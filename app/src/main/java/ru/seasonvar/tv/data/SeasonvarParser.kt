@@ -69,7 +69,8 @@ object SeasonvarParser {
             val season = Regex("Сезон\\s+(\\d+)", RegexOption.IGNORE_CASE)
                 .find(info.ownText())?.groupValues?.get(1)?.toIntOrNull()
             SeriesEntry(id, url, listOf(title, original).filter { it.isNotBlank() }.joinToString(" / "),
-                season, update, "https://cdn.svstat.net/oblojka/" + id + ".jpg")
+                season, update, "https://cdn.svstat.net/oblojka/" + id + ".jpg",
+                isNew = anchor.hasClass("rside-p-new"))
         }
         return CatalogPage(day, entries.distinctBy { it.key })
     }

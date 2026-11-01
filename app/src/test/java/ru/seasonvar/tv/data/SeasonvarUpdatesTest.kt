@@ -37,6 +37,8 @@ class SeasonvarUpdatesTest {
         assertEquals("https://cdn.svstat.net/oblojka/100.jpg", entries[0].posterUrl)
         assertNull(entries[1].season)
         assertEquals("Другой сериал", entries[1].title)
+        assertFalse(entries[0].isNew)
+        assertTrue(entries[1].isNew)
         assertEquals(SeasonvarParser.updates(page, day).entries,
             SeasonvarParser.updates(page, day.plusDays(1)).entries)
     }
@@ -53,6 +55,16 @@ class SeasonvarUpdatesTest {
         assertEquals(50, entries.map { it.key }.distinct().size)
         assertEquals(2, entries.count { it.id == "50921" })
         assertEquals("0 серия (RuDub)", entries.first().update)
+        assertEquals(listOf("50990", "51055", "51081", "51082", "51077",
+            "51080", "50987", "51043", "51079", "50994"),
+            entries.filter { it.isNew }.map { it.id })
+    }
+
+    @Test fun new_badge_requires_the_exact_site_marker_not_the_episode_number() {
+        val firstEpisode = page.replace("6 серия (Студия)", "1 серия")
+        assertFalse(SeasonvarParser.updates(firstEpisode, day).entries.first().isNew)
+        val similarClass = page.replace("rside-p-new", "rside-p-newish")
+        assertTrue(SeasonvarParser.updates(similarClass, day).entries.none { it.isNew })
     }
 
     @Test fun exact_duplicate_is_not_duplicated() {
@@ -97,7 +109,9 @@ class SeasonvarUpdatesTest {
         val file = File(dir, "updates-ajax.html").apply { writeText(page) }
         val repository = repository(dir)
         file.setLastModified(now - 13 * 60 * 60 * 1000)
-        assertEquals(2, repository.cached(day, PublicFeed.UPDATES)?.entries?.size)
+        val entries = repository.cached(day, PublicFeed.UPDATES)!!.entries
+        assertEquals(2, entries.size)
+        assertTrue(entries[1].isNew)
         file.setLastModified(now - 24 * 60 * 60 * 1000)
         assertNull(repository.cached(day, PublicFeed.UPDATES))
     }

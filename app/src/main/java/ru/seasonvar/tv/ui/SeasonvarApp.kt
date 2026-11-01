@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -36,6 +37,8 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.window.Dialog
@@ -465,13 +468,31 @@ private fun SeriesThumbnail(
 @Composable
 private fun Poster(entry: SeriesEntry, modifier: Modifier) {
     val placeholder = painterResource(R.drawable.poster_placeholder)
-    AsyncImage(
-        model = entry.posterUrl,
-        contentDescription = null,
-        modifier = modifier,
-        contentScale = ContentScale.Crop,
-        placeholder = placeholder, error = placeholder,
-    )
+    val d = SeasonvarTheme.dimensions
+    val c = MaterialTheme.colorScheme
+    Box(modifier.clip(RoundedCornerShape(
+        topStart = d.cardCornerRadius, topEnd = d.cardCornerRadius))) {
+        AsyncImage(
+            model = entry.posterUrl,
+            contentDescription = null,
+            modifier = Modifier.matchParentSize(),
+            contentScale = ContentScale.Crop,
+            placeholder = placeholder, error = placeholder,
+        )
+        if (entry.isNew) {
+            Text(
+                stringResource(R.string.series_new_badge),
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .background(c.surface)
+                    .padding(horizontal = d.badgePaddingHorizontal, vertical = d.badgePaddingVertical),
+                color = c.onSurface,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+        }
+    }
 }
 
 @Composable

@@ -11,6 +11,7 @@ data class SeriesEntry(
     val season: Int?,
     val update: String,
     val posterUrl: String,
+    val isNew: Boolean = false,
 ) {
     val key: String get() = url + "|" + update
 }

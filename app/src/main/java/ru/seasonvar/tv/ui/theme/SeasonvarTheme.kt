@@ -37,6 +37,8 @@ data class SeasonvarDimensions(
     val cardPadding: Dp,
     val cardCornerRadius: Dp,
     val focusBorderWidth: Dp,
+    val badgePaddingHorizontal: Dp,
+    val badgePaddingVertical: Dp,
     val dialogWidth: Dp,
     val dialogHeight: Dp,
 )
@@ -88,6 +90,8 @@ fun SeasonvarTheme(content: @Composable () -> Unit) {
         cardPadding = dimensionResource(R.dimen.seasonvar_card_padding),
         cardCornerRadius = dimensionResource(R.dimen.seasonvar_card_corner_radius),
         focusBorderWidth = dimensionResource(R.dimen.seasonvar_focus_border_width),
+        badgePaddingHorizontal = dimensionResource(R.dimen.seasonvar_badge_padding_horizontal),
+        badgePaddingVertical = dimensionResource(R.dimen.seasonvar_badge_padding_vertical),
         dialogWidth = dimensionResource(R.dimen.seasonvar_dialog_width),
         dialogHeight = dimensionResource(R.dimen.seasonvar_dialog_height),
     )
