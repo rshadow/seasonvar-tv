@@ -37,7 +37,9 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -480,17 +482,28 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
             placeholder = placeholder, error = placeholder,
         )
         if (entry.isNew) {
-            Text(
-                stringResource(R.string.series_new_badge),
-                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+            Box(
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(d.badgeHeight)
                     .background(c.surface)
-                    .padding(horizontal = d.badgePaddingHorizontal, vertical = d.badgePaddingVertical),
-                color = c.onSurface,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-            )
+                    .padding(horizontal = d.badgePaddingHorizontal),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(R.string.series_new_badge),
+                    modifier = Modifier.offset(x = d.badgeTextOffsetHorizontal, y = d.badgeTextOffsetVertical),
+                    color = c.onSurface,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.Both,
+                        ),
+                    ),
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
