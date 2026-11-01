@@ -507,6 +507,7 @@ private fun SettingsPane(
     val c = MaterialTheme.colorScheme
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
+    var dnsFocused by remember { mutableStateOf(false) }
     val dnsFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
@@ -531,8 +532,6 @@ private fun SettingsPane(
                 .padding(d.spacingMedium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Checkbox(checked = bypassEnabled, onCheckedChange = null)
-            Spacer(Modifier.width(d.spacingMedium))
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.bypass_title), color = c.onBackground,
                     style = MaterialTheme.typography.titleLarge)
@@ -540,19 +539,35 @@ private fun SettingsPane(
                 Text(stringResource(R.string.bypass_description), color = c.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyLarge)
             }
+            Spacer(Modifier.width(d.spacingMedium))
+            Checkbox(checked = bypassEnabled, onCheckedChange = null)
         }
         Spacer(Modifier.height(d.spacingLarge))
-        ThemeButton(
-            stringResource(R.string.dns_current, stringResource(dnsLabel(dnsProvider))),
-            onClick = { onInteraction(); dnsDialogOpen = true },
-            Modifier.width(d.buttonWidth).height(d.navigationButtonHeight)
-                .focusRequester(dnsFocus)
+        Row(
+            Modifier.fillMaxWidth().focusRequester(dnsFocus)
                 .focusProperties {
                     left = menuFocus
                     up = toggleFocus
                     down = FocusRequester.Cancel
-                },
-        )
+                }
+                .onFocusChanged { dnsFocused = it.isFocused }
+                .border(d.focusBorderWidth, if (dnsFocused) c.primary else Color.Transparent,
+                    RoundedCornerShape(d.cardCornerRadius))
+                .clickable(role = Role.Button, onClick = { onInteraction(); dnsDialogOpen = true })
+                .padding(d.spacingMedium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.dns_setting_title), color = c.onBackground,
+                    style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.dns_description), color = c.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge)
+            }
+            Spacer(Modifier.width(d.spacingMedium))
+            Text(stringResource(dnsLabel(dnsProvider)), color = c.primary,
+                style = MaterialTheme.typography.bodyLarge)
+        }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge)
@@ -609,10 +624,10 @@ private fun DnsDialog(
                         .padding(d.spacingMedium),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = selected == provider, onClick = null)
-                    Spacer(Modifier.width(d.spacingMedium))
                     Text(stringResource(dnsLabel(provider)), color = c.onBackground,
-                        style = MaterialTheme.typography.titleLarge)
+                        style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(d.spacingMedium))
+                    RadioButton(selected = selected == provider, onClick = null)
                 }
             }
         }

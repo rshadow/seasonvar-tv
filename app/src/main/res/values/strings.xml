@@ -30,7 +30,8 @@
     <string name="bypass_description">Помогает открыть сайт при сетевых ограничениях. Проверка HTTPS-сертификатов остаётся включённой.</string>
     <string name="network_applies">Настройки сохраняются и применяются к новым запросам страниц и постеров. Список «Сегодня» обновляется при изменении.</string>
     <string name="dns_title" translatable="false">DNS</string>
-    <string name="dns_current">DNS: %1$s</string>
+    <string name="dns_setting_title">DNS-сервер</string>
+    <string name="dns_description">Определяет адреса сайтов. Можно использовать DNS устройства или Quad9 с запросами по HTTPS.</string>
     <string name="dns_system">Системный</string>
     <string name="dns_quad9" translatable="false">Quad9 DoH</string>
 </resources>
