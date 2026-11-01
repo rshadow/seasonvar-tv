@@ -19,7 +19,7 @@ class CatalogRepository(
             val fresh = when (feed) {
                 PublicFeed.TODAY -> java.time.Instant.ofEpochMilli(file.lastModified())
                     .atZone(zone).toLocalDate() == day
-                PublicFeed.UPDATES -> nowMillis() - file.lastModified() in 0 until 86_400_000L
+                PublicFeed.UPDATES, PublicFeed.TOP -> nowMillis() - file.lastModified() in 0 until 86_400_000L
             }
             if (!fresh) return@withContext null
             runCatching { parse(file.readText(), day, feed) }.getOrNull()
@@ -29,7 +29,7 @@ class CatalogRepository(
         withContext(Dispatchers.IO) {
             val html = when (feed) {
                 PublicFeed.TODAY -> source.get("https://seasonvar.ru/")
-                PublicFeed.UPDATES -> source.updates()
+                PublicFeed.UPDATES, PublicFeed.TOP -> source.sidebar(feed)
             }
             val parsed = parse(html, day, feed)
             save(cacheName(feed), html)
@@ -38,12 +38,13 @@ class CatalogRepository(
 
     private fun parse(html: String, day: LocalDate, feed: PublicFeed): CatalogPage = when (feed) {
         PublicFeed.TODAY -> SeasonvarParser.today(html, day)
-        PublicFeed.UPDATES -> SeasonvarParser.updates(html, day)
+        PublicFeed.UPDATES, PublicFeed.TOP -> SeasonvarParser.sidebar(html, day)
     }
 
     private fun cacheName(feed: PublicFeed): String = when (feed) {
         PublicFeed.TODAY -> "today.html"
         PublicFeed.UPDATES -> "updates-ajax.html"
+        PublicFeed.TOP -> "top-ajax.html"
     }
 
     suspend fun description(entry: SeriesEntry): SeriesDescription {

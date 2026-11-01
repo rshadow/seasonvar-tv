@@ -28,7 +28,7 @@ class SeasonvarUpdatesTest {
     @get:Rule val folder = TemporaryFolder()
 
     @Test fun reads_ajax_fragment_in_site_order_with_season_and_original_title() {
-        val entries = SeasonvarParser.updates(page, day).entries
+        val entries = SeasonvarParser.sidebar(page, day).entries
         assertEquals(listOf("100", "200"), entries.map { it.id })
         assertEquals("Первый & второй", entries[0].title)
         assertEquals("First & Second", entries[0].originalTitle)
@@ -41,13 +41,13 @@ class SeasonvarUpdatesTest {
         assertEquals("Другой сериал", entries[1].title)
         assertFalse(entries[0].isNew)
         assertTrue(entries[1].isNew)
-        assertEquals(SeasonvarParser.updates(page, day).entries,
-            SeasonvarParser.updates(page, day.plusDays(1)).entries)
+        assertEquals(SeasonvarParser.sidebar(page, day).entries,
+            SeasonvarParser.sidebar(page, day.plusDays(1)).entries)
     }
 
     @Test fun real_ajax_response_preserves_all_50_positions_in_site_order() {
         val html = javaClass.getResource("/updates-ajax.html")!!.readText()
-        val entries = SeasonvarParser.updates(html, day).entries
+        val entries = SeasonvarParser.sidebar(html, day).entries
         val expected = "51072 36145 50709 50570 50710 50996 50836 51067 47435 50713 " +
             "50990 50920 51055 50579 51081 51082 50392 50865 50906 51077 " +
             "51080 50987 50625 50749 50765 50921 50907 51043 50888 51078 " +
@@ -65,26 +65,26 @@ class SeasonvarUpdatesTest {
     @Test fun original_title_is_used_only_when_russian_name_is_absent() {
         for (missing in listOf("", "<div class='rside-t'> </div>")) {
             val html = page.replace("<div class=\"rside-t\">Первый &amp; второй</div>", missing)
-            val entry = SeasonvarParser.updates(html, day).entries.first()
+            val entry = SeasonvarParser.sidebar(html, day).entries.first()
             assertEquals("First & Second", entry.title)
             assertEquals("First & Second", entry.fullTitle)
         }
         val withSlash = page.replace("Первый &amp; второй", "Первый / Второй")
-        assertEquals("Первый / Второй", SeasonvarParser.updates(withSlash, day).entries.first().title)
+        assertEquals("Первый / Второй", SeasonvarParser.sidebar(withSlash, day).entries.first().title)
         assertThrows(MarkupChangedException::class.java) {
-            SeasonvarParser.updates(page.replace("Первый &amp; второй", "").replace("First &amp; Second", ""), day)
+            SeasonvarParser.sidebar(page.replace("Первый &amp; второй", "").replace("First &amp; Second", ""), day)
         }
     }
 
     @Test fun new_badge_requires_the_exact_site_marker_not_the_episode_number() {
         val firstEpisode = page.replace("6 серия (Студия)", "1 серия")
-        assertFalse(SeasonvarParser.updates(firstEpisode, day).entries.first().isNew)
+        assertFalse(SeasonvarParser.sidebar(firstEpisode, day).entries.first().isNew)
         val similarClass = page.replace("rside-p-new", "rside-p-newish")
-        assertTrue(SeasonvarParser.updates(similarClass, day).entries.none { it.isNew })
+        assertTrue(SeasonvarParser.sidebar(similarClass, day).entries.none { it.isNew })
     }
 
     @Test fun exact_duplicate_is_not_duplicated() {
-        assertEquals(2, SeasonvarParser.updates(page + page, day).entries.size)
+        assertEquals(2, SeasonvarParser.sidebar(page + page, day).entries.size)
     }
 
     @Test fun different_updates_of_the_same_season_are_preserved() {
@@ -94,14 +94,14 @@ class SeasonvarUpdatesTest {
               <div class="rside-ss">Сезон 2<span>6 серия (Другая студия)</span></div>
             </a>
         """
-        val entries = SeasonvarParser.updates(page + extra, day).entries
+        val entries = SeasonvarParser.sidebar(page + extra, day).entries
         assertEquals(3, entries.size)
         assertEquals(2, entries.count { it.id == "100" })
         assertEquals(3, entries.map { it.key }.distinct().size)
     }
 
     @Test fun valid_empty_updates_are_distinct_from_changed_or_blocked_markup() {
-        assertTrue(SeasonvarParser.updates("  ", day).entries.isEmpty())
+        assertTrue(SeasonvarParser.sidebar("  ", day).entries.isEmpty())
         for (invalid in listOf(
             "<h1>Blocked</h1>",
             "<div class='pgs-msg'>ошибка загрузки</div>",
@@ -109,13 +109,13 @@ class SeasonvarUpdatesTest {
             page.replace("rside-t\"", "changed\"").replace("rside-t_en\"", "changed-en\""),
             page.replace("<span>6 серия (Студия)</span>", ""),
         )) {
-            assertThrows(MarkupChangedException::class.java) { SeasonvarParser.updates(invalid, day) }
+            assertThrows(MarkupChangedException::class.java) { SeasonvarParser.sidebar(invalid, day) }
         }
     }
 
     @Test fun external_season_url_is_rejected() {
         assertThrows(MarkupChangedException::class.java) {
-            SeasonvarParser.updates(page.replace("/serial-100-First.html",
+            SeasonvarParser.sidebar(page.replace("/serial-100-First.html",
                 "https://example.org/serial-100-First.html"), day)
         }
     }
@@ -156,7 +156,7 @@ class SeasonvarUpdatesTest {
     }
 
     @Test fun ajax_request_matches_the_site_form() {
-        val request = SiteClient.updatesRequest()
+        val request = SiteClient.sidebarRequest(PublicFeed.UPDATES)
         assertEquals("POST", request.method)
         assertEquals("https://seasonvar.ru/ajax.php?mode=new", request.url.toString())
         assertEquals("https://seasonvar.ru/", request.header("Referer"))
@@ -171,6 +171,9 @@ class SeasonvarUpdatesTest {
     private fun repository(directory: File, response: String? = null) =
         CatalogRepository(directory, object : HtmlSource {
             override suspend fun get(url: String): String = error("Updates must not GET the homepage")
-            override suspend fun updates(): String = response ?: throw IOException("offline")
+            override suspend fun sidebar(feed: PublicFeed): String {
+                assertEquals(PublicFeed.UPDATES, feed)
+                return response ?: throw IOException("offline")
+            }
         }, ZoneOffset.UTC, { now })
 }

@@ -6,6 +6,13 @@
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
     <string name="today_title">Сегодня</string>
+    <string name="top_title">Топ</string>
+    <string name="top_hint">Популярные сериалы сайта</string>
+    <string name="top_count">Популярные сериалы · всего: %1$d</string>
+    <string name="top_loading">Загружаем топ…</string>
+    <string name="top_empty">В топе пока нет сериалов</string>
+    <string name="top_cached">Сохранённый список «Топ»</string>
+    <string name="top_cached_error">Не удалось обновить. Показан сохранённый список «Топ».</string>
     <string name="updates_title">Обновления</string>
     <string name="updates_hint">Последние обновления сайта</string>
     <string name="updates_count">Последние серии · обновлений: %1$d</string>

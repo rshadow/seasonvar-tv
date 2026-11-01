@@ -250,19 +250,19 @@ def validate_url(url):
     return parsed
 
 
-def request_page(url, ip, strategy, timeout, source_ip=None, updates=False):
+def request_page(url, ip, strategy, timeout, source_ip=None, ajax=False):
     parsed = validate_url(url)
     target = quote(parsed.path or "/", safe="/%:@!$&()*+,;=-._~")
     if parsed.query:
         target += "?" + quote(parsed.query, safe="%=&+/:?@!$()*,-._~;")
-    body = b"ganre=&country=&block=0&main=1" if updates else b""
+    body = b"ganre=&country=&block=0&main=1" if ajax else b""
     ajax_headers = (
         "Content-Type: application/x-www-form-urlencoded\r\n"
         "X-Requested-With: XMLHttpRequest\r\n"
         "Referer: https://seasonvar.ru/\r\n"
         f"Content-Length: {len(body)}\r\n"
-    ) if updates else ""
-    method = "POST" if updates else "GET"
+    ) if ajax else ""
+    method = "POST" if ajax else "GET"
     request = (
         f"{method} {target} HTTP/1.1\r\nHost: {parsed.hostname}\r\n"
         "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -306,7 +306,7 @@ class PageSummary(HTMLParser):
             self.news_blocks += 1
 
 
-def fetch(url, strategy, timeout, source_ip=None, override_ip=None, updates=False):
+def fetch(url, strategy, timeout, source_ip=None, override_ip=None, ajax=False):
     addresses = {}
     for _ in range(6):
         parsed = validate_url(url)
@@ -316,7 +316,7 @@ def fetch(url, strategy, timeout, source_ip=None, override_ip=None, updates=Fals
         last_error = None
         for ip in addresses[host]:
             try:
-                result = request_page(url, ip, strategy, timeout, source_ip, updates)
+                result = request_page(url, ip, strategy, timeout, source_ip, ajax)
                 break
             except (OSError, ssl.SSLError, FetchError, http.client.HTTPException) as exc:
                 last_error = exc
@@ -325,7 +325,7 @@ def fetch(url, strategy, timeout, source_ip=None, override_ip=None, updates=Fals
             raise FetchError("All destination addresses failed") from last_error
         status, content_type, location, body = result
         if status in (301, 302, 303, 307, 308):
-            if updates:
+            if ajax:
                 raise FetchError("Unexpected AJAX redirect")
             if not location:
                 raise FetchError("Redirect has no Location")
@@ -362,7 +362,7 @@ def main():
     parser.add_argument("--strategy", choices=("default", "tlsrec", "direct"), default="default")
     parser.add_argument("--timeout", type=float, default=10)
     parser.add_argument("--source-ip")
-    parser.add_argument("--updates", action="store_true", help="POST the public updates AJAX form")
+    parser.add_argument("--sidebar", choices=("new", "pop"), help="POST a public sidebar AJAX form")
     parser.add_argument("--ip", help="Override the destination IPv4 for diagnostics")
     args = parser.parse_args()
     try:
@@ -372,8 +372,8 @@ def main():
             if address:
                 ipaddress.IPv4Address(address)
         body, content_type, ip, count = fetch(
-            "https://seasonvar.ru/ajax.php?mode=new" if args.updates else args.url,
-            args.strategy, args.timeout, args.source_ip, args.ip, args.updates
+            "https://seasonvar.ru/ajax.php?mode=" + args.sidebar if args.sidebar else args.url,
+            args.strategy, args.timeout, args.source_ip, args.ip, bool(args.sidebar)
         )
         save_output(args.output, body)
         print(

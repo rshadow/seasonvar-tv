@@ -61,7 +61,7 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import java.time.format.DateTimeFormatter
 
-private enum class Section { TODAY, UPDATES, SETTINGS, ABOUT }
+private enum class Section { TODAY, UPDATES, TOP, SETTINGS, ABOUT }
 
 @Composable
 fun SeasonvarApp(
@@ -85,9 +85,15 @@ fun SeasonvarApp(
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
     val todayListState = rememberLazyListState()
     val updatesListState = rememberLazyListState()
-    val listState = if (activeFeed == PublicFeed.TODAY) todayListState else updatesListState
+    val topListState = rememberLazyListState()
+    val listState = when (activeFeed) {
+        PublicFeed.TODAY -> todayListState
+        PublicFeed.UPDATES -> updatesListState
+        PublicFeed.TOP -> topListState
+    }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
+    val topFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val toggleFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
@@ -114,6 +120,7 @@ fun SeasonvarApp(
         val feed = when (item) {
             Section.TODAY -> PublicFeed.TODAY
             Section.UPDATES -> PublicFeed.UPDATES
+            Section.TOP -> PublicFeed.TOP
             else -> null
         }
         if (feed != null) {
@@ -165,6 +172,7 @@ fun SeasonvarApp(
             when (section) {
                 Section.TODAY -> todayFocus.requestFocus()
                 Section.UPDATES -> updatesFocus.requestFocus()
+                Section.TOP -> topFocus.requestFocus()
                 Section.SETTINGS -> settingsFocus.requestFocus()
                 Section.ABOUT -> aboutFocus.requestFocus()
             }
@@ -198,16 +206,18 @@ fun SeasonvarApp(
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.height(d.spacingSection))
-                listOf(Section.TODAY, Section.UPDATES, Section.SETTINGS, Section.ABOUT).forEach { item ->
+                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.SETTINGS, Section.ABOUT).forEach { item ->
                     val focus = when (item) {
                         Section.TODAY -> todayFocus
                         Section.UPDATES -> updatesFocus
+                        Section.TOP -> topFocus
                         Section.SETTINGS -> settingsFocus
                         Section.ABOUT -> aboutFocus
                     }
                     val label = when (item) {
                         Section.TODAY -> R.string.today_title
                         Section.UPDATES -> R.string.updates_title
+                        Section.TOP -> R.string.top_title
                         Section.SETTINGS -> R.string.settings_title
                         Section.ABOUT -> R.string.about_title
                     }
@@ -246,18 +256,24 @@ fun SeasonvarApp(
                 } else if (section == Section.ABOUT) {
                     AboutPane()
                 } else {
-                    CatalogPane(
-                        state, description, selected, listState, cards, activeFeed,
-                        if (activeFeed == PublicFeed.TODAY) todayFocus else updatesFocus, refreshFocus, retryFocus,
-                        onRefresh = { onRefresh(activeFeed) },
-                        onFocused = { selectEntry(it.key) },
-                        onOpen = {
-                            backNavigation.reset()
-                            inputModeManager.requestInputMode(InputMode.Keyboard)
-                            selectEntry(it.key)
-                            detailsOpen = true
-                        },
-                    )
+                    key(activeFeed) {
+                        CatalogPane(
+                            state, description, selected, listState, cards, activeFeed,
+                            when (activeFeed) {
+                                PublicFeed.TODAY -> todayFocus
+                                PublicFeed.UPDATES -> updatesFocus
+                                PublicFeed.TOP -> topFocus
+                            }, refreshFocus, retryFocus,
+                            onRefresh = { onRefresh(activeFeed) },
+                            onFocused = { selectEntry(it.key) },
+                            onOpen = {
+                                backNavigation.reset()
+                                inputModeManager.requestInputMode(InputMode.Keyboard)
+                                selectEntry(it.key)
+                                detailsOpen = true
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -314,18 +330,19 @@ private fun CatalogPane(
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val isToday = feed == PublicFeed.TODAY
+    val isTop = feed == PublicFeed.TOP
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(if (isToday) R.string.today_title else R.string.updates_title), style = MaterialTheme.typography.headlineSmall,
+                Text(stringResource(if (isToday) R.string.today_title else if (isTop) R.string.top_title else R.string.updates_title), style = MaterialTheme.typography.headlineSmall,
                     color = c.onBackground)
                 Text(
                     if (isToday) {
                         if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
                     } else {
-                        if (state.loaded) stringResource(R.string.updates_count, state.entries.size)
-                        else stringResource(R.string.updates_hint)
+                        if (state.loaded) stringResource(if (isTop) R.string.top_count else R.string.updates_count, state.entries.size)
+                        else stringResource(if (isTop) R.string.top_hint else R.string.updates_hint)
                     },
                     style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
                 )
@@ -343,11 +360,11 @@ private fun CatalogPane(
                 verticalArrangement = Arrangement.Center,
             ) {
                 val message = when {
-                    state.loading -> if (isToday) R.string.today_loading else R.string.updates_loading
+                    state.loading -> if (isToday) R.string.today_loading else if (isTop) R.string.top_loading else R.string.updates_loading
                     state.failure == LoadFailure.MARKUP -> R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
-                    else -> if (isToday) R.string.today_empty else R.string.updates_empty
+                    else -> if (isToday) R.string.today_empty else if (isTop) R.string.top_empty else R.string.updates_empty
                 }
                 Text(stringResource(message), style = MaterialTheme.typography.titleLarge,
                     color = c.onBackground)
@@ -370,9 +387,9 @@ private fun CatalogPane(
             if (state.failure != null || state.cached || state.loading) {
                 Text(
                     stringResource(if (state.failure != null) {
-                        if (isToday) R.string.today_cached_error else R.string.updates_cached_error
+                        if (isToday) R.string.today_cached_error else if (isTop) R.string.top_cached_error else R.string.updates_cached_error
                     } else if (state.loading) R.string.today_updating
-                    else if (isToday) R.string.today_cached else R.string.updates_cached),
+                    else if (isToday) R.string.today_cached else if (isTop) R.string.top_cached else R.string.updates_cached),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                 )
             }

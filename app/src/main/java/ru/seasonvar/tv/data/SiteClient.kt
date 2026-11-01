@@ -20,7 +20,7 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
 
     override suspend fun get(url: String): String = execute(Request.Builder().url(url).build())
 
-    override suspend fun updates(): String = execute(updatesRequest())
+    override suspend fun sidebar(feed: PublicFeed): String = execute(sidebarRequest(feed))
 
     private suspend fun execute(initial: Request): String {
         var request = initial
@@ -46,15 +46,22 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
     }
 
     companion object {
-        internal fun updatesRequest(): Request = Request.Builder()
-            .url("https://seasonvar.ru/ajax.php?mode=new")
-            .header("Referer", "https://seasonvar.ru/")
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Accept", "text/html")
-            .post(FormBody.Builder()
-                .add("ganre", "").add("country", "").add("block", "0").add("main", "1")
-                .build())
-            .build()
+        internal fun sidebarRequest(feed: PublicFeed): Request {
+            val mode = when (feed) {
+                PublicFeed.UPDATES -> "new"
+                PublicFeed.TOP -> "pop"
+                PublicFeed.TODAY -> throw IllegalArgumentException("Today is not a sidebar feed")
+            }
+            return Request.Builder()
+                .url("https://seasonvar.ru/ajax.php?mode=" + mode)
+                .header("Referer", "https://seasonvar.ru/")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .header("Accept", "text/html")
+                .post(FormBody.Builder()
+                    .add("ganre", "").add("country", "").add("block", "0").add("main", "1")
+                    .build())
+                .build()
+        }
     }
 
     private data class Result(val status: Int, val location: String?, val body: String)

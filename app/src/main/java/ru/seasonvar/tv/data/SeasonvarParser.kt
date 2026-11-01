@@ -54,7 +54,7 @@ object SeasonvarParser {
         return CatalogPage(day, entries.distinctBy { it.key })
     }
 
-    fun updates(html: String, day: LocalDate): CatalogPage {
+    fun sidebar(html: String, day: LocalDate): CatalogPage {
         val body = Jsoup.parseBodyFragment(html, "https://seasonvar.ru/").body()
         val anchors = body.children()
         if (body.ownText().isNotBlank() || anchors.any {

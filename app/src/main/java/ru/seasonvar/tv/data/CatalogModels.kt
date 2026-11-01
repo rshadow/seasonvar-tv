@@ -2,7 +2,7 @@ package ru.seasonvar.tv.data
 
 import java.time.LocalDate
 
-enum class PublicFeed { TODAY, UPDATES }
+enum class PublicFeed { TODAY, UPDATES, TOP }
 
 data class SeriesEntry(
     val id: String,
@@ -26,5 +26,5 @@ class SiteHttpException(val status: Int) : Exception("HTTP " + status)
 
 interface HtmlSource {
     suspend fun get(url: String): String
-    suspend fun updates(): String
+    suspend fun sidebar(feed: PublicFeed): String
 }

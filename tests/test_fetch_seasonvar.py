@@ -116,18 +116,18 @@ class OriginTests(unittest.TestCase):
             fetcher.fetch("https://seasonvar.ru/", "default", 1)
 
     def test_ajax_wire_request_uses_post_form_and_get_stays_unchanged(self):
-        for updates in (False, True):
-            with self.subTest(updates=updates), patch.object(fetcher.socket, "create_connection"), \
+        for ajax, mode in ((False, None), (True, "new"), (True, "pop")):
+            with self.subTest(ajax=ajax, mode=mode), patch.object(fetcher.socket, "create_connection"), \
                     patch.object(fetcher, "TLSStream") as tls:
                 stream = tls.return_value
                 stream.makefile.return_value = io.BytesIO(
                     b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n")
-                url = "https://seasonvar.ru/ajax.php?mode=new" if updates else "https://seasonvar.ru/"
-                fetcher.request_page(url, "192.0.2.1", "default", 1, updates=updates)
+                url = "https://seasonvar.ru/ajax.php?mode=" + mode if ajax else "https://seasonvar.ru/"
+                fetcher.request_page(url, "192.0.2.1", "default", 1, ajax=ajax)
                 wire = stream.sendall.call_args.args[0]
                 headers, body = wire.split(b"\r\n\r\n", 1)
-                if updates:
-                    self.assertTrue(headers.startswith(b"POST /ajax.php?mode=new HTTP/1.1\r\n"))
+                if ajax:
+                    self.assertTrue(headers.startswith(("POST /ajax.php?mode=" + mode + " HTTP/1.1\r\n").encode()))
                     self.assertIn(b"Content-Type: application/x-www-form-urlencoded", headers)
                     self.assertIn(b"X-Requested-With: XMLHttpRequest", headers)
                     self.assertIn(b"Referer: https://seasonvar.ru/", headers)
@@ -142,7 +142,7 @@ class OriginTests(unittest.TestCase):
     def test_ajax_redirect_is_not_replaced_with_a_homepage_get(self, request, dns):
         request.return_value = (302, "text/html", "/", b"")
         with self.assertRaises(fetcher.FetchError):
-            fetcher.fetch("https://seasonvar.ru/ajax.php?mode=new", "default", 1, updates=True)
+            fetcher.fetch("https://seasonvar.ru/ajax.php?mode=new", "default", 1, ajax=True)
         request.assert_called_once()
 
     @patch.object(fetcher, "quad9", return_value=["192.0.2.1"])

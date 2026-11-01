@@ -103,7 +103,7 @@ class SeasonvarParserTest {
         file.setLastModified(day.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
         val repo = CatalogRepository(dir, object : HtmlSource {
             override suspend fun get(url: String): String = throw IOException("offline")
-            override suspend fun updates(): String = error("Unexpected AJAX request")
+            override suspend fun sidebar(feed: PublicFeed): String = error("Unexpected AJAX request")
         }, ZoneOffset.UTC)
         assertEquals(1, repo.cached(day)?.entries?.size)
         assertNull(repo.cached(day.plusDays(1)))
@@ -114,7 +114,7 @@ class SeasonvarParserTest {
         val file = File(dir, "today.html").apply { writeText(page) }
         val repo = CatalogRepository(dir, object : HtmlSource {
             override suspend fun get(url: String) = "<h1>Blocked</h1>"
-            override suspend fun updates(): String = error("Unexpected AJAX request")
+            override suspend fun sidebar(feed: PublicFeed): String = error("Unexpected AJAX request")
         })
         try { repo.load(day); fail("Expected a contract error") }
         catch (_: MarkupChangedException) { }
