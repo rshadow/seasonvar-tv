@@ -31,11 +31,19 @@ class SeasonvarParserTest {
         val result = SeasonvarParser.today(page, day)
         assertEquals(1, result.entries.size)
         val item = result.entries.single()
-        assertEquals("Сериал & история / Story", item.title)
+        assertEquals("Сериал & история", item.title)
+        assertEquals("Story", item.originalTitle)
+        assertEquals("Сериал & история / Story", item.fullTitle)
         assertEquals(2, item.season)
         assertEquals("4-5 серия (Студия А)", item.update)
         assertEquals("https://seasonvar.ru/serial-100-Test.html", item.url)
         assertEquals("https://cdn.svstat.net/oblojka/100.jpg", item.posterUrl)
+    }
+
+    @Test fun original_title_is_used_when_today_has_no_russian_name() {
+        val entry = SeasonvarParser.today(page.replace("Сериал &amp; история ", ""), day).entries.single()
+        assertEquals("Story", entry.title)
+        assertEquals("Story", entry.fullTitle)
     }
 
     @Test fun no_updates_for_requested_day_is_empty() {

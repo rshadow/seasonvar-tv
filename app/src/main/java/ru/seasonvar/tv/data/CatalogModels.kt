@@ -12,8 +12,10 @@ data class SeriesEntry(
     val update: String,
     val posterUrl: String,
     val isNew: Boolean = false,
+    val originalTitle: String? = null,
 ) {
     val key: String get() = url + "|" + update
+    val fullTitle: String get() = listOfNotNull(title, originalTitle).distinct().joinToString(" / ")
 }
 
 data class CatalogPage(val date: LocalDate, val entries: List<SeriesEntry>)

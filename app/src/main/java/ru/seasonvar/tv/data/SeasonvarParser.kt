@@ -31,7 +31,9 @@ object SeasonvarParser {
             for (anchor in anchors) {
                 val id = anchor.attr("data-id")
                 val url = pageUrl(anchor.attr("href")) ?: throw MarkupChangedException()
-                val title = anchor.selectFirst("div.news_n")?.text()?.trim().orEmpty()
+                val name = anchor.selectFirst("div.news_n") ?: throw MarkupChangedException()
+                val original = name.selectFirst("span")?.text()?.removePrefix("/")?.trim().orEmpty()
+                val title = name.ownText().ifBlank { original }
                 val info = anchor.selectFirst("div.news-w") ?: throw MarkupChangedException()
                 val update = anchor.select("span.news_s").joinToString("; ") { it.text() }
                 if (!id.matches(Regex("\\d+")) || title.isBlank() || update.isBlank()) {
@@ -45,6 +47,7 @@ object SeasonvarParser {
                     season = season,
                     update = update,
                     posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
+                    originalTitle = original.takeIf { it.isNotBlank() },
                 )
             }
         }
@@ -61,16 +64,17 @@ object SeasonvarParser {
             val url = pageUrl(anchor.attr("href")) ?: throw MarkupChangedException()
             val id = Regex("/serial-(\\d+)").find(URI(url).path)?.groupValues?.get(1)
                 ?: throw MarkupChangedException()
-            val title = anchor.selectFirst(".rside-t")?.text().orEmpty()
             val original = anchor.selectFirst(".rside-t_en")?.text().orEmpty()
+            val title = anchor.selectFirst(".rside-t")?.text().orEmpty().ifBlank { original }
             val info = anchor.selectFirst(".rside-ss") ?: throw MarkupChangedException()
             val update = info.select("span").joinToString("; ") { it.text() }
             if (title.isBlank() || update.isBlank()) throw MarkupChangedException()
             val season = Regex("Сезон\\s+(\\d+)", RegexOption.IGNORE_CASE)
                 .find(info.ownText())?.groupValues?.get(1)?.toIntOrNull()
-            SeriesEntry(id, url, listOf(title, original).filter { it.isNotBlank() }.joinToString(" / "),
+            SeriesEntry(id, url, title,
                 season, update, "https://cdn.svstat.net/oblojka/" + id + ".jpg",
-                isNew = anchor.hasClass("rside-p-new"))
+                isNew = anchor.hasClass("rside-p-new"),
+                originalTitle = original.takeIf { it.isNotBlank() })
         }
         return CatalogPage(day, entries.distinctBy { it.key })
     }

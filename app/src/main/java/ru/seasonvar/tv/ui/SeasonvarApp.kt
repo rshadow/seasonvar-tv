@@ -406,7 +406,7 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
     val c = MaterialTheme.colorScheme
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
         Column(Modifier.weight(1f)) {
-            Text(entry.title, style = MaterialTheme.typography.headlineSmall, color = c.onBackground,
+            Text(entry.fullTitle, style = MaterialTheme.typography.headlineSmall, color = c.onBackground,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(d.spacingSmall))
             Text(entry.update, style = MaterialTheme.typography.bodyMedium, color = c.primary,
@@ -444,7 +444,7 @@ private fun SeriesThumbnail(
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(d.cardCornerRadius)
     Column(
-        Modifier.width(d.cardWidth).focusRequester(requester)
+        Modifier.width(d.cardWidth).height(d.cardHeight).focusRequester(requester)
             .focusProperties {
                 this.up = up
                 this.right = right
@@ -459,7 +459,7 @@ private fun SeriesThumbnail(
         Poster(entry, Modifier.fillMaxWidth().height(d.thumbnailHeight))
         Spacer(Modifier.height(d.spacingSmall))
         Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
-            maxLines = 2, overflow = TextOverflow.Ellipsis)
+            minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(entry.update, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -526,7 +526,7 @@ private fun SeriesDialog(
                 .padding(d.spacingLarge),
             verticalArrangement = Arrangement.spacedBy(d.spacingMedium),
         ) {
-            Text(entry.title, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
+            Text(entry.fullTitle, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(entry.update, color = c.primary, style = MaterialTheme.typography.bodyLarge)
             Box(

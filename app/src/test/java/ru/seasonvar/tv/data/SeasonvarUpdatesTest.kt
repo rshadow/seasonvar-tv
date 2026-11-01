@@ -30,7 +30,9 @@ class SeasonvarUpdatesTest {
     @Test fun reads_ajax_fragment_in_site_order_with_season_and_original_title() {
         val entries = SeasonvarParser.updates(page, day).entries
         assertEquals(listOf("100", "200"), entries.map { it.id })
-        assertEquals("Первый & второй / First & Second", entries[0].title)
+        assertEquals("Первый & второй", entries[0].title)
+        assertEquals("First & Second", entries[0].originalTitle)
+        assertEquals("Первый & второй / First & Second", entries[0].fullTitle)
         assertEquals(2, entries[0].season)
         assertEquals("6 серия (Студия)", entries[0].update)
         assertEquals("https://seasonvar.ru/serial-100-First.html", entries[0].url)
@@ -58,6 +60,20 @@ class SeasonvarUpdatesTest {
         assertEquals(listOf("50990", "51055", "51081", "51082", "51077",
             "51080", "50987", "51043", "51079", "50994"),
             entries.filter { it.isNew }.map { it.id })
+    }
+
+    @Test fun original_title_is_used_only_when_russian_name_is_absent() {
+        for (missing in listOf("", "<div class='rside-t'> </div>")) {
+            val html = page.replace("<div class=\"rside-t\">Первый &amp; второй</div>", missing)
+            val entry = SeasonvarParser.updates(html, day).entries.first()
+            assertEquals("First & Second", entry.title)
+            assertEquals("First & Second", entry.fullTitle)
+        }
+        val withSlash = page.replace("Первый &amp; второй", "Первый / Второй")
+        assertEquals("Первый / Второй", SeasonvarParser.updates(withSlash, day).entries.first().title)
+        assertThrows(MarkupChangedException::class.java) {
+            SeasonvarParser.updates(page.replace("Первый &amp; второй", "").replace("First &amp; Second", ""), day)
+        }
     }
 
     @Test fun new_badge_requires_the_exact_site_marker_not_the_episode_number() {
@@ -90,7 +106,7 @@ class SeasonvarUpdatesTest {
             "<h1>Blocked</h1>",
             "<div class='pgs-msg'>ошибка загрузки</div>",
             "<li data-tabr='rside-new' data-tabgr='rightside'>" + page + "</li>",
-            page.replace("rside-t\"", "changed\""),
+            page.replace("rside-t\"", "changed\"").replace("rside-t_en\"", "changed-en\""),
             page.replace("<span>6 серия (Студия)</span>", ""),
         )) {
             assertThrows(MarkupChangedException::class.java) { SeasonvarParser.updates(invalid, day) }

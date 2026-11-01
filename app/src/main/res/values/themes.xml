@@ -23,6 +23,7 @@
     <dimen name="seasonvar_header_button_width">112dp</dimen>
     <dimen name="seasonvar_header_button_height">44dp</dimen>
     <dimen name="seasonvar_card_width">120dp</dimen>
+    <dimen name="seasonvar_card_height">212dp</dimen>
     <dimen name="seasonvar_thumbnail_height">144dp</dimen>
     <dimen name="seasonvar_card_row_height">224dp</dimen>
     <dimen name="seasonvar_poster_width">120dp</dimen>
