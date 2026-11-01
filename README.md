@@ -57,6 +57,8 @@ make run
 
 ## Разработка
 
+Цвета, отступы и размеры кнопок настраиваются в [themes.xml](app/src/main/res/values/themes.xml), подключение к Compose и типографика — в [SeasonvarTheme.kt](app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt). Палитра взята из CSS оригинального сайта; правила и источники — [ADR-0008](docs/adr/0008-centralized-ui-theme.md).
+
 Принят нативный стек **Kotlin + Compose for TV + Media3 ExoPlayer** — [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md).
 
 [ADR-0003](docs/adr/0003-performance-principles.md) закрепляет показ каталога из кэша с обновлением в фоне, кеширование постеров под размер карточек, фоновую обработку данных, ленивые списки, восстановление фокуса и позиции, управление ресурсами плеера и измерения release-сборки на Ugoos.

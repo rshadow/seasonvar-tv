@@ -107,6 +107,10 @@ make layout
 make screenshot OUT=/path/to/menu.png
 ~~~
 
+## Настройка интерфейса
+
+Цвета, отступы и размеры компонентов задаются в [themes.xml](../app/src/main/res/values/themes.xml). Роли цветов Compose, набор стилей текста и типизированные размеры — в [SeasonvarTheme.kt](../app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt). После изменения выполнить `make run`. Источники фирменной палитры и правила — [ADR-0008](adr/0008-centralized-ui-theme.md); `make site-styles` загружает CSS для повторной сверки.
+
 ## Получение страниц сайта
 
 `make site-fetch` сохраняет публичную главную Seasonvar в `build/site/index.html` с использованием проверенной DPI-стратегии и Quad9 DoH. Параметры, поиск и результаты проверки — в [docs/api/access.md](api/access.md). Проверки загрузчика запускаются через `make site-test` и входят в `make test` и `make check`.

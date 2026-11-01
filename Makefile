@@ -17,8 +17,9 @@ SITE_STRATEGY ?= default
 SITE_SOURCE_IP ?=
 SITE_IP ?=
 SITE_TIMEOUT ?= 10
+SITE_STYLE_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run logs debug attach key tap screenshot layout site-fetch site-test
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run logs debug attach key tap screenshot layout site-fetch site-test site-styles
 
 help:
 	@printf '%s\n' \
@@ -43,7 +44,8 @@ help:
 		'make screenshot OUT=file    Save the current screen' \
 		'make devices                List connected devices' \
 		'make site-fetch             Fetch public Seasonvar HTML/JSON with DPI strategy' \
-		'make site-test              Test the standalone website fetcher'
+		'make site-test              Test the standalone website fetcher' \
+		'make site-styles            Download original website CSS for theme reference'
 
 bootstrap:
 	python3 scripts/bootstrap.py --cache-dir "$(BOOTSTRAP_CACHE)"
@@ -147,3 +149,10 @@ site-fetch:
 
 site-test:
 	python3 -m unittest discover -s tests -p 'test_fetch_seasonvar.py' -v
+
+site-styles:
+	mkdir -p build/site
+	curl --fail --silent --show-error --location --max-time 20 \
+		'https://cdn.svstat.net/asset/css/main.css?$(SITE_STYLE_VERSION)' -o build/site/main.css
+	curl --fail --silent --show-error --location --max-time 20 \
+		'https://cdn.svstat.net/asset/css/pg.index.css?$(SITE_STYLE_VERSION)' -o build/site/pg.index.css

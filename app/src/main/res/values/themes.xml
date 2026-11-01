@@ -1,8 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="seasonvar_accent">#F5B50C</color>
+    <color name="seasonvar_on_accent">#2B2521</color>
+    <color name="seasonvar_background">#2B2521</color>
+    <color name="seasonvar_surface">#980C3D</color>
+    <color name="seasonvar_text">#F3F3F3</color>
+    <color name="seasonvar_secondary_text">#D5D9D9</color>
+
+    <dimen name="seasonvar_screen_padding_horizontal">64dp</dimen>
+    <dimen name="seasonvar_screen_padding_vertical">48dp</dimen>
+    <dimen name="seasonvar_spacing_small">8dp</dimen>
+    <dimen name="seasonvar_spacing_medium">20dp</dimen>
+    <dimen name="seasonvar_spacing_large">24dp</dimen>
+    <dimen name="seasonvar_spacing_extra_large">32dp</dimen>
+    <dimen name="seasonvar_spacing_section">40dp</dimen>
+    <dimen name="seasonvar_button_width">320dp</dimen>
+    <dimen name="seasonvar_button_height">64dp</dimen>
+
     <style name="Theme.SeasonvarTV" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#11151C</item>
-        <item name="android:colorAccent">#C2EC7B</item>
+        <item name="android:windowBackground">@color/seasonvar_background</item>
+        <item name="android:colorAccent">@color/seasonvar_accent</item>
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>

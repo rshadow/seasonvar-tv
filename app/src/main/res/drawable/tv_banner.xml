@@ -3,6 +3,6 @@
     android:height="180dp"
     android:viewportWidth="320"
     android:viewportHeight="180">
-    <path android:fillColor="#11151C" android:pathData="M0,0h320v180h-320z" />
-    <path android:fillColor="#C2EC7B" android:pathData="M135,45L210,90L135,135z" />
+    <path android:fillColor="@color/seasonvar_background" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="@color/seasonvar_accent" android:pathData="M135,45L210,90L135,135z" />
 </vector>

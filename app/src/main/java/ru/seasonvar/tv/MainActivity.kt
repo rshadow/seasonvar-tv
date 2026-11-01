@@ -24,11 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -36,7 +34,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.tv.material3.darkColorScheme
+import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,18 +54,15 @@ private fun SeasonvarApp() {
     var aboutVisible by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = aboutVisible) { aboutVisible = false }
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFFC2EC7B),
-            background = Color(0xFF11151C),
-            onBackground = Color(0xFFF2F4F7),
-        ),
-    ) {
+    SeasonvarTheme {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 64.dp, vertical = 48.dp),
+                .padding(
+                    horizontal = SeasonvarTheme.dimensions.screenPaddingHorizontal,
+                    vertical = SeasonvarTheme.dimensions.screenPaddingVertical,
+                ),
             verticalArrangement = Arrangement.Center,
         ) {
             if (aboutVisible) {
@@ -86,13 +81,13 @@ private fun MenuScreen(onAbout: () -> Unit) {
         style = MaterialTheme.typography.displayMedium,
         color = MaterialTheme.colorScheme.onBackground,
     )
-    Spacer(Modifier.height(40.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingSection))
     Text(
         text = stringResource(R.string.menu_title),
         style = MaterialTheme.typography.titleMedium,
-        color = Color(0xFFA5ADBA),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingMedium))
     InitialFocusButton(
         text = stringResource(R.string.about_title),
         onClick = onAbout,
@@ -106,31 +101,31 @@ private fun AboutScreen(onBack: () -> Unit) {
         style = MaterialTheme.typography.headlineLarge,
         color = MaterialTheme.colorScheme.onBackground,
     )
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingLarge))
     Text(
         text = stringResource(R.string.app_name),
         style = MaterialTheme.typography.titleLarge,
         color = MaterialTheme.colorScheme.onBackground,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingSmall))
     Text(
         text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
         style = MaterialTheme.typography.bodyLarge,
-        color = Color(0xFFA5ADBA),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingMedium))
     Text(
         text = stringResource(R.string.about_description),
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onBackground,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingSmall))
     Text(
         text = stringResource(R.string.about_source),
         style = MaterialTheme.typography.bodyMedium,
-        color = Color(0xFFA5ADBA),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingExtraLarge))
     InitialFocusButton(text = stringResource(R.string.back), onClick = onBack)
 }
 
@@ -138,6 +133,8 @@ private fun AboutScreen(onBack: () -> Unit) {
 private fun InitialFocusButton(text: String, onClick: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
+    val colors = MaterialTheme.colorScheme
+
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -149,13 +146,13 @@ private fun InitialFocusButton(text: String, onClick: () -> Unit) {
                     onClick()
                 }
             }
-            .width(320.dp)
-            .height(64.dp),
+            .width(SeasonvarTheme.dimensions.buttonWidth)
+            .height(SeasonvarTheme.dimensions.buttonHeight),
         colors = ButtonDefaults.colors(
-            containerColor = if (focused) Color(0xFFC2EC7B) else Color(0xFF262E3B),
-            contentColor = if (focused) Color(0xFF11151C) else Color(0xFFF2F4F7),
-            focusedContainerColor = Color(0xFFC2EC7B),
-            focusedContentColor = Color(0xFF11151C),
+            containerColor = if (focused) colors.primary else colors.surface,
+            contentColor = if (focused) colors.onPrimary else colors.onSurface,
+            focusedContainerColor = colors.primary,
+            focusedContentColor = colors.onPrimary,
         ),
     ) {
         Text(text = text, style = MaterialTheme.typography.titleMedium)
