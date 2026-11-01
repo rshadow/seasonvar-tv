@@ -28,9 +28,11 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -80,6 +82,7 @@ fun SeasonvarApp(
     val cards = remember { mutableMapOf<String, FocusRequester>() }
     val scope = rememberCoroutineScope()
     val backNavigation = remember { BackNavigation() }
+    val inputModeManager = LocalInputModeManager.current
     val selected = remember(state.entries, selectedKey) {
         state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
     }
@@ -102,6 +105,7 @@ fun SeasonvarApp(
             } else if (selected == null) {
                 if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
             } else {
+                inputModeManager.requestInputMode(InputMode.Keyboard)
                 val index = state.entries.indexOfFirst { it.key == selected.key }
                 if (listState.layoutInfo.visibleItemsInfo.none { it.key == selected.key }) {
                     listState.scrollToItem(index.coerceAtLeast(0))
@@ -126,10 +130,17 @@ fun SeasonvarApp(
         }
     }
 
+    fun closeDetails() {
+        detailsOpen = false
+        enterContent()
+    }
+
     fun navigateBack() {
         val exit = backNavigation.shouldExit(SystemClock.uptimeMillis())
         if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarInput", "back section=" + section + " exit=" + exit)
-        if (exit) onExit() else returnToMenu()
+        if (exit) onExit()
+        else if (detailsOpen) closeDetails()
+        else returnToMenu()
     }
 
     BackHandler { navigateBack() }
@@ -197,7 +208,12 @@ fun SeasonvarApp(
                         todayFocus, refreshFocus, retryFocus,
                         onRefresh = onRefresh,
                         onFocused = { selectedKey = it.key },
-                        onOpen = { backNavigation.reset(); selectedKey = it.key; detailsOpen = true },
+                        onOpen = {
+                            backNavigation.reset()
+                            inputModeManager.requestInputMode(InputMode.Keyboard)
+                            selectedKey = it.key
+                            detailsOpen = true
+                        },
                     )
                 }
             }
@@ -206,7 +222,7 @@ fun SeasonvarApp(
             SeriesDialog(
                 selected, description,
                 onRetry = { onSelect(selected, true) },
-                onClose = { backNavigation.reset(); returnToMenu() },
+                onClose = { backNavigation.reset(); closeDetails() },
                 onBack = ::navigateBack,
                 onInteraction = backNavigation::reset,
             )
