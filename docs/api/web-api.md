@@ -1,6 +1,6 @@
 # HTTP-интерфейсы сайта seasonvar.ru
 
-Контракты ниже восстановлены по открытым клиентам. Базовый адрес — `https://seasonvar.ru`. Агент не выполнял авторизованные запросы; живые ответы из его сети не получены. Пользователь открыл поисковый GET-запрос в браузере и прислал JSON с 14 результатами.
+Контракты ниже восстановлены по открытым клиентам. Базовый адрес — `https://seasonvar.ru`. Агент не выполнял авторизованные запросы. Главная и поисковый JSON получены из его сети анонимно через [локальный загрузчик с DPI-стратегией](access.md). Ранее пользователь также прислал поисковый JSON с 14 результатами из браузера.
 
 Главные источники: [Go-адаптер](https://github.com/0x3654/lampa-plugins/blob/71e97be0264ef1c69acaf227707b651750d0b64b/tracker-top/seasonvar.go), [Kotlin-клиент](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/java/ru/seasonvar/tv/data/api/SeasonvarApi.kt), [Kotlin-парсер](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/java/ru/seasonvar/tv/data/api/SeasonvarParser.kt). Остальные ссылки — в [sources.md](sources.md).
 
@@ -91,7 +91,7 @@ curl --get 'https://seasonvar.ru/autocomplete.php' \
 
 ### Главная
 
-`GET /` возвращает HTML. Kotlin-парсер читает:
+`GET /` возвращает HTML. 2026-11-01 загрузчик получил HTTP 200 и восемь блоков `div.news` с датами от 01.11.2026 до 25.10.2026; заголовки дат имеют формат `dd.MM.yyyy`. Полный контракт карточек ещё сверяется. Kotlin-парсер читает:
 
 | Данные | Селектор / атрибут |
 | --- | --- |

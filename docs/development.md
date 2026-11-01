@@ -107,6 +107,10 @@ make layout
 make screenshot OUT=/path/to/menu.png
 ~~~
 
+## Получение страниц сайта
+
+`make site-fetch` сохраняет публичную главную Seasonvar в `build/site/index.html` с использованием проверенной DPI-стратегии и Quad9 DoH. Параметры, поиск и результаты проверки — в [docs/api/access.md](api/access.md). Проверки загрузчика запускаются через `make site-test` и входят в `make test` и `make check`.
+
 ## Физическая приставка
 
 Подключить устройство к ADB и найти его серийный идентификатор через `make devices`. Затем использовать `make run DEVICE=SERIAL`, заменив `SERIAL` значением из списка. IP приставки в проекте не закрепляется.

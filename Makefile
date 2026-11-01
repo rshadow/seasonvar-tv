@@ -11,8 +11,14 @@ DEVICE ?= emulator-5554
 APP_ID := ru.seasonvar.tv
 APK := app/build/outputs/apk/debug/app-debug.apk
 ADB := $(ENV) adb -s "$(DEVICE)"
+SITE_URL ?= https://seasonvar.ru/
+SITE_OUT ?= build/site/index.html
+SITE_STRATEGY ?= default
+SITE_SOURCE_IP ?=
+SITE_IP ?=
+SITE_TIMEOUT ?= 10
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run logs debug attach key tap screenshot layout
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run logs debug attach key tap screenshot layout site-fetch site-test
 
 help:
 	@printf '%s\n' \
@@ -35,7 +41,9 @@ help:
 		'make tap X=400 Y=670        Tap a point in device pixels' \
 		'make layout                 Dump the current UI hierarchy' \
 		'make screenshot OUT=file    Save the current screen' \
-		'make devices                List connected devices'
+		'make devices                List connected devices' \
+		'make site-fetch             Fetch public Seasonvar HTML/JSON with DPI strategy' \
+		'make site-test              Test the standalone website fetcher'
 
 bootstrap:
 	python3 scripts/bootstrap.py --cache-dir "$(BOOTSTRAP_CACHE)"
@@ -55,13 +63,13 @@ deps:
 build:
 	$(GRADLE) :app:assembleDebug
 
-test:
+test: site-test
 	$(GRADLE) :app:testDebugUnitTest
 
 lint:
 	$(GRADLE) :app:lintDebug
 
-check:
+check: site-test
 	$(GRADLE) :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 
 clean:
@@ -131,3 +139,11 @@ screenshot:
 layout:
 	$(ADB) shell uiautomator dump /data/local/tmp/seasonvar-ui.xml > /dev/null
 	$(ADB) shell cat /data/local/tmp/seasonvar-ui.xml
+
+site-fetch:
+	python3 scripts/fetch-seasonvar.py --url "$(SITE_URL)" --output "$(SITE_OUT)" \
+		--strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)" \
+		$(if $(SITE_SOURCE_IP),--source-ip "$(SITE_SOURCE_IP)") $(if $(SITE_IP),--ip "$(SITE_IP)")
+
+site-test:
+	python3 -m unittest discover -s tests -p 'test_fetch_seasonvar.py' -v
