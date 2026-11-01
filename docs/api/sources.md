@@ -1,0 +1,110 @@
+# Источники и проверка
+
+Дата исследования: **2026-11-01**. Источники ниже прочитаны напрямую через GitHub или npm registry. Контракты восстановлены по исходникам; официальный опубликованный OpenAPI/Swagger документ не найден.
+
+## 1. Старый API с ключом
+
+### npm seasonvar-api@1.0.10
+
+- [Метаданные конкретной версии](https://registry.npmjs.org/seasonvar-api/1.0.10).
+- [Опубликованный архив](https://registry.npmjs.org/seasonvar-api/-/seasonvar-api-1.0.10.tgz).
+- Изучен `package/index.js`: POST-обёртка и семь команд; код пакета не выполнялся.
+- SHA-1 архива: `ace97cfda2d968827afd6e1799787c424e5ef72b`. Контрольная сумма скачанных байтов совпала с `dist.shasum` registry.
+- Registry указывает репозиторий `wormen/seasonvar-api`; запрос дерева через GitHub API вернул 404. Исходником для документации служит опубликованный npm-архив.
+- Пакет относится к 2016 году; его наличие в registry не доказывает текущую работу API.
+
+### Ruby-клиент avsej/seasonvar.rb
+
+- [lib/seasonvar/client.rb](https://github.com/avsej/seasonvar.rb/blob/35f5495c817892b707d3ed513e0ea72dbbd7107d/lib/seasonvar/client.rb).
+- Commit: `35f5495c817892b707d3ed513e0ea72dbbd7107d`.
+- Независимо подтверждает адрес, POST, имена команд и основные параметры.
+- Не используется как доказательство правильной сериализации вложенных параметров: их кодирование нужно проверить отдельно.
+
+## 2. Протокол аккаунта и HTML сайта
+
+### 0x3654/lampa-plugins
+
+- Commit: `71e97be0264ef1c69acaf227707b651750d0b64b`.
+- Дата commit: `2026-10-25T20:44:59Z`.
+- [tracker-top/seasonvar.go](https://github.com/0x3654/lampa-plugins/blob/71e97be0264ef1c69acaf227707b651750d0b64b/tracker-top/seasonvar.go).
+
+Изучены исходящие запросы к Seasonvar: логин, `svid1`, поиск, подборки, `/resume`, страницы сезонов и `jsonMark.php`. Собственные маршруты прокси `/seasonvar/*` не являются API исходного сайта. Код не запускался, аккаунт этому сервису не передавался.
+
+### Zhmot666/SeasonvarTV
+
+- Commit: `f79d2f379a3504d5de9668f3d16feef58de5a33f`.
+- Дата commit: `2026-03-21T17:47:43Z`.
+- [Описание Android TV-клиента](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/README_ANDROID.md).
+- [SeasonvarApi.kt](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/java/ru/seasonvar/tv/data/api/SeasonvarApi.kt).
+- [SeasonvarParser.kt](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/java/ru/seasonvar/tv/data/api/SeasonvarParser.kt).
+- [SeasonvarRepository.kt](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/java/ru/seasonvar/tv/data/repository/SeasonvarRepository.kt).
+- [PlayerActivity.kt](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/java/ru/seasonvar/tv/player/PlayerActivity.kt).
+- [AndroidManifest.xml](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/src/main/AndroidManifest.xml).
+- [app/build.gradle.kts](https://github.com/Zhmot666/SeasonvarTV/blob/f79d2f379a3504d5de9668f3d16feef58de5a33f/app/build.gradle.kts).
+
+Исходники подтверждают предназначение для ТВ: Leanback, управление пультом, горизонтальные Activity, отсутствие требования touchscreen. В конфигурации `minSdk=21`. Авторизация и личные разделы реализованы через сайт. Плеер — WebView, а не нативный ExoPlayer/Media3. Сборка, установка, пригодность UX и воспроизведение в этом исследовании не проверялись.
+
+## 3. Старое получение плейлистов
+
+### weirdgiraffe/plugin.video.giraffe.seasonvar
+
+- Commit: `a81ce38c88df7ced1d72effbe513b9307d315390`.
+- Дата commit: `2024-06-05T12:47:35Z`. Это дата выбранного commit репозитория, не подтверждение обновления самого протокола в 2024 году.
+- [requester.py](https://github.com/weirdgiraffe/plugin.video.giraffe.seasonvar/blob/a81ce38c88df7ced1d72effbe513b9307d315390/resources/site-packages/seasonvar/requester.py).
+- [parser.py](https://github.com/weirdgiraffe/plugin.video.giraffe.seasonvar/blob/a81ce38c88df7ced1d72effbe513b9307d315390/resources/site-packages/seasonvar/parser.py).
+- [playlist.json — старая фикстура](https://github.com/weirdgiraffe/plugin.video.giraffe.seasonvar/blob/a81ce38c88df7ced1d72effbe513b9307d315390/resources/site-packages/seasonvar/tests/assets/playlist.json).
+
+Подтверждает старую цепочку `data4play → player.php → pl → JSON с file`. URL из фикстур не переносились в примеры как действующие.
+
+### AlexanderC/seasonvar-api
+
+- Commit: `df12e7b909be2ea957710619ef3f3ccb01c4735a`.
+- Дата commit: `2018-04-15T21:12:01Z`.
+- [lib/playlist.js](https://github.com/AlexanderC/seasonvar-api/blob/df12e7b909be2ea957710619ef3f3ccb01c4735a/lib/playlist.js).
+- [lib/secure-mark.js](https://github.com/AlexanderC/seasonvar-api/blob/df12e7b909be2ea957710619ef3f3ccb01c4735a/lib/secure-mark.js).
+
+Это другой пакет/проект, не `seasonvar-api@1.0.10` от Oleg Bogdanov. Он парсит сайт без API-ключа. Старое конструирование `playls2/…/list.xml` и изменение security mark не рекомендованы как современный контракт без проверки.
+
+## 4. Проверка сети и Quad9
+
+Все обращения выполнялись без учётных данных. Проверка TLS не отключалась. Системные DNS-настройки не менялись.
+
+| Проверка | Наблюдение |
+| --- | --- |
+| Системный resolver: `api.seasonvar.ru` | Ошибка разрешения имени |
+| HTTPS `seasonvar.ru/` и `/?mod=api` | Ошибка проверки самоподписанного сертификата |
+| HTTP `seasonvar.ru/?mod=api` с редиректами | HTTP 200 у конечной страницы `https://m.megafonpro.ru/rkn-landing/sales-communication`; это не ответ Seasonvar |
+| Quad9 `9.9.9.9`, обычный DNS | `api.seasonvar.ru`: `NXDOMAIN`; основной домен: A-записи |
+| Quad9 DoH, TLS-проверка включена | Те же результаты; подключение к `dns.quad9.net` закреплено на `9.9.9.9` |
+| HTTPS с `curl --resolve` по адресам из Quad9 | Тайм-ауты либо ошибка сертификата; страница API не получена |
+
+DoH-запрос использовал `https://dns.quad9.net/dns-query`, формат `application/dns-message` и базовую bootstrap-запись `dns.quad9.net:443:9.9.9.9`. Это исключает зависимость данного запроса от системного разрешения имени DoH-сервера. Причину ответа `NXDOMAIN` он сам по себе не устанавливает.
+
+Адреса, полученные от Quad9 2026-11-01, приведены для воспроизводимости диагностики, не для постоянного хардкода:
+
+| IP seasonvar.ru | Результат HTTPS `/?mod=api` |
+| --- | --- |
+| `89.124.99.46` | TLS-тайм-аут |
+| `185.154.14.179` | Ошибка самоподписанного сертификата |
+| `91.198.166.23` | Ошибка самоподписанного сертификата |
+| `46.30.41.42` | TLS-тайм-аут |
+| `195.63.143.40` | Тайм-аут подключения |
+
+Вывод ограничен нашей сетью и временем проверки: Quad9 не обеспечил доступ. Из этого нельзя заключать, что основной сайт недоступен у пользователя или что старый API окончательно закрыт.
+
+## 5. Ответ поиска, полученный пользователем
+
+2026-11-01 пользователь открыл в браузере `GET /autocomplete.php?query=Игра%20престолов` и передал полный JSON в чат. Ответ сохранён в [examples/autocomplete-game-of-thrones.json](examples/autocomplete-game-of-thrones.json), Unicode-экранирование декодировано для чтения. Cookie, пароли и персональные данные в нём отсутствуют.
+
+Наблюдения: `query` — строка; `suggestions.valu`, `suggestions.kp`, `data`, `id` — массивы строк длиной 14; ID относятся к отдельным сезонам/страницам, а названия и рейтинги могут содержать HTML. Это пользовательская проверка поиска, не доказательство доступности из сети агента, анонимности браузера, работы логина или видеоплеера.
+
+## 6. Что ещё проверить
+
+1. Поиск: пользователь уже прислал реальный JSON, сохранённый в [примере](examples/autocomplete-game-of-thrones.json). Дальше проверить пустой запрос, отсутствие результатов, ошибки и поведение без cookie.
+2. Проверить выдачу и истечение сессии своего аккаунта, пустые личные списки и ошибку пароля.
+3. Проверить HTML страницы сезона и текущий вариант плейлиста.
+4. Установить, доступен ли прямой видеопоток для нативного плеера; проверить озвучки, качество и права аккаунта.
+5. С разрешённой тестовой отметкой подтвердить поля `jsonMark.php`, ответ и повторное чтение прогресса.
+6. Если `/?mod=api` доступна после входа, уточнить действующий адрес, условия API-ключа и официальные схемы.
+
+Реальные пароли, API-ключи, cookie и подписанные видеоссылки в документацию и примеры не включать. Для будущих локальных скриптов источник секретов — только `~/secrets.env`; значения не выводить.
