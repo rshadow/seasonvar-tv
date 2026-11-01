@@ -388,6 +388,7 @@ private fun CatalogPane(
                     SeriesThumbnail(
                         item, requester, refreshFocus,
                         if (index == 0) menuFocus else null,
+                        right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
                         onFocused = { onFocused(item) }, onClick = { onOpen(item) },
                     )
                 }
@@ -431,6 +432,7 @@ private fun SeriesThumbnail(
     requester: FocusRequester,
     up: FocusRequester,
     left: FocusRequester?,
+    right: FocusRequester,
     onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -440,7 +442,11 @@ private fun SeriesThumbnail(
     val shape = RoundedCornerShape(d.cardCornerRadius)
     Column(
         Modifier.width(d.cardWidth).focusRequester(requester)
-            .focusProperties { this.up = up; if (left != null) this.left = left }
+            .focusProperties {
+                this.up = up
+                this.right = right
+                if (left != null) this.left = left
+            }
             .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused() }
             .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, shape)
             .background(c.surface, shape)
