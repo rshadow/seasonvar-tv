@@ -93,7 +93,7 @@ class SeasonvarParserTest {
         val dir = folder.newFolder()
         val file = File(dir, "today.html").apply { writeText(page) }
         file.setLastModified(day.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli())
-        val repo = TodayRepository(dir, object : HtmlSource {
+        val repo = CatalogRepository(dir, object : HtmlSource {
             override suspend fun get(url: String): String = throw IOException("offline")
         }, ZoneOffset.UTC)
         assertEquals(1, repo.cached(day)?.entries?.size)
@@ -103,7 +103,7 @@ class SeasonvarParserTest {
     @Test fun broken_network_response_does_not_replace_valid_cache() = runBlocking {
         val dir = folder.newFolder()
         val file = File(dir, "today.html").apply { writeText(page) }
-        val repo = TodayRepository(dir, object : HtmlSource {
+        val repo = CatalogRepository(dir, object : HtmlSource {
             override suspend fun get(url: String) = "<h1>Blocked</h1>"
         })
         try { repo.load(day); fail("Expected a contract error") }

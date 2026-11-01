@@ -45,24 +45,26 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
-import ru.seasonvar.tv.data.TodayEntry
+import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.navigation.BackNavigation
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
-import ru.seasonvar.tv.ui.today.DescriptionState
-import ru.seasonvar.tv.ui.today.LoadFailure
-import ru.seasonvar.tv.ui.today.TodayUiState
+import ru.seasonvar.tv.ui.catalog.DescriptionState
+import ru.seasonvar.tv.ui.catalog.LoadFailure
+import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import java.time.format.DateTimeFormatter
 
-private enum class Section { TODAY, SETTINGS, ABOUT }
+private enum class Section { TODAY, UPDATES, SETTINGS, ABOUT }
 
 @Composable
 fun SeasonvarApp(
-    state: TodayUiState,
-    description: DescriptionState,
-    onRefresh: () -> Unit,
-    onSelect: (TodayEntry, Boolean) -> Unit,
+    states: Map<PublicFeed, CatalogUiState>,
+    descriptions: Map<PublicFeed, DescriptionState>,
+    onRefresh: (PublicFeed) -> Unit,
+    onSelect: (PublicFeed, SeriesEntry, Boolean) -> Unit,
+    onFeedVisible: (PublicFeed) -> Unit = {},
     bypassEnabled: Boolean = true,
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
@@ -70,10 +72,17 @@ fun SeasonvarApp(
     onExit: () -> Unit = {},
 ) {
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
-    var selectedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var activeFeed by rememberSaveable { mutableStateOf(PublicFeed.TODAY) }
+    var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
+    val state = states.getValue(activeFeed)
+    val description = descriptions.getValue(activeFeed)
+    val selectedKey = selectedKeys[activeFeed.name]
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    val todayListState = rememberLazyListState()
+    val updatesListState = rememberLazyListState()
+    val listState = if (activeFeed == PublicFeed.TODAY) todayListState else updatesListState
     val todayFocus = remember { FocusRequester() }
+    val updatesFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val toggleFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
@@ -86,11 +95,33 @@ fun SeasonvarApp(
     val selected = remember(state.entries, selectedKey) {
         state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
     }
-    LaunchedEffect(state.entries) {
-        if (selectedKey != null && state.entries.none { it.key == selectedKey }) detailsOpen = false
-        if (state.entries.none { it.key == selectedKey }) selectedKey = selected?.key
+    val latestSelected by rememberUpdatedState(selected)
+    val latestState by rememberUpdatedState(state)
+    val latestListState by rememberUpdatedState(listState)
+
+    fun selectEntry(key: String?) {
+        selectedKeys = if (key == null) selectedKeys - activeFeed.name
+            else selectedKeys + (activeFeed.name to key)
     }
-    LaunchedEffect(selected?.key) { selected?.let { onSelect(it, false) } }
+
+    fun selectSection(item: Section) {
+        section = item
+        val feed = when (item) {
+            Section.TODAY -> PublicFeed.TODAY
+            Section.UPDATES -> PublicFeed.UPDATES
+            else -> null
+        }
+        if (feed != null) {
+            activeFeed = feed
+            onFeedVisible(feed)
+        }
+    }
+
+    LaunchedEffect(activeFeed, state.entries) {
+        if (selectedKey != null && state.entries.none { it.key == selectedKey }) detailsOpen = false
+        if (state.entries.none { it.key == selectedKey }) selectEntry(selected?.key)
+    }
+    LaunchedEffect(activeFeed, selected?.key) { selected?.let { onSelect(activeFeed, it, false) } }
     LaunchedEffect(Unit) { todayFocus.requestFocus() }
 
     fun enterContent() {
@@ -98,6 +129,9 @@ fun SeasonvarApp(
         scope.launch {
             repeat(2) { withFrameNanos { } }
             if (section != requestedSection) return@launch
+            val selected = latestSelected
+            val state = latestState
+            val listState = latestListState
             if (section == Section.SETTINGS) {
                 toggleFocus.requestFocus()
             } else if (section == Section.ABOUT) {
@@ -110,6 +144,7 @@ fun SeasonvarApp(
                 if (listState.layoutInfo.visibleItemsInfo.none { it.key == selected.key }) {
                     listState.scrollToItem(index.coerceAtLeast(0))
                     repeat(2) { withFrameNanos { } }
+                    if (section != requestedSection) return@launch
                 }
                 cards[selected.key]?.requestFocus()
             }
@@ -124,6 +159,7 @@ fun SeasonvarApp(
             if (section != requestedSection) return@launch
             when (section) {
                 Section.TODAY -> todayFocus.requestFocus()
+                Section.UPDATES -> updatesFocus.requestFocus()
                 Section.SETTINGS -> settingsFocus.requestFocus()
                 Section.ABOUT -> aboutFocus.requestFocus()
             }
@@ -157,26 +193,28 @@ fun SeasonvarApp(
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.height(d.spacingSection))
-                listOf(Section.TODAY, Section.SETTINGS, Section.ABOUT).forEach { item ->
+                listOf(Section.TODAY, Section.UPDATES, Section.SETTINGS, Section.ABOUT).forEach { item ->
                     val focus = when (item) {
                         Section.TODAY -> todayFocus
+                        Section.UPDATES -> updatesFocus
                         Section.SETTINGS -> settingsFocus
                         Section.ABOUT -> aboutFocus
                     }
                     val label = when (item) {
                         Section.TODAY -> R.string.today_title
+                        Section.UPDATES -> R.string.updates_title
                         Section.SETTINGS -> R.string.settings_title
                         Section.ABOUT -> R.string.about_title
                     }
                     ThemeButton(
                         stringResource(label),
-                        onClick = { backNavigation.reset(); section = item; enterContent() },
+                        onClick = { backNavigation.reset(); selectSection(item); enterContent() },
                         modifier = Modifier.fillMaxWidth().height(d.navigationButtonHeight)
                             .focusRequester(focus)
-                            .onFocusChanged { if (it.isFocused) section = item }
+                            .onFocusChanged { if (it.isFocused) selectSection(item) }
                             .onPreviewKeyEvent {
                                 if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                    section = item
+                                    selectSection(item)
                                     enterContent()
                                     true
                                 } else false
@@ -203,15 +241,15 @@ fun SeasonvarApp(
                 } else if (section == Section.ABOUT) {
                     AboutPane()
                 } else {
-                    TodayPane(
-                        state, description, selected, listState, cards,
-                        todayFocus, refreshFocus, retryFocus,
-                        onRefresh = onRefresh,
-                        onFocused = { selectedKey = it.key },
+                    CatalogPane(
+                        state, description, selected, listState, cards, activeFeed,
+                        if (activeFeed == PublicFeed.TODAY) todayFocus else updatesFocus, refreshFocus, retryFocus,
+                        onRefresh = { onRefresh(activeFeed) },
+                        onFocused = { selectEntry(it.key) },
                         onOpen = {
                             backNavigation.reset()
                             inputModeManager.requestInputMode(InputMode.Keyboard)
-                            selectedKey = it.key
+                            selectEntry(it.key)
                             detailsOpen = true
                         },
                     )
@@ -221,7 +259,7 @@ fun SeasonvarApp(
         if (detailsOpen && selected != null) {
             SeriesDialog(
                 selected, description,
-                onRetry = { onSelect(selected, true) },
+                onRetry = { onSelect(activeFeed, selected, true) },
                 onClose = { backNavigation.reset(); closeDetails() },
                 onBack = ::navigateBack,
                 onInteraction = backNavigation::reset,
@@ -254,29 +292,36 @@ private fun ThemeButton(
 }
 
 @Composable
-private fun TodayPane(
-    state: TodayUiState,
+private fun CatalogPane(
+    state: CatalogUiState,
     description: DescriptionState,
-    selected: TodayEntry?,
+    selected: SeriesEntry?,
     listState: LazyListState,
     cards: MutableMap<String, FocusRequester>,
-    todayFocus: FocusRequester,
+    feed: PublicFeed,
+    menuFocus: FocusRequester,
     refreshFocus: FocusRequester,
     retryFocus: FocusRequester,
     onRefresh: () -> Unit,
-    onFocused: (TodayEntry) -> Unit,
-    onOpen: (TodayEntry) -> Unit,
+    onFocused: (SeriesEntry) -> Unit,
+    onOpen: (SeriesEntry) -> Unit,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    val isToday = feed == PublicFeed.TODAY
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.today_title), style = MaterialTheme.typography.headlineSmall,
+                Text(stringResource(if (isToday) R.string.today_title else R.string.updates_title), style = MaterialTheme.typography.headlineSmall,
                     color = c.onBackground)
                 Text(
-                    if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date,
+                    if (isToday) {
+                        if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
+                    } else {
+                        if (state.loaded) stringResource(R.string.updates_count, state.entries.size)
+                        else stringResource(R.string.updates_hint)
+                    },
                     style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
                 )
             }
@@ -293,11 +338,11 @@ private fun TodayPane(
                 verticalArrangement = Arrangement.Center,
             ) {
                 val message = when {
-                    state.loading -> R.string.today_loading
+                    state.loading -> if (isToday) R.string.today_loading else R.string.updates_loading
                     state.failure == LoadFailure.MARKUP -> R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
-                    else -> R.string.today_empty
+                    else -> if (isToday) R.string.today_empty else R.string.updates_empty
                 }
                 Text(stringResource(message), style = MaterialTheme.typography.titleLarge,
                     color = c.onBackground)
@@ -319,8 +364,10 @@ private fun TodayPane(
         } else {
             if (state.failure != null || state.cached || state.loading) {
                 Text(
-                    stringResource(if (state.failure != null) R.string.today_cached_error
-                        else if (state.loading) R.string.today_updating else R.string.today_cached),
+                    stringResource(if (state.failure != null) {
+                        if (isToday) R.string.today_cached_error else R.string.updates_cached_error
+                    } else if (state.loading) R.string.today_updating
+                    else if (isToday) R.string.today_cached else R.string.updates_cached),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -335,12 +382,12 @@ private fun TodayPane(
                 itemsIndexed(
                     state.entries,
                     key = { _, item -> item.key },
-                    contentType = { _, _ -> "today-series" },
+                    contentType = { _, _ -> "series" },
                 ) { index, item ->
                     val requester = cards.getOrPut(item.key) { FocusRequester() }
                     SeriesThumbnail(
                         item, requester, refreshFocus,
-                        if (index == 0) todayFocus else null,
+                        if (index == 0) menuFocus else null,
                         onFocused = { onFocused(item) }, onClick = { onOpen(item) },
                     )
                 }
@@ -350,7 +397,7 @@ private fun TodayPane(
 }
 
 @Composable
-private fun SelectedPanel(entry: TodayEntry, description: DescriptionState, modifier: Modifier) {
+private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, modifier: Modifier) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
@@ -380,7 +427,7 @@ private fun SelectedPanel(entry: TodayEntry, description: DescriptionState, modi
 
 @Composable
 private fun SeriesThumbnail(
-    entry: TodayEntry,
+    entry: SeriesEntry,
     requester: FocusRequester,
     up: FocusRequester,
     left: FocusRequester?,
@@ -410,7 +457,7 @@ private fun SeriesThumbnail(
 }
 
 @Composable
-private fun Poster(entry: TodayEntry, modifier: Modifier) {
+private fun Poster(entry: SeriesEntry, modifier: Modifier) {
     val placeholder = painterResource(R.drawable.poster_placeholder)
     AsyncImage(
         model = entry.posterUrl,
@@ -423,7 +470,7 @@ private fun Poster(entry: TodayEntry, modifier: Modifier) {
 
 @Composable
 private fun SeriesDialog(
-    entry: TodayEntry,
+    entry: SeriesEntry,
     description: DescriptionState,
     onRetry: () -> Unit,
     onClose: () -> Unit,
@@ -659,6 +706,10 @@ private fun AboutPane() {
 
 @Preview(device = "spec:width=960dp,height=540dp,dpi=320", showBackground = true)
 @Composable
-private fun TodayPreview() {
-    SeasonvarApp(TodayUiState(), DescriptionState(), {}, { _, _ -> })
+private fun CatalogPreview() {
+    SeasonvarApp(
+        PublicFeed.entries.associateWith { CatalogUiState() },
+        PublicFeed.entries.associateWith { DescriptionState() },
+        {}, { _, _, _ -> },
+    )
 }

@@ -21,8 +21,9 @@ SITE_SOURCE_IP ?=
 SITE_IP ?=
 SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
+SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts
 
 help:
 	@printf '%s\n' \
@@ -50,7 +51,8 @@ help:
 		'make devices                List connected devices' \
 		'make site-fetch             Fetch public Seasonvar HTML/JSON with DPI strategy' \
 		'make site-test              Test the standalone website fetcher' \
-		'make site-styles            Download original website CSS for theme reference'
+		'make site-styles            Download original website CSS for theme reference' \
+		'make site-scripts           Download website JavaScript for protocol research'
 
 bootstrap:
 	python3 scripts/bootstrap.py --cache-dir "$(BOOTSTRAP_CACHE)"
@@ -169,3 +171,8 @@ site-styles:
 		'https://cdn.svstat.net/asset/css/main.css?$(SITE_STYLE_VERSION)' -o build/site/main.css
 	curl --fail --silent --show-error --location --max-time 20 \
 		'https://cdn.svstat.net/asset/css/pg.index.css?$(SITE_STYLE_VERSION)' -o build/site/pg.index.css
+
+site-scripts:
+	mkdir -p build/site
+	curl --fail --silent --show-error --location --max-time 20 \
+		'https://cdn.svstat.net/asset/js/main.min.js?$(SITE_SCRIPT_VERSION)' -o build/site/main.js

@@ -6,6 +6,13 @@
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
     <string name="today_title">Сегодня</string>
+    <string name="updates_title">Обновления</string>
+    <string name="updates_hint">Последние обновления сайта</string>
+    <string name="updates_count">Последние серии · обновлений: %1$d</string>
+    <string name="updates_loading">Загружаем обновления…</string>
+    <string name="updates_empty">Обновлений пока нет</string>
+    <string name="updates_cached">Сохранённый список обновлений</string>
+    <string name="updates_cached_error">Не удалось обновить. Показан сохранённый список обновлений.</string>
     <string name="today_date_count">%1$s · обновлений: %2$d</string>
     <string name="refresh">Обновить</string>
     <string name="retry">Повторить</string>

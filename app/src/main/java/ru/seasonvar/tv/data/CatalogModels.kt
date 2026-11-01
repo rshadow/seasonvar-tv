@@ -2,7 +2,9 @@ package ru.seasonvar.tv.data
 
 import java.time.LocalDate
 
-data class TodayEntry(
+enum class PublicFeed { TODAY, UPDATES }
+
+data class SeriesEntry(
     val id: String,
     val url: String,
     val title: String,
@@ -13,7 +15,7 @@ data class TodayEntry(
     val key: String get() = url + "|" + update
 }
 
-data class TodayPage(val date: LocalDate, val entries: List<TodayEntry>)
+data class CatalogPage(val date: LocalDate, val entries: List<SeriesEntry>)
 data class SeriesDescription(val paragraphs: List<String>)
 
 class MarkupChangedException : Exception("Unexpected Seasonvar markup")

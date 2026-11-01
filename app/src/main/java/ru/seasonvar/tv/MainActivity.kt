@@ -10,12 +10,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.navigation.traceBackKey
-import ru.seasonvar.tv.ui.today.TodayViewModel
+import ru.seasonvar.tv.ui.catalog.CatalogViewModel
 
 class MainActivity : ComponentActivity() {
-    private lateinit var model: TodayViewModel
+    private lateinit var models: Map<PublicFeed, CatalogViewModel>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,24 +28,33 @@ class MainActivity : ComponentActivity() {
         }
         val container = application as SeasonvarApplication
         val repository = container.repository
-        model = ViewModelProvider(this, TodayViewModel.Factory(repository))[TodayViewModel::class.java]
+        models = PublicFeed.entries.associateWith { feed ->
+            ViewModelProvider(this, CatalogViewModel.Factory(repository, feed))
+                .get("catalog-" + feed.name, CatalogViewModel::class.java)
+        }
         setContent {
-            val state by model.state.collectAsStateWithLifecycle()
-            val description by model.description.collectAsStateWithLifecycle()
+            val today by models.getValue(PublicFeed.TODAY).state.collectAsStateWithLifecycle()
+            val updates by models.getValue(PublicFeed.UPDATES).state.collectAsStateWithLifecycle()
+            val todayDescription by models.getValue(PublicFeed.TODAY).description.collectAsStateWithLifecycle()
+            val updatesDescription by models.getValue(PublicFeed.UPDATES).description.collectAsStateWithLifecycle()
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             SeasonvarApp(
-                state, description, model::refresh, model::select,
+                states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates),
+                descriptions = mapOf(PublicFeed.TODAY to todayDescription, PublicFeed.UPDATES to updatesDescription),
+                onRefresh = { feed -> models.getValue(feed).refresh() },
+                onSelect = { feed, entry, retry -> models.getValue(feed).select(entry, retry) },
+                onFeedVisible = { feed -> models.getValue(feed).activate() },
                 bypassEnabled = network.bypassEnabled,
                 onBypassChange = { enabled ->
                     container.networkSettings.setBypassEnabled(enabled)
-                    model.networkChanged()
+                    models.values.forEach { it.networkChanged() }
                 },
                 onExit = ::finishAndRemoveTask,
                 dnsProvider = network.dnsProvider,
                 onDnsChange = { provider ->
                     if (provider != network.dnsProvider) {
                         container.networkSettings.setDnsProvider(provider)
-                        model.networkChanged()
+                        models.values.forEach { it.networkChanged() }
                     }
                 },
             )
@@ -68,6 +78,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        model.refreshIfDateChanged()
+        models.values.forEach { it.refreshIfDateChanged() }
     }
 }

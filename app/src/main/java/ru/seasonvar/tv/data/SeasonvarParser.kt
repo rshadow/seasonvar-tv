@@ -13,11 +13,11 @@ object SeasonvarParser {
     private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.uuuu")
         .withResolverStyle(ResolverStyle.STRICT)
 
-    fun today(html: String, day: LocalDate): TodayPage {
+    fun today(html: String, day: LocalDate): CatalogPage {
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         val blocks = doc.select("div.news")
         if (blocks.isEmpty()) throw MarkupChangedException()
-        val entries = mutableListOf<TodayEntry>()
+        val entries = mutableListOf<SeriesEntry>()
         for (block in blocks) {
             val header = block.selectFirst("div.news-head")?.text()
                 ?: throw MarkupChangedException()
@@ -38,7 +38,7 @@ object SeasonvarParser {
                     throw MarkupChangedException()
                 }
                 val season = seasonPattern.find(info.ownText())?.groupValues?.get(1)?.toIntOrNull()
-                entries += TodayEntry(
+                entries += SeriesEntry(
                     id = id,
                     url = url,
                     title = title,
@@ -48,10 +48,35 @@ object SeasonvarParser {
                 )
             }
         }
-        return TodayPage(day, entries.distinctBy { it.key })
+        return CatalogPage(day, entries.distinctBy { it.key })
     }
 
-    fun description(html: String, entry: TodayEntry): SeriesDescription {
+    fun updates(html: String, day: LocalDate): CatalogPage {
+        val doc = Jsoup.parse(html, "https://seasonvar.ru/")
+        val block = doc.selectFirst("li[data-tabr=rside-new][data-tabgr=rightside]")
+            ?: throw MarkupChangedException()
+        val anchors = block.select("a.pst.rside-p[href]")
+        if (anchors.isEmpty() && (block.children().isNotEmpty() || block.text().isNotBlank())) {
+            throw MarkupChangedException()
+        }
+        val entries = anchors.map { anchor ->
+            val url = pageUrl(anchor.attr("href")) ?: throw MarkupChangedException()
+            val id = Regex("/serial-(\\d+)").find(URI(url).path)?.groupValues?.get(1)
+                ?: throw MarkupChangedException()
+            val title = anchor.selectFirst(".rside-t")?.text().orEmpty()
+            val original = anchor.selectFirst(".rside-t_en")?.text().orEmpty()
+            val info = anchor.selectFirst(".rside-ss") ?: throw MarkupChangedException()
+            val update = info.select("span").joinToString("; ") { it.text() }
+            if (title.isBlank() || update.isBlank()) throw MarkupChangedException()
+            val season = Regex("Сезон\\s+(\\d+)", RegexOption.IGNORE_CASE)
+                .find(info.ownText())?.groupValues?.get(1)?.toIntOrNull()
+            SeriesEntry(id, url, listOf(title, original).filter { it.isNotBlank() }.joinToString(" / "),
+                season, update, "https://cdn.svstat.net/oblojka/" + id + ".jpg")
+        }
+        return CatalogPage(day, entries.distinctBy { it.key })
+    }
+
+    fun description(html: String, entry: SeriesEntry): SeriesDescription {
         val doc = Jsoup.parse(html, entry.url)
         val info = doc.selectFirst(".pgs-sinfo[data-id-season]")
             ?: throw MarkupChangedException()
