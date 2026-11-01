@@ -1,0 +1,133 @@
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
+.DEFAULT_GOAL := help
+
+BOOTSTRAP_CACHE ?= $(HOME)/.cache/seasonvar/downloads
+ENV := ./scripts/android-env.sh
+GRADLE_ARGS ?=
+GRADLE := $(ENV) ./gradlew --console=plain $(GRADLE_ARGS)
+AVD ?= Seasonvar_TV_API_34
+DEVICE ?= emulator-5554
+APP_ID := ru.seasonvar.tv
+APK := app/build/outputs/apk/debug/app-debug.apk
+ADB := $(ENV) adb -s "$(DEVICE)"
+
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run logs debug attach key tap screenshot layout
+
+help:
+	@printf '%s\n' \
+		'make bootstrap              Install the pinned JDK and SDK locally' \
+		'make licenses               Review Android SDK licenses' \
+		'make doctor                 Check local tools and versions' \
+		'make deps                   Download build dependencies' \
+		'make build                  Build the debug APK' \
+		'make test                   Run the unit-test task' \
+		'make lint                   Run Android Lint' \
+		'make check                  Build, run unit tests and Android Lint' \
+		'make avd                    Create the local Android TV emulator' \
+		'make emulator               Start the local emulator window' \
+		'make emulator-restart       Restart and apply emulator input settings' \
+		'make run [DEVICE=serial]     Build, install and launch' \
+		'make logs [DEVICE=serial]    Show app-only logs' \
+		'make debug [DEVICE=serial]   Open a local JDWP debugger port' \
+		'make attach                 Attach the terminal debugger' \
+		'make key KEY=BACK           Send a remote-control key' \
+		'make tap X=400 Y=670        Tap a point in device pixels' \
+		'make layout                 Dump the current UI hierarchy' \
+		'make screenshot OUT=file    Save the current screen' \
+		'make devices                List connected devices'
+
+bootstrap:
+	python3 scripts/bootstrap.py --cache-dir "$(BOOTSTRAP_CACHE)"
+
+licenses:
+	$(ENV) sh -c 'exec sdkmanager --sdk_root="$$ANDROID_HOME" --licenses'
+
+doctor:
+	$(ENV) java -version
+	$(GRADLE) --version
+	$(ENV) adb version
+
+deps:
+	python3 scripts/prefetch-gradle.py --cache-dir "$(BOOTSTRAP_CACHE)"
+	$(GRADLE) :app:assembleDebug
+
+build:
+	$(GRADLE) :app:assembleDebug
+
+test:
+	$(GRADLE) :app:testDebugUnitTest
+
+lint:
+	$(GRADLE) :app:lintDebug
+
+check:
+	$(GRADLE) :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+
+clean:
+	$(GRADLE) clean
+
+devices:
+	$(ENV) adb devices -l
+
+avd:
+	@if $(ENV) emulator -list-avds | tr -d '\r' | grep -Fxq "$(AVD)"; then echo "AVD $(AVD) is ready."; else \
+	printf 'no\n' | $(ENV) avdmanager create avd --name "$(AVD)" \
+		--package "$$(python3 -c 'import platform; print("system-images;android-34;android-tv;" + ("arm64-v8a" if platform.machine() in ("arm64", "aarch64") else "x86"))')" \
+		--device tv_1080p; fi
+	python3 scripts/configure-avd.py --name "$(AVD)"
+
+emulator: avd
+	@if $(ADB) emu avd name 2>/dev/null | tr -d '\r' | grep -Fxq "$(AVD)"; then \
+		echo "AVD $(AVD) is already running on $(DEVICE). Run make run."; \
+	else $(ENV) emulator -avd "$(AVD)" -no-boot-anim -no-snapshot-save; fi
+
+emulator-stop:
+	@if ! name="$$($(ADB) emu avd name 2>/dev/null | tr -d '\r' | head -n 1)"; then \
+		echo 'Emulator is already stopped.'; exit 0; fi; \
+		[[ "$$name" == "$(AVD)" ]] || { echo 'Selected device is a different emulator.' >&2; exit 1; }; \
+		$(ADB) emu kill; \
+		for attempt in {1..30}; do \
+			if ! $(ADB) get-state >/dev/null 2>&1; then exit 0; fi; sleep 1; \
+		done; echo 'Emulator did not stop within 30 seconds.' >&2; exit 1
+
+emulator-restart: emulator-stop
+	$(MAKE) emulator
+
+install: build
+	$(ADB) wait-for-device
+	@until [[ "$$($(ADB) shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; do sleep 1; done
+	$(ADB) install -r "$(APK)"
+
+run: install
+	$(ADB) shell am start -n "$(APP_ID)/.MainActivity"
+
+logs:
+	@pid="$$($(ADB) shell pidof -s "$(APP_ID)" | tr -d '\r')"; \
+		test -n "$$pid" || { echo 'The app is not running.' >&2; exit 1; }; \
+		$(ADB) logcat --pid="$$pid"
+
+debug:
+	@pid="$$($(ADB) shell pidof -s "$(APP_ID)" | tr -d '\r')"; \
+		test -n "$$pid" || { echo 'Run make run first.' >&2; exit 1; }; \
+		$(ADB) forward tcp:8700 "jdwp:$$pid"; \
+		echo 'Attach Android Studio to the app or run make attach.'
+
+attach: debug
+	$(ENV) jdb -attach localhost:8700
+
+key:
+	@test -n "$(KEY)" || { echo 'Set KEY=DPAD_CENTER, BACK, DPAD_UP, ...' >&2; exit 1; }
+	$(ADB) shell input keyevent "KEYCODE_$(KEY)"
+
+tap:
+	@test -n "$(X)" -a -n "$(Y)" || { echo 'Set X and Y in device pixels.' >&2; exit 1; }
+	$(ADB) shell input tap "$(X)" "$(Y)"
+
+screenshot:
+	@test -n "$(OUT)" || { echo 'Set OUT=/path/to/screenshot.png' >&2; exit 1; }
+	$(ADB) exec-out screencap -p > "$(OUT)"
+
+layout:
+	$(ADB) shell uiautomator dump /data/local/tmp/seasonvar-ui.xml > /dev/null
+	$(ADB) shell cat /data/local/tmp/seasonvar-ui.xml

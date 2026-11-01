@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Seasonvar TV</string>
+    <string name="menu_title">Меню</string>
+    <string name="about_title">О программе</string>
+    <string name="about_description">Клиент Seasonvar для телевизоров и ТВ-приставок.</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
+    <string name="back">Назад</string>
+</resources>

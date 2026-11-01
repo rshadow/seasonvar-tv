@@ -19,3 +19,7 @@
 | ADR | Дата | Статус |
 | --- | --- | --- |
 | [0001 — Хранить решения в docs/adr](0001-record-decisions-as-adrs.md) | 2026-11-01 | Принято |
+| [0002 — Kotlin, Compose for TV и Media3](0002-native-kotlin-compose-media3.md) | 2026-11-01 | Принято |
+| [0003 — Принципы производительности](0003-performance-principles.md) | 2026-11-01 | Принято |
+| [0004 — Локальное подключение скиллов](0004-project-local-skills.md) | 2026-11-01 | Принято |
+| [0005 — Воспроизводимая локальная разработка](0005-reproducible-local-development.md) | 2026-11-01 | Принято |

@@ -1,0 +1,662 @@
+{
+  "schema": 1,
+  "sdk_api": 36,
+  "tv_api": 34,
+  "hosts": {
+    "darwin-arm64": {
+      "jdk": {
+        "version": "17.0.21+9",
+        "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.21_9.tar.gz",
+        "size": 186192554,
+        "checksum": {
+          "algorithm": "sha256",
+          "value": "78b08c7f5a0598242d5719c022e19479cb4a3aa45c37c19726a757a469ed1c15"
+        }
+      },
+      "sdk": [
+        {
+          "package": "platforms;android-36",
+          "revision": "2.0.0",
+          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
+          "size": 65878410,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "platforms/android-36",
+          "root": "android-36"
+        },
+        {
+          "package": "build-tools;35.0.0",
+          "revision": "35.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r35_macosx.zip",
+          "size": 76857898,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "93ab8ce91230e067b5add4bfa79919c52b27f072"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "build-tools/35.0.0",
+          "root": "android-15"
+        },
+        {
+          "package": "platform-tools",
+          "revision": "37.0.1",
+          "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-darwin.zip",
+          "size": 16110554,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "6ae73f4de6452dc57e62ec02b68eed92a4c21661"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platform-tools\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>37</major>\n      <minor>0</minor>\n      <micro>1</micro>\n    </revision>\n    <display-name>Android SDK Platform-Tools</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "platform-tools",
+          "root": "platform-tools"
+        },
+        {
+          "package": "cmdline-tools;latest",
+          "revision": "23.0.0",
+          "url": "https://dl.google.com/android/repository/commandlinetools-mac_arm64-16111833_latest.zip",
+          "size": 155384151,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "ad03dc49bfacfd52c110b14104ea548b8a07e830"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"cmdline-tools;latest\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>23</major>\n      <minor>0</minor>\n    </revision>\n    <display-name>Android SDK Command-line Tools (latest)</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "cmdline-tools/latest",
+          "root": "cmdline-tools"
+        },
+        {
+          "package": "emulator",
+          "revision": "37.2.13",
+          "url": "https://dl.google.com/android/repository/emulator-darwin_aarch64-16740729.zip",
+          "size": 416113219,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "6c5e61b873e11c7d1d08683bea089f762baee070"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"emulator\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>37</major>\n      <minor>2</minor>\n      <micro>13</micro>\n    </revision>\n    <display-name>Android Emulator</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "emulator",
+          "root": "emulator"
+        }
+      ],
+      "image": {
+        "package": "system-images;android-34;android-tv;arm64-v8a",
+        "revision": "3.0.0",
+        "url": "https://dl.google.com/android/repository/sys-img/android-tv/arm64-v8a-34_r03.zip",
+        "size": 815200224,
+        "checksum": {
+          "algorithm": "sha1",
+          "value": "a31d0d8326f2c82787f95dd387614274082a96a0"
+        },
+        "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sys-img=\"http://schemas.android.com/sdk/android/repo/sys-img2/03\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"system-images;android-34;android-tv;arm64-v8a\">\n    <type-details xsi:type=\"sys-img:sysImgDetailsType\">\n      <api-level>34</api-level>\n      <extension-level>7</extension-level>\n      <base-extension>true</base-extension>\n      <tag>\n        <id>android-tv</id>\n        <display>Android TV</display>\n      </tag>\n      <abi>arm64-v8a</abi>\n    </type-details>\n    <revision>\n      <major>3</major>\n    </revision>\n    <display-name>Android TV ARM 64 v8a System Image</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    <dependencies>\n      <dependency path=\"emulator\">\n        <min-revision>\n          <major>28</major>\n          <minor>1</minor>\n          <micro>6</micro>\n        </min-revision>\n      </dependency>\n    </dependencies>\n    </localPackage>\n</local:repository>\n",
+        "destination": "system-images/android-34/android-tv/arm64-v8a",
+        "root": "arm64"
+      }
+    },
+    "darwin-x86_64": {
+      "jdk": {
+        "version": "17.0.21+9",
+        "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_mac_hotspot_17.0.21_9.tar.gz",
+        "size": 180879475,
+        "checksum": {
+          "algorithm": "sha256",
+          "value": "868f5c672b3389fdbe48e44f94ae170f01668b1401360944fc7159d7cc9772cc"
+        }
+      },
+      "sdk": [
+        {
+          "package": "platforms;android-36",
+          "revision": "2.0.0",
+          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
+          "size": 65878410,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "platforms/android-36",
+          "root": "android-36"
+        },
+        {
+          "package": "build-tools;35.0.0",
+          "revision": "35.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r35_macosx.zip",
+          "size": 76857898,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "93ab8ce91230e067b5add4bfa79919c52b27f072"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "build-tools/35.0.0",
+          "root": "android-15"
+        },
+        {
+          "package": "platform-tools",
+          "revision": "37.0.1",
+          "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-darwin.zip",
+          "size": 16110554,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "6ae73f4de6452dc57e62ec02b68eed92a4c21661"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platform-tools\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>37</major>\n      <minor>0</minor>\n      <micro>1</micro>\n    </revision>\n    <display-name>Android SDK Platform-Tools</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "platform-tools",
+          "root": "platform-tools"
+        },
+        {
+          "package": "cmdline-tools;latest",
+          "revision": "23.0.0",
+          "url": "https://dl.google.com/android/repository/commandlinetools-mac_x86_64-16111833_latest.zip",
+          "size": 155582504,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "112cf9618794a997ff273537d55bee02c22abffe"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"cmdline-tools;latest\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>23</major>\n      <minor>0</minor>\n    </revision>\n    <display-name>Android SDK Command-line Tools (latest)</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "cmdline-tools/latest",
+          "root": "cmdline-tools"
+        },
+        {
+          "package": "emulator",
+          "revision": "37.2.13",
+          "url": "https://dl.google.com/android/repository/emulator-darwin_x64-16740729.zip",
+          "size": 488733162,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "b0c5fdc92430079436e9aec5983f14a5499de9b0"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"emulator\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>37</major>\n      <minor>2</minor>\n      <micro>13</micro>\n    </revision>\n    <display-name>Android Emulator</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "emulator",
+          "root": "emulator"
+        }
+      ],
+      "image": {
+        "package": "system-images;android-34;android-tv;x86",
+        "revision": "3.0.0",
+        "url": "https://dl.google.com/android/repository/sys-img/android-tv/x86-34_r03.zip",
+        "size": 809947873,
+        "checksum": {
+          "algorithm": "sha1",
+          "value": "8de1dcb502b0b4080e6f363828db64e609b3aa2a"
+        },
+        "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sys-img=\"http://schemas.android.com/sdk/android/repo/sys-img2/03\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"system-images;android-34;android-tv;x86\">\n    <type-details xsi:type=\"sys-img:sysImgDetailsType\">\n      <api-level>34</api-level>\n      <extension-level>7</extension-level>\n      <base-extension>true</base-extension>\n      <tag>\n        <id>android-tv</id>\n        <display>Android TV</display>\n      </tag>\n      <abi>x86</abi>\n    </type-details>\n    <revision>\n      <major>3</major>\n    </revision>\n    <display-name>Android TV Intel x86 Atom System Image</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    <dependencies>\n      <dependency path=\"emulator\">\n        <min-revision>\n          <major>28</major>\n          <minor>1</minor>\n          <micro>6</micro>\n        </min-revision>\n      </dependency>\n    </dependencies>\n    </localPackage>\n  </local:repository>\n",
+        "destination": "system-images/android-34/android-tv/x86",
+        "root": "x86"
+      }
+    },
+    "linux-x86_64": {
+      "jdk": {
+        "version": "17.0.21+9",
+        "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz",
+        "size": 193594705,
+        "checksum": {
+          "algorithm": "sha256",
+          "value": "8b9b611d917e3dfd8419d3566b5949226f69b052fed7e109c1368add1dfe8711"
+        }
+      },
+      "sdk": [
+        {
+          "package": "platforms;android-36",
+          "revision": "2.0.0",
+          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
+          "size": 65878410,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "platforms/android-36",
+          "root": "android-36"
+        },
+        {
+          "package": "build-tools;35.0.0",
+          "revision": "35.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r35_linux.zip",
+          "size": 61958799,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "2cfaa0bbb2336e9ec18ed3ecea84fa2e2af607bc"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "build-tools/35.0.0",
+          "root": "android-15"
+        },
+        {
+          "package": "platform-tools",
+          "revision": "37.0.1",
+          "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip",
+          "size": 9054187,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "477254aa5f903c15cf51001717bdf347fb6b53e0"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platform-tools\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>37</major>\n      <minor>0</minor>\n      <micro>1</micro>\n    </revision>\n    <display-name>Android SDK Platform-Tools</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "platform-tools",
+          "root": "platform-tools"
+        },
+        {
+          "package": "cmdline-tools;latest",
+          "revision": "23.0.0",
+          "url": "https://dl.google.com/android/repository/commandlinetools-linux-16111833_latest.zip",
+          "size": 181052239,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "e025545c62a8e64c7559119566a569fb1dec5f60"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"cmdline-tools;latest\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>23</major>\n      <minor>0</minor>\n    </revision>\n    <display-name>Android SDK Command-line Tools (latest)</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "cmdline-tools/latest",
+          "root": "cmdline-tools"
+        },
+        {
+          "package": "emulator",
+          "revision": "37.2.13",
+          "url": "https://dl.google.com/android/repository/emulator-linux_x64-16740729.zip",
+          "size": 349658551,
+          "checksum": {
+            "algorithm": "sha1",
+            "value": "f41f9e31eb5ca64926603c03265c50bbc0ff4172"
+          },
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"emulator\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>37</major>\n      <minor>2</minor>\n      <micro>13</micro>\n    </revision>\n    <display-name>Android Emulator</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
+          "destination": "emulator",
+          "root": "emulator"
+        }
+      ],
+      "image": {
+        "package": "system-images;android-34;android-tv;x86",
+        "revision": "3.0.0",
+        "url": "https://dl.google.com/android/repository/sys-img/android-tv/x86-34_r03.zip",
+        "size": 809947873,
+        "checksum": {
+          "algorithm": "sha1",
+          "value": "8de1dcb502b0b4080e6f363828db64e609b3aa2a"
+        },
+        "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sys-img=\"http://schemas.android.com/sdk/android/repo/sys-img2/03\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"system-images;android-34;android-tv;x86\">\n    <type-details xsi:type=\"sys-img:sysImgDetailsType\">\n      <api-level>34</api-level>\n      <extension-level>7</extension-level>\n      <base-extension>true</base-extension>\n      <tag>\n        <id>android-tv</id>\n        <display>Android TV</display>\n      </tag>\n      <abi>x86</abi>\n    </type-details>\n    <revision>\n      <major>3</major>\n    </revision>\n    <display-name>Android TV Intel x86 Atom System Image</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    <dependencies>\n      <dependency path=\"emulator\">\n        <min-revision>\n          <major>28</major>\n          <minor>1</minor>\n          <micro>6</micro>\n        </min-revision>\n      </dependency>\n    </dependencies>\n    </localPackage>\n  </local:repository>\n",
+        "destination": "system-images/android-34/android-tv/x86",
+        "root": "x86"
+      }
+    }
+  },
+  "licenses": {
+    "android-sdk-license": "Terms and Conditions\n\nThis is the Android Software Development Kit License Agreement\n\n1. Introduction\n\n1.1 The Android Software Development Kit (referred to in the License Agreement as the \"SDK\" and specifically including the Android system files, packaged APIs, and Google APIs add-ons) is licensed to you subject to the terms of the License Agreement. The License Agreement forms a legally binding contract between you and Google in relation to your use of the SDK.\n\n1.2 \"Android\" means the Android software stack for devices, as made available under the Android Open Source Project, which is located at the following URL: http://source.android.com/, as updated from time to time.\n\n1.3 A \"compatible implementation\" means any Android device that (i) complies with the Android Compatibility Definition document, which can be found at the Android compatibility website (http://source.android.com/compatibility) and which may be updated from time to time; and (ii) successfully passes the Android Compatibility Test Suite (CTS).\n\n1.4 \"Google\" means Google Inc., a Delaware corporation with principal place of business at 1600 Amphitheatre Parkway, Mountain View, CA 94043, United States.\n\n\n2. Accepting the License Agreement\n\n2.1 In order to use the SDK, you must first agree to the License Agreement. You may not use the SDK if you do not accept the License Agreement.\n\n2.2 By clicking to accept, you hereby agree to the terms of the License Agreement.\n\n2.3 You may not use the SDK and may not accept the License Agreement if you are a person barred from receiving the SDK under the laws of the United States or other countries, including the country in which you are resident or from which you use the SDK.\n\n2.4 If you are agreeing to be bound by the License Agreement on behalf of your employer or other entity, you represent and warrant that you have full legal authority to bind your employer or such entity to the License Agreement. If you do not have the requisite authority, you may not accept the License Agreement or use the SDK on behalf of your employer or other entity.\n\n\n3. SDK License from Google\n\n3.1 Subject to the terms of the License Agreement, Google grants you a limited, worldwide, royalty-free, non-assignable, non-exclusive, and non-sublicensable license to use the SDK solely to develop applications for compatible implementations of Android.\n\n3.2 You may not use this SDK to develop applications for other platforms (including non-compatible implementations of Android) or to develop another SDK. You are of course free to develop applications for other platforms, including non-compatible implementations of Android, provided that this SDK is not used for that purpose.\n\n3.3 You agree that Google or third parties own all legal right, title and interest in and to the SDK, including any Intellectual Property Rights that subsist in the SDK. \"Intellectual Property Rights\" means any and all rights under patent law, copyright law, trade secret law, trademark law, and any and all other proprietary rights. Google reserves all rights not expressly granted to you.\n\n3.4 You may not use the SDK for any purpose not expressly permitted by the License Agreement.  Except to the extent required by applicable third party licenses, you may not copy (except for backup purposes), modify, adapt, redistribute, decompile, reverse engineer, disassemble, or create derivative works of the SDK or any part of the SDK.\n\n3.5 Use, reproduction and distribution of components of the SDK licensed under an open source software license are governed solely by the terms of that open source software license and not the License Agreement.\n\n3.6 You agree that the form and nature of the SDK that Google provides may change without prior notice to you and that future versions of the SDK may be incompatible with applications developed on previous versions of the SDK. You agree that Google may stop (permanently or temporarily) providing the SDK (or any features within the SDK) to you or to users generally at Google's sole discretion, without prior notice to you.\n\n3.7 Nothing in the License Agreement gives you a right to use any of Google's trade names, trademarks, service marks, logos, domain names, or other distinctive brand features.\n\n3.8 You agree that you will not remove, obscure, or alter any proprietary rights notices (including copyright and trademark notices) that may be affixed to or contained within the SDK.\n\n\n4. Use of the SDK by You\n\n4.1 Google agrees that it obtains no right, title or interest from you (or your licensors) under the License Agreement in or to any software applications that you develop using the SDK, including any intellectual property rights that subsist in those applications.\n\n4.2 You agree to use the SDK and write applications only for purposes that are permitted by (a) the License Agreement and (b) any applicable law, regulation or generally accepted practices or guidelines in the relevant jurisdictions (including any laws regarding the export of data or software to and from the United States or other relevant countries).\n\n4.3 You agree that if you use the SDK to develop applications for general public users, you will protect the privacy and legal rights of those users. If the users provide you with user names, passwords, or other login information or personal information, you must make the users aware that the information will be available to your application, and you must provide legally adequate privacy notice and protection for those users. If your application stores personal or sensitive information provided by users, it must do so securely. If the user provides your application with Google Account information, your application may only use that information to access the user's Google Account when, and for the limited purposes for which, the user has given you permission to do so.\n\n4.4 You agree that you will not engage in any activity with the SDK, including the development or distribution of an application, that interferes with, disrupts, damages, or accesses in an unauthorized manner the servers, networks, or other properties or services of any third party including, but not limited to, Google or any mobile communications carrier.\n\n4.5 You agree that you are solely responsible for (and that Google has no responsibility to you or to any third party for) any data, content, or resources that you create, transmit or display through Android and/or applications for Android, and for the consequences of your actions (including any loss or damage which Google may suffer) by doing so.\n\n4.6 You agree that you are solely responsible for (and that Google has no responsibility to you or to any third party for) any breach of your obligations under the License Agreement, any applicable third party contract or Terms of Service, or any applicable law or regulation, and for the consequences (including any loss or damage which Google or any third party may suffer) of any such breach.\n\n5. Your Developer Credentials\n\n5.1 You agree that you are responsible for maintaining the confidentiality of any developer credentials that may be issued to you by Google or which you may choose yourself and that you will be solely responsible for all applications that are developed under your developer credentials.\n\n6. Privacy and Information\n\n6.1 In order to continually innovate and improve the SDK, Google may collect certain usage statistics from the software including but not limited to a unique identifier, associated IP address, version number of the software, and information on which tools and/or services in the SDK are being used and how they are being used. Before any of this information is collected, the SDK will notify you and seek your consent. If you withhold consent, the information will not be collected.\n\n6.2 The data collected is examined in the aggregate to improve the SDK and is maintained in accordance with Google's Privacy Policy.\n\n\n7. Third Party Applications\n\n7.1 If you use the SDK to run applications developed by a third party or that access data, content or resources provided by a third party, you agree that Google is not responsible for those applications, data, content, or resources. You understand that all data, content or resources which you may access through such third party applications are the sole responsibility of the person from which they originated and that Google is not liable for any loss or damage that you may experience as a result of the use or access of any of those third party applications, data, content, or resources.\n\n7.2 You should be aware the data, content, and resources presented to you through such a third party application may be protected by intellectual property rights which are owned by the providers (or by other persons or companies on their behalf). You may not modify, rent, lease, loan, sell, distribute or create derivative works based on these data, content, or resources (either in whole or in part) unless you have been specifically given permission to do so by the relevant owners.\n\n7.3 You acknowledge that your use of such third party applications, data, content, or resources may be subject to separate terms between you and the relevant third party. In that case, the License Agreement does not affect your legal relationship with these third parties.\n\n\n8. Using Android APIs\n\n8.1 Google Data APIs\n\n8.1.1 If you use any API to retrieve data from Google, you acknowledge that the data may be protected by intellectual property rights which are owned by Google or those parties that provide the data (or by other persons or companies on their behalf). Your use of any such API may be subject to additional Terms of Service. You may not modify, rent, lease, loan, sell, distribute or create derivative works based on this data (either in whole or in part) unless allowed by the relevant Terms of Service.\n\n8.1.2 If you use any API to retrieve a user's data from Google, you acknowledge and agree that you shall retrieve data only with the user's explicit consent and only when, and for the limited purposes for which, the user has given you permission to do so. If you use the Android Recognition Service API, documented at the following URL: https://developer.android.com/reference/android/speech/RecognitionService, as updated from time to time, you acknowledge that the use of the API is subject to the Data Processing Addendum for Products where Google is a Data Processor, which is located at the following URL: https://privacy.google.com/businesses/gdprprocessorterms/, as updated from time to time. By clicking to accept, you hereby agree to the terms of the Data Processing Addendum for Products where Google is a Data Processor.\n\n\n9. Terminating the License Agreement\n\n9.1 The License Agreement will continue to apply until terminated by either you or Google as set out below.\n\n9.2 If you want to terminate the License Agreement, you may do so by ceasing your use of the SDK and any relevant developer credentials.\n\n9.3 Google may at any time, terminate the License Agreement with you if:\n(A) you have breached any provision of the License Agreement; or\n(B) Google is required to do so by law; or\n(C) the partner with whom Google offered certain parts of SDK (such as APIs) to you has terminated its relationship with Google or ceased to offer certain parts of the SDK to you; or\n(D) Google decides to no longer provide the SDK or certain parts of the SDK to users in the country in which you are resident or from which you use the service, or the provision of the SDK or certain SDK services to you by Google is, in Google's sole discretion, no longer commercially viable.\n\n9.4 When the License Agreement comes to an end, all of the legal rights, obligations and liabilities that you and Google have benefited from, been subject to (or which have accrued over time whilst the License Agreement has been in force) or which are expressed to continue indefinitely, shall be unaffected by this cessation, and the provisions of paragraph 14.7 shall continue to apply to such rights, obligations and liabilities indefinitely.\n\n\n10. DISCLAIMER OF WARRANTIES\n\n10.1 YOU EXPRESSLY UNDERSTAND AND AGREE THAT YOUR USE OF THE SDK IS AT YOUR SOLE RISK AND THAT THE SDK IS PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTY OF ANY KIND FROM GOOGLE.\n\n10.2 YOUR USE OF THE SDK AND ANY MATERIAL DOWNLOADED OR OTHERWISE OBTAINED THROUGH THE USE OF THE SDK IS AT YOUR OWN DISCRETION AND RISK AND YOU ARE SOLELY RESPONSIBLE FOR ANY DAMAGE TO YOUR COMPUTER SYSTEM OR OTHER DEVICE OR LOSS OF DATA THAT RESULTS FROM SUCH USE.\n\n10.3 GOOGLE FURTHER EXPRESSLY DISCLAIMS ALL WARRANTIES AND CONDITIONS OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.\n\n\n11. LIMITATION OF LIABILITY\n\n11.1 YOU EXPRESSLY UNDERSTAND AND AGREE THAT GOOGLE, ITS SUBSIDIARIES AND AFFILIATES, AND ITS LICENSORS SHALL NOT BE LIABLE TO YOU UNDER ANY THEORY OF LIABILITY FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR EXEMPLARY DAMAGES THAT MAY BE INCURRED BY YOU, INCLUDING ANY LOSS OF DATA, WHETHER OR NOT GOOGLE OR ITS REPRESENTATIVES HAVE BEEN ADVISED OF OR SHOULD HAVE BEEN AWARE OF THE POSSIBILITY OF ANY SUCH LOSSES ARISING.\n\n\n12. Indemnification\n\n12.1 To the maximum extent permitted by law, you agree to defend, indemnify and hold harmless Google, its affiliates and their respective directors, officers, employees and agents from and against any and all claims, actions, suits or proceedings, as well as any and all losses, liabilities, damages, costs and expenses (including reasonable attorneys fees) arising out of or accruing from (a) your use of the SDK, (b) any application you develop on the SDK that infringes any copyright, trademark, trade secret, trade dress, patent or other intellectual property right of any person or defames any person or violates their rights of publicity or privacy, and (c) any non-compliance by you with the License Agreement.\n\n\n13. Changes to the License Agreement\n\n13.1 Google may make changes to the License Agreement as it distributes new versions of the SDK. When these changes are made, Google will make a new version of the License Agreement available on the website where the SDK is made available.\n\n\n14. General Legal Terms\n\n14.1 The License Agreement constitutes the whole legal agreement between you and Google and governs your use of the SDK (excluding any services which Google may provide to you under a separate written agreement), and completely replaces any prior agreements between you and Google in relation to the SDK.\n\n14.2 You agree that if Google does not exercise or enforce any legal right or remedy which is contained in the License Agreement (or which Google has the benefit of under any applicable law), this will not be taken to be a formal waiver of Google's rights and that those rights or remedies will still be available to Google.\n\n14.3 If any court of law, having the jurisdiction to decide on this matter, rules that any provision of the License Agreement is invalid, then that provision will be removed from the License Agreement without affecting the rest of the License Agreement. The remaining provisions of the License Agreement will continue to be valid and enforceable.\n\n14.4 You acknowledge and agree that each member of the group of companies of which Google is the parent shall be third party beneficiaries to the License Agreement and that such other companies shall be entitled to directly enforce, and rely upon, any provision of the License Agreement that confers a benefit on (or rights in favor of) them. Other than this, no other person or company shall be third party beneficiaries to the License Agreement.\n\n14.5 EXPORT RESTRICTIONS. THE SDK IS SUBJECT TO UNITED STATES EXPORT LAWS AND REGULATIONS. YOU MUST COMPLY WITH ALL DOMESTIC AND INTERNATIONAL EXPORT LAWS AND REGULATIONS THAT APPLY TO THE SDK. THESE LAWS INCLUDE RESTRICTIONS ON DESTINATIONS, END USERS AND END USE.\n\n14.6 The rights granted in the License Agreement may not be assigned or transferred by either you or Google without the prior written approval of the other party. Neither you nor Google shall be permitted to delegate their responsibilities or obligations under the License Agreement without the prior written approval of the other party.\n\n14.7 The License Agreement, and your relationship with Google under the License Agreement, shall be governed by the laws of the State of California without regard to its conflict of laws provisions. You and Google agree to submit to the exclusive jurisdiction of the courts located within the county of Santa Clara, California to resolve any legal matter arising from the License Agreement. Notwithstanding this, you agree that Google shall still be allowed to apply for injunctive remedies (or an equivalent type of urgent legal relief) in any jurisdiction.\n\n\nJanuary 16, 2019\n",
+    "android-sdk-preview-license": "To get started with the Android SDK Preview, you must agree to the following terms and conditions.\nAs described below, please note that this is a preview version of the Android SDK, subject to change, that you use at your own risk.  The Android SDK Preview is not a stable release, and may contain errors and defects that can result in serious damage to your computer systems, devices and data.\n\nThis is the Android SDK Preview License Agreement (the \"License Agreement\").\n\n1. Introduction\n\n1.1 The Android SDK Preview (referred to in the License Agreement as the “Preview” and specifically including the Android system files, packaged APIs, and Preview library files, if and when they are made available) is licensed to you subject to the terms of the License Agreement. The License Agreement forms a legally binding contract between you and Google in relation to your use of the Preview.\n\n1.2 \"Android\" means the Android software stack for devices, as made available under the Android Open Source Project, which is located at the following URL: http://source.android.com/, as updated from time to time.\n\n1.3 \"Google\" means Google Inc., a Delaware corporation with principal place of business at 1600 Amphitheatre Parkway, Mountain View, CA 94043, United States.\n\n2. Accepting the License Agreement\n\n2.1 In order to use the Preview, you must first agree to the License Agreement. You may not use the Preview if you do not accept the License Agreement.\n\n2.2 By clicking to accept and/or using the Preview, you hereby agree to the terms of the License Agreement.\n\n2.3 You may not use the Preview and may not accept the License Agreement if you are a person barred from receiving the Preview under the laws of the United States or other countries including the country in which you are resident or from which you use the Preview.\n\n2.4 If you will use the Preview internally within your company or organization you agree to be bound by the License Agreement on behalf of your employer or other entity, and you represent and warrant that you have full legal authority to bind your employer or such entity to the License Agreement. If you do not have the requisite authority, you may not accept the License Agreement or use the Preview on behalf of your employer or other entity.\n\n3. Preview License from Google\n\n3.1 Subject to the terms of the License Agreement, Google grants you a royalty-free, non-assignable, non-exclusive, non-sublicensable, limited, revocable license to use the Preview, personally or internally within your company or organization, solely to develop applications to run on the Android platform.\n\n3.2 You agree that Google or third parties owns all legal right, title and interest in and to the Preview, including any Intellectual Property Rights that subsist in the Preview. \"Intellectual Property Rights\" means any and all rights under patent law, copyright law, trade secret law, trademark law, and any and all other proprietary rights. Google reserves all rights not expressly granted to you.\n\n3.3 You may not use the Preview for any purpose not expressly permitted by the License Agreement. Except to the extent required by applicable third party licenses, you may not: (a) copy (except for backup purposes), modify, adapt, redistribute, decompile, reverse engineer, disassemble, or create derivative works of the Preview or any part of the Preview; or (b) load any part of the Preview onto a mobile handset or any other hardware device except a personal computer, combine any part of the Preview with other software, or distribute any software or device incorporating a part of the Preview.\n\n3.4 You agree that you will not take any actions that may cause or result in the fragmentation of Android, including but not limited to distributing, participating in the creation of, or promoting in any way a software development kit derived from the Preview.\n\n3.5 Use, reproduction and distribution of components of the Preview licensed under an open source software license are governed solely by the terms of that open source software license and not the License Agreement. You agree to remain a licensee in good standing in regard to such open source software licenses under all the rights granted and to refrain from any actions that may terminate, suspend, or breach such rights.\n\n3.6 You agree that the form and nature of the Preview that Google provides may change without prior notice to you and that future versions of the Preview may be incompatible with applications developed on previous versions of the Preview. You agree that Google may stop (permanently or temporarily) providing the Preview (or any features within the Preview) to you or to users generally at Google's sole discretion, without prior notice to you.\n\n3.7 Nothing in the License Agreement gives you a right to use any of Google's trade names, trademarks, service marks, logos, domain names, or other distinctive brand features.\n\n3.8 You agree that you will not remove, obscure, or alter any proprietary rights notices (including copyright and trademark notices) that may be affixed to or contained within the Preview.\n\n4. Use of the Preview by You\n\n4.1 Google agrees that nothing in the License Agreement gives Google any right, title or interest from you (or your licensors) under the License Agreement in or to any software applications that you develop using the Preview, including any intellectual property rights that subsist in those applications.\n\n4.2 You agree to use the Preview and write applications only for purposes that are permitted by (a) the License Agreement, and (b) any applicable law, regulation or generally accepted practices or guidelines in the relevant jurisdictions (including any laws regarding the export of data or software to and from the United States or other relevant countries).\n\n4.3 You agree that if you use the Preview to develop applications, you will protect the privacy and legal rights of users. If users provide you with user names, passwords, or other login information or personal information, you must make the users aware that the information will be available to your application, and you must provide legally adequate privacy notice and protection for those users. If your application stores personal or sensitive information provided by users, it must do so securely. If users provide you with Google Account information, your application may only use that information to access the user's Google Account when, and for the limited purposes for which, each user has given you permission to do so.\n\n4.4 You agree that you will not engage in any activity with the Preview, including the development or distribution of an application, that interferes with, disrupts, damages, or accesses in an unauthorized manner the servers, networks, or other properties or services of Google or any third party.\n\n4.5 You agree that you are solely responsible for (and that Google has no responsibility to you or to any third party for) any data, content, or resources that you create, transmit or display through Android and/or applications for Android, and for the consequences of your actions (including any loss or damage which Google may suffer) by doing so.\n\n4.6 You agree that you are solely responsible for (and that Google has no responsibility to you or to any third party for) any breach of your obligations under the License Agreement, any applicable third party contract or Terms of Service, or any applicable law or regulation, and for the consequences (including any loss or damage which Google or any third party may suffer) of any such breach.\n\n4.7 The Preview is in development, and your testing and feedback are an important part of the development process. By using the Preview, you acknowledge that implementation of some features are still under development and that you should not rely on the Preview having the full functionality of a stable release. You agree not to publicly distribute or ship any application using this Preview as this Preview will no longer be supported after the official Android SDK is released.\n\n5. Your Developer Credentials\n\n5.1 You agree that you are responsible for maintaining the confidentiality of any developer credentials that may be issued to you by Google or which you may choose yourself and that you will be solely responsible for all applications that are developed under your developer credentials.\n\n6. Privacy and Information\n\n6.1 In order to continually innovate and improve the Preview, Google may collect certain usage statistics from the software including but not limited to a unique identifier, associated IP address, version number of the software, and information on which tools and/or services in the Preview are being used and how they are being used. Before any of this information is collected, the Preview will notify you and seek your consent. If you withhold consent, the information will not be collected.\n\n6.2 The data collected is examined in the aggregate to improve the Preview and is maintained in accordance with Google's Privacy Policy located at http://www.google.com/policies/privacy/.\n\n7. Third Party Applications\n\n7.1 If you use the Preview to run applications developed by a third party or that access data, content or resources provided by a third party, you agree that Google is not responsible for those applications, data, content, or resources. You understand that all data, content or resources which you may access through such third party applications are the sole responsibility of the person from which they originated and that Google is not liable for any loss or damage that you may experience as a result of the use or access of any of those third party applications, data, content, or resources.\n\n7.2 You should be aware the data, content, and resources presented to you through such a third party application may be protected by intellectual property rights which are owned by the providers (or by other persons or companies on their behalf). You may not modify, rent, lease, loan, sell, distribute or create derivative works based on these data, content, or resources (either in whole or in part) unless you have been specifically given permission to do so by the relevant owners.\n\n7.3 You acknowledge that your use of such third party applications, data, content, or resources may be subject to separate terms between you and the relevant third party.\n\n8. Using Google APIs\n\n8.1 Google APIs\n\n8.1.1 If you use any API to retrieve data from Google, you acknowledge that the data may be protected by intellectual property rights which are owned by Google or those parties that provide the data (or by other persons or companies on their behalf). Your use of any such API may be subject to additional Terms of Service. You may not modify, rent, lease, loan, sell, distribute or create derivative works based on this data (either in whole or in part) unless allowed by the relevant Terms of Service.\n\n8.1.2 If you use any API to retrieve a user's data from Google, you acknowledge and agree that you shall retrieve data only with the user's explicit consent and only when, and for the limited purposes for which, the user has given you permission to do so.\n\n9. Terminating the License Agreement\n\n9.1 the License Agreement will continue to apply until terminated by either you or Google as set out below.\n\n9.2 If you want to terminate the License Agreement, you may do so by ceasing your use of the Preview and any relevant developer credentials.\n\n9.3 Google may at any time, terminate the License Agreement, with or without cause, upon notice to you.\n\n9.4 The License Agreement will automatically terminate without notice or other action upon the earlier of:\n(A) when Google ceases to provide the Preview or certain parts of the Preview to users in the country in which you are resident or from which you use the service; and\n(B) Google issues a final release version of the Android SDK.\n\n9.5 When the License Agreement is terminated, the license granted to you in the License Agreement will terminate, you will immediately cease all use of the Preview, and the provisions of paragraphs 10, 11, 12 and 14 shall survive indefinitely.\n\n10. DISCLAIMERS\n\n10.1 YOU EXPRESSLY UNDERSTAND AND AGREE THAT YOUR USE OF THE PREVIEW IS AT YOUR SOLE RISK AND THAT THE PREVIEW IS PROVIDED \"AS IS\" AND \"AS AVAILABLE\" WITHOUT WARRANTY OF ANY KIND FROM GOOGLE.\n\n10.2 YOUR USE OF THE PREVIEW AND ANY MATERIAL DOWNLOADED OR OTHERWISE OBTAINED THROUGH THE USE OF THE PREVIEW IS AT YOUR OWN DISCRETION AND RISK AND YOU ARE SOLELY RESPONSIBLE FOR ANY DAMAGE TO YOUR COMPUTER SYSTEM OR OTHER DEVICE OR LOSS OF DATA THAT RESULTS FROM SUCH USE. WITHOUT LIMITING THE FOREGOING, YOU UNDERSTAND THAT THE PREVIEW IS NOT A STABLE RELEASE AND MAY CONTAIN ERRORS, DEFECTS AND SECURITY VULNERABILITIES THAT CAN RESULT IN SIGNIFICANT DAMAGE, INCLUDING THE COMPLETE, IRRECOVERABLE LOSS OF USE OF YOUR COMPUTER SYSTEM OR OTHER DEVICE.\n\n10.3 GOOGLE FURTHER EXPRESSLY DISCLAIMS ALL WARRANTIES AND CONDITIONS OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO THE IMPLIED WARRANTIES AND CONDITIONS OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.\n\n11. LIMITATION OF LIABILITY\n\n11.1 YOU EXPRESSLY UNDERSTAND AND AGREE THAT GOOGLE, ITS SUBSIDIARIES AND AFFILIATES, AND ITS LICENSORS SHALL NOT BE LIABLE TO YOU UNDER ANY THEORY OF LIABILITY FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR EXEMPLARY DAMAGES THAT MAY BE INCURRED BY YOU, INCLUDING ANY LOSS OF DATA, WHETHER OR NOT GOOGLE OR ITS REPRESENTATIVES HAVE BEEN ADVISED OF OR SHOULD HAVE BEEN AWARE OF THE POSSIBILITY OF ANY SUCH LOSSES ARISING.\n\n12. Indemnification\n\n12.1 To the maximum extent permitted by law, you agree to defend, indemnify and hold harmless Google, its affiliates and their respective directors, officers, employees and agents from and against any and all claims, actions, suits or proceedings, as well as any and all losses, liabilities, damages, costs and expenses (including reasonable attorneys’ fees) arising out of or accruing from (a) your use of the Preview, (b) any application you develop on the Preview that infringes any Intellectual Property Rights of any person or defames any person or violates their rights of publicity or privacy, and (c) any non-compliance by you of the License Agreement.\n\n13. Changes to the License Agreement\n\n13.1 Google may make changes to the License Agreement as it distributes new versions of the Preview. When these changes are made, Google will make a new version of the License Agreement available on the website where the Preview is made available.\n\n14. General Legal Terms\n\n14.1 the License Agreement constitutes the whole legal agreement between you and Google and governs your use of the Preview (excluding any services which Google may provide to you under a separate written agreement), and completely replaces any prior agreements between you and Google in relation to the Preview.\n\n14.2 You agree that if Google does not exercise or enforce any legal right or remedy which is contained in the License Agreement (or which Google has the benefit of under any applicable law), this will not be taken to be a formal waiver of Google's rights and that those rights or remedies will still be available to Google.\n\n14.3 If any court of law, having the jurisdiction to decide on this matter, rules that any provision of the License Agreement is invalid, then that provision will be removed from the License Agreement without affecting the rest of the License Agreement. The remaining provisions of the License Agreement will continue to be valid and enforceable.\n\n14.4 You acknowledge and agree that each member of the group of companies of which Google is the parent shall be third party beneficiaries to the License Agreement and that such other companies shall be entitled to directly enforce, and rely upon, any provision of the License Agreement that confers a benefit on (or rights in favor of) them. Other than this, no other person or company shall be third party beneficiaries to the License Agreement.\n\n14.5 EXPORT RESTRICTIONS. THE PREVIEW IS SUBJECT TO UNITED STATES EXPORT LAWS AND REGULATIONS. YOU MUST COMPLY WITH ALL DOMESTIC AND INTERNATIONAL EXPORT LAWS AND REGULATIONS THAT APPLY TO THE PREVIEW. THESE LAWS INCLUDE RESTRICTIONS ON DESTINATIONS, END USERS AND END USE.\n\n14.6 The License Agreement may not be assigned or transferred by you without the prior written approval of Google, and any attempted assignment without such approval will be void. You shall not delegate your responsibilities or obligations under the License Agreement without the prior written approval of Google.\n\n14.7 The License Agreement, and your relationship with Google under the License Agreement, shall be governed by the laws of the State of California without regard to its conflict of laws provisions. You and Google agree to submit to the exclusive jurisdiction of the courts located within the county of Santa Clara, California to resolve any legal matter arising from the License Agreement. Notwithstanding this, you agree that Google shall still be allowed to apply for injunctive remedies (or an equivalent type of urgent legal relief) in any jurisdiction.\n\nJune 2014.\n"
+  },
+  "gradle_artifacts": [
+    {
+      "group": "com.android.tools.build",
+      "artifact": "gradle",
+      "version": "8.13.2",
+      "file": "gradle-8.13.2.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.13.2/gradle-8.13.2.jar",
+      "size": 13116808,
+      "sha1": "5975ee61ee7e3f9413fbe10270f230cfb6d227fc",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e494f7ce75ca6c1abff301d4a70b18fdd3d6af855875f4f85082bb7608f041de"
+      }
+    },
+    {
+      "group": "com.android.tools.build",
+      "artifact": "builder",
+      "version": "8.13.2",
+      "file": "builder-8.13.2.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/builder/8.13.2/builder-8.13.2.jar",
+      "size": 15823022,
+      "sha1": "92e06fde9f28276c57c4c81eefce4e72ec9cefc9",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "7d393f8553120c7d7a869cb33c4279aad9485986773f63af97af08ea2e1ff37a"
+      }
+    },
+    {
+      "group": "com.android.tools.build",
+      "artifact": "bundletool",
+      "version": "1.18.1",
+      "file": "bundletool-1.18.1.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/bundletool/1.18.1/bundletool-1.18.1.jar",
+      "size": 13356668,
+      "sha1": "76bb1aa21a19495ca070bfb6abd194daf91dccd1",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a73341a7945abcb0e6b8971c7b1b2801bd765006447ca0d2437a4260d572ceac"
+      }
+    },
+    {
+      "group": "com.android.tools.analytics-library",
+      "artifact": "protos",
+      "version": "31.13.2",
+      "file": "protos-31.13.2.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/analytics-library/protos/31.13.2/protos-31.13.2.jar",
+      "size": 9027320,
+      "sha1": "568520224f5c347add38c2bef3d0288ae11f8d31",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b2ded20a897fba9649efeb18ba2fc062ee39e500d4eb712045cb0e34b43b5efb"
+      }
+    },
+    {
+      "group": "androidx.compose.foundation",
+      "artifact": "foundation-android",
+      "version": "1.10.4",
+      "file": "foundation-android-1.10.4.aar",
+      "cache_file": "foundation.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-android/1.10.4/foundation-android-1.10.4.aar",
+      "size": 4948956,
+      "sha1": "ee7bbb31da7860fe075f72ad3d497507f3ebad8b",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "184c45ff50559af0b00abfd5b5c0224fd0cf25b55c6098a8874bf4b1fb5f9c33"
+      }
+    },
+    {
+      "group": "androidx.compose.foundation",
+      "artifact": "foundation-layout-android",
+      "version": "1.10.4",
+      "file": "foundation-layout-android-1.10.4.aar",
+      "cache_file": "foundation-layout.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-layout-android/1.10.4/foundation-layout-android-1.10.4.aar",
+      "size": 546455,
+      "sha1": "341cb7bbb89b4200048aaaba430b6899a5f14177",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "dbd371f7d041bfd89c55ce5a5dd6d7c60da9641009d2b3e794dd9b5e4f772881"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-android",
+      "version": "1.10.4",
+      "file": "ui-android-1.10.4.aar",
+      "cache_file": "ui.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.10.4/ui-android-1.10.4.aar",
+      "size": 5760687,
+      "sha1": "27238bf26a9042c3e02257b1fa7c0e6053fc87c1",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b860014180d5cabaa0656e9379b1445cf794ed5a8724457d442e816279a2694f"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-text-android",
+      "version": "1.10.4",
+      "file": "ui-text-android-1.10.4.aar",
+      "cache_file": "ui-text.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text-android/1.10.4/ui-text-android-1.10.4.aar",
+      "size": 821593,
+      "sha1": "bf994f7a7d1afac6a5f81fddc8540b219ab91e59",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "39c6a93a3d4cf18ab255e93ae29fed6d5672e81d30795c3dbb812fc00e670577"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-graphics-android",
+      "version": "1.10.4",
+      "file": "ui-graphics-android-1.10.4.aar",
+      "cache_file": "ui-graphics.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics-android/1.10.4/ui-graphics-android-1.10.4.aar",
+      "size": 1695013,
+      "sha1": "596580e56c87a0da9e5ee4144b465e3038fb8f8e",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "d47fb0d1caa62106481948a5af7ba0466f9fa92db3167b8c33cca9543b7f09fa"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-unit-android",
+      "version": "1.10.4",
+      "file": "ui-unit-android-1.10.4.aar",
+      "cache_file": "ui-unit.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-unit-android/1.10.4/ui-unit-android-1.10.4.aar",
+      "size": 100767,
+      "sha1": "2acb802e7f46d90becedb302c22d56c64b7b0955",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "8571829fd05919b8415750e1028dd2b95c2ad7a07421286917268de06e2d55f4"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-geometry-android",
+      "version": "1.10.4",
+      "file": "ui-geometry-android-1.10.4.aar",
+      "cache_file": "ui-geometry.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-geometry-android/1.10.4/ui-geometry-android-1.10.4.aar",
+      "size": 59772,
+      "sha1": "f3aa766a263476fcbe7ec82760a938059331d3b6",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "ad1c76c7fd6b2964d28ac45862c1e13951aa35114cda1c4eab63bd3ce69b44d8"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-util-android",
+      "version": "1.10.4",
+      "file": "ui-util-android-1.10.4.aar",
+      "cache_file": "ui-util.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-util-android/1.10.4/ui-util-android-1.10.4.aar",
+      "size": 22302,
+      "sha1": "ee386f2af2c8a90aa955dfd3aafb8506f87a4978",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "8098bca31a4a9b125c46666926f8f095e60306e2463a4b0883454325bee3461a"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-tooling-android",
+      "version": "1.10.4",
+      "file": "ui-tooling-android-1.10.4.aar",
+      "cache_file": "ui-tooling.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-android/1.10.4/ui-tooling-android-1.10.4.aar",
+      "size": 177848,
+      "sha1": "e89430535a7be8c2eb0c44bf201e59ffec488089",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "41edf69399401ca786301a86d7435bd373c7f1013d4cc551a98fc4174a5afa98"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-tooling-preview-android",
+      "version": "1.10.4",
+      "file": "ui-tooling-preview-android-1.10.4.aar",
+      "cache_file": "ui-tooling-preview.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-preview-android/1.10.4/ui-tooling-preview-android-1.10.4.aar",
+      "size": 22131,
+      "sha1": "ebd1a1e1ef69db67954c13d2dee0fbb2adabbf14",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "c372e41b9d38b78ae3673d6ef7a95f280f2ab05203a703b2193c83062dea60dd"
+      }
+    },
+    {
+      "group": "androidx.compose.ui",
+      "artifact": "ui-tooling-data-android",
+      "version": "1.10.4",
+      "file": "ui-tooling-data-android-1.10.4.aar",
+      "cache_file": "ui-tooling-data.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-data-android/1.10.4/ui-tooling-data-android-1.10.4.aar",
+      "size": 47227,
+      "sha1": "472d0d507d227a8816576b383cf8615ecf31879e",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e964fea22d292e2ed8cad11286f9a885692810fe00fbc2f004e272383ab9dc0f"
+      }
+    },
+    {
+      "group": "androidx.compose.runtime",
+      "artifact": "runtime-android",
+      "version": "1.10.4",
+      "file": "runtime-android-1.10.4.aar",
+      "cache_file": "runtime.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-android/1.10.4/runtime-android-1.10.4.aar",
+      "size": 2495395,
+      "sha1": "b9dec198b64eae52102916e2e05dfce2258d7b30",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "14a0ec47c992112cace7f7c2a93d8bd9b800fe20f71cae18a32ddeff9d86a8a2"
+      }
+    },
+    {
+      "group": "androidx.compose.runtime",
+      "artifact": "runtime-retain-android",
+      "version": "1.10.4",
+      "file": "runtime-retain-android-1.10.4.aar",
+      "cache_file": "runtime-retain.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain-android/1.10.4/runtime-retain-android-1.10.4.aar",
+      "size": 1061098,
+      "sha1": "8f918fe3ae49f3681970efa7fa9439a5df791810",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "59ab12402c50581b8b34da40f70009584d2beacdbe78b547b4f1c91938f6fad9"
+      }
+    },
+    {
+      "group": "androidx.compose.runtime",
+      "artifact": "runtime-saveable-android",
+      "version": "1.10.4",
+      "file": "runtime-saveable-android-1.10.4.aar",
+      "cache_file": "runtime-saveable.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-saveable-android/1.10.4/runtime-saveable-android-1.10.4.aar",
+      "size": 1058083,
+      "sha1": "478886097ddd2fce0c65383c931712baeb955739",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "ff0862c0a626c1de8524b83bd9ee81ee8aad9b24edeab5a56711ba658e8433bd"
+      }
+    },
+    {
+      "group": "androidx.compose.animation",
+      "artifact": "animation-android",
+      "version": "1.10.4",
+      "file": "animation-android-1.10.4.aar",
+      "cache_file": "animation.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-android/1.10.4/animation-android-1.10.4.aar",
+      "size": 1524409,
+      "sha1": "ed112ae32e2f9af301061e2b928079a064d5946c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "215da14c3e1ada35d4c71177dc6af1a2d50cc473ca4f126f152deae6cb0fc5b6"
+      }
+    },
+    {
+      "group": "androidx.compose.animation",
+      "artifact": "animation-core-android",
+      "version": "1.10.4",
+      "file": "animation-core-android-1.10.4.aar",
+      "cache_file": "animation-core.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-core-android/1.10.4/animation-core-android-1.10.4.aar",
+      "size": 1369853,
+      "sha1": "1dcb9cc3abdc675f328527e1528f5e914b24221e",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "05ee8844cca8c8e77fe6a3809472326270a1247b48a4ced590635c928cf80a83"
+      }
+    },
+    {
+      "group": "androidx.compose.material",
+      "artifact": "material-android",
+      "version": "1.10.4",
+      "file": "material-android-1.10.4.aar",
+      "cache_file": "material.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-android/1.10.4/material-android-1.10.4.aar",
+      "size": 2336352,
+      "sha1": "bb7eb0acd57f5601684441083eea94f73349a33c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1a989502e4d34528c25656899385fab892c7b04a5e8b650131f74df660cacadd"
+      }
+    },
+    {
+      "group": "androidx.compose.material",
+      "artifact": "material-ripple-android",
+      "version": "1.10.4",
+      "file": "material-ripple-android-1.10.4.aar",
+      "cache_file": "material-ripple.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-ripple-android/1.10.4/material-ripple-android-1.10.4.aar",
+      "size": 96259,
+      "sha1": "93a1716f3e0eda657e274da7ec685d5daafb40b6",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "35d721595659b108a10d773e62ef409074ae2b08cfe62a73f30576b5abc2ed68"
+      }
+    },
+    {
+      "group": "com.android.tools.build",
+      "artifact": "aapt2",
+      "version": "8.13.2-14304508",
+      "file": "aapt2-8.13.2-14304508-osx.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/8.13.2-14304508/aapt2-8.13.2-14304508-osx.jar",
+      "size": 5324976,
+      "sha1": "6b73169c0a1b4f52d66ddebb49de47432be2c031",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "0d47f17c3924e5472b6125aa608d949dd7f46510889729671f31f2f4d801e8e7"
+      }
+    },
+    {
+      "group": "com.android.tools.build",
+      "artifact": "aapt2",
+      "version": "8.13.2-14304508",
+      "file": "aapt2-8.13.2-14304508-linux.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/8.13.2-14304508/aapt2-8.13.2-14304508-linux.jar",
+      "size": 2815427,
+      "sha1": "2285a625f089775f58866eccfe3e70cc3c2c7495",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "839609d6d776d6dd60a02aa577d97193ce3e650cf1deaabf062321e23bbd6bf6"
+      }
+    },
+    {
+      "group": "com.android.tools.lint",
+      "artifact": "lint-checks",
+      "version": "31.13.2",
+      "file": "lint-checks-31.13.2.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/lint/lint-checks/31.13.2/lint-checks-31.13.2.jar",
+      "size": 7070496,
+      "sha1": "e2f3f7637e4e711839115773d649f9fc6974c1a9",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3b64f395ae17fcea104882b00a4acdc7dc691f5daca5dff2bdde89fa052bb199"
+      }
+    },
+    {
+      "group": "com.android.tools.external.com-intellij",
+      "artifact": "intellij-core",
+      "version": "31.13.2",
+      "file": "intellij-core-31.13.2.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/intellij-core/31.13.2/intellij-core-31.13.2.jar",
+      "size": 37723447,
+      "sha1": "311f867deee610b6eab4ee138b3c97e29eb5db38",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "9a6faa6061d0f3d54a64decb61944c1b2c6927f8d325cd298c82c2a8d867ee68"
+      }
+    },
+    {
+      "group": "com.android.tools.external.com-intellij",
+      "artifact": "kotlin-compiler",
+      "version": "31.13.2",
+      "file": "kotlin-compiler-31.13.2.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/kotlin-compiler/31.13.2/kotlin-compiler-31.13.2.jar",
+      "size": 51117829,
+      "sha1": "8f7c8905b9e5bb7960dcfd46c198d496ca8c3b1c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "552dfaffe295d08504870816c27fc09007e1231fb9b14c1ff9bbf861f9b35990"
+      }
+    }
+  ],
+  "avd": {
+    "hardware": {
+      "hw.keyboard": "yes",
+      "hw.keyboard.lid": "no",
+      "hw.screen": "multi-touch"
+    }
+  }
+}
