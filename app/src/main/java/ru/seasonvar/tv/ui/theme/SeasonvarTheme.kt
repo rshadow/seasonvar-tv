@@ -24,6 +24,21 @@ data class SeasonvarDimensions(
     val spacingSection: Dp,
     val buttonWidth: Dp,
     val buttonHeight: Dp,
+    val menuWidth: Dp,
+    val navigationButtonHeight: Dp,
+    val contentGap: Dp,
+    val headerButtonWidth: Dp,
+    val headerButtonHeight: Dp,
+    val cardWidth: Dp,
+    val thumbnailHeight: Dp,
+    val cardRowHeight: Dp,
+    val posterWidth: Dp,
+    val posterHeight: Dp,
+    val cardPadding: Dp,
+    val cardCornerRadius: Dp,
+    val focusBorderWidth: Dp,
+    val dialogWidth: Dp,
+    val dialogHeight: Dp,
 )
 
 private val LocalDimensions = staticCompositionLocalOf<SeasonvarDimensions> {
@@ -60,6 +75,21 @@ fun SeasonvarTheme(content: @Composable () -> Unit) {
         spacingSection = dimensionResource(R.dimen.seasonvar_spacing_section),
         buttonWidth = dimensionResource(R.dimen.seasonvar_button_width),
         buttonHeight = dimensionResource(R.dimen.seasonvar_button_height),
+        menuWidth = dimensionResource(R.dimen.seasonvar_menu_width),
+        navigationButtonHeight = dimensionResource(R.dimen.seasonvar_navigation_button_height),
+        contentGap = dimensionResource(R.dimen.seasonvar_content_gap),
+        headerButtonWidth = dimensionResource(R.dimen.seasonvar_header_button_width),
+        headerButtonHeight = dimensionResource(R.dimen.seasonvar_header_button_height),
+        cardWidth = dimensionResource(R.dimen.seasonvar_card_width),
+        thumbnailHeight = dimensionResource(R.dimen.seasonvar_thumbnail_height),
+        cardRowHeight = dimensionResource(R.dimen.seasonvar_card_row_height),
+        posterWidth = dimensionResource(R.dimen.seasonvar_poster_width),
+        posterHeight = dimensionResource(R.dimen.seasonvar_poster_height),
+        cardPadding = dimensionResource(R.dimen.seasonvar_card_padding),
+        cardCornerRadius = dimensionResource(R.dimen.seasonvar_card_corner_radius),
+        focusBorderWidth = dimensionResource(R.dimen.seasonvar_focus_border_width),
+        dialogWidth = dimensionResource(R.dimen.seasonvar_dialog_width),
+        dialogHeight = dimensionResource(R.dimen.seasonvar_dialog_height),
     )
 
     CompositionLocalProvider(LocalDimensions provides dimensions) {

@@ -1,10 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Seasonvar TV</string>
-    <string name="menu_title">Меню</string>
     <string name="about_title">О программе</string>
     <string name="about_description">Клиент Seasonvar для телевизоров и ТВ-приставок.</string>
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
     <string name="back">Назад</string>
+    <string name="today_title">Сегодня</string>
+    <string name="today_date_count">%1$s · обновлений: %2$d</string>
+    <string name="refresh">Обновить</string>
+    <string name="retry">Повторить</string>
+    <string name="today_loading">Загружаем сегодняшние серии…</string>
+    <string name="today_empty">Сегодня новых серий пока нет</string>
+    <string name="today_empty_hint">Обновите список немного позже.</string>
+    <string name="today_network_error">Не удалось подключиться к Seasonvar</string>
+    <string name="today_http_error">Сайт временно не отвечает</string>
+    <string name="today_markup_error">Не удалось прочитать список обновлений</string>
+    <string name="today_error_hint">Проверьте подключение к сети и доступность seasonvar.ru, затем повторите попытку.</string>
+    <string name="today_cached_error">Не удалось обновить. Показан сохранённый список за сегодня.</string>
+    <string name="today_updating">Обновляем список…</string>
+    <string name="today_cached">Сохранённый список за сегодня</string>
+    <string name="description_loading">Загружаем описание…</string>
+    <string name="description_error">Не удалось загрузить описание.</string>
+    <string name="description_empty">На сайте нет описания.</string>
+    <string name="season_number">Сезон %1$d</string>
+    <string name="today_loading_hint">Связываемся с seasonvar.ru…</string>
+    <string name="settings_title">Настройки</string>
+    <string name="network_title">Сеть</string>
+    <string name="bypass_title">Обход блокировок</string>
+    <string name="bypass_description">Помогает открыть сайт при сетевых ограничениях. Проверка HTTPS-сертификатов остаётся включённой.</string>
+    <string name="network_applies">Настройки сохраняются и применяются к новым запросам страниц и постеров. Список «Сегодня» обновляется при изменении.</string>
+    <string name="dns_title" translatable="false">DNS</string>
+    <string name="dns_current">DNS: %1$s</string>
+    <string name="dns_system">Системный</string>
+    <string name="dns_quad9" translatable="false">Quad9 DoH</string>
 </resources>

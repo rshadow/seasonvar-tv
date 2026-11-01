@@ -5,6 +5,7 @@ SHELL := /bin/bash
 BOOTSTRAP_CACHE ?= $(HOME)/.cache/seasonvar/downloads
 ENV := ./scripts/android-env.sh
 GRADLE_ARGS ?=
+LOG_ARGS ?=
 GRADLE := $(ENV) ./gradlew --console=plain $(GRADLE_ARGS)
 AVD ?= Seasonvar_TV_API_34
 DEVICE ?= emulator-5554
@@ -19,7 +20,7 @@ SITE_IP ?=
 SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run logs debug attach key tap screenshot layout site-fetch site-test site-styles
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key tap screenshot layout site-fetch site-test site-styles
 
 help:
 	@printf '%s\n' \
@@ -35,7 +36,8 @@ help:
 		'make emulator               Start the local emulator window' \
 		'make emulator-restart       Restart and apply emulator input settings' \
 		'make run [DEVICE=serial]     Build, install and launch' \
-		'make logs [DEVICE=serial]    Show app-only logs' \
+		'make restart                Restart the installed app' \
+		'make logs [LOG_ARGS=-d]      Show app-only logs' \
 		'make debug [DEVICE=serial]   Open a local JDWP debugger port' \
 		'make attach                 Attach the terminal debugger' \
 		'make key KEY=BACK           Send a remote-control key' \
@@ -112,10 +114,14 @@ install: build
 run: install
 	$(ADB) shell am start -n "$(APP_ID)/.MainActivity"
 
+restart:
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ADB) shell am start -n "$(APP_ID)/.MainActivity"
+
 logs:
 	@pid="$$($(ADB) shell pidof -s "$(APP_ID)" | tr -d '\r')"; \
 		test -n "$$pid" || { echo 'The app is not running.' >&2; exit 1; }; \
-		$(ADB) logcat --pid="$$pid"
+		$(ADB) logcat --pid="$$pid" $(LOG_ARGS)
 
 debug:
 	@pid="$$($(ADB) shell pidof -s "$(APP_ID)" | tr -d '\r')"; \

@@ -1,0 +1,6 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp" android:height="180dp"
+    android:viewportWidth="120" android:viewportHeight="180">
+    <path android:fillColor="@color/seasonvar_surface" android:pathData="M0,0h120v180h-120z" />
+    <path android:fillColor="@color/seasonvar_accent" android:pathData="M45,65L85,90L45,115z" />
+</vector>

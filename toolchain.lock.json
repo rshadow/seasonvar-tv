@@ -650,6 +650,19 @@
         "algorithm": "sha256",
         "value": "552dfaffe295d08504870816c27fc09007e1231fb9b14c1ff9bbf861f9b35990"
       }
+    },
+    {
+      "group": "com.android.tools",
+      "artifact": "desugar_jdk_libs_nio",
+      "version": "2.1.5",
+      "file": "desugar_jdk_libs_nio-2.1.5.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/desugar_jdk_libs_nio/2.1.5/desugar_jdk_libs_nio-2.1.5.jar",
+      "size": 6113073,
+      "sha1": "2aa1e5e7eb1f9082b4d88990c5f7aea7e95efc0a",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "d8044befae095781b9a80bf1faa92edc30382d75d437476784c1bf991598a976"
+      }
     }
   ],
   "avd": {
