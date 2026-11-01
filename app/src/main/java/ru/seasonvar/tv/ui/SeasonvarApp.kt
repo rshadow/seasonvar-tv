@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,6 +46,8 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.TodayEntry
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.navigation.BackNavigation
+import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.today.DescriptionState
 import ru.seasonvar.tv.ui.today.LoadFailure
 import ru.seasonvar.tv.ui.today.TodayUiState
@@ -62,23 +65,21 @@ fun SeasonvarApp(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    onExit: () -> Unit = {},
 ) {
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
     var selectedKey by rememberSaveable { mutableStateOf<String?>(null) }
-    var networkSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
-    var contentFocused by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val todayFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
-    val networkFocus = remember { FocusRequester() }
     val toggleFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
     val refreshFocus = remember { FocusRequester() }
     val retryFocus = remember { FocusRequester() }
-    val aboutBackFocus = remember { FocusRequester() }
     val cards = remember { mutableMapOf<String, FocusRequester>() }
     val scope = rememberCoroutineScope()
+    val backNavigation = remember { BackNavigation() }
     val selected = remember(state.entries, selectedKey) {
         state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
     }
@@ -90,12 +91,14 @@ fun SeasonvarApp(
     LaunchedEffect(Unit) { todayFocus.requestFocus() }
 
     fun enterContent() {
+        val requestedSection = section
         scope.launch {
             repeat(2) { withFrameNanos { } }
+            if (section != requestedSection) return@launch
             if (section == Section.SETTINGS) {
-                if (networkSettingsOpen) toggleFocus.requestFocus() else networkFocus.requestFocus()
+                toggleFocus.requestFocus()
             } else if (section == Section.ABOUT) {
-                aboutBackFocus.requestFocus()
+                aboutFocus.requestFocus()
             } else if (selected == null) {
                 if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
             } else {
@@ -109,22 +112,33 @@ fun SeasonvarApp(
         }
     }
 
-    fun closeNetworkSettings() {
-        networkSettingsOpen = false
-        scope.launch { repeat(2) { withFrameNanos { } }; networkFocus.requestFocus() }
-    }
-    BackHandler(enabled = contentFocused || section != Section.TODAY) {
-        if (section == Section.SETTINGS && networkSettingsOpen) {
-            closeNetworkSettings()
-        } else {
-            section = Section.TODAY
-            todayFocus.requestFocus()
+    fun returnToMenu() {
+        val requestedSection = section
+        detailsOpen = false
+        scope.launch {
+            repeat(2) { withFrameNanos { } }
+            if (section != requestedSection) return@launch
+            when (section) {
+                Section.TODAY -> todayFocus.requestFocus()
+                Section.SETTINGS -> settingsFocus.requestFocus()
+                Section.ABOUT -> aboutFocus.requestFocus()
+            }
         }
     }
+
+    fun navigateBack() {
+        val exit = backNavigation.shouldExit(SystemClock.uptimeMillis())
+        if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarInput", "back section=" + section + " exit=" + exit)
+        if (exit) onExit() else returnToMenu()
+    }
+
+    BackHandler { navigateBack() }
     SeasonvarTheme {
         val d = SeasonvarTheme.dimensions
         Row(
-            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+            Modifier.fillMaxSize()
+                .backNavigationKeys(::navigateBack, backNavigation::reset)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
             horizontalArrangement = Arrangement.spacedBy(d.contentGap),
         ) {
@@ -145,9 +159,10 @@ fun SeasonvarApp(
                     }
                     ThemeButton(
                         stringResource(label),
-                        onClick = { section = item; enterContent() },
+                        onClick = { backNavigation.reset(); section = item; enterContent() },
                         modifier = Modifier.fillMaxWidth().height(d.navigationButtonHeight)
                             .focusRequester(focus)
+                            .onFocusChanged { if (it.isFocused) section = item }
                             .onPreviewKeyEvent {
                                 if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
                                     section = item
@@ -161,30 +176,28 @@ fun SeasonvarApp(
                 }
             }
             Box(
-                Modifier.weight(1f).fillMaxHeight()
-                    .onFocusChanged { contentFocused = it.hasFocus }.focusGroup()
+                Modifier.weight(1f).fillMaxHeight().focusGroup()
             ) {
                 if (section == Section.SETTINGS) {
                     SettingsPane(
-                        networkSettingsOpen, bypassEnabled, networkFocus, toggleFocus,
-                        onOpenNetwork = {
-                            networkSettingsOpen = true
-                            scope.launch { repeat(2) { withFrameNanos { } }; toggleFocus.requestFocus() }
-                        },
-                        onBack = { closeNetworkSettings() },
+                        bypassEnabled, toggleFocus,
+                        menuFocus = settingsFocus,
                         onBypassChange = onBypassChange,
                         dnsProvider = dnsProvider,
                         onDnsChange = onDnsChange,
+                        onBack = ::navigateBack,
+                        onCloseDialog = { backNavigation.reset(); returnToMenu() },
+                        onInteraction = backNavigation::reset,
                     )
                 } else if (section == Section.ABOUT) {
-                    AboutPane(aboutBackFocus) { section = Section.TODAY; todayFocus.requestFocus() }
+                    AboutPane()
                 } else {
                     TodayPane(
                         state, description, selected, listState, cards,
                         todayFocus, refreshFocus, retryFocus,
                         onRefresh = onRefresh,
                         onFocused = { selectedKey = it.key },
-                        onOpen = { selectedKey = it.key; detailsOpen = true },
+                        onOpen = { backNavigation.reset(); selectedKey = it.key; detailsOpen = true },
                     )
                 }
             }
@@ -193,7 +206,9 @@ fun SeasonvarApp(
             SeriesDialog(
                 selected, description,
                 onRetry = { onSelect(selected, true) },
-                onClose = { detailsOpen = false; enterContent() },
+                onClose = { backNavigation.reset(); returnToMenu() },
+                onBack = ::navigateBack,
+                onInteraction = backNavigation::reset,
             )
         }
     }
@@ -396,10 +411,12 @@ private fun SeriesDialog(
     description: DescriptionState,
     onRetry: () -> Unit,
     onClose: () -> Unit,
+    onBack: () -> Unit,
+    onInteraction: () -> Unit,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
-    val closeFocus = remember { FocusRequester() }
+    val descriptionFocus = remember { FocusRequester() }
     val paragraphs = when {
         description.key != entry.key || description.loading -> listOf(stringResource(R.string.description_loading))
         description.failed -> listOf(stringResource(R.string.description_error))
@@ -411,20 +428,20 @@ private fun SeriesDialog(
     val step = with(androidx.compose.ui.platform.LocalDensity.current) { d.navigationButtonHeight.toPx() }
     var textFocused by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        BackHandler(onBack = onBack)
         Column(
             Modifier.width(d.dialogWidth).height(d.dialogHeight)
+                .backNavigationKeys(onBack, onInteraction)
                 .background(c.background, RoundedCornerShape(d.cardCornerRadius))
                 .padding(d.spacingLarge),
             verticalArrangement = Arrangement.spacedBy(d.spacingMedium),
         ) {
-            ThemeButton(stringResource(R.string.back), onClose,
-                Modifier.width(d.headerButtonWidth).height(d.headerButtonHeight)
-                    .focusRequester(closeFocus))
             Text(entry.title, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(entry.update, color = c.primary, style = MaterialTheme.typography.bodyLarge)
             Box(
                 Modifier.weight(1f).fillMaxWidth()
+                    .focusRequester(descriptionFocus)
                     .onFocusChanged { textFocused = it.isFocused }
                     .border(d.focusBorderWidth, if (textFocused) c.primary else Color.Transparent,
                         RoundedCornerShape(d.cardCornerRadius))
@@ -436,8 +453,7 @@ private fun SeriesDialog(
                                 else { scope.launch { scroll.scrollBy(step) }; true }
                             }
                             Key.DirectionUp -> {
-                                if (scroll.value == 0) closeFocus.requestFocus()
-                                else scope.launch { scroll.scrollBy(-step) }
+                                scope.launch { scroll.scrollBy(-step) }
                                 true
                             }
                             else -> false
@@ -456,82 +472,88 @@ private fun SeriesDialog(
             }
         }
     }
-    LaunchedEffect(Unit) { closeFocus.requestFocus() }
+    LaunchedEffect(Unit) { descriptionFocus.requestFocus() }
 }
 
 @Composable
 private fun SettingsPane(
-    networkOpen: Boolean,
     bypassEnabled: Boolean,
-    networkFocus: FocusRequester,
     toggleFocus: FocusRequester,
-    onOpenNetwork: () -> Unit,
-    onBack: () -> Unit,
+    menuFocus: FocusRequester,
     onBypassChange: (Boolean) -> Unit,
     dnsProvider: DnsProvider,
     onDnsChange: (DnsProvider) -> Unit,
+    onBack: () -> Unit,
+    onCloseDialog: () -> Unit,
+    onInteraction: () -> Unit,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var focused by remember { mutableStateOf(false) }
     val dnsFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
-        Text(
-            stringResource(if (networkOpen) R.string.network_title else R.string.settings_title),
-            style = MaterialTheme.typography.headlineMedium, color = c.onBackground,
+        Text(stringResource(R.string.settings_title),
+            style = MaterialTheme.typography.headlineMedium, color = c.onBackground)
+        Spacer(Modifier.height(d.spacingLarge))
+        Text(stringResource(R.string.network_title),
+            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+        Spacer(Modifier.height(d.spacingMedium))
+        Row(
+            Modifier.fillMaxWidth().focusRequester(toggleFocus)
+                .focusProperties {
+                    left = menuFocus
+                    up = FocusRequester.Cancel
+                    down = dnsFocus
+                }
+                .onFocusChanged { focused = it.isFocused }
+                .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent,
+                    RoundedCornerShape(d.cardCornerRadius))
+                .toggleable(value = bypassEnabled, role = Role.Checkbox,
+                    onValueChange = onBypassChange)
+                .padding(d.spacingMedium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = bypassEnabled, onCheckedChange = null)
+            Spacer(Modifier.width(d.spacingMedium))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.bypass_title), color = c.onBackground,
+                    style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.bypass_description), color = c.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        Spacer(Modifier.height(d.spacingLarge))
+        ThemeButton(
+            stringResource(R.string.dns_current, stringResource(dnsLabel(dnsProvider))),
+            onClick = { onInteraction(); dnsDialogOpen = true },
+            Modifier.width(d.buttonWidth).height(d.navigationButtonHeight)
+                .focusRequester(dnsFocus)
+                .focusProperties {
+                    left = menuFocus
+                    up = toggleFocus
+                    down = FocusRequester.Cancel
+                },
         )
         Spacer(Modifier.height(d.spacingLarge))
-        if (!networkOpen) {
-            ThemeButton(
-                stringResource(R.string.network_title), onOpenNetwork,
-                Modifier.width(d.buttonWidth).height(d.navigationButtonHeight)
-                    .focusRequester(networkFocus),
-            )
-        } else {
-            var focused by remember { mutableStateOf(false) }
-            Row(
-                Modifier.fillMaxWidth().focusRequester(toggleFocus)
-                    .onFocusChanged { focused = it.isFocused }
-                    .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent,
-                        RoundedCornerShape(d.cardCornerRadius))
-                    .toggleable(value = bypassEnabled, role = Role.Checkbox,
-                        onValueChange = onBypassChange)
-                    .padding(d.spacingMedium),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(checked = bypassEnabled, onCheckedChange = null)
-                Spacer(Modifier.width(d.spacingMedium))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.bypass_title), color = c.onBackground,
-                        style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(d.spacingSmall))
-                    Text(stringResource(R.string.bypass_description), color = c.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-            Spacer(Modifier.height(d.spacingLarge))
-            ThemeButton(
-                stringResource(R.string.dns_current, stringResource(dnsLabel(dnsProvider))),
-                onClick = { dnsDialogOpen = true },
-                Modifier.width(d.buttonWidth).height(d.navigationButtonHeight)
-                    .focusRequester(dnsFocus),
-            )
-            Spacer(Modifier.height(d.spacingLarge))
-            Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge)
-            Spacer(Modifier.height(d.spacingExtraLarge))
-            ThemeButton(stringResource(R.string.back), onBack,
-                Modifier.width(d.buttonWidth).height(d.navigationButtonHeight))
-        }
+        Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyLarge)
     }
-    if (dnsDialogOpen && networkOpen) {
-        DnsDialog(dnsProvider, onDnsChange, onClose = {
-            dnsDialogOpen = false
-            scope.launch { repeat(2) { withFrameNanos { } }; dnsFocus.requestFocus() }
-        })
+    if (dnsDialogOpen) {
+        DnsDialog(
+            dnsProvider,
+            onSelect = { provider ->
+                onDnsChange(provider)
+                dnsDialogOpen = false
+                scope.launch { repeat(2) { withFrameNanos { } }; dnsFocus.requestFocus() }
+            },
+            onClose = { dnsDialogOpen = false; onCloseDialog() },
+            onBack = { dnsDialogOpen = false; onBack() },
+            onInteraction = onInteraction,
+        )
     }
-
 }
 
 @Composable
@@ -539,13 +561,17 @@ private fun DnsDialog(
     selected: DnsProvider,
     onSelect: (DnsProvider) -> Unit,
     onClose: () -> Unit,
+    onBack: () -> Unit,
+    onInteraction: () -> Unit,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val options = remember { DnsProvider.entries.associateWith { FocusRequester() } }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        BackHandler(onBack = onBack)
         Column(
             Modifier.width(d.dialogWidth).heightIn(max = d.dialogHeight)
+                .backNavigationKeys(onBack, onInteraction)
                 .background(c.background, RoundedCornerShape(d.cardCornerRadius))
                 .padding(d.spacingLarge)
                 .verticalScroll(androidx.compose.foundation.rememberScrollState())
@@ -563,7 +589,7 @@ private fun DnsDialog(
                         .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent,
                             RoundedCornerShape(d.cardCornerRadius))
                         .selectable(selected = selected == provider, role = Role.RadioButton,
-                            onClick = { onSelect(provider); onClose() })
+                            onClick = { onInteraction(); onSelect(provider) })
                         .padding(d.spacingMedium),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -584,7 +610,7 @@ private fun dnsLabel(provider: DnsProvider): Int = when (provider) {
 }
 
 @Composable
-private fun AboutPane(backFocus: FocusRequester, onBack: () -> Unit) {
+private fun AboutPane() {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
@@ -597,9 +623,6 @@ private fun AboutPane(backFocus: FocusRequester, onBack: () -> Unit) {
         Spacer(Modifier.height(d.spacingMedium))
         Text(stringResource(R.string.about_description), color = c.onBackground)
         Text(stringResource(R.string.about_source), color = c.onSurfaceVariant)
-        Spacer(Modifier.height(d.spacingExtraLarge))
-        ThemeButton(stringResource(R.string.back), onBack,
-            Modifier.width(d.buttonWidth).height(d.buttonHeight).focusRequester(backFocus))
     }
 }
 

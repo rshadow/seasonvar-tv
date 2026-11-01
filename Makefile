@@ -6,8 +6,10 @@ BOOTSTRAP_CACHE ?= $(HOME)/.cache/seasonvar/downloads
 ENV := ./scripts/android-env.sh
 GRADLE_ARGS ?=
 LOG_ARGS ?=
+KEY_ARGS ?=
 GRADLE := $(ENV) ./gradlew --console=plain $(GRADLE_ARGS)
 AVD ?= Seasonvar_TV_API_34
+EMULATOR_ARGS := $(shell python3 -c 'import json; print(" ".join(json.load(open("toolchain.lock.json"))["avd"]["emulator_args"]))')
 DEVICE ?= emulator-5554
 APP_ID := ru.seasonvar.tv
 APK := app/build/outputs/apk/debug/app-debug.apk
@@ -20,7 +22,7 @@ SITE_IP ?=
 SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key tap screenshot layout site-fetch site-test site-styles
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles
 
 help:
 	@printf '%s\n' \
@@ -41,6 +43,7 @@ help:
 		'make debug [DEVICE=serial]   Open a local JDWP debugger port' \
 		'make attach                 Attach the terminal debugger' \
 		'make key KEY=BACK           Send a remote-control key' \
+		'make key-double KEY=BACK    Send a quick double key press' \
 		'make tap X=400 Y=670        Tap a point in device pixels' \
 		'make layout                 Dump the current UI hierarchy' \
 		'make screenshot OUT=file    Save the current screen' \
@@ -92,7 +95,7 @@ avd:
 emulator: avd
 	@if $(ADB) emu avd name 2>/dev/null | tr -d '\r' | grep -Fxq "$(AVD)"; then \
 		echo "AVD $(AVD) is already running on $(DEVICE). Run make run."; \
-	else $(ENV) emulator -avd "$(AVD)" -no-boot-anim -no-snapshot-save; fi
+	else $(ENV) emulator -avd "$(AVD)" $(EMULATOR_ARGS); fi
 
 emulator-stop:
 	@if ! name="$$($(ADB) emu avd name 2>/dev/null | tr -d '\r' | head -n 1)"; then \
@@ -134,7 +137,11 @@ attach: debug
 
 key:
 	@test -n "$(KEY)" || { echo 'Set KEY=DPAD_CENTER, BACK, DPAD_UP, ...' >&2; exit 1; }
-	$(ADB) shell input keyevent "KEYCODE_$(KEY)"
+	$(ADB) shell input keyevent $(KEY_ARGS) "KEYCODE_$(KEY)"
+
+key-double:
+	@test -n "$(KEY)" || { echo 'Set KEY=BACK or ESCAPE' >&2; exit 1; }
+	$(ADB) shell input keyevent "KEYCODE_$(KEY)" "KEYCODE_$(KEY)"
 
 tap:
 	@test -n "$(X)" -a -n "$(Y)" || { echo 'Set X and Y in device pixels.' >&2; exit 1; }

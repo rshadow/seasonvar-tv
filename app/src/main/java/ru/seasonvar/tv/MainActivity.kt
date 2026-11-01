@@ -1,6 +1,7 @@
 package ru.seasonvar.tv
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
@@ -10,6 +11,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.seasonvar.tv.ui.SeasonvarApp
+import ru.seasonvar.tv.ui.navigation.traceBackKey
 import ru.seasonvar.tv.ui.today.TodayViewModel
 
 class MainActivity : ComponentActivity() {
@@ -37,6 +39,7 @@ class MainActivity : ComponentActivity() {
                     container.networkSettings.setBypassEnabled(enabled)
                     model.networkChanged()
                 },
+                onExit = ::finishAndRemoveTask,
                 dnsProvider = network.dnsProvider,
                 onDnsChange = { provider ->
                     if (provider != network.dnsProvider) {
@@ -46,6 +49,21 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        traceBackKey(event, "activity")
+        if (keyCode == KeyEvent.KEYCODE_ESCAPE) return true
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        traceBackKey(event, "activity")
+        if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
+            if (!event.isCanceled) onBackPressedDispatcher.onBackPressed()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onResume() {

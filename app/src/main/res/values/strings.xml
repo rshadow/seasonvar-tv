@@ -5,7 +5,6 @@
     <string name="about_description">Клиент Seasonvar для телевизоров и ТВ-приставок.</string>
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
-    <string name="back">Назад</string>
     <string name="today_title">Сегодня</string>
     <string name="today_date_count">%1$s · обновлений: %2$d</string>
     <string name="refresh">Обновить</string>

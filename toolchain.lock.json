@@ -670,6 +670,11 @@
       "hw.keyboard": "yes",
       "hw.keyboard.lid": "no",
       "hw.screen": "multi-touch"
-    }
+    },
+    "emulator_args": [
+      "-no-boot-anim",
+      "-no-snapshot-save",
+      "-use-keycode-forwarding"
+    ]
   }
 }
