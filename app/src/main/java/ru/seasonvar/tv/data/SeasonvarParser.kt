@@ -52,13 +52,11 @@ object SeasonvarParser {
     }
 
     fun updates(html: String, day: LocalDate): CatalogPage {
-        val doc = Jsoup.parse(html, "https://seasonvar.ru/")
-        val block = doc.selectFirst("li[data-tabr=rside-new][data-tabgr=rightside]")
-            ?: throw MarkupChangedException()
-        val anchors = block.select("a.pst.rside-p[href]")
-        if (anchors.isEmpty() && (block.children().isNotEmpty() || block.text().isNotBlank())) {
-            throw MarkupChangedException()
-        }
+        val body = Jsoup.parseBodyFragment(html, "https://seasonvar.ru/").body()
+        val anchors = body.children()
+        if (body.ownText().isNotBlank() || anchors.any {
+            it.tagName() != "a" || !it.hasClass("pst") || !it.hasClass("rside-p") || !it.hasAttr("href")
+        }) throw MarkupChangedException()
         val entries = anchors.map { anchor ->
             val url = pageUrl(anchor.attr("href")) ?: throw MarkupChangedException()
             val id = Regex("/serial-(\\d+)").find(URI(url).path)?.groupValues?.get(1)

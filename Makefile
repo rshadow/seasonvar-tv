@@ -23,7 +23,7 @@ SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates
 
 help:
 	@printf '%s\n' \
@@ -50,6 +50,7 @@ help:
 		'make screenshot OUT=file    Save the current screen' \
 		'make devices                List connected devices' \
 		'make site-fetch             Fetch public Seasonvar HTML/JSON with DPI strategy' \
+		'make site-updates           Fetch the public updates AJAX fragment' \
 		'make site-test              Test the standalone website fetcher' \
 		'make site-styles            Download original website CSS for theme reference' \
 		'make site-scripts           Download website JavaScript for protocol research'
@@ -159,6 +160,11 @@ layout:
 
 site-fetch:
 	python3 scripts/fetch-seasonvar.py --url "$(SITE_URL)" --output "$(SITE_OUT)" \
+		--strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)" \
+		$(if $(SITE_SOURCE_IP),--source-ip "$(SITE_SOURCE_IP)") $(if $(SITE_IP),--ip "$(SITE_IP)")
+
+site-updates:
+	python3 scripts/fetch-seasonvar.py --updates --output build/site/updates.html \
 		--strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)" \
 		$(if $(SITE_SOURCE_IP),--source-ip "$(SITE_SOURCE_IP)") $(if $(SITE_IP),--ip "$(SITE_IP)")
 

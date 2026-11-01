@@ -27,7 +27,10 @@ class CatalogRepository(
 
     suspend fun load(day: LocalDate, feed: PublicFeed = PublicFeed.TODAY): CatalogPage =
         withContext(Dispatchers.IO) {
-            val html = source.get("https://seasonvar.ru/")
+            val html = when (feed) {
+                PublicFeed.TODAY -> source.get("https://seasonvar.ru/")
+                PublicFeed.UPDATES -> source.updates()
+            }
             val parsed = parse(html, day, feed)
             save(cacheName(feed), html)
             parsed
@@ -40,7 +43,7 @@ class CatalogRepository(
 
     private fun cacheName(feed: PublicFeed): String = when (feed) {
         PublicFeed.TODAY -> "today.html"
-        PublicFeed.UPDATES -> "updates.html"
+        PublicFeed.UPDATES -> "updates-ajax.html"
     }
 
     suspend fun description(entry: SeriesEntry): SeriesDescription {

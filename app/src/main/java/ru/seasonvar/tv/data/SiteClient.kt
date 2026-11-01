@@ -2,6 +2,7 @@ package ru.seasonvar.tv.data
 
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
+import okhttp3.FormBody
 import okhttp3.Callback
 import okhttp3.Request
 import ru.seasonvar.tv.data.network.NetworkClients
@@ -17,27 +18,43 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
     override fun newCall(request: Request): Call =
         clients.forConfiguration(settings.configuration.value).newCall(request)
 
-    override suspend fun get(url: String): String {
-        var current = url
+    override suspend fun get(url: String): String = execute(Request.Builder().url(url).build())
+
+    override suspend fun updates(): String = execute(updatesRequest())
+
+    private suspend fun execute(initial: Request): String {
+        var request = initial
         repeat(5) {
-            val request = Request.Builder().url(current)
+            val result = newCall(request.newBuilder()
                 .header("User-Agent", "Mozilla/5.0 (Android TV) SeasonvarTV/" + ru.seasonvar.tv.BuildConfig.VERSION_NAME)
                 .header("Accept-Language", "ru-RU,ru;q=0.9")
-                .build()
-            val result = newCall(request).awaitResult()
+                .build()).awaitResult()
             if (result.status in setOf(301, 302, 303, 307, 308)) {
-                val destination = java.net.URI(current).resolve(result.location ?: "")
+                if (request.method != "GET") throw IOException("Unexpected AJAX redirect")
+                val destination = java.net.URI(request.url.toString()).resolve(result.location ?: "")
                 if (destination.scheme != "https" ||
                     destination.host !in setOf("seasonvar.ru", "www.seasonvar.ru") ||
                     destination.userInfo != null || destination.port !in listOf(-1, 443)
                 ) throw IOException("Unexpected redirect")
-                current = destination.toASCIIString()
+                request = request.newBuilder().url(destination.toASCIIString()).build()
             } else {
                 if (result.status != 200) throw SiteHttpException(result.status)
                 return result.body
             }
         }
         throw IOException("Too many redirects")
+    }
+
+    companion object {
+        internal fun updatesRequest(): Request = Request.Builder()
+            .url("https://seasonvar.ru/ajax.php?mode=new")
+            .header("Referer", "https://seasonvar.ru/")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Accept", "text/html")
+            .post(FormBody.Builder()
+                .add("ganre", "").add("country", "").add("block", "0").add("main", "1")
+                .build())
+            .build()
     }
 
     private data class Result(val status: Int, val location: String?, val body: String)

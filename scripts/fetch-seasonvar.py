@@ -250,24 +250,32 @@ def validate_url(url):
     return parsed
 
 
-def request_page(url, ip, strategy, timeout, source_ip=None):
+def request_page(url, ip, strategy, timeout, source_ip=None, updates=False):
     parsed = validate_url(url)
     target = quote(parsed.path or "/", safe="/%:@!$&()*+,;=-._~")
     if parsed.query:
         target += "?" + quote(parsed.query, safe="%=&+/:?@!$()*,-._~;")
+    body = b"ganre=&country=&block=0&main=1" if updates else b""
+    ajax_headers = (
+        "Content-Type: application/x-www-form-urlencoded\r\n"
+        "X-Requested-With: XMLHttpRequest\r\n"
+        "Referer: https://seasonvar.ru/\r\n"
+        f"Content-Length: {len(body)}\r\n"
+    ) if updates else ""
+    method = "POST" if updates else "GET"
     request = (
-        f"GET {target} HTTP/1.1\r\nHost: {parsed.hostname}\r\n"
+        f"{method} {target} HTTP/1.1\r\nHost: {parsed.hostname}\r\n"
         "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\r\n"
         "Accept: text/html,application/json;q=0.9,*/*;q=0.8\r\n"
         "Accept-Language: ru-RU,ru;q=0.9,en;q=0.8\r\n"
-        "Accept-Encoding: identity\r\nConnection: close\r\n\r\n"
+        f"Accept-Encoding: identity\r\n{ajax_headers}Connection: close\r\n\r\n"
     )
     source = (source_ip, 0) if source_ip else None
     with socket.create_connection((ip, 443), timeout=timeout, source_address=source) as sock:
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         stream = TLSStream(sock, parsed.hostname, strategy, timeout)
-        stream.sendall(request.encode("ascii"))
+        stream.sendall(request.encode("ascii") + body)
         with http.client.HTTPResponse(stream) as response:
             response.begin()
             status = response.status
@@ -298,7 +306,7 @@ class PageSummary(HTMLParser):
             self.news_blocks += 1
 
 
-def fetch(url, strategy, timeout, source_ip=None, override_ip=None):
+def fetch(url, strategy, timeout, source_ip=None, override_ip=None, updates=False):
     addresses = {}
     for _ in range(6):
         parsed = validate_url(url)
@@ -308,7 +316,7 @@ def fetch(url, strategy, timeout, source_ip=None, override_ip=None):
         last_error = None
         for ip in addresses[host]:
             try:
-                result = request_page(url, ip, strategy, timeout, source_ip)
+                result = request_page(url, ip, strategy, timeout, source_ip, updates)
                 break
             except (OSError, ssl.SSLError, FetchError, http.client.HTTPException) as exc:
                 last_error = exc
@@ -317,6 +325,8 @@ def fetch(url, strategy, timeout, source_ip=None, override_ip=None):
             raise FetchError("All destination addresses failed") from last_error
         status, content_type, location, body = result
         if status in (301, 302, 303, 307, 308):
+            if updates:
+                raise FetchError("Unexpected AJAX redirect")
             if not location:
                 raise FetchError("Redirect has no Location")
             url = urljoin(url, location)
@@ -352,6 +362,7 @@ def main():
     parser.add_argument("--strategy", choices=("default", "tlsrec", "direct"), default="default")
     parser.add_argument("--timeout", type=float, default=10)
     parser.add_argument("--source-ip")
+    parser.add_argument("--updates", action="store_true", help="POST the public updates AJAX form")
     parser.add_argument("--ip", help="Override the destination IPv4 for diagnostics")
     args = parser.parse_args()
     try:
@@ -361,7 +372,8 @@ def main():
             if address:
                 ipaddress.IPv4Address(address)
         body, content_type, ip, count = fetch(
-            args.url, args.strategy, args.timeout, args.source_ip, args.ip
+            "https://seasonvar.ru/ajax.php?mode=new" if args.updates else args.url,
+            args.strategy, args.timeout, args.source_ip, args.ip, args.updates
         )
         save_output(args.output, body)
         print(

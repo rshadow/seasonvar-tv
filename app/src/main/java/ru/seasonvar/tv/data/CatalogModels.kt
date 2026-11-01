@@ -23,4 +23,5 @@ class SiteHttpException(val status: Int) : Exception("HTTP " + status)
 
 interface HtmlSource {
     suspend fun get(url: String): String
+    suspend fun updates(): String
 }

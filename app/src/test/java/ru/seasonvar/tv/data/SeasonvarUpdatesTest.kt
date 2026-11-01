@@ -14,8 +14,6 @@ class SeasonvarUpdatesTest {
     private val day = LocalDate.of(2026, 11, 2)
     private val now = day.atTime(12, 0).toInstant(ZoneOffset.UTC).toEpochMilli()
     private val page = """
-        <ul>
-        <li data-tabr="rside-new" data-tabgr="rightside">
           <a class="pst rside-p" href="/serial-100-First.html">
             <div class="rside-t">Первый &amp; второй</div>
             <div class="rside-t_en">First &amp; Second</div>
@@ -25,18 +23,11 @@ class SeasonvarUpdatesTest {
             <div class="rside-t">Другой сериал</div>
             <div class="rside-ss"><span>10-12 серия</span></div>
           </a>
-        </li>
-        <li data-tabr="rside-pop" data-tabgr="rightside">
-          <a class="pst rside-p" href="/serial-300-Top.html">
-            <div class="rside-t">Не из обновлений</div>
-            <div class="rside-ss"><span>1 серия</span></div>
-          </a>
-        </li></ul>
     """.trimIndent()
 
     @get:Rule val folder = TemporaryFolder()
 
-    @Test fun reads_only_updates_in_site_order_with_season_and_original_title() {
+    @Test fun reads_ajax_fragment_in_site_order_with_season_and_original_title() {
         val entries = SeasonvarParser.updates(page, day).entries
         assertEquals(listOf("100", "200"), entries.map { it.id })
         assertEquals("Первый & второй / First & Second", entries[0].title)
@@ -50,11 +41,22 @@ class SeasonvarUpdatesTest {
             SeasonvarParser.updates(page, day.plusDays(1)).entries)
     }
 
+    @Test fun real_ajax_response_preserves_all_50_positions_in_site_order() {
+        val html = javaClass.getResource("/updates-ajax.html")!!.readText()
+        val entries = SeasonvarParser.updates(html, day).entries
+        val expected = "51072 36145 50709 50570 50710 50996 50836 51067 47435 50713 " +
+            "50990 50920 51055 50579 51081 51082 50392 50865 50906 51077 " +
+            "51080 50987 50625 50749 50765 50921 50907 51043 50888 51078 " +
+            "37364 51079 49711 49729 49353 51058 50934 50680 50531 20574 " +
+            "49384 50743 44886 50711 50804 50921 50838 50994 50684 50363"
+        assertEquals(expected.split(" "), entries.map { it.id })
+        assertEquals(50, entries.map { it.key }.distinct().size)
+        assertEquals(2, entries.count { it.id == "50921" })
+        assertEquals("0 серия (RuDub)", entries.first().update)
+    }
+
     @Test fun exact_duplicate_is_not_duplicated() {
-        val first = page.substringAfter("<li data-tabr=\"rside-new\" data-tabgr=\"rightside\">")
-            .substringBefore("</li>")
-        val repeated = page.replace("</li>", first + "</li>")
-        assertEquals(2, SeasonvarParser.updates(repeated, day).entries.size)
+        assertEquals(2, SeasonvarParser.updates(page + page, day).entries.size)
     }
 
     @Test fun different_updates_of_the_same_season_are_preserved() {
@@ -64,18 +66,18 @@ class SeasonvarUpdatesTest {
               <div class="rside-ss">Сезон 2<span>6 серия (Другая студия)</span></div>
             </a>
         """
-        val entries = SeasonvarParser.updates(page.replace("</li>", extra + "</li>"), day).entries
+        val entries = SeasonvarParser.updates(page + extra, day).entries
         assertEquals(3, entries.size)
         assertEquals(2, entries.count { it.id == "100" })
         assertEquals(3, entries.map { it.key }.distinct().size)
     }
 
     @Test fun valid_empty_updates_are_distinct_from_changed_or_blocked_markup() {
-        assertTrue(SeasonvarParser.updates(
-            "<li data-tabr='rside-new' data-tabgr='rightside'></li>", day).entries.isEmpty())
+        assertTrue(SeasonvarParser.updates("  ", day).entries.isEmpty())
         for (invalid in listOf(
             "<h1>Blocked</h1>",
-            "<li data-tabr='rside-new' data-tabgr='rightside'><div class='svload'></div></li>",
+            "<div class='pgs-msg'>ошибка загрузки</div>",
+            "<li data-tabr='rside-new' data-tabgr='rightside'>" + page + "</li>",
             page.replace("rside-t\"", "changed\""),
             page.replace("<span>6 серия (Студия)</span>", ""),
         )) {
@@ -92,7 +94,7 @@ class SeasonvarUpdatesTest {
 
     @Test fun updates_cache_can_cross_midnight_but_expires_after_24_hours() = runBlocking {
         val dir = folder.newFolder()
-        val file = File(dir, "updates.html").apply { writeText(page) }
+        val file = File(dir, "updates-ajax.html").apply { writeText(page) }
         val repository = repository(dir)
         file.setLastModified(now - 13 * 60 * 60 * 1000)
         assertEquals(2, repository.cached(day, PublicFeed.UPDATES)?.entries?.size)
@@ -104,21 +106,41 @@ class SeasonvarUpdatesTest {
         val dir = folder.newFolder()
         val repository = repository(dir, page)
         repository.load(day, PublicFeed.UPDATES)
-        assertEquals(page, File(dir, "updates.html").readText())
+        assertEquals(page, File(dir, "updates-ajax.html").readText())
         assertFalse(File(dir, "today.html").exists())
         assertNull(repository.cached(day, PublicFeed.TODAY))
     }
 
     @Test fun broken_updates_do_not_replace_a_good_cache() = runBlocking {
         val dir = folder.newFolder()
-        val cached = File(dir, "updates.html").apply { writeText(page) }
+        val cached = File(dir, "updates-ajax.html").apply { writeText(page) }
         try { repository(dir, "<h1>Blocked</h1>").load(day, PublicFeed.UPDATES); fail() }
         catch (_: MarkupChangedException) { }
         assertEquals(page, cached.readText())
     }
 
+    @Test fun old_homepage_cache_is_not_used_for_ajax_updates() = runBlocking {
+        val dir = folder.newFolder()
+        File(dir, "updates.html").writeText(page)
+        assertNull(repository(dir).cached(day, PublicFeed.UPDATES))
+    }
+
+    @Test fun ajax_request_matches_the_site_form() {
+        val request = SiteClient.updatesRequest()
+        assertEquals("POST", request.method)
+        assertEquals("https://seasonvar.ru/ajax.php?mode=new", request.url.toString())
+        assertEquals("https://seasonvar.ru/", request.header("Referer"))
+        assertEquals("XMLHttpRequest", request.header("X-Requested-With"))
+        val body = request.body!!
+        assertEquals("application/x-www-form-urlencoded", body.contentType().toString())
+        val buffer = okio.Buffer()
+        body.writeTo(buffer)
+        assertEquals("ganre=&country=&block=0&main=1", buffer.readUtf8())
+    }
+
     private fun repository(directory: File, response: String? = null) =
         CatalogRepository(directory, object : HtmlSource {
-            override suspend fun get(url: String): String = response ?: throw IOException("offline")
+            override suspend fun get(url: String): String = error("Updates must not GET the homepage")
+            override suspend fun updates(): String = response ?: throw IOException("offline")
         }, ZoneOffset.UTC, { now })
 }
