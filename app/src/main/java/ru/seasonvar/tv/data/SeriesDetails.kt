@@ -12,6 +12,7 @@ data class SeriesDetails(
     val seasons: List<SeasonOption>,
     val translations: List<Translation>,
     val defaultTranslationId: String?,
+    val playbackUnavailableReason: String? = null,
 )
 
 // Last local playback position; account synchronization is a separate feature.

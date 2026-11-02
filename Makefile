@@ -223,7 +223,7 @@ site-search:
 		$(MAKE) site-fetch SITE_URL="$$url" SITE_OUT=build/site/search.json
 
 site-test:
-	python3 -m unittest discover -s tests -p 'test_fetch_seasonvar.py' -v
+	python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 site-styles:
 	mkdir -p build/site

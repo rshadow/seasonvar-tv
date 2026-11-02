@@ -75,10 +75,10 @@ class CatalogRepository(
         }
     }
 
-    suspend fun details(entry: SeriesEntry): SeriesDetails = withContext(Dispatchers.IO) {
+    suspend fun details(entry: SeriesEntry, force: Boolean = false): SeriesDetails = withContext(Dispatchers.IO) {
         val name = "series-" + entry.id + ".html"
         val file = File(directory, name)
-        if (file.isFile && nowMillis() - file.lastModified() in 0 until 86_400_000L) {
+        if (!force && file.isFile && nowMillis() - file.lastModified() in 0 until 86_400_000L) {
             runCatching { SeriesDetailsParser.parse(file.readText(), entry) }.getOrNull()?.let { return@withContext it }
         }
         val html = source.get(entry.url)

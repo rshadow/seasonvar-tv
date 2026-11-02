@@ -42,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import ru.seasonvar.tv.diagnostics.failureSummary
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
@@ -136,6 +137,7 @@ class PlayerActivity : ComponentActivity() {
 
     private fun preparePlayback() {
         val selected = request ?: return
+        trace("open season=" + selected.seasonId + " translation=" + selected.translationId + " episode=" + selected.episodeId)
         resolveJob?.cancel()
         releasePlayback()
         loading = true
@@ -170,7 +172,7 @@ class PlayerActivity : ComponentActivity() {
                     override fun onPlayerError(error: PlaybackException) {
                         loading = false
                         failure = R.string.player_playback_error
-                        trace("error=" + error.errorCodeName)
+                        trace("error=" + error.errorCodeName + " " + failureSummary(error))
                     }
                 })
                 playback = player
@@ -191,7 +193,7 @@ class PlayerActivity : ComponentActivity() {
                     is VideoUnavailableException -> R.string.player_unavailable
                     else -> R.string.player_source_error
                 }
-                trace("resolve-error=" + e.javaClass.simpleName)
+                trace("resolve-error=" + failureSummary(e))
             }
         }
     }

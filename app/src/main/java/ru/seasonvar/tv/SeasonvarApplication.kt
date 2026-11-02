@@ -15,7 +15,11 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val siteClient by lazy { SiteClient(networkSettings) }
     val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient) }
 
-    val videos by lazy { VideoRepository(siteClient::resource) }
+    val videos by lazy { VideoRepository { url, referer ->
+        if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarPlayback", "request=" +
+            if (java.net.URI(url).path.startsWith("/serial-")) "page" else "playlist")
+        siteClient.resource(url, referer)
+    } }
     val playbackProgress by lazy { PlaybackProgress(this) }
 
     override fun newImageLoader(): ImageLoader =

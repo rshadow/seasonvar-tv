@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.playback
 
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
@@ -11,7 +12,7 @@ object VideoParser {
     private val declaration = Regex("""\bvar\s+pl\s*=\s*\{([^;]+)\}""")
     private val member = Regex("""["']?(\d+)["']?\s*:\s*(["'])(.*?)\2""")
     private val assignment = Regex("""\bpl\[\s*["']?(\d+)["']?\s*\]\s*=\s*(["'])(.*?)\2""")
-    private val videoUrl = Regex("""(?:https?:)?//[^\s,\[\]]+""")
+    private val sourceBoundary = Regex(""",\s*\[[^\]]+\]\s*(?=(?:https?:)?//)|\s+or\s+(?=(?:https?:)?//)""")
 
     fun playlistUrl(html: String, request: PlaybackRequest): String {
         val info = Jsoup.parse(html, request.pageUrl).selectFirst(".pgs-sinfo[data-id-season]")
@@ -54,16 +55,26 @@ object VideoParser {
             value.startsWith("#") -> throw VideoUnavailableException()
             else -> value
         }
-        val found = videoUrl.find(decoded)?.value ?: throw VideoUnavailableException()
+        val text = decoded.trim()
+        val withoutQuality = if (text.startsWith("[")) {
+            val end = text.indexOf(']')
+            if (end < 1) throw VideoUnavailableException()
+            text.substring(end + 1).trim()
+        } else text
+        val found = sourceBoundary.split(withoutQuality, limit = 2).first().trim()
+        if (!found.startsWith("//") && !found.startsWith("https://") && !found.startsWith("http://")) {
+            throw VideoUnavailableException()
+        }
         val url = when {
             found.startsWith("//") -> "https:" + found
             found.startsWith("http:") -> "https:" + found.drop(5)
             else -> found
         }
-        val uri = try { URI(url) } catch (_: Exception) { throw MarkupChangedException() }
-        if (uri.scheme != "https" || uri.host.isNullOrBlank() || uri.userInfo != null ||
-            uri.port !in listOf(-1, 443)) throw MarkupChangedException()
-        return VideoSource(uri.toASCIIString())
+        val parsed = url.toHttpUrlOrNull() ?: throw MarkupChangedException()
+        val authority = url.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
+        if (parsed.scheme != "https" || parsed.username.isNotEmpty() || parsed.password.isNotEmpty() ||
+            '@' in authority || parsed.port != 443) throw MarkupChangedException()
+        return VideoSource(parsed.toUri().toASCIIString())
     }
 
     private fun clean(value: String) = Jsoup.parseBodyFragment(value).text().trim()

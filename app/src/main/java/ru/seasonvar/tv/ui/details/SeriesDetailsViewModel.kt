@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.data.*
+import ru.seasonvar.tv.diagnostics.failureSummary
 import ru.seasonvar.tv.data.playback.PlaybackProgress
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.ui.catalog.LoadFailure
@@ -25,12 +26,14 @@ data class DetailsUiState(
     val resume: ResumePoint? = null,
 ) {
     val translation get() = details?.translations?.firstOrNull { it.id == translationId }
-    val episodes get() = translation?.episodes
+    val episodes get() = translation?.episodes.takeIf { details?.playbackUnavailableReason == null }
     val episode get() = episodes?.firstOrNull { it.id == episodeId }
+    val canPlay get() = details != null && details.playbackUnavailableReason == null && episode != null
 }
 
 class SeriesDetailsViewModel(
     private val loadResume: suspend (String) -> ResumePoint? = { null },
+    private val reload: (suspend (SeriesEntry) -> SeriesDetails)? = null,
     private val load: suspend (SeriesEntry) -> SeriesDetails,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DetailsUiState())
@@ -40,17 +43,17 @@ class SeriesDetailsViewModel(
     private var savedResume: ResumePoint? = null
 
     fun open(entry: SeriesEntry) = fetch(entry)
-    fun retry() { state.value.entry?.let(::fetch) }
+    fun retry() { state.value.entry?.let { fetch(it, force = true) } }
     fun close() { job?.cancel(); resumeJob?.cancel(); savedResume = null; mutableState.value = DetailsUiState() }
 
-    private fun fetch(entry: SeriesEntry) {
+    private fun fetch(entry: SeriesEntry, force: Boolean = false) {
         job?.cancel()
         resumeJob?.cancel()
         savedResume = null
         mutableState.value = DetailsUiState(entry = entry, loading = true)
         job = viewModelScope.launch {
             try {
-                val details = load(entry)
+                val details = (if (force) reload ?: load else load)(entry)
                 ensureActive()
                 val point = loadResume(entry.id)
                 ensureActive()
@@ -108,6 +111,7 @@ class SeriesDetailsViewModel(
     fun playbackRequest(episodeId: String? = state.value.episodeId): PlaybackRequest? {
         val current = state.value
         val details = current.details ?: return null
+        if (details.playbackUnavailableReason != null) return null
         val translation = current.translation ?: return null
         val episode = translation.episodes?.firstOrNull { it.id == episodeId } ?: return null
         return PlaybackRequest(details.entry.id, details.entry.url, translation.id, episode.id, episode.label, details.entry.title)
@@ -131,8 +135,16 @@ class SeriesDetailsViewModel(
     class Factory(private val repository: CatalogRepository, private val progress: PlaybackProgress) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SeriesDetailsViewModel::class.java))
+            suspend fun loadDetails(entry: SeriesEntry, force: Boolean): SeriesDetails =
+                try { repository.details(entry, force) } catch (e: Exception) {
+                    if (e !is CancellationException && ru.seasonvar.tv.BuildConfig.DEBUG) {
+                        android.util.Log.w("SeasonvarDetails", "season=" + entry.id + " " + failureSummary(e))
+                    }
+                    throw e
+                }
             @Suppress("UNCHECKED_CAST")
-            return SeriesDetailsViewModel(loadResume = progress::read, load = repository::details) as T
+            return SeriesDetailsViewModel(loadResume = progress::read,
+                reload = { loadDetails(it, true) }, load = { loadDetails(it, false) }) as T
         }
     }
 }

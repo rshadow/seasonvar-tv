@@ -147,11 +147,12 @@ internal fun SeriesDetailsPane(
                     verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                     ThemeButton(stringResource(when {
                         state.failure != null -> R.string.retry
+                        !preparing && !state.canPlay -> R.string.details_reload
                         state.resume != null -> R.string.details_continue
                         else -> R.string.details_watch
                     }), onClick = {
                         onInteraction()
-                        if (state.failure != null) model.retry() else model.playbackRequest()?.let(onPlay)
+                        if (state.failure != null || !state.canPlay) model.retry() else model.playbackRequest()?.let(onPlay)
                     }, loading = preparing,
                         modifier = Modifier.height(d.headerButtonSize).then(actionScrolling).focusRequester(play).focusProperties {
                             left = menuFocus; up = FocusRequester.Cancel
@@ -369,7 +370,8 @@ private fun EpisodeList(
                     }
                 }
             } else Text(if (preparing) stringResource(R.string.description_loading)
-                else stringResource(if (episodes == null) R.string.details_episodes_unavailable else R.string.details_episodes_empty),
+                else state.details?.playbackUnavailableReason
+                    ?: stringResource(if (episodes == null) R.string.details_episodes_unavailable else R.string.details_episodes_empty),
                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }
         if (showAllEpisodes) ThemeButton(stringResource(R.string.details_all_episodes), onAllEpisodes,

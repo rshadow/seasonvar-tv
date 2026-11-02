@@ -57,4 +57,29 @@ class VideoParserTest {
     @Test(expected = MarkupChangedException::class) fun rejects_corrupt_base64_without_exposing_it_in_errors() {
         VideoParser.source(json(row("1", "#2!bad!")), request)
     }
+    @Test fun encoded_single_source_preserves_brackets_in_the_filename() {
+        val value = "//media.example.test/video/Episode[Studio].720p.mp4?example=one%2Btwo"
+        val file = "#2" + Base64.getEncoder().encodeToString(value.toByteArray())
+        assertEquals("https://media.example.test/video/Episode%5BStudio%5D.720p.mp4?example=one%2Btwo",
+            VideoParser.source(json(row("1", file)), request).url)
+    }
+    @Test fun single_source_preserves_commas_in_the_filename() {
+        val url = "https://media.example.test/video/My.Series,.Episode.1.mp4"
+        assertEquals(url, VideoParser.source(json(row("1", url)), request).url)
+    }
+    @Test fun quality_separator_does_not_cut_filename_punctuation() {
+        val value = "[480p]//media.example.test/One[Studio],.mp4,[720p]//media.example.test/two.mp4"
+        assertEquals("https://media.example.test/One%5BStudio%5D,.mp4",
+            VideoParser.source(json(row("1", value)), request).url)
+    }
+    @Test fun encodes_spaces_without_truncating_the_source() {
+        assertEquals("https://media.example.test/My%20Episode.mp4",
+            VideoParser.source(json(row("1", "//media.example.test/My Episode.mp4")), request).url)
+    }
+    @Test fun takes_first_explicit_mirror_without_cutting_normal_filename_words() {
+        val value = "https://media.example.test/Truth or Dare.mp4 or https://other.example.test/two.mp4"
+        assertEquals("https://media.example.test/Truth%20or%20Dare.mp4",
+            VideoParser.source(json(row("1", value)), request).url)
+    }
+
 }

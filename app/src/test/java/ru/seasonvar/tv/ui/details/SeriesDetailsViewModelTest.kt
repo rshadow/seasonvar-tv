@@ -132,4 +132,26 @@ class SeriesDetailsViewModelTest {
         assertEquals("2", model.state.value.resume!!.seasonId)
     }
 
+    @Test fun unavailable_season_can_be_refreshed_without_a_no_op_watch_action() = runTest(dispatcher) {
+        var refreshes = 0
+        val model = SeriesDetailsViewModel(reload = { refreshes++; details(it) }) {
+            details(it).copy(translations = emptyList(), defaultTranslationId = null,
+                playbackUnavailableReason = "Сезон недоступен")
+        }
+        model.open(entry()); advanceUntilIdle()
+        assertFalse(model.state.value.canPlay)
+        assertNull(model.playbackRequest())
+        model.retry(); advanceUntilIdle()
+        assertEquals(1, refreshes)
+        assertTrue(model.state.value.canPlay)
+        assertNotNull(model.playbackRequest())
+    }
+
+    @Test fun explicit_site_restriction_prevents_playback_even_with_leftover_episodes() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel { details(it).copy(playbackUnavailableReason = "Сезон недоступен") }
+        model.open(entry()); advanceUntilIdle()
+        assertFalse(model.state.value.canPlay)
+        assertNull(model.playbackRequest())
+    }
+
 }

@@ -102,4 +102,37 @@ class SeriesDetailsParserTest {
             assertEquals(8, result.seasons.size)
         } finally { directory.deleteRecursively() }
     }
+    @Test fun preserves_site_playback_restriction_without_inventing_episodes() {
+        val blocked = javaClass.getResource("/series-restricted.html")!!.readText()
+        val result = SeriesDetailsParser.parse(blocked, entry.copy(id = "39185"))
+        assertEquals("По просьбе правообладателя, сезон заблокирован для вашей страны.", result.playbackUnavailableReason)
+        assertTrue(result.translations.isEmpty())
+        assertEquals(2, result.seasons.size)
+        assertEquals(listOf("Тестовое описание."), result.paragraphs)
+    }
+
+    @Test fun explicit_refresh_bypasses_metadata_cache() = runBlocking {
+        val directory = Files.createTempDirectory("details-refresh-test").toFile()
+        try {
+            var calls = 0
+            val source = object : HtmlSource {
+                override suspend fun get(url: String): String { calls++; return html }
+                override suspend fun sidebar(feed: PublicFeed) = error("Unexpected request")
+            }
+            val repository = CatalogRepository(directory, source)
+            repository.details(entry)
+            repository.details(entry)
+            assertEquals(1, calls)
+            repository.details(entry, force = true)
+            assertEquals(2, calls)
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun hidden_web_player_error_placeholder_is_not_a_playback_restriction() {
+        val page = html + """<div id="errorPlayer" class="pgs-player-block error">Ошибка при загрузке плеера, попробуйте перезагрузить страницу</div>"""
+        val result = SeriesDetailsParser.parse(page, entry)
+        assertNull(result.playbackUnavailableReason)
+        assertEquals(10, result.translations.first { it.id == "0" }.episodes!!.size)
+    }
+
 }

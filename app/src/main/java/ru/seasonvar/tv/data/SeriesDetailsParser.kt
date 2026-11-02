@@ -64,6 +64,7 @@ object SeriesDetailsParser {
             serialId, SeasonvarParser.description(html, entry).paragraphs, facts,
             info.select(".pgs-sinfo-actor a").map { it.text() }.filter { it.isNotBlank() },
             seasons, translations, default,
+            doc.selectFirst(".pgs-player-block:not(.error)")?.text()?.takeIf { it.isNotBlank() },
         )
     }
 

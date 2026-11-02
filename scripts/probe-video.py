@@ -9,11 +9,33 @@ import re
 import socket
 import sys
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import quote, urljoin, urlsplit
 
 spec = importlib.util.spec_from_file_location("seasonvar_fetch", Path(__file__).with_name("fetch-seasonvar.py"))
 fetcher = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fetcher)
+
+
+def media_url(value):
+    if value.startswith("#2"):
+        value = base64.b64decode(value[2:].replace("//b2xvbG8=", "", 1), validate=True).decode("utf-8")
+    elif value.startswith("#"):
+        raise ValueError("Unsupported encoding")
+    value = value.strip()
+    if value.startswith("["):
+        end = value.find("]")
+        if end < 1:
+            raise ValueError("Invalid quality label")
+        value = value[end + 1:].strip()
+    value = re.split(r",\s*\[[^\]]+\]\s*(?=(?:https?:)?//)|\s+or\s+(?=(?:https?:)?//)", value, maxsplit=1)[0].strip()
+    if value.startswith("//"):
+        value = "https:" + value
+    if value.startswith("http:"):
+        value = "https:" + value[5:]
+    target = urlsplit(value)
+    if target.scheme != "https" or not target.hostname or target.username is not None or target.password is not None or target.port not in (None, 443):
+        raise ValueError("Invalid media URL")
+    return quote(value, safe=":/?&=%+@,;!$'()*#-._~")
 
 
 def probe(args):
@@ -49,19 +71,7 @@ def probe(args):
     matches = [row for row in leaves if str(row.get("id")) == args.episode]
     if len(matches) != 1:
         raise ValueError("Episode absent or ambiguous")
-    value = matches[0]["file"]
-    if value.startswith("#2"):
-        value = base64.b64decode(value[2:].replace("//b2xvbG8=", "", 1)).decode("utf-8")
-    elif value.startswith("#"):
-        raise ValueError("Unsupported encoding")
-    media = re.search(r"(?:https?:)?//[^,\s\[\]]+", value).group()
-    if media.startswith("//"):
-        media = "https:" + media
-    if media.startswith("http:"):
-        media = "https:" + media[5:]
-    target = urlsplit(media)
-    if target.scheme != "https" or not target.hostname or target.username or target.password:
-        raise ValueError("Invalid media URL")
+    target = urlsplit(media_url(matches[0]["file"]))
     path = (target.path or "/") + ("?" + target.query if target.query else "")
     addresses = fetcher.quad9(target.hostname, min(args.timeout, 8))
     result = None

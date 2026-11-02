@@ -95,4 +95,5 @@
     <string name="player_unavailable">Видео этой серии недоступно</string>
     <string name="player_source_error">Не удалось получить ссылку на видео</string>
     <string name="player_playback_error">Не удалось воспроизвести видео</string>
+    <string name="details_reload">Обновить данные</string>
 </resources>
