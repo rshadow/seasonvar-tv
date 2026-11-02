@@ -98,7 +98,7 @@ internal fun SearchControls(
                         voiceMessage = R.string.search_voice_unavailable
                     }
                 },
-                modifier = Modifier.size(d.headerButtonSize).focusRequester(microphoneFocus)
+                modifier = Modifier.focusRequester(microphoneFocus)
                     .focusProperties { left = menuFocus; right = inputFocus }
                     .onPreviewKeyEvent {
                         if (it.key == Key.DirectionDown && it.type == KeyEventType.KeyDown) {

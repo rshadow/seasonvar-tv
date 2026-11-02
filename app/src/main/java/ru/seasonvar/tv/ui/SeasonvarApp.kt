@@ -302,7 +302,7 @@ private fun SeasonvarContent(
                     section = Section.SEARCH
                     searchEditRequest++
                 },
-                modifier = Modifier.size(d.headerButtonSize).focusRequester(searchFocus)
+                modifier = Modifier.focusRequester(searchFocus)
                     .focusProperties { down = todayFocus },
                 icon = R.drawable.ic_search,
             )
@@ -423,28 +423,35 @@ internal fun ThemeButton(
     val focus = remember { FocusRequester() }
     val c = MaterialTheme.colorScheme
     val d = SeasonvarTheme.dimensions
-    Button(
-        onClick = onClick,
-        modifier = modifier.focusRequester(focus).onFocusChanged { focused = it.isFocused }
-            .pointerInput(onClick) { detectTapGestures { focus.requestFocus(); onClick() } },
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(d.buttonCornerRadius)),
-        scale = ButtonDefaults.scale(focusedScale = 1f),
-        contentPadding = if (icon != null) PaddingValues(d.spacingSmall) else ButtonDefaults.ContentPadding,
-        colors = ButtonDefaults.colors(
-            containerColor = when {
-                focused -> c.primary
-                icon != null -> Color.Transparent
-                active -> c.surface
-                else -> c.background
-            },
-            contentColor = if (focused) c.onPrimary else c.onSurface,
-            focusedContainerColor = c.primary,
-            focusedContentColor = c.onPrimary,
-        ),
-    ) {
-        if (icon != null) {
-            Icon(painterResource(icon), contentDescription = text, modifier = Modifier.size(d.headerButtonIconSize))
-        } else {
+    val buttonModifier = modifier.focusRequester(focus).onFocusChanged { focused = it.isFocused }
+        .pointerInput(onClick) { detectTapGestures { focus.requestFocus(); onClick() } }
+    val shape = ButtonDefaults.shape(shape = RoundedCornerShape(d.buttonCornerRadius))
+    val scale = ButtonDefaults.scale(focusedScale = 1f)
+    val colors = ButtonDefaults.colors(
+        containerColor = when {
+            focused -> c.primary
+            icon != null -> Color.Transparent
+            active -> c.surface
+            else -> c.background
+        },
+        contentColor = if (focused) c.onPrimary else c.onSurface,
+        focusedContainerColor = c.primary,
+        focusedContentColor = c.onPrimary,
+    )
+    if (icon != null) {
+        IconButton(
+            onClick = onClick,
+            modifier = buttonModifier.size(d.headerButtonSize),
+            shape = shape,
+            scale = scale,
+            colors = colors,
+        ) {
+            Icon(painterResource(icon), contentDescription = text,
+                modifier = Modifier.size(d.headerButtonIconSize))
+        }
+    } else {
+        Button(onClick = onClick, modifier = buttonModifier,
+            shape = shape, scale = scale, colors = colors) {
             Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -524,19 +531,21 @@ private fun CatalogPane(
                 if (searchHeader != null) searchHeader()
                 else Text(stringResource(strings.title), style = MaterialTheme.typography.headlineSmall,
                     color = c.onBackground)
-                Text(
-                    if (isToday) {
-                        if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
-                    } else {
-                        if (state.loaded) stringResource(strings.count, state.entries.size)
-                        else stringResource(strings.hint)
-                    },
-                    style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
-                )
+                if (feed != null || state.loaded) {
+                    Text(
+                        if (isToday) {
+                            if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
+                        } else {
+                            if (state.loaded) stringResource(strings.count, state.entries.size)
+                            else stringResource(strings.hint)
+                        },
+                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
+                    )
+                }
             }
             ThemeButton(
                 stringResource(R.string.refresh), onRefresh,
-                Modifier.size(d.headerButtonSize).focusRequester(refreshFocus),
+                Modifier.focusRequester(refreshFocus),
                 icon = R.drawable.ic_reload,
             )
         }
