@@ -77,13 +77,27 @@ import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.catalog.DescriptionState
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
+import ru.seasonvar.tv.data.account.PersonalFeed
 import ru.seasonvar.tv.ui.search.SearchUiState
 import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
 private const val CARD_WARMUP_FRAMES = 8
 
-private enum class Section { SEARCH, ACCOUNT, RESUME, TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT }
+private enum class Section(val personalFeed: PersonalFeed? = null) {
+    SEARCH, ACCOUNT,
+    RESUME(PersonalFeed.RESUME), PERSONAL_UPDATES(PersonalFeed.UPDATES),
+    PERSONAL_NO_UPDATES(PersonalFeed.NO_UPDATES), WANT(PersonalFeed.WANT), WATCHED(PersonalFeed.WATCHED),
+    TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT,
+}
+
+private fun personalTitle(feed: PersonalFeed) = when (feed) {
+    PersonalFeed.RESUME -> R.string.resume_title
+    PersonalFeed.UPDATES -> R.string.personal_updates_title
+    PersonalFeed.NO_UPDATES -> R.string.personal_no_updates_title
+    PersonalFeed.WANT -> R.string.personal_want_title
+    PersonalFeed.WATCHED -> R.string.personal_watched_title
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -108,14 +122,14 @@ fun SeasonvarApp(
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
     accountState: AccountUiState = AccountUiState(busy = false),
-    resumeState: CatalogUiState = CatalogUiState(loading = false),
-    resumeDescription: DescriptionState = DescriptionState(),
+    personalStates: Map<PersonalFeed, CatalogUiState> = emptyMap(),
+    personalDescriptions: Map<PersonalFeed, DescriptionState> = emptyMap(),
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
-    onResumeVisible: () -> Unit = {},
-    onResumeRefresh: () -> Unit = {},
-    onResumeSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
+    onPersonalVisible: (PersonalFeed) -> Unit = {},
+    onPersonalRefresh: (PersonalFeed) -> Unit = {},
+    onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
 ) {
     SeasonvarTheme {
         SeasonvarContent(
@@ -138,9 +152,9 @@ fun SeasonvarApp(
             detailsModel = detailsModel,
             onPlay = onPlay,
             accountSession = accountSession, accountState = accountState,
-            resumeState = resumeState, resumeDescription = resumeDescription,
+            personalStates = personalStates, personalDescriptions = personalDescriptions,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
-            onResumeVisible = onResumeVisible, onResumeRefresh = onResumeRefresh, onResumeSelect = onResumeSelect,
+            onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalSelect = onPersonalSelect,
         )
     }
 }
@@ -168,23 +182,23 @@ private fun SeasonvarContent(
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
     accountState: AccountUiState = AccountUiState(busy = false),
-    resumeState: CatalogUiState = CatalogUiState(loading = false),
-    resumeDescription: DescriptionState = DescriptionState(),
+    personalStates: Map<PersonalFeed, CatalogUiState> = emptyMap(),
+    personalDescriptions: Map<PersonalFeed, DescriptionState> = emptyMap(),
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
-    onResumeVisible: () -> Unit = {},
-    onResumeRefresh: () -> Unit = {},
-    onResumeSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
+    onPersonalVisible: (PersonalFeed) -> Unit = {},
+    onPersonalRefresh: (PersonalFeed) -> Unit = {},
+    onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
 ) {
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
     var activeFeed by rememberSaveable { mutableStateOf(PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
     val searching = section == Section.SEARCH
-    val resuming = section == Section.RESUME
-    val catalogKey = if (searching) "SEARCH" else if (resuming) "RESUME" else activeFeed.name
-    val state = if (searching) searchState.results else if (resuming) resumeState else states.getValue(activeFeed)
-    val description = if (searching) searchDescription else if (resuming) resumeDescription else descriptions.getValue(activeFeed)
+    val personalFeed = section.personalFeed
+    val catalogKey = if (searching) "SEARCH" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
+    val state = if (searching) searchState.results else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
+    val description = if (searching) searchDescription else if (personalFeed != null) personalDescriptions[personalFeed] ?: DescriptionState() else descriptions.getValue(activeFeed)
     val selectedKey = selectedKeys[catalogKey]
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
@@ -194,8 +208,8 @@ private fun SeasonvarContent(
     val newestListState = rememberLazyListState()
     val bestListState = rememberLazyListState()
     val searchListState = rememberLazyListState()
-    val resumeListState = rememberLazyListState()
-    val listState = if (searching) searchListState else if (resuming) resumeListState else when (activeFeed) {
+    val personalListStates = PersonalFeed.entries.associateWith { rememberLazyListState() }
+    val listState = if (searching) searchListState else if (personalFeed != null) personalListStates.getValue(personalFeed) else when (activeFeed) {
         PublicFeed.TODAY -> todayListState
         PublicFeed.UPDATES -> updatesListState
         PublicFeed.TOP -> topListState
@@ -204,7 +218,7 @@ private fun SeasonvarContent(
     }
     val searchFocus = remember { FocusRequester() }
     val accountFocus = remember { FocusRequester() }
-    val resumeFocus = remember { FocusRequester() }
+    val personalFocus = remember { PersonalFeed.entries.associateWith { FocusRequester() } }
     val searchInputFocus = remember { FocusRequester() }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
@@ -238,7 +252,7 @@ private fun SeasonvarContent(
     fun selectSection(item: Section) {
         detailsOpen = false
         section = item
-        if (item == Section.RESUME) onResumeVisible()
+        item.personalFeed?.let(onPersonalVisible)
         val feed = when (item) {
             Section.TODAY -> PublicFeed.TODAY
             Section.UPDATES -> PublicFeed.UPDATES
@@ -266,18 +280,19 @@ private fun SeasonvarContent(
         if (state.entries.none { it.key == selectedKey }) selectEntry(selected?.key)
     }
     LaunchedEffect(catalogKey, selected?.key, description.key) {
-        selected?.let { if (searching) onSearchSelect(it, false) else if (resuming) onResumeSelect(it, false) else onSelect(activeFeed, it, false) }
+        selected?.let { if (searching) onSearchSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
     }
     LaunchedEffect(Unit) { todayFocus.requestFocus() }
     LaunchedEffect(accountSession.version) {
-        selectedKeys = selectedKeys - "RESUME"
-        cards.keys.removeAll { it.startsWith("RESUME|") }
-        resumeListState.scrollToItem(0)
+        val personalKeys = PersonalFeed.entries.map { it.catalogKey }.toSet()
+        selectedKeys = selectedKeys - personalKeys
+        cards.keys.removeAll { it.substringBefore('|') in personalKeys }
+        personalListStates.values.forEach { it.scrollToItem(0) }
         detailsOpen = false
-        if (section == Section.RESUME && accountSession.user == null) section = Section.ACCOUNT
+        if (section.personalFeed != null && accountSession.user == null) section = Section.ACCOUNT
         if (section == Section.ACCOUNT && accountSession.user != null) {
             selectSection(Section.RESUME)
-            repeat(2) { withFrameNanos { } }; resumeFocus.requestFocus()
+            repeat(2) { withFrameNanos { } }; personalFocus.getValue(PersonalFeed.RESUME).requestFocus()
         }
     }
 
@@ -320,7 +335,8 @@ private fun SeasonvarContent(
             when (section) {
                 Section.SEARCH -> searchFocus.requestFocus()
                 Section.ACCOUNT -> accountFocus.requestFocus()
-                Section.RESUME -> resumeFocus.requestFocus()
+                Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED ->
+                    personalFocus.getValue(requireNotNull(section.personalFeed)).requestFocus()
                 Section.TODAY -> todayFocus.requestFocus()
                 Section.UPDATES -> updatesFocus.requestFocus()
                 Section.TOP -> topFocus.requestFocus()
@@ -375,12 +391,13 @@ private fun SeasonvarContent(
                 Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
             ) {
-                (listOf(Section.TODAY) + (if (accountSession.user != null) listOf(Section.RESUME) else emptyList()) +
+                (listOf(Section.TODAY) + (if (accountSession.user != null) Section.entries.filter { it.personalFeed != null } else emptyList()) +
                     listOf(Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT)).forEach { item ->
                     val focus = when (item) {
                         Section.SEARCH -> searchFocus
                         Section.ACCOUNT -> accountFocus
-                        Section.RESUME -> resumeFocus
+                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED ->
+                            personalFocus.getValue(requireNotNull(item.personalFeed))
                         Section.TODAY -> todayFocus
                         Section.UPDATES -> updatesFocus
                         Section.TOP -> topFocus
@@ -392,7 +409,8 @@ private fun SeasonvarContent(
                     val label = when (item) {
                         Section.SEARCH -> R.string.search_title
                         Section.ACCOUNT -> R.string.account_title
-                        Section.RESUME -> R.string.resume_title
+                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED ->
+                            personalTitle(requireNotNull(item.personalFeed))
                         Section.TODAY -> R.string.today_title
                         Section.UPDATES -> R.string.updates_title
                         Section.TOP -> R.string.top_title
@@ -441,7 +459,7 @@ private fun SeasonvarContent(
                 SeriesDetailsPane(
                     selected, detailsModel,
                     onPlay = onPlay,
-                    menuFocus = if (searching) searchFocus else if (resuming) resumeFocus else when (activeFeed) {
+                    menuFocus = if (searching) searchFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
                         PublicFeed.TODAY -> todayFocus
                         PublicFeed.UPDATES -> updatesFocus
                         PublicFeed.TOP -> topFocus
@@ -452,8 +470,8 @@ private fun SeasonvarContent(
                 )
             } else {
                 CatalogPane(
-                    state, description, selected, listState, cards, if (searching || resuming) null else activeFeed,
-                    if (searching) searchFocus else if (resuming) resumeFocus else when (activeFeed) {
+                    state, description, selected, listState, cards, if (searching || personalFeed != null) null else activeFeed,
+                    if (searching) searchFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
                         PublicFeed.TODAY -> todayFocus
                         PublicFeed.UPDATES -> updatesFocus
                         PublicFeed.TOP -> topFocus
@@ -472,8 +490,8 @@ private fun SeasonvarContent(
                             onResults = { keyboard?.hide(); if (state.entries.isNotEmpty()) enterContent() },
                         )
                     } } else null,
-                    onRefresh = { if (searching) onSearchSubmit() else if (resuming) onResumeRefresh() else onRefresh(activeFeed) },
-                    personal = resuming, catalogKey = catalogKey,
+                    onRefresh = { if (searching) onSearchSubmit() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
+                    personalFeed = personalFeed, catalogKey = catalogKey,
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = {
                         backNavigation.reset()
@@ -616,14 +634,15 @@ private fun CatalogPane(
     onOpen: (SeriesEntry) -> Unit,
     query: String? = null,
     searchHeader: (@Composable () -> Unit)? = null,
-    personal: Boolean = false,
+    personalFeed: PersonalFeed? = null,
     catalogKey: String = feed?.name ?: "SEARCH",
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val isToday = feed == PublicFeed.TODAY
-    val strings = remember(feed, personal) {
-        if (personal) CatalogStrings(R.string.resume_title, R.string.resume_hint,
+    val personal = personalFeed != null
+    val strings = remember(feed, personalFeed) {
+        if (personalFeed != null) CatalogStrings(personalTitle(personalFeed), R.string.resume_hint,
             R.string.resume_count, R.string.resume_loading, R.string.resume_empty,
             R.string.resume_hint, R.string.resume_error)
         else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_hint,
@@ -687,7 +706,8 @@ private fun CatalogPane(
                 Text(
                     stringResource(if (state.loading && !state.loaded) R.string.today_loading_hint
                         else if (state.failure != null) R.string.today_error_hint
-                        else if (personal) R.string.resume_empty_hint else if (feed == null) {
+                        else if (personalFeed == PersonalFeed.RESUME) R.string.resume_empty_hint
+                        else if (personal) R.string.personal_empty_hint else if (feed == null) {
                             if (query.isNullOrBlank()) R.string.search_input_hint else R.string.search_empty_hint
                         } else R.string.today_empty_hint),
                     style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,

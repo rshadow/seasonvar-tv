@@ -112,6 +112,11 @@
     <string name="account_storage_error">Не удалось сохранить сессию на устройстве. Попробуйте войти снова.</string>
     <string name="account_markup_error">Не удалось проверить аккаунт: ответ сайта изменился.</string>
     <string name="account_check">Проверить сессию</string>
+    <string name="personal_updates_title">Есть обновления</string>
+    <string name="personal_no_updates_title">Нет новых серий</string>
+    <string name="personal_want_title">Хочу посмотреть</string>
+    <string name="personal_watched_title">Посмотрел</string>
+    <string name="personal_empty_hint">В этой вкладке вашей учётной записи пока нет сериалов.</string>
     <string name="resume_title">На чём остановились</string>
     <string name="resume_hint">Список из вашей учётной записи Seasonvar</string>
     <string name="resume_count">В списке: %1$d</string>

@@ -48,7 +48,7 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
-		'make account-test           Check account, cookies and private cache tests' \
+		'make account-test           Check account, personal lists, cookies and private cache' \
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \
@@ -243,4 +243,4 @@ site-video-probe:
 		--episode "$(SITE_EPISODE)" --strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)"
 
 account-test:
-	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.account.*'
+	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.account.*' --tests 'ru.seasonvar.tv.ui.account.*'

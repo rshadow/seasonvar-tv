@@ -13,13 +13,14 @@ class AccountRepositoryTest {
     private val site = "https://seasonvar.ru/".toHttpUrl()
     private inner class Transport : AccountTransport {
         val calls = mutableListOf<String>()
+        var page = authenticated
         var accepted = true
         var expired = false
         var offline = false
         override suspend fun get(url: String, jar: SessionCookies): String {
             calls += url
             if (offline) throw IOException()
-            return if (url.endsWith("/resume") && accepted && !expired && jar.loadForRequest(site).isNotEmpty()) authenticated else guest
+            return if (url.endsWith("/resume") && accepted && !expired && jar.loadForRequest(site).isNotEmpty()) page else guest
         }
         override suspend fun login(login: String, password: String, jar: SessionCookies): String {
             calls += "POST login"
@@ -73,4 +74,29 @@ class AccountRepositoryTest {
         assertFalse(manager.hasSession())
         assertTrue(store.cookies.isEmpty())
     }
+    @Test fun every_personal_section_uses_the_same_authenticated_page_and_selects_its_tab() = runBlocking {
+        val transport = Transport().apply { page = javaClass.getResource("/account-resume-current.html")!!.readText() }
+        val repository = AccountRepository(SessionManager(MemorySessionStore()), transport)
+        repository.login("example", "dummy-password")
+        transport.calls.clear()
+        val expected = listOf(listOf("123", "456"), listOf("123"), listOf("456"), listOf("789"), listOf("999"))
+        PersonalFeed.entries.forEachIndexed { index, feed ->
+            assertEquals(expected[index], repository.personalList(feed).entries.map { it.id })
+        }
+        assertEquals(List(5) { "https://seasonvar.ru/resume" }, transport.calls)
+    }
+    @Test fun expiration_in_any_personal_section_clears_the_session() = runBlocking {
+        PersonalFeed.entries.forEach { feed ->
+            val manager = SessionManager(MemorySessionStore())
+            val transport = Transport()
+            val repository = AccountRepository(manager, transport)
+            repository.login("example", "dummy-password")
+            transport.expired = true
+            try { repository.personalList(feed); fail(feed.name) } catch (_: SessionExpiredException) { }
+            assertNull(repository.session.value.user)
+            assertTrue(repository.session.value.expired)
+            assertFalse(manager.hasSession())
+        }
+    }
+
 }

@@ -81,4 +81,52 @@ class AccountParserTest {
         assertEquals("Тестовый пользователь", result.name)
     }
 
+    @Test fun each_personal_section_reads_only_its_own_tab_including_hidden_tabs() {
+        val expected = mapOf(PersonalFeed.RESUME to listOf("123", "456"),
+            PersonalFeed.UPDATES to listOf("123"), PersonalFeed.NO_UPDATES to listOf("456"),
+            PersonalFeed.WANT to listOf("789"), PersonalFeed.WATCHED to listOf("999"))
+        expected.forEach { (feed, ids) ->
+            assertEquals(feed.name, ids, AccountParser.personalList(current, feed).entries.map { it.id })
+        }
+    }
+    @Test fun preserves_order_and_distinct_marks_even_when_their_season_url_matches() {
+        val doc = org.jsoup.Jsoup.parse(current)
+        val tab = doc.selectFirst("[data-tabr=marks-want]")!!
+        val second = tab.selectFirst(".pgs-marks-el")!!.clone().attr("data-marksel", "790")
+        second.selectFirst(".pgs-marks-name")!!.text("Следующая отметка")
+        tab.appendChild(second)
+        val entries = AccountParser.personalList(doc.outerHtml(), PersonalFeed.WANT).entries
+        assertEquals(listOf("Хочу посмотреть", "Следующая отметка"), entries.map { it.title })
+        assertEquals(1, entries.map { it.url }.toSet().size)
+        assertEquals(2, entries.map { it.key }.toSet().size)
+    }
+    @Test fun empty_tab_is_empty_without_importing_neighbouring_lists() {
+        PersonalFeed.entries.filter { it != PersonalFeed.RESUME }.forEach { feed ->
+            val doc = org.jsoup.Jsoup.parse(current)
+            doc.selectFirst("[data-tabr=${feed.tabs.single()}]")!!.empty()
+            assertTrue(feed.name, AccountParser.personalList(doc.outerHtml(), feed).entries.isEmpty())
+        }
+    }
+    @Test fun missing_tab_or_malformed_selected_row_is_an_error_for_every_section() {
+        PersonalFeed.entries.forEach { feed ->
+            val doc = org.jsoup.Jsoup.parse(current)
+            doc.selectFirst("[data-tabr=${feed.tabs.first()}]")!!.remove()
+            try { AccountParser.personalList(doc.outerHtml(), feed); fail(feed.name) } catch (_: MarkupChangedException) { }
+            val bad = current.replace("pgs-marks-name", "unrecognised-name")
+            try { AccountParser.personalList(bad, feed); fail(feed.name) } catch (_: MarkupChangedException) { }
+        }
+    }
+    @Test fun guest_tabs_are_never_reported_as_an_empty_personal_section() {
+        val doc = org.jsoup.Jsoup.parse(current)
+        doc.selectFirst(".headblock-menu")!!.html("<a href='/?mod=login'>Вход</a>")
+        PersonalFeed.entries.forEach { feed ->
+            try { AccountParser.personalList(doc.outerHtml(), feed); fail(feed.name) } catch (_: SessionExpiredException) { }
+        }
+    }
+    @Test fun unrelated_bad_tab_does_not_break_the_selected_list() {
+        val doc = org.jsoup.Jsoup.parse(current)
+        doc.selectFirst("[data-tabr=marks-watched] .pgs-marks-name")!!.remove()
+        assertEquals("789", AccountParser.personalList(doc.outerHtml(), PersonalFeed.WANT).entries.single().id)
+    }
+
 }

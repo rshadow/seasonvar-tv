@@ -36,11 +36,16 @@ object AccountParser {
         val name = menuName ?: profileName ?: "Аккаунт Seasonvar"
         return AccountUser(id, name, avatar)
     }
-    fun resume(html: String): AccountPage {
+    fun resume(html: String): AccountPage = personalList(html, PersonalFeed.RESUME)
+
+    fun personalList(html: String, feed: PersonalFeed): AccountPage {
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         val user = user(doc) ?: throw SessionExpiredException()
         if (doc.selectFirst(".pgs-marks") == null) throw MarkupChangedException()
-        val tabs = doc.select("[data-tabr=marks-new], [data-tabr=marks-nonew]")
+        val tabs = doc.select(feed.tabs.joinToString(", ") { "[data-tabr=$it]" })
+        if (tabs.size != feed.tabs.size && (feed != PersonalFeed.RESUME || tabs.isNotEmpty())) {
+            throw MarkupChangedException()
+        }
         val entries = if (tabs.isNotEmpty()) {
             tabs.flatMap { tab -> tab.select(".pgs-marks-el").mapIndexed { index, row ->
                 val anchor = row.selectFirst("a[href*=serial-]") ?: throw MarkupChangedException()

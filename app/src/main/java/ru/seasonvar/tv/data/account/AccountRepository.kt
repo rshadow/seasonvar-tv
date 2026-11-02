@@ -52,7 +52,9 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         mutableSession.value = AccountSession(user, session.value.version + 1)
     } }
 
-    suspend fun resume(): AccountPage = withContext(Dispatchers.IO) {
+    suspend fun resume(): AccountPage = personalList(PersonalFeed.RESUME)
+
+    suspend fun personalList(feed: PersonalFeed): AccountPage = withContext(Dispatchers.IO) {
         val expected = session.value
         if (expected.user == null) throw SessionExpiredException()
         val jar = sessions.current()
@@ -63,7 +65,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             mutex.withLock { if (session.value.version == expected.version) clear(expired = true) }
             throw SessionExpiredException()
         }
-        AccountParser.resume(html)
+        AccountParser.personalList(html, feed)
     }
 
     suspend fun logout(): Unit = withContext(Dispatchers.IO) { mutex.withLock {

@@ -7,7 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import ru.seasonvar.tv.ui.account.AccountViewModel
-import ru.seasonvar.tv.ui.account.ResumeViewModel
+import ru.seasonvar.tv.ui.account.PersonalListViewModel
+import ru.seasonvar.tv.data.account.PersonalFeed
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -41,14 +42,17 @@ class MainActivity : ComponentActivity() {
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
-        val resumeModel = ViewModelProvider(this, ResumeViewModel.Factory(container.account, repository))[ResumeViewModel::class.java]
+        val personalModels = PersonalFeed.entries.associateWith { feed ->
+            ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed))
+                .get("personal-" + feed.name, PersonalListViewModel::class.java)
+        }
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress))[SeriesDetailsViewModel::class.java]
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
-            val resume by resumeModel.state.collectAsStateWithLifecycle()
-            val resumeDescription by resumeModel.description.collectAsStateWithLifecycle()
+            val personalStates = personalModels.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
+            val personalDescriptions = personalModels.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             LaunchedEffect(accountSession.version) {
                 if (accountSession.version > 0) {
                     models.values.forEach { it.sessionChanged() }
@@ -71,9 +75,11 @@ class MainActivity : ComponentActivity() {
             SeasonvarApp(
                 detailsModel = detailsModel,
                 accountSession = accountSession, accountState = accountState,
-                resumeState = resume, resumeDescription = resumeDescription,
+                personalStates = personalStates, personalDescriptions = personalDescriptions,
                 onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,
-                onResumeVisible = resumeModel::activate, onResumeRefresh = resumeModel::refresh, onResumeSelect = resumeModel::select,
+                onPersonalVisible = { personalModels.getValue(it).activate() },
+                onPersonalRefresh = { personalModels.getValue(it).refresh() },
+                onPersonalSelect = { feed, entry, retry -> personalModels.getValue(feed).select(entry, retry) },
                 onPlay = { startActivity(PlayerActivity.intent(this, it)) },
                 states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates,
                     PublicFeed.TOP to top, PublicFeed.NEWEST to newest, PublicFeed.BEST to best),
@@ -93,7 +99,7 @@ class MainActivity : ComponentActivity() {
                     container.networkSettings.setBypassEnabled(enabled)
                     models.values.forEach { it.networkChanged() }
                     searchModel.networkChanged()
-                    resumeModel.refresh()
+                    personalModels.values.forEach { it.refreshIfActive() }
                 },
                 onExit = ::finishAndRemoveTask,
                 dnsProvider = network.dnsProvider,
@@ -102,7 +108,7 @@ class MainActivity : ComponentActivity() {
                         container.networkSettings.setDnsProvider(provider)
                         models.values.forEach { it.networkChanged() }
                         searchModel.networkChanged()
-                        resumeModel.refresh()
+                        personalModels.values.forEach { it.refreshIfActive() }
                     }
                 },
             )
