@@ -37,6 +37,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -62,10 +63,13 @@ import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.catalog.DescriptionState
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
+import ru.seasonvar.tv.ui.search.SearchUiState
+import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
-private enum class Section { TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT }
+private enum class Section { SEARCH, TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SeasonvarApp(
     states: Map<PublicFeed, CatalogUiState>,
@@ -73,6 +77,12 @@ fun SeasonvarApp(
     onRefresh: (PublicFeed) -> Unit,
     onSelect: (PublicFeed, SeriesEntry, Boolean) -> Unit,
     onFeedVisible: (PublicFeed) -> Unit = {},
+    searchState: SearchUiState = SearchUiState(),
+    searchDescription: DescriptionState = DescriptionState(),
+    onSearchQuery: (String) -> Unit = {},
+    onSearchSubmit: () -> Unit = {},
+    onSearchSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
+    onSearchVisible: (Boolean) -> Unit = {},
     bypassEnabled: Boolean = true,
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
@@ -82,22 +92,28 @@ fun SeasonvarApp(
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
     var activeFeed by rememberSaveable { mutableStateOf(PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
-    val state = states.getValue(activeFeed)
-    val description = descriptions.getValue(activeFeed)
-    val selectedKey = selectedKeys[activeFeed.name]
+    val searching = section == Section.SEARCH
+    val catalogKey = if (searching) "SEARCH" else activeFeed.name
+    val state = if (searching) searchState.results else states.getValue(activeFeed)
+    val description = if (searching) searchDescription else descriptions.getValue(activeFeed)
+    val selectedKey = selectedKeys[catalogKey]
+    var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
     val todayListState = rememberLazyListState()
     val updatesListState = rememberLazyListState()
     val topListState = rememberLazyListState()
     val newestListState = rememberLazyListState()
     val bestListState = rememberLazyListState()
-    val listState = when (activeFeed) {
+    val searchListState = rememberLazyListState()
+    val listState = if (searching) searchListState else when (activeFeed) {
         PublicFeed.TODAY -> todayListState
         PublicFeed.UPDATES -> updatesListState
         PublicFeed.TOP -> topListState
         PublicFeed.NEWEST -> newestListState
         PublicFeed.BEST -> bestListState
     }
+    val searchFocus = remember { FocusRequester() }
+    val searchInputFocus = remember { FocusRequester() }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
     val topFocus = remember { FocusRequester() }
@@ -112,6 +128,8 @@ fun SeasonvarApp(
     val scope = rememberCoroutineScope()
     val backNavigation = remember { BackNavigation() }
     val inputModeManager = LocalInputModeManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val imeVisible = WindowInsets.isImeVisible
     val selected = remember(state.entries, selectedKey) {
         state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
     }
@@ -120,8 +138,8 @@ fun SeasonvarApp(
     val latestListState by rememberUpdatedState(listState)
 
     fun selectEntry(key: String?) {
-        selectedKeys = if (key == null) selectedKeys - activeFeed.name
-            else selectedKeys + (activeFeed.name to key)
+        selectedKeys = if (key == null) selectedKeys - catalogKey
+            else selectedKeys + (catalogKey to key)
     }
 
     fun selectSection(item: Section) {
@@ -140,11 +158,21 @@ fun SeasonvarApp(
         }
     }
 
-    LaunchedEffect(activeFeed, state.entries) {
+    DisposableEffect(searching) {
+        onSearchVisible(searching)
+        onDispose { if (searching) onSearchVisible(false) }
+    }
+    LaunchedEffect(searchState.query) {
+        selectedKeys = selectedKeys - "SEARCH"
+        searchListState.scrollToItem(0)
+    }
+    LaunchedEffect(catalogKey, state.entries) {
         if (selectedKey != null && state.entries.none { it.key == selectedKey }) detailsOpen = false
         if (state.entries.none { it.key == selectedKey }) selectEntry(selected?.key)
     }
-    LaunchedEffect(activeFeed, selected?.key) { selected?.let { onSelect(activeFeed, it, false) } }
+    LaunchedEffect(catalogKey, selected?.key, description.key) {
+        selected?.let { if (searching) onSearchSelect(it, false) else onSelect(activeFeed, it, false) }
+    }
     LaunchedEffect(Unit) { todayFocus.requestFocus() }
 
     fun enterContent() {
@@ -160,7 +188,8 @@ fun SeasonvarApp(
             } else if (section == Section.ABOUT) {
                 aboutFocus.requestFocus()
             } else if (selected == null) {
-                if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
+                if (searching) searchInputFocus.requestFocus()
+                else if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
             } else {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 val index = state.entries.indexOfFirst { it.key == selected.key }
@@ -181,6 +210,7 @@ fun SeasonvarApp(
             repeat(2) { withFrameNanos { } }
             if (section != requestedSection) return@launch
             when (section) {
+                Section.SEARCH -> searchFocus.requestFocus()
                 Section.TODAY -> todayFocus.requestFocus()
                 Section.UPDATES -> updatesFocus.requestFocus()
                 Section.TOP -> topFocus.requestFocus()
@@ -198,6 +228,11 @@ fun SeasonvarApp(
     }
 
     fun navigateBack() {
+        if (searching && !detailsOpen && imeVisible) {
+            keyboard?.hide()
+            backNavigation.reset()
+            return
+        }
         val exit = backNavigation.shouldExit(SystemClock.uptimeMillis())
         if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarInput", "back section=" + section + " exit=" + exit)
         if (exit) onExit()
@@ -216,8 +251,17 @@ fun SeasonvarApp(
             horizontalArrangement = Arrangement.spacedBy(d.contentGap),
         ) {
             Column(Modifier.width(d.menuWidth).fillMaxHeight()) {
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground)
+                ThemeButton(
+                    stringResource(R.string.search_title),
+                    onClick = {
+                        backNavigation.reset()
+                        section = Section.SEARCH
+                        searchEditRequest++
+                    },
+                    modifier = Modifier.size(d.headerButtonSize).focusRequester(searchFocus)
+                        .focusProperties { down = todayFocus },
+                    icon = R.drawable.ic_search,
+                )
                 Spacer(Modifier.height(d.menuHeaderSpacing))
                 Column(
                     Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
@@ -225,6 +269,7 @@ fun SeasonvarApp(
                 ) {
                     listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
                         val focus = when (item) {
+                            Section.SEARCH -> searchFocus
                             Section.TODAY -> todayFocus
                             Section.UPDATES -> updatesFocus
                             Section.TOP -> topFocus
@@ -234,6 +279,7 @@ fun SeasonvarApp(
                             Section.ABOUT -> aboutFocus
                         }
                         val label = when (item) {
+                            Section.SEARCH -> R.string.search_title
                             Section.TODAY -> R.string.today_title
                             Section.UPDATES -> R.string.updates_title
                             Section.TOP -> R.string.top_title
@@ -277,17 +323,29 @@ fun SeasonvarApp(
                 } else if (section == Section.ABOUT) {
                     AboutPane()
                 } else {
-                    key(activeFeed) {
+                    key(catalogKey) {
                         CatalogPane(
-                            state, description, selected, listState, cards, activeFeed,
-                            when (activeFeed) {
+                            state, description, selected, listState, cards, if (searching) null else activeFeed,
+                            if (searching) searchFocus else when (activeFeed) {
                                 PublicFeed.TODAY -> todayFocus
                                 PublicFeed.UPDATES -> updatesFocus
                                 PublicFeed.TOP -> topFocus
                                 PublicFeed.NEWEST -> newestFocus
                                 PublicFeed.BEST -> bestFocus
                             }, refreshFocus, retryFocus,
-                            onRefresh = { onRefresh(activeFeed) },
+                            query = if (searching) searchState.query else null,
+                            searchHeader = if (searching) { {
+                                SearchControls(
+                                    query = searchState.query,
+                                    onQuery = onSearchQuery,
+                                    inputFocus = searchInputFocus,
+                                    menuFocus = searchFocus,
+                                    editRequest = searchEditRequest,
+                                    onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
+                                    onResults = { keyboard?.hide(); if (state.entries.isNotEmpty()) enterContent() },
+                                )
+                            } } else null,
+                            onRefresh = { if (searching) onSearchSubmit() else onRefresh(activeFeed) },
                             onFocused = { selectEntry(it.key) },
                             onOpen = {
                                 backNavigation.reset()
@@ -303,7 +361,7 @@ fun SeasonvarApp(
         if (detailsOpen && selected != null) {
             SeriesDialog(
                 selected, description,
-                onRetry = { onSelect(activeFeed, selected, true) },
+                onRetry = { if (searching) onSearchSelect(selected, true) else onSelect(activeFeed, selected, true) },
                 onClose = { backNavigation.reset(); closeDetails() },
                 onBack = ::navigateBack,
                 onInteraction = backNavigation::reset,
@@ -313,7 +371,7 @@ fun SeasonvarApp(
 }
 
 @Composable
-private fun ThemeButton(
+internal fun ThemeButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -391,23 +449,31 @@ private fun CatalogPane(
     selected: SeriesEntry?,
     listState: LazyListState,
     cards: MutableMap<String, FocusRequester>,
-    feed: PublicFeed,
+    feed: PublicFeed?,
     menuFocus: FocusRequester,
     refreshFocus: FocusRequester,
     retryFocus: FocusRequester,
     onRefresh: () -> Unit,
     onFocused: (SeriesEntry) -> Unit,
     onOpen: (SeriesEntry) -> Unit,
+    query: String? = null,
+    searchHeader: (@Composable () -> Unit)? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val isToday = feed == PublicFeed.TODAY
-    val strings = remember(feed) { catalogStrings(feed) }
+    val strings = remember(feed) {
+        if (feed == null) CatalogStrings(R.string.search_title, R.string.search_hint,
+            R.string.search_count, R.string.search_loading, R.string.search_empty,
+            R.string.search_hint, R.string.search_error)
+        else catalogStrings(feed)
+    }
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(strings.title), style = MaterialTheme.typography.headlineSmall,
+            Column(Modifier.weight(1f).padding(end = d.spacingSmall)) {
+                if (searchHeader != null) searchHeader()
+                else Text(stringResource(strings.title), style = MaterialTheme.typography.headlineSmall,
                     color = c.onBackground)
                 Text(
                     if (isToday) {
@@ -432,8 +498,9 @@ private fun CatalogPane(
                 verticalArrangement = Arrangement.Center,
             ) {
                 val message = when {
+                    query != null && query.isBlank() -> R.string.search_hint
                     state.loading -> strings.loading
-                    state.failure == LoadFailure.MARKUP -> R.string.today_markup_error
+                    state.failure == LoadFailure.MARKUP -> if (feed == null) R.string.search_error else R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
                     else -> strings.empty
@@ -443,10 +510,13 @@ private fun CatalogPane(
                 Spacer(Modifier.height(d.spacingMedium))
                 Text(
                     stringResource(if (state.loading) R.string.today_loading_hint
-                        else if (state.failure != null) R.string.today_error_hint else R.string.today_empty_hint),
+                        else if (state.failure != null) R.string.today_error_hint
+                        else if (feed == null) {
+                            if (query.isNullOrBlank()) R.string.search_input_hint else R.string.search_empty_hint
+                        } else R.string.today_empty_hint),
                     style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,
                 )
-                if (!state.loading) {
+                if (!state.loading && (feed != null || state.failure != null)) {
                     Spacer(Modifier.height(d.spacingLarge))
                     ThemeButton(
                         stringResource(R.string.retry), onRefresh,
@@ -500,8 +570,8 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
             Text(entry.fullTitle, style = MaterialTheme.typography.headlineSmall, color = c.onBackground,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(d.spacingSmall))
-            Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium, color = c.primary,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (entry.subtitle.isNotBlank()) Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium,
+                color = c.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             entry.season?.let {
                 Text(stringResource(R.string.season_number, it), color = c.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall)
@@ -551,7 +621,7 @@ private fun SeriesThumbnail(
         Spacer(Modifier.height(d.spacingSmall))
         Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
             minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(entry.subtitle, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
+        Text(entry.subtitle.ifBlank { entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty() }, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -630,7 +700,7 @@ private fun SeriesDialog(
         ) {
             Text(entry.fullTitle, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(entry.subtitle, color = c.primary, style = MaterialTheme.typography.bodyLarge)
+            Text(entry.subtitle.ifBlank { entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty() }, color = c.primary, style = MaterialTheme.typography.bodyLarge)
             Box(
                 Modifier.weight(1f).fillMaxWidth()
                     .focusRequester(descriptionFocus)

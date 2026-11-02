@@ -6,6 +6,9 @@ BOOTSTRAP_CACHE ?= $(HOME)/.cache/seasonvar/downloads
 ENV := ./scripts/android-env.sh
 GRADLE_ARGS ?=
 LOG_ARGS ?=
+INPUT_TEXT ?=
+SEARCH_QUERY ?= Игра престолов
+export INPUT_TEXT SEARCH_QUERY
 KEY_ARGS ?=
 GRADLE := $(ENV) ./gradlew --console=plain $(GRADLE_ARGS)
 AVD ?= Seasonvar_TV_API_34
@@ -23,7 +26,7 @@ SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text
 
 help:
 	@printf '%s\n' \
@@ -43,6 +46,7 @@ help:
 		'make logs [LOG_ARGS=-d]      Show app-only logs' \
 		'make debug [DEVICE=serial]   Open a local JDWP debugger port' \
 		'make attach                 Attach the terminal debugger' \
+		'make text INPUT_TEXT=hello  Enter text in the focused input' \
 		'make key KEY=BACK           Send a remote-control key' \
 		'make key-double KEY=BACK    Send a quick double key press' \
 		'make tap X=400 Y=670        Tap a point in device pixels' \
@@ -53,6 +57,7 @@ help:
 		'make site-updates           Fetch the public updates AJAX fragment' \
 		'make site-top               Fetch the public Top AJAX fragment' \
 		'make site-newest            Fetch the public Newest AJAX fragment' \
+		'make site-search            Fetch search JSON (SEARCH_QUERY=...)' \
 		'make site-best              Fetch the public Best Series page' \
 		'make site-test              Test the standalone website fetcher' \
 		'make site-styles            Download original website CSS for theme reference' \
@@ -145,6 +150,10 @@ key:
 	@test -n "$(KEY)" || { echo 'Set KEY=DPAD_CENTER, BACK, DPAD_UP, ...' >&2; exit 1; }
 	$(ADB) shell input keyevent $(KEY_ARGS) "KEYCODE_$(KEY)"
 
+text:
+	@test -n "$${INPUT_TEXT:-}" || { echo 'Set INPUT_TEXT to enter in the focused field.' >&2; exit 1; }
+	$(ENV) python3 -c 'import os,shlex,subprocess,sys; subprocess.run(["adb", "-s", sys.argv[1], "shell", "input", "text", shlex.quote(os.environ["INPUT_TEXT"].replace(" ", "%s"))], check=True)' "$(DEVICE)"
+
 key-double:
 	@test -n "$(KEY)" || { echo 'Set KEY=BACK or ESCAPE' >&2; exit 1; }
 	$(ADB) shell input keyevent "KEYCODE_$(KEY)" "KEYCODE_$(KEY)"
@@ -183,6 +192,10 @@ site-newest:
 
 site-best:
 	$(MAKE) site-fetch SITE_URL='https://seasonvar.ru/?mode=top' SITE_OUT=build/site/best.html
+
+site-search:
+	@url="$$(python3 -c 'import os,urllib.parse; print("https://seasonvar.ru/autocomplete.php?" + urllib.parse.urlencode({"query": os.environ["SEARCH_QUERY"]}))')"; \
+		$(MAKE) site-fetch SITE_URL="$$url" SITE_OUT=build/site/search.json
 
 site-test:
 	python3 -m unittest discover -s tests -p 'test_fetch_seasonvar.py' -v

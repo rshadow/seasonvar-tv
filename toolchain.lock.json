@@ -663,6 +663,97 @@
         "algorithm": "sha256",
         "value": "d8044befae095781b9a80bf1faa92edc30382d75d437476784c1bf991598a976"
       }
+    },
+    {
+      "group": "org.json",
+      "artifact": "json",
+      "version": "20240303",
+      "file": "json-20240303.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.pom",
+      "size": 7696,
+      "sha1": "78c0fa2a26888461731e26603ef4b19cc53239ca",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "994baf5d89bf4caa5ce968e4c4eab135c8f9783ecf4d2b7b0e9d1c8a4ddf1e4f"
+      }
+    },
+    {
+      "group": "org.json",
+      "artifact": "json",
+      "version": "20240303",
+      "file": "json-20240303.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar",
+      "size": 78332,
+      "sha1": "0ebb88e8fb5122b7506d5cf1d69f1ccdb790d22a",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed"
+      }
+    },
+    {
+      "group": "org.jetbrains.kotlinx",
+      "artifact": "kotlinx-coroutines-test",
+      "version": "1.9.0",
+      "file": "kotlinx-coroutines-test-1.9.0.module",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.9.0/kotlinx-coroutines-test-1.9.0.module",
+      "size": 45747,
+      "sha1": "7ff92fa82f78b094d619f8b3b36f54d5a02f962f",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3a5f38700b2a4eb290e3507a0e3e4f9cc0bd63e70cca7f15e911dbf37c4f44ca"
+      }
+    },
+    {
+      "group": "org.jetbrains.kotlinx",
+      "artifact": "kotlinx-coroutines-test",
+      "version": "1.9.0",
+      "file": "kotlinx-coroutines-test-1.9.0.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.9.0/kotlinx-coroutines-test-1.9.0.pom",
+      "size": 2057,
+      "sha1": "9dfcdb02a88d639041c8fdfc989fd787f9cbe29d",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e6b4aae143750cb1b64e0397d4b96dc6135ba6ab2c337386df54df0d98cdf121"
+      }
+    },
+    {
+      "group": "org.jetbrains.kotlinx",
+      "artifact": "kotlinx-coroutines-test-jvm",
+      "version": "1.9.0",
+      "file": "kotlinx-coroutines-test-jvm-1.9.0.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.9.0/kotlinx-coroutines-test-jvm-1.9.0.jar",
+      "size": 135030,
+      "sha1": "7227c0691a604e2b32f525b628014dda862d0eed",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "68b87fa90db3dab1e794ff6078364087c07f87e5e4a4d0c8d3272a222ee8fe7e"
+      }
+    },
+    {
+      "group": "org.jetbrains.kotlinx",
+      "artifact": "kotlinx-coroutines-test-jvm",
+      "version": "1.9.0",
+      "file": "kotlinx-coroutines-test-jvm-1.9.0.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.9.0/kotlinx-coroutines-test-jvm-1.9.0.pom",
+      "size": 2396,
+      "sha1": "7229f7e71d584c697077c719af354d838d738162",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e808f2810b1d6b94de8e4dc9718df5bd33eebdada3fdbf2f7eecfafd56982bfd"
+      }
+    },
+    {
+      "group": "org.jetbrains.kotlinx",
+      "artifact": "kotlinx-coroutines-test-jvm",
+      "version": "1.9.0",
+      "file": "kotlinx-coroutines-test-jvm-1.9.0.module",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.9.0/kotlinx-coroutines-test-jvm-1.9.0.module",
+      "size": 4793,
+      "sha1": "d33518ddfeccdc23eb07a9886f8ab424e1347690",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e2364beb540720b3c117957853379d4ae222058ad88f73a2ac73026c836f839f"
+      }
     }
   ],
   "avd": {

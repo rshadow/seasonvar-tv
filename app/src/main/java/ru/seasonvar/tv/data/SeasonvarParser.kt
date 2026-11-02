@@ -1,6 +1,9 @@
 package ru.seasonvar.tv.data
 
 import org.jsoup.Jsoup
+import org.json.JSONObject
+import org.json.JSONArray
+import org.json.JSONException
 import java.net.URI
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -108,6 +111,54 @@ object SeasonvarParser {
             )
         }
         return CatalogPage(day, entries.distinctBy { it.key })
+    }
+
+    fun search(json: String, query: String): List<SeriesEntry> {
+        try {
+            val root = JSONObject(json)
+            if (root.opt("query") != query) throw MarkupChangedException()
+            if (listOf("suggestions", "data", "id").all { root.has(it) && root.isNull(it) }) {
+                return emptyList()
+            }
+            val suggestions = root.getJSONObject("suggestions")
+            val names = suggestions.getJSONArray("valu")
+            val paths = root.getJSONArray("data")
+            val ids = root.getJSONArray("id")
+            val ratings = suggestions.opt("kp")
+            if (names.length() != paths.length() ||
+                (ratings != null && (ratings !is JSONArray || ratings.length() != names.length()))
+            ) throw MarkupChangedException()
+            val rows = (0 until names.length()).map { index ->
+                if (ratings is JSONArray && ratings.get(index) !is String) throw MarkupChangedException()
+                val rawName = names.get(index) as? String ?: throw MarkupChangedException()
+                val path = paths.get(index) as? String ?: throw MarkupChangedException()
+                rawName to path
+            }
+            if (ids.length() != rows.count { it.second.isNotBlank() }) throw MarkupChangedException()
+            var idIndex = 0
+            return rows.mapNotNull { (rawName, path) ->
+                // Site separators have an empty path and no corresponding ID.
+                if (path.isBlank()) return@mapNotNull null
+                val id = ids.get(idIndex++) as? String ?: throw MarkupChangedException()
+                if (!id.matches(Regex("\\d+"))) throw MarkupChangedException()
+                if (path.startsWith("actor/") || path.startsWith("tag/")) return@mapNotNull null
+                val url = pageUrl(path) ?: throw MarkupChangedException()
+                if (!id.matches(Regex("\\d+")) ||
+                    Regex("/serial-(\\d+)").find(URI(url).path)?.groupValues?.get(1) != id
+                ) throw MarkupChangedException()
+                val name = Jsoup.parseBodyFragment(rawName).text().trim()
+                val match = seasonPattern.find(name)
+                val title = name.replace(seasonPattern, "").trim()
+                val parts = title.split(Regex("""\s*/\s+"""), limit = 2)
+                val preferred = parts.first().ifBlank { parts.getOrNull(1).orEmpty() }
+                if (preferred.isBlank()) throw MarkupChangedException()
+                SeriesEntry(id, url, preferred, match?.groupValues?.get(1)?.toIntOrNull(), "",
+                    "https://cdn.svstat.net/oblojka/" + id + ".jpg",
+                    originalTitle = parts.getOrNull(1)?.takeIf { it.isNotBlank() && it != preferred })
+            }.distinctBy { it.key }
+        } catch (_: JSONException) {
+            throw MarkupChangedException()
+        }
     }
 
     fun description(html: String, entry: SeriesEntry): SeriesDescription {

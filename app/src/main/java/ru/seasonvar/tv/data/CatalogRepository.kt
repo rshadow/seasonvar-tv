@@ -3,6 +3,7 @@ package ru.seasonvar.tv.data
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -49,6 +50,13 @@ class CatalogRepository(
         PublicFeed.TOP -> "top-ajax.html"
         PublicFeed.NEWEST -> "newest-ajax.html"
         PublicFeed.BEST -> "best.html"
+    }
+
+    suspend fun search(query: String): List<SeriesEntry> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext emptyList()
+        val url = "https://seasonvar.ru/autocomplete.php".toHttpUrl().newBuilder()
+            .addQueryParameter("query", query).build()
+        SeasonvarParser.search(source.get(url.toString()), query)
     }
 
     suspend fun description(entry: SeriesEntry): SeriesDescription {

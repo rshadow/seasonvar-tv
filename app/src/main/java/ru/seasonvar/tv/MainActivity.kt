@@ -14,8 +14,10 @@ import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.navigation.traceBackKey
 import ru.seasonvar.tv.ui.catalog.CatalogViewModel
+import ru.seasonvar.tv.ui.search.SearchViewModel
 
 class MainActivity : ComponentActivity() {
+    private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +34,10 @@ class MainActivity : ComponentActivity() {
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed))
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
+        searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
         setContent {
+            val search by searchModel.state.collectAsStateWithLifecycle()
+            val searchDescription by searchModel.description.collectAsStateWithLifecycle()
             val today by models.getValue(PublicFeed.TODAY).state.collectAsStateWithLifecycle()
             val updates by models.getValue(PublicFeed.UPDATES).state.collectAsStateWithLifecycle()
             val top by models.getValue(PublicFeed.TOP).state.collectAsStateWithLifecycle()
@@ -49,6 +54,12 @@ class MainActivity : ComponentActivity() {
                     PublicFeed.TOP to top, PublicFeed.NEWEST to newest, PublicFeed.BEST to best),
                 descriptions = mapOf(PublicFeed.TODAY to todayDescription, PublicFeed.UPDATES to updatesDescription,
                     PublicFeed.TOP to topDescription, PublicFeed.NEWEST to newestDescription, PublicFeed.BEST to bestDescription),
+                searchState = search,
+                searchDescription = searchDescription,
+                onSearchQuery = searchModel::queryChanged,
+                onSearchSubmit = searchModel::submit,
+                onSearchSelect = searchModel::select,
+                onSearchVisible = { visible -> if (visible) searchModel.activate() else searchModel.deactivate() },
                 onRefresh = { feed -> models.getValue(feed).refresh() },
                 onSelect = { feed, entry, retry -> models.getValue(feed).select(entry, retry) },
                 onFeedVisible = { feed -> models.getValue(feed).activate() },
@@ -56,6 +67,7 @@ class MainActivity : ComponentActivity() {
                 onBypassChange = { enabled ->
                     container.networkSettings.setBypassEnabled(enabled)
                     models.values.forEach { it.networkChanged() }
+                    searchModel.networkChanged()
                 },
                 onExit = ::finishAndRemoveTask,
                 dnsProvider = network.dnsProvider,
@@ -63,6 +75,7 @@ class MainActivity : ComponentActivity() {
                     if (provider != network.dnsProvider) {
                         container.networkSettings.setDnsProvider(provider)
                         models.values.forEach { it.networkChanged() }
+                        searchModel.networkChanged()
                     }
                 },
             )
