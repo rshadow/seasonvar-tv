@@ -15,9 +15,10 @@ data class SeriesEntry(
     val originalTitle: String? = null,
     val seasonCountLabel: String? = null,
     val previewDescription: String? = null,
+    val sourceKey: String? = null,
 ) {
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
-    val key: String get() = url + "|" + update
+    val key: String get() = sourceKey ?: (url + "|" + update)
     val fullTitle: String get() = listOfNotNull(title, originalTitle).distinct().joinToString(" / ")
 }
 

@@ -34,7 +34,7 @@ SITE_EPISODE ?= 1
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test
 
 help:
 	@printf '%s\n' \
@@ -48,6 +48,7 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
+		'make account-test           Check account, cookies and private cache tests' \
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \
@@ -240,3 +241,6 @@ site-scripts:
 site-video-probe:
 	python3 scripts/probe-video.py --url "$(SITE_URL)" --translation "$(SITE_TRANSLATION)" \
 		--episode "$(SITE_EPISODE)" --strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)"
+
+account-test:
+	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.account.*'

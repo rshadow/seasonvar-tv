@@ -83,6 +83,15 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         }
     }
 
+    fun sessionChanged() {
+        val reload = started
+        refreshJob?.cancel(); descriptionJob?.cancel()
+        mutableState.value = CatalogUiState(loading = false)
+        mutableDescription.value = DescriptionState()
+        started = false
+        if (reload) refresh()
+    }
+
     fun networkChanged() {
         if (!started) return
         val selected = mutableState.value.entries.firstOrNull { it.key == mutableDescription.value.key }

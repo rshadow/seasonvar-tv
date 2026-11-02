@@ -1,0 +1,26 @@
+package ru.seasonvar.tv.diagnostics
+
+import org.jsoup.Jsoup
+
+// Only structure and counts: never serialize text, attribute values, URLs or cookies.
+internal fun accountStructure(html: String): String {
+    val doc = Jsoup.parse(html)
+    val header = doc.selectFirst(".headblock-menu")
+    val elements = header?.getAllElements()?.take(24)?.joinToString(";") { node ->
+        node.tagName() + "(" + node.attributes().asList().joinToString(",") { it.key } + ")"
+    }.orEmpty()
+    val tabs = listOf("marks-new", "marks-nonew", "marks-want", "marks-watched").joinToString(",") { tab ->
+        tab + "=" + doc.select("[data-tabr=$tab] .pgs-marks-el").size
+    }
+    val row = doc.selectFirst(".pgs-marks-el")
+    val rowShape = row?.getAllElements()?.take(35)?.joinToString(";") { node ->
+        node.tagName() + "." + node.classNames().filter { it.startsWith("pgs-") && it.matches(Regex("[a-z-]+")) }.joinToString(".") +
+            "(" + node.attributes().asList().joinToString(",") { it.key } + ")"
+    }.orEmpty()
+    val bn = doc.select(".pgs-marks-bn")
+    return "headerImages=" + (header?.select("img")?.size ?: 0) + " header=" + elements +
+        " bn=" + bn.size + " bnSerialLinks=" + bn.select("a[href*=serial-]").size +
+        " bnTags=" + bn.select("*").groupingBy { it.tagName() }.eachCount() +
+        " rows=" + doc.select(".pgs-marks-el").size + " tabs=" + tabs + " rowShape=" + rowShape +
+        " avatarParsed=" + runCatching { ru.seasonvar.tv.data.account.AccountParser.user(html)?.avatarUrl != null }.getOrDefault(false)
+}

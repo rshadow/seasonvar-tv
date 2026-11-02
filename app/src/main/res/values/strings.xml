@@ -96,4 +96,27 @@
     <string name="player_source_error">Не удалось получить ссылку на видео</string>
     <string name="player_playback_error">Не удалось воспроизвести видео</string>
     <string name="details_reload">Обновить данные</string>
+    <string name="account_title">Аккаунт</string>
+    <string name="account_sign_in">Войти</string>
+    <string name="account_sign_out">Выйти из аккаунта</string>
+    <string name="account_login">Логин или e-mail</string>
+    <string name="account_password">Пароль</string>
+    <string name="account_login_hint">Войдите в свою учётную запись Seasonvar. Пароль не сохраняется.</string>
+    <string name="account_signed_in_hint">Вы вошли в Seasonvar. Личные разделы доступны в меню.</string>
+    <string name="account_wait">Пожалуйста, подождите…</string>
+    <string name="account_required">Введите логин и пароль.</string>
+    <string name="account_bad_credentials">Не удалось войти. Проверьте логин и пароль.</string>
+    <string name="account_expired">Сессия закончилась. Войдите снова.</string>
+    <string name="account_network_error">Не удалось связаться с Seasonvar. Проверьте подключение и настройки сети.</string>
+    <string name="account_http_error">Seasonvar временно не принимает запрос. Попробуйте позже.</string>
+    <string name="account_storage_error">Не удалось сохранить сессию на устройстве. Попробуйте войти снова.</string>
+    <string name="account_markup_error">Не удалось проверить аккаунт: ответ сайта изменился.</string>
+    <string name="account_check">Проверить сессию</string>
+    <string name="resume_title">На чём остановились</string>
+    <string name="resume_hint">Список из вашей учётной записи Seasonvar</string>
+    <string name="resume_count">В списке: %1$d</string>
+    <string name="resume_loading">Загружаем ваш список…</string>
+    <string name="resume_empty">В списке пока ничего нет</string>
+    <string name="resume_empty_hint">Здесь отображаются списки «Есть обновления» и «Нет новых серий» из вашего аккаунта.</string>
+    <string name="resume_error">Не удалось прочитать личный список.</string>
 </resources>

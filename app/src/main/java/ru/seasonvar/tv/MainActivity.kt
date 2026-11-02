@@ -5,6 +5,9 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import ru.seasonvar.tv.ui.account.AccountViewModel
+import ru.seasonvar.tv.ui.account.ResumeViewModel
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -37,9 +40,21 @@ class MainActivity : ComponentActivity() {
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed))
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
+        val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
+        val resumeModel = ViewModelProvider(this, ResumeViewModel.Factory(container.account, repository))[ResumeViewModel::class.java]
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress))[SeriesDetailsViewModel::class.java]
         setContent {
+            val accountSession by container.account.session.collectAsStateWithLifecycle()
+            val accountState by accountModel.state.collectAsStateWithLifecycle()
+            val resume by resumeModel.state.collectAsStateWithLifecycle()
+            val resumeDescription by resumeModel.description.collectAsStateWithLifecycle()
+            LaunchedEffect(accountSession.version) {
+                if (accountSession.version > 0) {
+                    models.values.forEach { it.sessionChanged() }
+                    searchModel.sessionChanged()
+                }
+            }
             val search by searchModel.state.collectAsStateWithLifecycle()
             val searchDescription by searchModel.description.collectAsStateWithLifecycle()
             val today by models.getValue(PublicFeed.TODAY).state.collectAsStateWithLifecycle()
@@ -55,6 +70,10 @@ class MainActivity : ComponentActivity() {
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             SeasonvarApp(
                 detailsModel = detailsModel,
+                accountSession = accountSession, accountState = accountState,
+                resumeState = resume, resumeDescription = resumeDescription,
+                onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,
+                onResumeVisible = resumeModel::activate, onResumeRefresh = resumeModel::refresh, onResumeSelect = resumeModel::select,
                 onPlay = { startActivity(PlayerActivity.intent(this, it)) },
                 states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates,
                     PublicFeed.TOP to top, PublicFeed.NEWEST to newest, PublicFeed.BEST to best),
@@ -74,6 +93,7 @@ class MainActivity : ComponentActivity() {
                     container.networkSettings.setBypassEnabled(enabled)
                     models.values.forEach { it.networkChanged() }
                     searchModel.networkChanged()
+                    resumeModel.refresh()
                 },
                 onExit = ::finishAndRemoveTask,
                 dnsProvider = network.dnsProvider,
@@ -82,6 +102,7 @@ class MainActivity : ComponentActivity() {
                         container.networkSettings.setDnsProvider(provider)
                         models.values.forEach { it.networkChanged() }
                         searchModel.networkChanged()
+                        resumeModel.refresh()
                     }
                 },
             )

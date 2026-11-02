@@ -60,6 +60,13 @@ class SearchViewModel(
 
     fun submit() = request(debounce = false)
 
+    fun sessionChanged() {
+        searchJob?.cancel(); descriptionJob?.cancel()
+        mutableDescription.value = DescriptionState()
+        mutableState.value = SearchUiState(mutableState.value.query, CatalogUiState(loading = false))
+        if (active) submit()
+    }
+
     fun networkChanged() {
         if (active) {
             mutableDescription.value = DescriptionState()

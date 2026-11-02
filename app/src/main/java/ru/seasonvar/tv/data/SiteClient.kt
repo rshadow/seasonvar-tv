@@ -12,11 +12,21 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Factory {
+class SiteClient(private val settings: NetworkSettings, private val sessions: ru.seasonvar.tv.data.account.SessionManager? = null) : HtmlSource, Call.Factory {
     private val clients = NetworkClients()
 
-    override fun newCall(request: Request): Call =
-        clients.forConfiguration(settings.configuration.value).newCall(request)
+    private var lastJar: ru.seasonvar.tv.data.account.SessionCookies? = null
+    private val sessionClients = mutableMapOf<ru.seasonvar.tv.data.network.NetworkConfiguration, okhttp3.OkHttpClient>()
+
+    @Synchronized
+    private fun client(jar: ru.seasonvar.tv.data.account.SessionCookies?): okhttp3.OkHttpClient {
+        if (jar == null) return clients.forConfiguration(settings.configuration.value)
+        if (lastJar !== jar) { sessionClients.clear(); lastJar = jar }
+        return sessionClients.getOrPut(settings.configuration.value) {
+            clients.forConfiguration(settings.configuration.value).newBuilder().cookieJar(jar).build()
+        }
+    }
+    override fun newCall(request: Request): Call = client(sessions?.current()).newCall(request)
 
     val mediaCalls = object : Call.Factory {
         override fun newCall(request: Request): Call =
@@ -30,21 +40,33 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
 
     override suspend fun sidebar(feed: PublicFeed): String = execute(sidebarRequest(feed))
 
-    private suspend fun execute(initial: Request): String {
+    suspend fun accountGet(url: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
+        execute(Request.Builder().url(url).header("Referer", "https://seasonvar.ru/").build(), jar)
+
+    suspend fun accountLogin(login: String, password: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
+        execute(Request.Builder().url("https://seasonvar.ru/?mod=login")
+            .header("Referer", "https://seasonvar.ru/")
+            .post(FormBody.Builder().add("login", login).add("password", password).build()).build(), jar, true)
+
+    private suspend fun execute(initial: Request, jar: ru.seasonvar.tv.data.account.SessionCookies? = sessions?.current(), loginRedirect: Boolean = false): String {
         var request = initial
         repeat(5) {
-            val result = newCall(request.newBuilder()
+            val result = client(jar).newCall(request.newBuilder()
                 .header("User-Agent", "Mozilla/5.0 (Android TV) SeasonvarTV/" + ru.seasonvar.tv.BuildConfig.VERSION_NAME)
                 .header("Accept-Language", "ru-RU,ru;q=0.9")
                 .build()).awaitResult()
             if (result.status in setOf(301, 302, 303, 307, 308)) {
-                if (request.method != "GET") throw IOException("Unexpected AJAX redirect")
+                if (request.method != "GET" && (!loginRedirect || result.status !in setOf(301, 302, 303))) {
+                    throw IOException("Unexpected redirect")
+                }
                 val destination = java.net.URI(request.url.toString()).resolve(result.location ?: "")
                 if (destination.scheme != "https" ||
                     destination.host !in setOf("seasonvar.ru", "www.seasonvar.ru") ||
                     destination.userInfo != null || destination.port !in listOf(-1, 443)
                 ) throw IOException("Unexpected redirect")
-                request = request.newBuilder().url(destination.toASCIIString()).build()
+                request = request.newBuilder().url(destination.toASCIIString()).apply {
+                    if (request.method != "GET") get()
+                }.build()
             } else {
                 if (result.status != 200) throw SiteHttpException(result.status)
                 return result.body

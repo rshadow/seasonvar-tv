@@ -12,9 +12,11 @@ class CatalogRepository(
     private val source: HtmlSource,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val cacheToken: () -> Long? = { 0L },
 ) {
     suspend fun cached(day: LocalDate, feed: PublicFeed = PublicFeed.TODAY): CatalogPage? =
         withContext(Dispatchers.IO) {
+            if (cacheToken() == null) return@withContext null
             val file = File(directory, cacheName(feed))
             if (!file.isFile) return@withContext null
             val fresh = when (feed) {
@@ -28,13 +30,14 @@ class CatalogRepository(
 
     suspend fun load(day: LocalDate, feed: PublicFeed = PublicFeed.TODAY): CatalogPage =
         withContext(Dispatchers.IO) {
+            val token = cacheToken()
             val html = when (feed) {
                 PublicFeed.TODAY -> source.get("https://seasonvar.ru/")
                 PublicFeed.BEST -> source.get("https://seasonvar.ru/?mode=top")
                 PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> source.sidebar(feed)
             }
             val parsed = parse(html, day, feed)
-            save(cacheName(feed), html)
+            if (token != null && cacheToken() == token) save(cacheName(feed), html)
             parsed
         }
 
@@ -60,9 +63,10 @@ class CatalogRepository(
     }
 
     suspend fun description(entry: SeriesEntry): SeriesDescription {
+        val token = withContext(Dispatchers.IO) { cacheToken() }
         val cached = withContext(Dispatchers.IO) {
             val file = File(directory, "series-" + entry.id + ".html")
-            if (file.isFile && nowMillis() - file.lastModified() < 86_400_000L) {
+            if (token != null && file.isFile && nowMillis() - file.lastModified() < 86_400_000L) {
                 runCatching { SeasonvarParser.description(file.readText(), entry) }.getOrNull()
             } else null
         }
@@ -70,20 +74,21 @@ class CatalogRepository(
         return withContext(Dispatchers.IO) {
             val html = source.get(entry.url)
             val description = SeasonvarParser.description(html, entry)
-            save("series-" + entry.id + ".html", html)
+            if (token != null && cacheToken() == token) save("series-" + entry.id + ".html", html)
             description
         }
     }
 
     suspend fun details(entry: SeriesEntry, force: Boolean = false): SeriesDetails = withContext(Dispatchers.IO) {
+        val token = cacheToken()
         val name = "series-" + entry.id + ".html"
         val file = File(directory, name)
-        if (!force && file.isFile && nowMillis() - file.lastModified() in 0 until 86_400_000L) {
+        if (token != null && !force && file.isFile && nowMillis() - file.lastModified() in 0 until 86_400_000L) {
             runCatching { SeriesDetailsParser.parse(file.readText(), entry) }.getOrNull()?.let { return@withContext it }
         }
         val html = source.get(entry.url)
         val details = SeriesDetailsParser.parse(html, entry)
-        save(name, html)
+        if (token != null && cacheToken() == token) save(name, html)
         details
     }
 
