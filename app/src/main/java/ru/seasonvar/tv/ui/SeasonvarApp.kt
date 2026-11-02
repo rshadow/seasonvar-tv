@@ -67,11 +67,55 @@ import ru.seasonvar.tv.ui.search.SearchUiState
 import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
+private const val CARD_WARMUP_FRAMES = 8
+
 private enum class Section { SEARCH, TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SeasonvarApp(
+    states: Map<PublicFeed, CatalogUiState>,
+    descriptions: Map<PublicFeed, DescriptionState>,
+    onRefresh: (PublicFeed) -> Unit,
+    onSelect: (PublicFeed, SeriesEntry, Boolean) -> Unit,
+    onFeedVisible: (PublicFeed) -> Unit = {},
+    searchState: SearchUiState = SearchUiState(),
+    searchDescription: DescriptionState = DescriptionState(),
+    onSearchQuery: (String) -> Unit = {},
+    onSearchSubmit: () -> Unit = {},
+    onSearchSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
+    onSearchVisible: (Boolean) -> Unit = {},
+    bypassEnabled: Boolean = true,
+    onBypassChange: (Boolean) -> Unit = {},
+    dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
+    onDnsChange: (DnsProvider) -> Unit = {},
+    onExit: () -> Unit = {},
+) {
+    SeasonvarTheme {
+        SeasonvarContent(
+            states = states,
+            descriptions = descriptions,
+            onRefresh = onRefresh,
+            onSelect = onSelect,
+            onFeedVisible = onFeedVisible,
+            searchState = searchState,
+            searchDescription = searchDescription,
+            onSearchQuery = onSearchQuery,
+            onSearchSubmit = onSearchSubmit,
+            onSearchSelect = onSearchSelect,
+            onSearchVisible = onSearchVisible,
+            bypassEnabled = bypassEnabled,
+            onBypassChange = onBypassChange,
+            dnsProvider = dnsProvider,
+            onDnsChange = onDnsChange,
+            onExit = onExit,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SeasonvarContent(
     states: Map<PublicFeed, CatalogUiState>,
     descriptions: Map<PublicFeed, DescriptionState>,
     onRefresh: (PublicFeed) -> Unit,
@@ -133,6 +177,7 @@ fun SeasonvarApp(
     val selected = remember(state.entries, selectedKey) {
         state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
     }
+    val latestCatalogKey by rememberUpdatedState(catalogKey)
     val latestSelected by rememberUpdatedState(selected)
     val latestState by rememberUpdatedState(state)
     val latestListState by rememberUpdatedState(listState)
@@ -193,12 +238,12 @@ fun SeasonvarApp(
             } else {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 val index = state.entries.indexOfFirst { it.key == selected.key }
-                if (listState.layoutInfo.visibleItemsInfo.none { it.key == selected.key }) {
+                if (listState.layoutInfo.visibleItemsInfo.none { it.key == catalogKey + "|" + selected.key }) {
                     listState.scrollToItem(index.coerceAtLeast(0))
                     repeat(2) { withFrameNanos { } }
                     if (section != requestedSection) return@launch
                 }
-                cards[selected.key]?.requestFocus()
+                cards[catalogKey + "|" + selected.key]?.requestFocus()
             }
         }
     }
@@ -241,132 +286,128 @@ fun SeasonvarApp(
     }
 
     BackHandler { navigateBack() }
-    SeasonvarTheme {
-        val d = SeasonvarTheme.dimensions
-        Row(
-            Modifier.fillMaxSize()
-                .backNavigationKeys(::navigateBack, backNavigation::reset)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
-            horizontalArrangement = Arrangement.spacedBy(d.contentGap),
-        ) {
-            Column(Modifier.width(d.menuWidth).fillMaxHeight()) {
-                ThemeButton(
-                    stringResource(R.string.search_title),
-                    onClick = {
-                        backNavigation.reset()
-                        section = Section.SEARCH
-                        searchEditRequest++
-                    },
-                    modifier = Modifier.size(d.headerButtonSize).focusRequester(searchFocus)
-                        .focusProperties { down = todayFocus },
-                    icon = R.drawable.ic_search,
-                )
-                Spacer(Modifier.height(d.menuHeaderSpacing))
-                Column(
-                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
-                ) {
-                    listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
-                        val focus = when (item) {
-                            Section.SEARCH -> searchFocus
-                            Section.TODAY -> todayFocus
-                            Section.UPDATES -> updatesFocus
-                            Section.TOP -> topFocus
-                            Section.NEWEST -> newestFocus
-                            Section.BEST -> bestFocus
-                            Section.SETTINGS -> settingsFocus
-                            Section.ABOUT -> aboutFocus
-                        }
-                        val label = when (item) {
-                            Section.SEARCH -> R.string.search_title
-                            Section.TODAY -> R.string.today_title
-                            Section.UPDATES -> R.string.updates_title
-                            Section.TOP -> R.string.top_title
-                            Section.NEWEST -> R.string.newest_title
-                            Section.BEST -> R.string.best_title
-                            Section.SETTINGS -> R.string.settings_title
-                            Section.ABOUT -> R.string.about_title
-                        }
-                        ThemeButton(
-                            stringResource(label),
-                            onClick = { backNavigation.reset(); selectSection(item); enterContent() },
-                            modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
-                                .focusRequester(focus)
-                                .onFocusChanged { if (it.isFocused) selectSection(item) }
-                                .onPreviewKeyEvent {
-                                    if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                        selectSection(item)
-                                        enterContent()
-                                        true
-                                    } else false
-                                },
-                            active = section == item,
-                        )
-                    }
-                }
-            }
-            Box(
-                Modifier.weight(1f).fillMaxHeight().focusGroup()
-            ) {
-                if (section == Section.SETTINGS) {
-                    SettingsPane(
-                        bypassEnabled, toggleFocus,
-                        menuFocus = settingsFocus,
-                        onBypassChange = onBypassChange,
-                        dnsProvider = dnsProvider,
-                        onDnsChange = onDnsChange,
-                        onBack = ::navigateBack,
-                        onCloseDialog = { backNavigation.reset(); returnToMenu() },
-                        onInteraction = backNavigation::reset,
-                    )
-                } else if (section == Section.ABOUT) {
-                    AboutPane()
-                } else {
-                    key(catalogKey) {
-                        CatalogPane(
-                            state, description, selected, listState, cards, if (searching) null else activeFeed,
-                            if (searching) searchFocus else when (activeFeed) {
-                                PublicFeed.TODAY -> todayFocus
-                                PublicFeed.UPDATES -> updatesFocus
-                                PublicFeed.TOP -> topFocus
-                                PublicFeed.NEWEST -> newestFocus
-                                PublicFeed.BEST -> bestFocus
-                            }, refreshFocus, retryFocus,
-                            query = if (searching) searchState.query else null,
-                            searchHeader = if (searching) { {
-                                SearchControls(
-                                    query = searchState.query,
-                                    onQuery = onSearchQuery,
-                                    inputFocus = searchInputFocus,
-                                    menuFocus = searchFocus,
-                                    editRequest = searchEditRequest,
-                                    onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
-                                    onResults = { keyboard?.hide(); if (state.entries.isNotEmpty()) enterContent() },
-                                )
-                            } } else null,
-                            onRefresh = { if (searching) onSearchSubmit() else onRefresh(activeFeed) },
-                            onFocused = { selectEntry(it.key) },
-                            onOpen = {
-                                backNavigation.reset()
-                                inputModeManager.requestInputMode(InputMode.Keyboard)
-                                selectEntry(it.key)
-                                detailsOpen = true
-                            },
-                        )
-                    }
-                }
-            }
-        }
-        if (detailsOpen && selected != null) {
-            SeriesDialog(
-                selected, description,
-                onRetry = { if (searching) onSearchSelect(selected, true) else onSelect(activeFeed, selected, true) },
-                onClose = { backNavigation.reset(); closeDetails() },
-                onBack = ::navigateBack,
-                onInteraction = backNavigation::reset,
+    val d = SeasonvarTheme.dimensions
+    Row(
+        Modifier.fillMaxSize()
+            .backNavigationKeys(::navigateBack, backNavigation::reset)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
+        horizontalArrangement = Arrangement.spacedBy(d.contentGap),
+    ) {
+        Column(Modifier.width(d.menuWidth).fillMaxHeight()) {
+            ThemeButton(
+                stringResource(R.string.search_title),
+                onClick = {
+                    backNavigation.reset()
+                    section = Section.SEARCH
+                    searchEditRequest++
+                },
+                modifier = Modifier.size(d.headerButtonSize).focusRequester(searchFocus)
+                    .focusProperties { down = todayFocus },
+                icon = R.drawable.ic_search,
             )
+            Spacer(Modifier.height(d.menuHeaderSpacing))
+            Column(
+                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
+            ) {
+                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
+                    val focus = when (item) {
+                        Section.SEARCH -> searchFocus
+                        Section.TODAY -> todayFocus
+                        Section.UPDATES -> updatesFocus
+                        Section.TOP -> topFocus
+                        Section.NEWEST -> newestFocus
+                        Section.BEST -> bestFocus
+                        Section.SETTINGS -> settingsFocus
+                        Section.ABOUT -> aboutFocus
+                    }
+                    val label = when (item) {
+                        Section.SEARCH -> R.string.search_title
+                        Section.TODAY -> R.string.today_title
+                        Section.UPDATES -> R.string.updates_title
+                        Section.TOP -> R.string.top_title
+                        Section.NEWEST -> R.string.newest_title
+                        Section.BEST -> R.string.best_title
+                        Section.SETTINGS -> R.string.settings_title
+                        Section.ABOUT -> R.string.about_title
+                    }
+                    ThemeButton(
+                        stringResource(label),
+                        onClick = { backNavigation.reset(); selectSection(item); enterContent() },
+                        modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
+                            .focusRequester(focus)
+                            .onFocusChanged { if (it.isFocused) selectSection(item) }
+                            .onPreviewKeyEvent {
+                                if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
+                                    selectSection(item)
+                                    enterContent()
+                                    true
+                                } else false
+                            },
+                        active = section == item,
+                    )
+                }
+            }
         }
+        Box(
+            Modifier.weight(1f).fillMaxHeight().focusGroup()
+        ) {
+            if (section == Section.SETTINGS) {
+                SettingsPane(
+                    bypassEnabled, toggleFocus,
+                    menuFocus = settingsFocus,
+                    onBypassChange = onBypassChange,
+                    dnsProvider = dnsProvider,
+                    onDnsChange = onDnsChange,
+                    onBack = ::navigateBack,
+                    onCloseDialog = { backNavigation.reset(); returnToMenu() },
+                    onInteraction = backNavigation::reset,
+                )
+            } else if (section == Section.ABOUT) {
+                AboutPane()
+            } else {
+                CatalogPane(
+                    state, description, selected, listState, cards, if (searching) null else activeFeed,
+                    if (searching) searchFocus else when (activeFeed) {
+                        PublicFeed.TODAY -> todayFocus
+                        PublicFeed.UPDATES -> updatesFocus
+                        PublicFeed.TOP -> topFocus
+                        PublicFeed.NEWEST -> newestFocus
+                        PublicFeed.BEST -> bestFocus
+                    }, refreshFocus, retryFocus,
+                    query = if (searching) searchState.query else null,
+                    searchHeader = if (searching) { {
+                        SearchControls(
+                            query = searchState.query,
+                            onQuery = onSearchQuery,
+                            inputFocus = searchInputFocus,
+                            menuFocus = searchFocus,
+                            editRequest = searchEditRequest,
+                            onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
+                            onResults = { keyboard?.hide(); if (state.entries.isNotEmpty()) enterContent() },
+                        )
+                    } } else null,
+                    onRefresh = { if (searching) onSearchSubmit() else onRefresh(activeFeed) },
+                    onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
+                    onOpen = {
+                        backNavigation.reset()
+                        inputModeManager.requestInputMode(InputMode.Keyboard)
+                        selectEntry(it.key)
+                        detailsOpen = true
+                    },
+                )
+            }
+        }
+    }
+    if (detailsOpen && selected != null) {
+        SeriesDialog(
+            selected, description,
+            onRetry = { if (searching) onSearchSelect(selected, true) else onSelect(activeFeed, selected, true) },
+            onClose = { backNavigation.reset(); closeDetails() },
+            onBack = ::navigateBack,
+            onInteraction = backNavigation::reset,
+        )
     }
 }
 
@@ -469,6 +510,14 @@ private fun CatalogPane(
         else catalogStrings(feed)
     }
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
+    val cardFrames = remember(feed, state.entries, listState) { mutableIntStateOf(0) }
+    val firstCard = remember(feed, state.entries, listState) { listState.firstVisibleItemIndex }
+    LaunchedEffect(cardFrames) {
+        if (state.entries.isNotEmpty()) repeat(CARD_WARMUP_FRAMES) {
+            withFrameNanos { }
+            cardFrames.intValue++
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f).padding(end = d.spacingSmall)) {
@@ -545,14 +594,21 @@ private fun CatalogPane(
             ) {
                 itemsIndexed(
                     state.entries,
-                    key = { _, item -> item.key },
+                    key = { _, item -> (feed?.name ?: "SEARCH") + "|" + item.key },
                     contentType = { _, _ -> "series" },
                 ) { index, item ->
-                    val requester = cards.getOrPut(item.key) { FocusRequester() }
+                    val requester = cards.getOrPut((feed?.name ?: "SEARCH") + "|" + item.key) { FocusRequester() }
+                    val contentReady = remember(cardFrames, firstCard, index) {
+                        derivedStateOf {
+                            val count = cardFrames.intValue
+                            count >= CARD_WARMUP_FRAMES || index in firstCard until (firstCard + count)
+                        }
+                    }
                     SeriesThumbnail(
                         item, requester, refreshFocus,
                         if (index == 0) menuFocus else null,
                         right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
+                        contentReady = { contentReady.value },
                         onFocused = { onFocused(item) }, onClick = { onOpen(item) },
                     )
                 }
@@ -597,6 +653,7 @@ private fun SeriesThumbnail(
     up: FocusRequester,
     left: FocusRequester?,
     right: FocusRequester,
+    contentReady: () -> Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -617,12 +674,14 @@ private fun SeriesThumbnail(
             .clickable(role = Role.Button, onClick = onClick)
             .padding(d.cardPadding),
     ) {
-        Poster(entry, Modifier.fillMaxWidth().height(d.thumbnailHeight))
-        Spacer(Modifier.height(d.spacingSmall))
-        Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
-            minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(entry.subtitle.ifBlank { entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty() }, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (contentReady()) {
+            Poster(entry, Modifier.fillMaxWidth().height(d.thumbnailHeight))
+            Spacer(Modifier.height(d.spacingSmall))
+            Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
+                minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(entry.subtitle.ifBlank { entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty() }, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

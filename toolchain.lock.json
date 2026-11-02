@@ -767,5 +767,11 @@
       "-no-snapshot-save",
       "-use-keycode-forwarding"
     ]
+  },
+  "performance": {
+    "build_type": "profile",
+    "navigation_rounds": 3,
+    "navigation_key_interval_seconds": 0.2,
+    "method_sample_interval_us": 1000
   }
 }

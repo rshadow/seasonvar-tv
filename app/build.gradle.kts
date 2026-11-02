@@ -17,6 +17,19 @@ android {
         versionName = "0.2.0"
     }
 
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        }
+        create("profile") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            proguardFiles("profile-rules.pro")
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

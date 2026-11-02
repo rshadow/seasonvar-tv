@@ -15,7 +15,12 @@ AVD ?= Seasonvar_TV_API_34
 EMULATOR_ARGS := $(shell python3 -c 'import json; print(" ".join(json.load(open("toolchain.lock.json"))["avd"]["emulator_args"]))')
 DEVICE ?= emulator-5554
 APP_ID := ru.seasonvar.tv
-APK := app/build/outputs/apk/debug/app-debug.apk
+PROFILE_BUILD_TYPE := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["performance"]["build_type"])')
+PROFILE_OUT ?= build/profile-navigation
+PROFILE_ARGS ?=
+BUILD_TYPE ?= debug
+BUILD_VARIANT := $(shell python3 -c 'import sys; print(sys.argv[1].capitalize())' "$(BUILD_TYPE)")
+APK := app/build/outputs/apk/$(BUILD_TYPE)/app-$(BUILD_TYPE).apk
 ADB := $(ENV) adb -s "$(DEVICE)"
 SITE_URL ?= https://seasonvar.ru/
 SITE_OUT ?= build/site/index.html
@@ -26,7 +31,7 @@ SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation
 
 help:
 	@printf '%s\n' \
@@ -35,6 +40,9 @@ help:
 		'make doctor                 Check local tools and versions' \
 		'make deps                   Download build dependencies' \
 		'make build                  Build the debug APK' \
+		'make build-profile          Build an optimized profileable APK' \
+		'make run-profile DEVICE=... Install and launch the profile build' \
+		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
 		'make check                  Build, run unit tests and Android Lint' \
@@ -79,7 +87,16 @@ deps:
 	$(GRADLE) :app:assembleDebug
 
 build:
-	$(GRADLE) :app:assembleDebug
+	$(GRADLE) :app:assemble$(BUILD_VARIANT)
+
+build-profile:
+	$(MAKE) build BUILD_TYPE=$(PROFILE_BUILD_TYPE)
+
+profile-navigation:
+	python3 scripts/profile-navigation.py --device "$(DEVICE)" --output "$(PROFILE_OUT)" $(PROFILE_ARGS)
+
+run-profile:
+	$(MAKE) run BUILD_TYPE=$(PROFILE_BUILD_TYPE)
 
 test: site-test
 	$(GRADLE) :app:testDebugUnitTest
