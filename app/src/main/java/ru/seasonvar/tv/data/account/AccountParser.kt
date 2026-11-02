@@ -3,6 +3,7 @@ package ru.seasonvar.tv.data.account
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import ru.seasonvar.tv.data.AccountMark
 import ru.seasonvar.tv.data.MarkupChangedException
 import ru.seasonvar.tv.data.SeasonvarParser
 import ru.seasonvar.tv.data.SeriesEntry
@@ -57,10 +58,10 @@ object AccountParser {
                     ?: seasonNumber(name)
                 val current = row.selectFirst(".pgs-marks-current")?.text()?.trim().orEmpty()
                 val message = row.selectFirst(".pgs-marks-mess")?.text()?.trim().orEmpty()
-                val update = listOf(current, message).filter { it.isNotBlank() }.distinct().joinToString(" · ")
+                val accountMark = if (current.isNotBlank() || message.isNotBlank()) AccountMark(current, message) else null
                 val mark = row.attr("data-marksel").takeIf { it.matches(Regex("[0-9]+")) } ?: "$id:$index"
-                SeriesEntry(id, url, title(name), season, update, "https://cdn.svstat.net/oblojka/$id.jpg",
-                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark)
+                SeriesEntry(id, url, title(name), season, "", "https://cdn.svstat.net/oblojka/$id.jpg",
+                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark)
             } }
         } else {
             doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.map { anchor ->

@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.ui.account.AccountUiState
 import ru.seasonvar.tv.ui.account.AccountPane
+import ru.seasonvar.tv.ui.account.AccountMarkDetails
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
@@ -767,6 +768,7 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
             Spacer(Modifier.height(d.spacingSmall))
             if (entry.subtitle.isNotBlank()) Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium,
                 color = c.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            AccountMarkDetails(entry.accountMark)
             entry.season?.let {
                 Text(stringResource(R.string.season_number, it), color = c.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall)

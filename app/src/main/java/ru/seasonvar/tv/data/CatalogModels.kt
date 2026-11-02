@@ -4,6 +4,8 @@ import java.time.LocalDate
 
 enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST, BEST }
 
+data class AccountMark(val progress: String, val status: String)
+
 data class SeriesEntry(
     val id: String,
     val url: String,
@@ -16,6 +18,7 @@ data class SeriesEntry(
     val seasonCountLabel: String? = null,
     val previewDescription: String? = null,
     val sourceKey: String? = null,
+    val accountMark: AccountMark? = null,
 ) {
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = sourceKey ?: (url + "|" + update)

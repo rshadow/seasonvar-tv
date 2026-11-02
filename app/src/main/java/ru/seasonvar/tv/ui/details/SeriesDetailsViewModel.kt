@@ -86,7 +86,7 @@ class SeriesDetailsViewModel(
         val current = state.value
         if (current.loading || current.entry?.id == id) return
         val season = current.details?.seasons?.firstOrNull { it.id == id } ?: return
-        fetch(current.details.entry.copy(id = season.id, url = season.url, season = season.number, update = ""))
+        fetch(current.details.entry.copy(id = season.id, url = season.url, season = season.number, update = "", accountMark = null))
     }
 
     fun selectTranslation(id: String) {

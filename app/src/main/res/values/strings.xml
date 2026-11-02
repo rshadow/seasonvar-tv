@@ -117,6 +117,7 @@
     <string name="personal_want_title">Хочу посмотреть</string>
     <string name="personal_watched_title">Посмотрел</string>
     <string name="personal_empty_hint">В этой вкладке вашей учётной записи пока нет сериалов.</string>
+    <string name="account_mark_progress">Отметка просмотра: %1$s</string>
     <string name="resume_title">На чём остановились</string>
     <string name="resume_hint">Список из вашей учётной записи Seasonvar</string>
     <string name="resume_count">В списке: %1$d</string>

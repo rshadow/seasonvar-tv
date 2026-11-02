@@ -154,4 +154,14 @@ class SeriesDetailsViewModelTest {
         assertNull(model.playbackRequest())
     }
 
+    @Test fun account_mark_survives_details_load_but_is_not_applied_to_another_season() = runTest(dispatcher) {
+        val mark = AccountMark("Отмечено 3 из 10", "Новые серии")
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(entry().copy(accountMark = mark)); advanceUntilIdle()
+        assertEquals(mark, model.state.value.entry!!.accountMark)
+        model.selectSeason("2"); advanceUntilIdle()
+        assertEquals("2", model.state.value.entry!!.id)
+        assertNull(model.state.value.entry!!.accountMark)
+    }
+
 }

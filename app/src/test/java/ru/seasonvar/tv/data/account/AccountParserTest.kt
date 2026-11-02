@@ -49,7 +49,10 @@ class AccountParserTest {
         val result = AccountParser.resume(current)
         assertEquals(listOf("123", "456"), result.entries.map { it.id })
         assertEquals(2, result.entries[0].season)
-        assertEquals("Отмечено 3 из 10 · Новые серии", result.entries[0].update)
+        assertEquals("", result.entries[0].update)
+        assertEquals("", result.entries[0].subtitle)
+        assertEquals("Отмечено 3 из 10", result.entries[0].accountMark!!.progress)
+        assertEquals("Новые серии", result.entries[0].accountMark!!.status)
         assertEquals("https://seasonvar.ru/serial-123-test-2-season.html", result.entries[0].url)
         assertEquals("Тестовый пользователь", result.user.name)
         assertEquals("https://cdn.svstat.net/avatar/example.jpg", result.user.avatarUrl)
@@ -127,6 +130,15 @@ class AccountParserTest {
         val doc = org.jsoup.Jsoup.parse(current)
         doc.selectFirst("[data-tabr=marks-watched] .pgs-marks-name")!!.remove()
         assertEquals("789", AccountParser.personalList(doc.outerHtml(), PersonalFeed.WANT).entries.single().id)
+    }
+
+    @Test fun absent_account_fields_stay_absent_instead_of_creating_empty_labels() {
+        val result = AccountParser.personalList(current, PersonalFeed.WANT)
+        assertNull(result.entries.single().accountMark)
+        val withoutStatus = AccountParser.personalList(current, PersonalFeed.NO_UPDATES).entries.single()
+        assertEquals("Отмечено 1 из 1", withoutStatus.accountMark!!.progress)
+        assertEquals("", withoutStatus.accountMark.status)
+        assertTrue(withoutStatus.subtitle.isEmpty())
     }
 
 }
