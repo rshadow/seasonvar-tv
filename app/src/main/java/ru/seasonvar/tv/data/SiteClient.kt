@@ -50,6 +50,7 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
             val mode = when (feed) {
                 PublicFeed.UPDATES -> "new"
                 PublicFeed.TOP -> "pop"
+                PublicFeed.NEWEST -> "newest"
                 PublicFeed.TODAY -> throw IllegalArgumentException("Today is not a sidebar feed")
             }
             return Request.Builder()

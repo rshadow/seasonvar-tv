@@ -57,7 +57,7 @@ class SeasonvarTopTest {
                 return when (feed) {
                     PublicFeed.TOP -> top
                     PublicFeed.UPDATES -> updates
-                    PublicFeed.TODAY -> error("Unexpected feed")
+                    PublicFeed.TODAY, PublicFeed.NEWEST -> error("Unexpected feed")
                 }
             }
         }, ZoneOffset.UTC, { now })

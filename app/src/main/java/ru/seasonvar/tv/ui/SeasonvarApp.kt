@@ -2,6 +2,7 @@ package ru.seasonvar.tv.ui
 
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,7 +62,7 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import java.time.format.DateTimeFormatter
 
-private enum class Section { TODAY, UPDATES, TOP, SETTINGS, ABOUT }
+private enum class Section { TODAY, UPDATES, TOP, NEWEST, SETTINGS, ABOUT }
 
 @Composable
 fun SeasonvarApp(
@@ -86,14 +87,17 @@ fun SeasonvarApp(
     val todayListState = rememberLazyListState()
     val updatesListState = rememberLazyListState()
     val topListState = rememberLazyListState()
+    val newestListState = rememberLazyListState()
     val listState = when (activeFeed) {
         PublicFeed.TODAY -> todayListState
         PublicFeed.UPDATES -> updatesListState
         PublicFeed.TOP -> topListState
+        PublicFeed.NEWEST -> newestListState
     }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
     val topFocus = remember { FocusRequester() }
+    val newestFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val toggleFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
@@ -121,6 +125,7 @@ fun SeasonvarApp(
             Section.TODAY -> PublicFeed.TODAY
             Section.UPDATES -> PublicFeed.UPDATES
             Section.TOP -> PublicFeed.TOP
+            Section.NEWEST -> PublicFeed.NEWEST
             else -> null
         }
         if (feed != null) {
@@ -173,6 +178,7 @@ fun SeasonvarApp(
                 Section.TODAY -> todayFocus.requestFocus()
                 Section.UPDATES -> updatesFocus.requestFocus()
                 Section.TOP -> topFocus.requestFocus()
+                Section.NEWEST -> newestFocus.requestFocus()
                 Section.SETTINGS -> settingsFocus.requestFocus()
                 Section.ABOUT -> aboutFocus.requestFocus()
             }
@@ -206,11 +212,12 @@ fun SeasonvarApp(
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.height(d.spacingSection))
-                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.SETTINGS, Section.ABOUT).forEach { item ->
+                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
                     val focus = when (item) {
                         Section.TODAY -> todayFocus
                         Section.UPDATES -> updatesFocus
                         Section.TOP -> topFocus
+                        Section.NEWEST -> newestFocus
                         Section.SETTINGS -> settingsFocus
                         Section.ABOUT -> aboutFocus
                     }
@@ -218,6 +225,7 @@ fun SeasonvarApp(
                         Section.TODAY -> R.string.today_title
                         Section.UPDATES -> R.string.updates_title
                         Section.TOP -> R.string.top_title
+                        Section.NEWEST -> R.string.newest_title
                         Section.SETTINGS -> R.string.settings_title
                         Section.ABOUT -> R.string.about_title
                     }
@@ -263,6 +271,7 @@ fun SeasonvarApp(
                                 PublicFeed.TODAY -> todayFocus
                                 PublicFeed.UPDATES -> updatesFocus
                                 PublicFeed.TOP -> topFocus
+                                PublicFeed.NEWEST -> newestFocus
                             }, refreshFocus, retryFocus,
                             onRefresh = { onRefresh(activeFeed) },
                             onFocused = { selectEntry(it.key) },
@@ -312,6 +321,35 @@ private fun ThemeButton(
     ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }
 
+private data class CatalogStrings(
+    @get:StringRes val title: Int,
+    @get:StringRes val hint: Int,
+    @get:StringRes val count: Int,
+    @get:StringRes val loading: Int,
+    @get:StringRes val empty: Int,
+    @get:StringRes val cached: Int,
+    @get:StringRes val cachedError: Int,
+)
+
+private fun catalogStrings(feed: PublicFeed): CatalogStrings = when (feed) {
+    PublicFeed.TODAY -> CatalogStrings(
+        R.string.today_title, R.string.today_loading_hint, R.string.today_date_count,
+        R.string.today_loading, R.string.today_empty, R.string.today_cached, R.string.today_cached_error,
+    )
+    PublicFeed.UPDATES -> CatalogStrings(
+        R.string.updates_title, R.string.updates_hint, R.string.updates_count,
+        R.string.updates_loading, R.string.updates_empty, R.string.updates_cached, R.string.updates_cached_error,
+    )
+    PublicFeed.TOP -> CatalogStrings(
+        R.string.top_title, R.string.top_hint, R.string.top_count,
+        R.string.top_loading, R.string.top_empty, R.string.top_cached, R.string.top_cached_error,
+    )
+    PublicFeed.NEWEST -> CatalogStrings(
+        R.string.newest_title, R.string.newest_hint, R.string.newest_count,
+        R.string.newest_loading, R.string.newest_empty, R.string.newest_cached, R.string.newest_cached_error,
+    )
+}
+
 @Composable
 private fun CatalogPane(
     state: CatalogUiState,
@@ -330,19 +368,19 @@ private fun CatalogPane(
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val isToday = feed == PublicFeed.TODAY
-    val isTop = feed == PublicFeed.TOP
+    val strings = remember(feed) { catalogStrings(feed) }
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(if (isToday) R.string.today_title else if (isTop) R.string.top_title else R.string.updates_title), style = MaterialTheme.typography.headlineSmall,
+                Text(stringResource(strings.title), style = MaterialTheme.typography.headlineSmall,
                     color = c.onBackground)
                 Text(
                     if (isToday) {
                         if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
                     } else {
-                        if (state.loaded) stringResource(if (isTop) R.string.top_count else R.string.updates_count, state.entries.size)
-                        else stringResource(if (isTop) R.string.top_hint else R.string.updates_hint)
+                        if (state.loaded) stringResource(strings.count, state.entries.size)
+                        else stringResource(strings.hint)
                     },
                     style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
                 )
@@ -360,11 +398,11 @@ private fun CatalogPane(
                 verticalArrangement = Arrangement.Center,
             ) {
                 val message = when {
-                    state.loading -> if (isToday) R.string.today_loading else if (isTop) R.string.top_loading else R.string.updates_loading
+                    state.loading -> strings.loading
                     state.failure == LoadFailure.MARKUP -> R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
-                    else -> if (isToday) R.string.today_empty else if (isTop) R.string.top_empty else R.string.updates_empty
+                    else -> strings.empty
                 }
                 Text(stringResource(message), style = MaterialTheme.typography.titleLarge,
                     color = c.onBackground)
@@ -387,9 +425,9 @@ private fun CatalogPane(
             if (state.failure != null || state.cached || state.loading) {
                 Text(
                     stringResource(if (state.failure != null) {
-                        if (isToday) R.string.today_cached_error else if (isTop) R.string.top_cached_error else R.string.updates_cached_error
+                        strings.cachedError
                     } else if (state.loading) R.string.today_updating
-                    else if (isToday) R.string.today_cached else if (isTop) R.string.top_cached else R.string.updates_cached),
+                    else strings.cached),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                 )
             }

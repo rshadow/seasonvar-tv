@@ -36,14 +36,17 @@ class MainActivity : ComponentActivity() {
             val today by models.getValue(PublicFeed.TODAY).state.collectAsStateWithLifecycle()
             val updates by models.getValue(PublicFeed.UPDATES).state.collectAsStateWithLifecycle()
             val top by models.getValue(PublicFeed.TOP).state.collectAsStateWithLifecycle()
+            val newest by models.getValue(PublicFeed.NEWEST).state.collectAsStateWithLifecycle()
             val todayDescription by models.getValue(PublicFeed.TODAY).description.collectAsStateWithLifecycle()
             val updatesDescription by models.getValue(PublicFeed.UPDATES).description.collectAsStateWithLifecycle()
             val topDescription by models.getValue(PublicFeed.TOP).description.collectAsStateWithLifecycle()
+            val newestDescription by models.getValue(PublicFeed.NEWEST).description.collectAsStateWithLifecycle()
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             SeasonvarApp(
-                states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates, PublicFeed.TOP to top),
+                states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates,
+                    PublicFeed.TOP to top, PublicFeed.NEWEST to newest),
                 descriptions = mapOf(PublicFeed.TODAY to todayDescription, PublicFeed.UPDATES to updatesDescription,
-                    PublicFeed.TOP to topDescription),
+                    PublicFeed.TOP to topDescription, PublicFeed.NEWEST to newestDescription),
                 onRefresh = { feed -> models.getValue(feed).refresh() },
                 onSelect = { feed, entry, retry -> models.getValue(feed).select(entry, retry) },
                 onFeedVisible = { feed -> models.getValue(feed).activate() },

@@ -6,6 +6,13 @@
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
     <string name="today_title">Сегодня</string>
+    <string name="newest_title">Новинки</string>
+    <string name="newest_hint">Новые сериалы сайта</string>
+    <string name="newest_count">Новинки сайта · всего: %1$d</string>
+    <string name="newest_loading">Загружаем новинки…</string>
+    <string name="newest_empty">Новинок пока нет</string>
+    <string name="newest_cached">Сохранённый список «Новинки»</string>
+    <string name="newest_cached_error">Не удалось обновить. Показан сохранённый список «Новинки».</string>
     <string name="top_title">Топ</string>
     <string name="top_hint">Популярные сериалы сайта</string>
     <string name="top_count">Популярные сериалы · всего: %1$d</string>

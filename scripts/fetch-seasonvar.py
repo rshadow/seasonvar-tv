@@ -362,7 +362,7 @@ def main():
     parser.add_argument("--strategy", choices=("default", "tlsrec", "direct"), default="default")
     parser.add_argument("--timeout", type=float, default=10)
     parser.add_argument("--source-ip")
-    parser.add_argument("--sidebar", choices=("new", "pop"), help="POST a public sidebar AJAX form")
+    parser.add_argument("--sidebar", choices=("new", "pop", "newest"), help="POST a public sidebar AJAX form")
     parser.add_argument("--ip", help="Override the destination IPv4 for diagnostics")
     args = parser.parse_args()
     try:

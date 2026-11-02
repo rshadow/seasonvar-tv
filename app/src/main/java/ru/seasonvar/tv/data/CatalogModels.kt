@@ -2,7 +2,7 @@ package ru.seasonvar.tv.data
 
 import java.time.LocalDate
 
-enum class PublicFeed { TODAY, UPDATES, TOP }
+enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST }
 
 data class SeriesEntry(
     val id: String,

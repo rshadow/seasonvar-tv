@@ -116,7 +116,7 @@ class OriginTests(unittest.TestCase):
             fetcher.fetch("https://seasonvar.ru/", "default", 1)
 
     def test_ajax_wire_request_uses_post_form_and_get_stays_unchanged(self):
-        for ajax, mode in ((False, None), (True, "new"), (True, "pop")):
+        for ajax, mode in ((False, None), (True, "new"), (True, "pop"), (True, "newest")):
             with self.subTest(ajax=ajax, mode=mode), patch.object(fetcher.socket, "create_connection"), \
                     patch.object(fetcher, "TLSStream") as tls:
                 stream = tls.return_value
