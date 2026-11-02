@@ -17,11 +17,15 @@
     <dimen name="seasonvar_button_width">320dp</dimen>
     <dimen name="seasonvar_button_height">64dp</dimen>
 
+    <dimen name="seasonvar_button_corner_radius">5dp</dimen>
     <dimen name="seasonvar_menu_width">176dp</dimen>
+    <dimen name="seasonvar_menu_item_height">40dp</dimen>
+    <dimen name="seasonvar_menu_item_spacing">4dp</dimen>
+    <dimen name="seasonvar_menu_header_spacing">24dp</dimen>
     <dimen name="seasonvar_navigation_button_height">52dp</dimen>
     <dimen name="seasonvar_content_gap">24dp</dimen>
-    <dimen name="seasonvar_header_button_width">112dp</dimen>
-    <dimen name="seasonvar_header_button_height">44dp</dimen>
+    <dimen name="seasonvar_header_button_size">44dp</dimen>
+    <dimen name="seasonvar_header_button_icon_size">24dp</dimen>
     <dimen name="seasonvar_card_width">120dp</dimen>
     <dimen name="seasonvar_card_height">212dp</dimen>
     <dimen name="seasonvar_thumbnail_height">144dp</dimen>

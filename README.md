@@ -58,6 +58,8 @@ make run
 
 ## Разработка
 
+Кнопки прямоугольные с небольшим скруглением; компактное левое меню прокручивается при нехватке места — [ADR-0023](docs/adr/0023-compact-rectangular-menu.md).
+
 Карточки ленты имеют фиксированный размер и показывают русское название, а при его отсутствии — оригинальное. Правило — [ADR-0019](docs/adr/0019-fixed-series-cards.md).
 
 Цвета, отступы и размеры кнопок настраиваются в [themes.xml](app/src/main/res/values/themes.xml), подключение к Compose и типографика — в [SeasonvarTheme.kt](app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt). Палитра взята из CSS оригинального сайта; правила и источники — [ADR-0008](docs/adr/0008-centralized-ui-theme.md).

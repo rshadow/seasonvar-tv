@@ -2,6 +2,7 @@ package ru.seasonvar.tv.ui
 
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +14,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyRow
@@ -213,45 +215,49 @@ fun SeasonvarApp(
                 .padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
             horizontalArrangement = Arrangement.spacedBy(d.contentGap),
         ) {
-            Column(Modifier.width(d.menuWidth)) {
+            Column(Modifier.width(d.menuWidth).fillMaxHeight()) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground)
-                Spacer(Modifier.height(d.spacingSection))
-                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
-                    val focus = when (item) {
-                        Section.TODAY -> todayFocus
-                        Section.UPDATES -> updatesFocus
-                        Section.TOP -> topFocus
-                        Section.NEWEST -> newestFocus
-                        Section.BEST -> bestFocus
-                        Section.SETTINGS -> settingsFocus
-                        Section.ABOUT -> aboutFocus
+                Spacer(Modifier.height(d.menuHeaderSpacing))
+                Column(
+                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
+                ) {
+                    listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
+                        val focus = when (item) {
+                            Section.TODAY -> todayFocus
+                            Section.UPDATES -> updatesFocus
+                            Section.TOP -> topFocus
+                            Section.NEWEST -> newestFocus
+                            Section.BEST -> bestFocus
+                            Section.SETTINGS -> settingsFocus
+                            Section.ABOUT -> aboutFocus
+                        }
+                        val label = when (item) {
+                            Section.TODAY -> R.string.today_title
+                            Section.UPDATES -> R.string.updates_title
+                            Section.TOP -> R.string.top_title
+                            Section.NEWEST -> R.string.newest_title
+                            Section.BEST -> R.string.best_title
+                            Section.SETTINGS -> R.string.settings_title
+                            Section.ABOUT -> R.string.about_title
+                        }
+                        ThemeButton(
+                            stringResource(label),
+                            onClick = { backNavigation.reset(); selectSection(item); enterContent() },
+                            modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
+                                .focusRequester(focus)
+                                .onFocusChanged { if (it.isFocused) selectSection(item) }
+                                .onPreviewKeyEvent {
+                                    if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
+                                        selectSection(item)
+                                        enterContent()
+                                        true
+                                    } else false
+                                },
+                            active = section == item,
+                        )
                     }
-                    val label = when (item) {
-                        Section.TODAY -> R.string.today_title
-                        Section.UPDATES -> R.string.updates_title
-                        Section.TOP -> R.string.top_title
-                        Section.NEWEST -> R.string.newest_title
-                        Section.BEST -> R.string.best_title
-                        Section.SETTINGS -> R.string.settings_title
-                        Section.ABOUT -> R.string.about_title
-                    }
-                    ThemeButton(
-                        stringResource(label),
-                        onClick = { backNavigation.reset(); selectSection(item); enterContent() },
-                        modifier = Modifier.fillMaxWidth().height(d.navigationButtonHeight)
-                            .focusRequester(focus)
-                            .onFocusChanged { if (it.isFocused) selectSection(item) }
-                            .onPreviewKeyEvent {
-                                if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                    selectSection(item)
-                                    enterContent()
-                                    true
-                                } else false
-                            },
-                        active = section == item,
-                    )
-                    Spacer(Modifier.height(d.spacingSmall))
                 }
             }
             Box(
@@ -312,21 +318,37 @@ private fun ThemeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     active: Boolean = true,
+    @DrawableRes icon: Int? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val c = MaterialTheme.colorScheme
+    val d = SeasonvarTheme.dimensions
     Button(
         onClick = onClick,
         modifier = modifier.focusRequester(focus).onFocusChanged { focused = it.isFocused }
             .pointerInput(onClick) { detectTapGestures { focus.requestFocus(); onClick() } },
+        shape = ButtonDefaults.shape(shape = RoundedCornerShape(d.buttonCornerRadius)),
+        scale = ButtonDefaults.scale(focusedScale = 1f),
+        contentPadding = if (icon != null) PaddingValues(d.spacingSmall) else ButtonDefaults.ContentPadding,
         colors = ButtonDefaults.colors(
-            containerColor = if (focused) c.primary else if (active) c.surface else c.background,
+            containerColor = when {
+                focused -> c.primary
+                icon != null -> Color.Transparent
+                active -> c.surface
+                else -> c.background
+            },
             contentColor = if (focused) c.onPrimary else c.onSurface,
             focusedContainerColor = c.primary,
             focusedContentColor = c.onPrimary,
         ),
-    ) { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    ) {
+        if (icon != null) {
+            Icon(painterResource(icon), contentDescription = text, modifier = Modifier.size(d.headerButtonIconSize))
+        } else {
+            Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
 }
 
 private data class CatalogStrings(
@@ -399,8 +421,8 @@ private fun CatalogPane(
             }
             ThemeButton(
                 stringResource(R.string.refresh), onRefresh,
-                Modifier.width(d.headerButtonWidth).height(d.headerButtonHeight)
-                    .focusRequester(refreshFocus),
+                Modifier.size(d.headerButtonSize).focusRequester(refreshFocus),
+                icon = R.drawable.ic_reload,
             )
         }
         Spacer(Modifier.height(d.spacingSmall))
