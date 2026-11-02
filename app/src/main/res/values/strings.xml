@@ -75,4 +75,17 @@
     <string name="dns_description">Определяет адреса сайтов. Можно использовать DNS устройства или Quad9 с запросами по HTTPS.</string>
     <string name="dns_system">Системный</string>
     <string name="dns_quad9" translatable="false">Quad9 DoH</string>
+    <string name="details_watch">▶ Смотреть</string>
+    <string name="details_continue">▶ Продолжить</string>
+    <string name="details_resume">Серия %1$s · %2$s</string>
+    <string name="details_translation">Перевод: %1$s</string>
+    <string name="details_season">Сезон</string>
+    <string name="details_translation_title">Перевод</string>
+    <string name="details_episodes">Серии</string>
+    <string name="details_all_episodes">Все серии</string>
+    <string name="details_episodes_empty">Серии пока не добавлены</string>
+    <string name="details_episodes_unavailable">Список серий недоступен</string>
+    <string name="details_cast">В ролях: %1$s</string>
+    <string name="details_markup_error">Не удалось прочитать карточку сериала</string>
+    <string name="details_description">Описание</string>
 </resources>

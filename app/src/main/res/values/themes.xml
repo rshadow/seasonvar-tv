@@ -43,6 +43,9 @@
     <dimen name="seasonvar_dialog_width">720dp</dimen>
     <dimen name="seasonvar_dialog_height">420dp</dimen>
 
+    <dimen name="seasonvar_episode_width">60dp</dimen>
+    <integer name="seasonvar_all_episodes_threshold">12</integer>
+
     <style name="Theme.SeasonvarTV" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/seasonvar_background</item>
         <item name="android:colorAccent">@color/seasonvar_accent</item>

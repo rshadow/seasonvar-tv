@@ -13,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
@@ -21,7 +20,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -67,6 +65,8 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.network.DnsProvider
+import ru.seasonvar.tv.ui.details.SeriesDetailsPane
+import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.navigation.BackNavigation
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
@@ -100,6 +100,7 @@ fun SeasonvarApp(
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
     onExit: () -> Unit = {},
+    detailsModel: SeriesDetailsViewModel? = null,
 ) {
     SeasonvarTheme {
         SeasonvarContent(
@@ -119,6 +120,7 @@ fun SeasonvarApp(
             dnsProvider = dnsProvider,
             onDnsChange = onDnsChange,
             onExit = onExit,
+            detailsModel = detailsModel,
         )
     }
 }
@@ -142,6 +144,7 @@ private fun SeasonvarContent(
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
     onExit: () -> Unit = {},
+    detailsModel: SeriesDetailsViewModel? = null,
 ) {
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
     var activeFeed by rememberSaveable { mutableStateOf(PublicFeed.TODAY) }
@@ -198,6 +201,7 @@ private fun SeasonvarContent(
     }
 
     fun selectSection(item: Section) {
+        detailsOpen = false
         section = item
         val feed = when (item) {
             Section.TODAY -> PublicFeed.TODAY
@@ -309,6 +313,7 @@ private fun SeasonvarContent(
                 stringResource(R.string.search_title),
                 onClick = {
                     backNavigation.reset()
+                    detailsOpen = false
                     section = Section.SEARCH
                     searchEditRequest++
                 },
@@ -376,6 +381,18 @@ private fun SeasonvarContent(
                 )
             } else if (section == Section.ABOUT) {
                 AboutPane()
+            } else if (detailsOpen && selected != null && detailsModel != null) {
+                SeriesDetailsPane(
+                    selected, detailsModel,
+                    menuFocus = if (searching) searchFocus else when (activeFeed) {
+                        PublicFeed.TODAY -> todayFocus
+                        PublicFeed.UPDATES -> updatesFocus
+                        PublicFeed.TOP -> topFocus
+                        PublicFeed.NEWEST -> newestFocus
+                        PublicFeed.BEST -> bestFocus
+                    },
+                    onInteraction = backNavigation::reset,
+                )
             } else {
                 CatalogPane(
                     state, description, selected, listState, cards, if (searching) null else activeFeed,
@@ -404,20 +421,13 @@ private fun SeasonvarContent(
                         backNavigation.reset()
                         inputModeManager.requestInputMode(InputMode.Keyboard)
                         selectEntry(it.key)
+                        searchEditRequest = 0
+                        keyboard?.hide()
                         detailsOpen = true
                     },
                 )
             }
         }
-    }
-    if (detailsOpen && selected != null) {
-        SeriesDialog(
-            selected, description,
-            onRetry = { if (searching) onSearchSelect(selected, true) else onSelect(activeFeed, selected, true) },
-            onClose = { backNavigation.reset(); closeDetails() },
-            onBack = ::navigateBack,
-            onInteraction = backNavigation::reset,
-        )
     }
 }
 
@@ -758,76 +768,6 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
             }
         }
     }
-}
-
-@Composable
-private fun SeriesDialog(
-    entry: SeriesEntry,
-    description: DescriptionState,
-    onRetry: () -> Unit,
-    onClose: () -> Unit,
-    onBack: () -> Unit,
-    onInteraction: () -> Unit,
-) {
-    val d = SeasonvarTheme.dimensions
-    val c = MaterialTheme.colorScheme
-    val descriptionFocus = remember { FocusRequester() }
-    val paragraphs = when {
-        description.key != entry.key || description.loading -> listOf(stringResource(R.string.description_loading))
-        description.failed -> listOf(stringResource(R.string.description_error))
-        description.description?.paragraphs.isNullOrEmpty() -> listOf(stringResource(R.string.description_empty))
-        else -> description.description.paragraphs
-    }
-    val scroll = androidx.compose.foundation.rememberScrollState()
-    val scope = rememberCoroutineScope()
-    val step = with(androidx.compose.ui.platform.LocalDensity.current) { d.navigationButtonHeight.toPx() }
-    var textFocused by remember { mutableStateOf(false) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        BackHandler(onBack = onBack)
-        Column(
-            Modifier.width(d.dialogWidth).height(d.dialogHeight)
-                .backNavigationKeys(onBack, onInteraction)
-                .background(c.background, RoundedCornerShape(d.cardCornerRadius))
-                .padding(d.spacingLarge),
-            verticalArrangement = Arrangement.spacedBy(d.spacingMedium),
-        ) {
-            Text(entry.fullTitle, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(entry.subtitle.ifBlank { entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty() }, color = c.primary, style = MaterialTheme.typography.bodyLarge)
-            Box(
-                Modifier.weight(1f).fillMaxWidth()
-                    .focusRequester(descriptionFocus)
-                    .onFocusChanged { textFocused = it.isFocused }
-                    .border(d.focusBorderWidth, if (textFocused) c.primary else Color.Transparent,
-                        RoundedCornerShape(d.cardCornerRadius))
-                    .onPreviewKeyEvent {
-                        if (it.type != KeyEventType.KeyDown) false
-                        else when (it.key) {
-                            Key.DirectionDown -> {
-                                if (scroll.value >= scroll.maxValue) false
-                                else { scope.launch { scroll.scrollBy(step) }; true }
-                            }
-                            Key.DirectionUp -> {
-                                scope.launch { scroll.scrollBy(-step) }
-                                true
-                            }
-                            else -> false
-                        }
-                    }
-                    .focusable()
-                    .verticalScroll(scroll)
-                    .padding(d.spacingSmall),
-            ) {
-                Text(paragraphs.joinToString("\n\n"), color = c.onBackground,
-                    style = MaterialTheme.typography.bodyLarge)
-            }
-            if (description.failed) {
-                ThemeButton(stringResource(R.string.retry), onRetry,
-                    Modifier.width(d.buttonWidth).height(d.navigationButtonHeight))
-            }
-        }
-    }
-    LaunchedEffect(Unit) { descriptionFocus.requestFocus() }
 }
 
 @Composable

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="950" viewBox="0 0 1440 950">
+<title>карточка сериала для Android TV</title>
+<desc>Постоянное меню слева. Справа название и сведения, постер слева, полное прокручиваемое описание, кнопка просмотра, сезон, перевод и серии справа. Рекомендаций и комментариев нет.</desc>
+<style>text{font-family:Arial,sans-serif;fill:#F3F3F3}.muted{fill:#D5D9D9}.dark{fill:#2B2521}.small{font-size:20px}.body{font-size:24px}.label{font-size:22px}.title{font-size:36px;font-weight:700}</style>
+<rect width="1440" height="950" fill="#181412"/>
+<text x="28" y="36" class="label">Карточка сериала · Android TV</text>
+<g transform="translate(0,60)">
+<rect width="1440" height="810" fill="#2B2521"/>
+
+<g transform="translate(69,57) scale(1.5)" fill="#F3F3F3"><path d="M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19.5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z"/></g>
+<rect x="54" y="144" width="264" height="60" rx="7.5" fill="#980C3D"/>
+<text x="78" y="182" class="label">Сегодня</text>
+<text x="78" y="248" class="label">Обновления</text>
+<text x="78" y="314" class="label">Топ</text>
+<text x="78" y="380" class="label">Новинки</text>
+<text x="78" y="446" class="label">Лучшие сериалы</text>
+<text x="78" y="512" class="label">Настройки</text>
+<text x="78" y="578" class="label">О программе</text>
+<text x="354" y="82" class="title">Игра престолов</text>
+<text x="354" y="119" class="body muted">Game of Thrones</text>
+<text x="354" y="160" class="label muted">2011 · США · Драмы, фэнтези · 18+</text>
+<rect x="354" y="198" width="240" height="360" rx="7.5" fill="#3C322D" stroke="#77695E" stroke-width="2"/>
+<text x="474" y="370" class="body muted" text-anchor="middle">Постер</text>
+<text x="474" y="402" class="body muted" text-anchor="middle">сериала</text>
+<rect x="366" y="210" width="108" height="32" rx="4" fill="#F5B50C"/>
+<text x="420" y="233" class="dark small" text-anchor="middle">ТОП 100</text>
+<text x="354" y="600" class="label muted">Режиссёры</text>
+<text x="354" y="630" class="small">Брайан Кирк, …</text>
+<text x="354" y="670" class="label muted">В ролях</text>
+<text x="354" y="700" class="small">Питер Динклэйдж, …</text>
+<rect x="354" y="724" width="240" height="48" rx="7.5" fill="#980C3D"/>
+<text x="474" y="756" class="label" text-anchor="middle">О сериале</text>
+<text x="624" y="222" class="body">Описание сайта ↑↓</text>
+<rect x="624" y="243" width="740" height="10" rx="3" fill="#77695E"/>
+<rect x="624" y="266" width="740" height="10" rx="3" fill="#77695E"/>
+<rect x="624" y="289" width="535" height="10" rx="3" fill="#77695E"/>
+<rect x="624" y="312" width="740" height="10" rx="3" fill="#77695E"/>
+<rect x="624" y="335" width="535" height="10" rx="3" fill="#77695E"/>
+<rect x="1375" y="238" width="5" height="108" rx="2" fill="#77695E"/>
+<rect x="1375" y="238" width="5" height="40" rx="2" fill="#F5B50C"/>
+<text x="624" y="736" class="small muted">Позже: «Продолжить» + сохранённая серия и время</text>
+<rect x="624" y="372" width="762" height="72" rx="7.5" fill="#F5B50C"/>
+<text x="1005.0" y="416.0" class="dark body" text-anchor="middle">▶ Смотреть</text>
+<rect x="624" y="460" width="230" height="62" rx="7.5" fill="#980C3D"/>
+<text x="739.0" y="499.0" class="label" text-anchor="middle">Сезон 1 ▾</text>
+<rect x="872" y="460" width="514" height="62" rx="7.5" fill="#980C3D"/>
+<text x="1129.0" y="499.0" class="label" text-anchor="middle">Перевод: Стандартный ▾</text>
+<text x="624" y="558" class="label muted">Серии</text>
+<rect x="624" y="576" width="62" height="56" rx="7.5" fill="#980C3D"/>
+<text x="655" y="612" class="body" text-anchor="middle">1</text>
+<rect x="698" y="576" width="62" height="56" rx="7.5" fill="#2B2521" stroke="#77695E" stroke-width="2"/>
+<text x="729" y="612" class="body" text-anchor="middle">2</text>
+<rect x="772" y="576" width="62" height="56" rx="7.5" fill="#2B2521" stroke="#77695E" stroke-width="2"/>
+<text x="803" y="612" class="body" text-anchor="middle">3</text>
+<rect x="846" y="576" width="62" height="56" rx="7.5" fill="#2B2521" stroke="#77695E" stroke-width="2"/>
+<text x="877" y="612" class="body" text-anchor="middle">4</text>
+<rect x="920" y="576" width="62" height="56" rx="7.5" fill="#2B2521" stroke="#77695E" stroke-width="2"/>
+<text x="951" y="612" class="body" text-anchor="middle">5</text>
+<rect x="994" y="576" width="62" height="56" rx="7.5" fill="#2B2521" stroke="#77695E" stroke-width="2"/>
+<text x="1025" y="612" class="body" text-anchor="middle">6</text>
+<rect x="1068" y="576" width="62" height="56" rx="7.5" fill="#2B2521" stroke="#77695E" stroke-width="2"/>
+<text x="1099" y="612" class="body" text-anchor="middle">7</text>
+<text x="1156" y="612" class="body muted">…</text>
+<rect x="624" y="650" width="228" height="48" rx="7.5" fill="#980C3D"/>
+<text x="738.0" y="682.0" class="label" text-anchor="middle">Все серии</text>
+</g>
+<text x="28" y="904" class="label muted">Начальный фокус → «Смотреть»  ·  Назад → выбранная карточка каталога</text>
+<text x="28" y="934" class="small muted">Схема расположения элементов; «Смотреть» и серии пока без запуска видео.</text>
+</svg>

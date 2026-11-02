@@ -174,7 +174,7 @@ object SeasonvarParser {
         )
     }
 
-    private fun pageUrl(path: String): String? = runCatching {
+    internal fun pageUrl(path: String): String? = runCatching {
         val uri = URI("https://seasonvar.ru/").resolve(path)
         if (uri.host !in setOf("seasonvar.ru", "www.seasonvar.ru") ||
             uri.userInfo != null || uri.port !in listOf(-1, 443) ||

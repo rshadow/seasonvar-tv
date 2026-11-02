@@ -49,6 +49,7 @@ data class SeasonvarDimensions(
     val badgeTextOffsetVertical: Dp,
     val dialogWidth: Dp,
     val dialogHeight: Dp,
+    val episodeWidth: Dp,
 )
 
 private val LocalDimensions = staticCompositionLocalOf<SeasonvarDimensions> {
@@ -58,6 +59,11 @@ private val LocalDimensions = staticCompositionLocalOf<SeasonvarDimensions> {
 private val SeasonvarTypography = Typography()
 
 object SeasonvarTheme {
+    val allEpisodesThreshold: Int
+        @Composable
+        @ReadOnlyComposable
+        get() = integerResource(R.integer.seasonvar_all_episodes_threshold)
+
     val refreshRotationDurationMillis: Int
         @Composable
         @ReadOnlyComposable
@@ -114,6 +120,7 @@ fun SeasonvarTheme(content: @Composable () -> Unit) {
         badgeTextOffsetVertical = dimensionResource(R.dimen.seasonvar_badge_text_offset_vertical),
         dialogWidth = dimensionResource(R.dimen.seasonvar_dialog_width),
         dialogHeight = dimensionResource(R.dimen.seasonvar_dialog_height),
+        episodeWidth = dimensionResource(R.dimen.seasonvar_episode_width),
     )
 
     CompositionLocalProvider(LocalDimensions provides dimensions) {
