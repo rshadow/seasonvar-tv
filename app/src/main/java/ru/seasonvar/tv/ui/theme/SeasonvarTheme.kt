@@ -7,6 +7,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Typography
@@ -57,6 +58,11 @@ private val LocalDimensions = staticCompositionLocalOf<SeasonvarDimensions> {
 private val SeasonvarTypography = Typography()
 
 object SeasonvarTheme {
+    val refreshRotationDurationMillis: Int
+        @Composable
+        @ReadOnlyComposable
+        get() = integerResource(R.integer.seasonvar_refresh_rotation_duration_ms)
+
     val dimensions: SeasonvarDimensions
         @Composable
         @ReadOnlyComposable

@@ -4,6 +4,11 @@ import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +37,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
@@ -41,6 +47,10 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -418,13 +428,20 @@ internal fun ThemeButton(
     modifier: Modifier = Modifier,
     active: Boolean = true,
     @DrawableRes icon: Int? = null,
+    loading: Boolean = false,
 ) {
     var focused by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val c = MaterialTheme.colorScheme
     val d = SeasonvarTheme.dimensions
+    val action = { if (!loading) onClick() }
+    val loadingDescription = if (loading) stringResource(R.string.today_updating) else null
     val buttonModifier = modifier.focusRequester(focus).onFocusChanged { focused = it.isFocused }
-        .pointerInput(onClick) { detectTapGestures { focus.requestFocus(); onClick() } }
+        .pointerInput(action) { detectTapGestures { focus.requestFocus(); action() } }
+        .then(if (loadingDescription != null) Modifier.semantics {
+            stateDescription = loadingDescription
+            progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+        } else Modifier)
     val shape = ButtonDefaults.shape(shape = RoundedCornerShape(d.buttonCornerRadius))
     val scale = ButtonDefaults.scale(focusedScale = 1f)
     val colors = ButtonDefaults.colors(
@@ -440,17 +457,30 @@ internal fun ThemeButton(
     )
     if (icon != null) {
         IconButton(
-            onClick = onClick,
+            onClick = action,
             modifier = buttonModifier.size(d.headerButtonSize),
             shape = shape,
             scale = scale,
             colors = colors,
         ) {
+            val rotation = if (loading) {
+                val transition = rememberInfiniteTransition(label = "refresh")
+                val angle = transition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(tween(
+                        durationMillis = SeasonvarTheme.refreshRotationDurationMillis,
+                        easing = LinearEasing,
+                    )),
+                    label = "refreshRotation",
+                )
+                Modifier.graphicsLayer { rotationZ = angle.value }
+            } else Modifier
             Icon(painterResource(icon), contentDescription = text,
-                modifier = Modifier.size(d.headerButtonIconSize))
+                modifier = Modifier.size(d.headerButtonIconSize).then(rotation))
         }
     } else {
-        Button(onClick = onClick, modifier = buttonModifier,
+        Button(onClick = action, modifier = buttonModifier,
             shape = shape, scale = scale, colors = colors) {
             Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -533,13 +563,15 @@ private fun CatalogPane(
                     color = c.onBackground)
                 if (feed != null || state.loaded) {
                     Text(
-                        if (isToday) {
-                            if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
-                        } else {
-                            if (state.loaded) stringResource(strings.count, state.entries.size)
-                            else stringResource(strings.hint)
+                        when {
+                            selected != null && state.failure != null -> stringResource(strings.cachedError)
+                            selected != null && state.cached && !state.loading -> stringResource(strings.cached)
+                            isToday -> if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
+                            state.loaded -> stringResource(strings.count, state.entries.size)
+                            else -> stringResource(strings.hint)
                         },
                         style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
+                        minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -547,6 +579,7 @@ private fun CatalogPane(
                 stringResource(R.string.refresh), onRefresh,
                 Modifier.focusRequester(refreshFocus),
                 icon = R.drawable.ic_reload,
+                loading = state.loading,
             )
         }
         Spacer(Modifier.height(d.spacingSmall))
@@ -557,7 +590,7 @@ private fun CatalogPane(
             ) {
                 val message = when {
                     query != null && query.isBlank() -> R.string.search_hint
-                    state.loading -> strings.loading
+                    state.loading && !state.loaded -> strings.loading
                     state.failure == LoadFailure.MARKUP -> if (feed == null) R.string.search_error else R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
@@ -567,32 +600,24 @@ private fun CatalogPane(
                     color = c.onBackground)
                 Spacer(Modifier.height(d.spacingMedium))
                 Text(
-                    stringResource(if (state.loading) R.string.today_loading_hint
+                    stringResource(if (state.loading && !state.loaded) R.string.today_loading_hint
                         else if (state.failure != null) R.string.today_error_hint
                         else if (feed == null) {
                             if (query.isNullOrBlank()) R.string.search_input_hint else R.string.search_empty_hint
                         } else R.string.today_empty_hint),
                     style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,
                 )
-                if (!state.loading && (feed != null || state.failure != null)) {
+                if ((state.loaded || !state.loading) && (feed != null || state.failure != null)) {
                     Spacer(Modifier.height(d.spacingLarge))
                     ThemeButton(
                         stringResource(R.string.retry), onRefresh,
                         Modifier.width(d.buttonWidth).height(d.navigationButtonHeight)
                             .focusRequester(retryFocus),
+                        loading = state.loading,
                     )
                 }
             }
         } else {
-            if (state.failure != null || state.cached || state.loading) {
-                Text(
-                    stringResource(if (state.failure != null) {
-                        strings.cachedError
-                    } else if (state.loading) R.string.today_updating
-                    else strings.cached),
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
-                )
-            }
             SelectedPanel(selected, description, Modifier.weight(1f))
             Spacer(Modifier.height(d.spacingMedium))
             LazyRow(

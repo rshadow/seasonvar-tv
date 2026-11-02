@@ -9,6 +9,7 @@ LOG_ARGS ?=
 INPUT_TEXT ?=
 SEARCH_QUERY ?= Игра престолов
 export INPUT_TEXT SEARCH_QUERY
+NETWORK_DELAY ?= none
 KEY_ARGS ?=
 GRADLE := $(ENV) ./gradlew --console=plain $(GRADLE_ARGS)
 AVD ?= Seasonvar_TV_API_34
@@ -31,7 +32,7 @@ SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay
 
 help:
 	@printf '%s\n' \
@@ -48,6 +49,7 @@ help:
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \
+		'make emulator-network-delay Set emulator latency (NETWORK_DELAY=1000 or none)' \
 		'make emulator-restart       Restart and apply emulator input settings' \
 		'make run [DEVICE=serial]     Build, install and launch' \
 		'make restart                Restart the installed app' \
@@ -124,6 +126,9 @@ emulator: avd
 	@if $(ADB) emu avd name 2>/dev/null | tr -d '\r' | grep -Fxq "$(AVD)"; then \
 		echo "AVD $(AVD) is already running on $(DEVICE). Run make run."; \
 	else $(ENV) emulator -avd "$(AVD)" $(EMULATOR_ARGS); fi
+
+emulator-network-delay:
+	$(ADB) emu network delay "$(NETWORK_DELAY)"
 
 emulator-stop:
 	@if ! name="$$($(ADB) emu avd name 2>/dev/null | tr -d '\r' | head -n 1)"; then \
