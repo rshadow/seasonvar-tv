@@ -79,6 +79,37 @@ object SeasonvarParser {
         return CatalogPage(day, entries.distinctBy { it.key })
     }
 
+    fun best(html: String, day: LocalDate): CatalogPage {
+        val doc = Jsoup.parse(html, "https://seasonvar.ru/")
+        val content = doc.selectFirst(".content .content-wrap") ?: throw MarkupChangedException()
+        if (content.selectFirst(".pgs-head")?.text() != "Топ сериалов") throw MarkupChangedException()
+        val results = content.selectFirst(".pgs-search #search-res") ?: throw MarkupChangedException()
+        val rows = results.children()
+        if (results.ownText().isNotBlank() || rows.any { !it.hasClass("pgs-search-wrap") }) {
+            throw MarkupChangedException()
+        }
+        val entries = rows.map { row ->
+            val url = pageUrl(row.selectFirst("a.pst[href]")?.attr("href").orEmpty())
+                ?: throw MarkupChangedException()
+            val info = row.selectFirst(".pgs-search-info") ?: throw MarkupChangedException()
+            val links = info.children().filter { it.tagName() == "a" && it.hasAttr("href") }
+            if (links.isEmpty() || links.any { pageUrl(it.attr("href")) != url }) throw MarkupChangedException()
+            val names = links.map { it.text() }.filter { it.isNotBlank() }
+            if (names.isEmpty()) throw MarkupChangedException()
+            val id = Regex("/serial-(\\d+)").find(URI(url).path)?.groupValues?.get(1)
+                ?: throw MarkupChangedException()
+            val count = Regex("\\((\\d+\\s+сезон(?:а|ов)?)\\)")
+                .find(info.ownText())?.groupValues?.get(1)
+            SeriesEntry(
+                id = id, url = url, title = names.first(), season = null, update = "",
+                posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
+                originalTitle = names.getOrNull(1), seasonCountLabel = count,
+                previewDescription = info.selectFirst("p")?.text()?.takeIf { it.isNotBlank() },
+            )
+        }
+        return CatalogPage(day, entries.distinctBy { it.key })
+    }
+
     fun description(html: String, entry: SeriesEntry): SeriesDescription {
         val doc = Jsoup.parse(html, entry.url)
         val info = doc.selectFirst(".pgs-sinfo[data-id-season]")

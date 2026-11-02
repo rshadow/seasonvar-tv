@@ -2,7 +2,7 @@ package ru.seasonvar.tv.data
 
 import java.time.LocalDate
 
-enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST }
+enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST, BEST }
 
 data class SeriesEntry(
     val id: String,
@@ -13,7 +13,10 @@ data class SeriesEntry(
     val posterUrl: String,
     val isNew: Boolean = false,
     val originalTitle: String? = null,
+    val seasonCountLabel: String? = null,
+    val previewDescription: String? = null,
 ) {
+    val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = url + "|" + update
     val fullTitle: String get() = listOfNotNull(title, originalTitle).distinct().joinToString(" / ")
 }

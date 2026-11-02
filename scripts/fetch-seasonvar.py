@@ -336,7 +336,7 @@ def fetch(url, strategy, timeout, source_ip=None, override_ip=None, ajax=False):
         summary = PageSummary()
         if "html" in content_type:
             summary.feed(body.decode("utf-8", errors="replace"))
-        if parsed.path in ("", "/") and summary.news_blocks == 0:
+        if parsed.path in ("", "/") and not parsed.query and summary.news_blocks == 0:
             raise FetchError("The homepage contains no news blocks; it may be a block page")
         return body, content_type, ip, summary.news_blocks
     raise FetchError("Too many redirects")

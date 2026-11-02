@@ -62,7 +62,7 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import java.time.format.DateTimeFormatter
 
-private enum class Section { TODAY, UPDATES, TOP, NEWEST, SETTINGS, ABOUT }
+private enum class Section { TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT }
 
 @Composable
 fun SeasonvarApp(
@@ -88,16 +88,19 @@ fun SeasonvarApp(
     val updatesListState = rememberLazyListState()
     val topListState = rememberLazyListState()
     val newestListState = rememberLazyListState()
+    val bestListState = rememberLazyListState()
     val listState = when (activeFeed) {
         PublicFeed.TODAY -> todayListState
         PublicFeed.UPDATES -> updatesListState
         PublicFeed.TOP -> topListState
         PublicFeed.NEWEST -> newestListState
+        PublicFeed.BEST -> bestListState
     }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
     val topFocus = remember { FocusRequester() }
     val newestFocus = remember { FocusRequester() }
+    val bestFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val toggleFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
@@ -126,6 +129,7 @@ fun SeasonvarApp(
             Section.UPDATES -> PublicFeed.UPDATES
             Section.TOP -> PublicFeed.TOP
             Section.NEWEST -> PublicFeed.NEWEST
+            Section.BEST -> PublicFeed.BEST
             else -> null
         }
         if (feed != null) {
@@ -179,6 +183,7 @@ fun SeasonvarApp(
                 Section.UPDATES -> updatesFocus.requestFocus()
                 Section.TOP -> topFocus.requestFocus()
                 Section.NEWEST -> newestFocus.requestFocus()
+                Section.BEST -> bestFocus.requestFocus()
                 Section.SETTINGS -> settingsFocus.requestFocus()
                 Section.ABOUT -> aboutFocus.requestFocus()
             }
@@ -212,12 +217,13 @@ fun SeasonvarApp(
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.height(d.spacingSection))
-                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
+                listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT).forEach { item ->
                     val focus = when (item) {
                         Section.TODAY -> todayFocus
                         Section.UPDATES -> updatesFocus
                         Section.TOP -> topFocus
                         Section.NEWEST -> newestFocus
+                        Section.BEST -> bestFocus
                         Section.SETTINGS -> settingsFocus
                         Section.ABOUT -> aboutFocus
                     }
@@ -226,6 +232,7 @@ fun SeasonvarApp(
                         Section.UPDATES -> R.string.updates_title
                         Section.TOP -> R.string.top_title
                         Section.NEWEST -> R.string.newest_title
+                        Section.BEST -> R.string.best_title
                         Section.SETTINGS -> R.string.settings_title
                         Section.ABOUT -> R.string.about_title
                     }
@@ -272,6 +279,7 @@ fun SeasonvarApp(
                                 PublicFeed.UPDATES -> updatesFocus
                                 PublicFeed.TOP -> topFocus
                                 PublicFeed.NEWEST -> newestFocus
+                                PublicFeed.BEST -> bestFocus
                             }, refreshFocus, retryFocus,
                             onRefresh = { onRefresh(activeFeed) },
                             onFocused = { selectEntry(it.key) },
@@ -347,6 +355,10 @@ private fun catalogStrings(feed: PublicFeed): CatalogStrings = when (feed) {
     PublicFeed.NEWEST -> CatalogStrings(
         R.string.newest_title, R.string.newest_hint, R.string.newest_count,
         R.string.newest_loading, R.string.newest_empty, R.string.newest_cached, R.string.newest_cached_error,
+    )
+    PublicFeed.BEST -> CatalogStrings(
+        R.string.best_title, R.string.best_hint, R.string.best_count,
+        R.string.best_loading, R.string.best_empty, R.string.best_cached, R.string.best_cached_error,
     )
 }
 
@@ -466,7 +478,7 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
             Text(entry.fullTitle, style = MaterialTheme.typography.headlineSmall, color = c.onBackground,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(d.spacingSmall))
-            Text(entry.update, style = MaterialTheme.typography.bodyMedium, color = c.primary,
+            Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium, color = c.primary,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             entry.season?.let {
                 Text(stringResource(R.string.season_number, it), color = c.onSurfaceVariant,
@@ -474,9 +486,9 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
             }
             Spacer(Modifier.height(d.spacingSmall))
             val text = when {
-                description.key != entry.key || description.loading -> stringResource(R.string.description_loading)
-                description.failed -> stringResource(R.string.description_error)
-                description.description?.paragraphs.isNullOrEmpty() -> stringResource(R.string.description_empty)
+                description.key != entry.key || description.loading -> entry.previewDescription ?: stringResource(R.string.description_loading)
+                description.failed -> entry.previewDescription ?: stringResource(R.string.description_error)
+                description.description?.paragraphs.isNullOrEmpty() -> entry.previewDescription ?: stringResource(R.string.description_empty)
                 else -> description.description.paragraphs.joinToString("\n\n")
             }
             Text(text, style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
@@ -517,7 +529,7 @@ private fun SeriesThumbnail(
         Spacer(Modifier.height(d.spacingSmall))
         Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
             minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(entry.update, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
+        Text(entry.subtitle, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -596,7 +608,7 @@ private fun SeriesDialog(
         ) {
             Text(entry.fullTitle, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(entry.update, color = c.primary, style = MaterialTheme.typography.bodyLarge)
+            Text(entry.subtitle, color = c.primary, style = MaterialTheme.typography.bodyLarge)
             Box(
                 Modifier.weight(1f).fillMaxWidth()
                     .focusRequester(descriptionFocus)

@@ -23,7 +23,7 @@ SITE_TIMEOUT ?= 10
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best
 
 help:
 	@printf '%s\n' \
@@ -53,6 +53,7 @@ help:
 		'make site-updates           Fetch the public updates AJAX fragment' \
 		'make site-top               Fetch the public Top AJAX fragment' \
 		'make site-newest            Fetch the public Newest AJAX fragment' \
+		'make site-best              Fetch the public Best Series page' \
 		'make site-test              Test the standalone website fetcher' \
 		'make site-styles            Download original website CSS for theme reference' \
 		'make site-scripts           Download website JavaScript for protocol research'
@@ -179,6 +180,9 @@ site-newest:
 	python3 scripts/fetch-seasonvar.py --sidebar newest --output build/site/newest.html \
 		--strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)" \
 		$(if $(SITE_SOURCE_IP),--source-ip "$(SITE_SOURCE_IP)") $(if $(SITE_IP),--ip "$(SITE_IP)")
+
+site-best:
+	$(MAKE) site-fetch SITE_URL='https://seasonvar.ru/?mode=top' SITE_OUT=build/site/best.html
 
 site-test:
 	python3 -m unittest discover -s tests -p 'test_fetch_seasonvar.py' -v

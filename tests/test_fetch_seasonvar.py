@@ -115,6 +115,15 @@ class OriginTests(unittest.TestCase):
         with self.assertRaises(fetcher.FetchError):
             fetcher.fetch("https://seasonvar.ru/", "default", 1)
 
+    @patch.object(fetcher, "quad9", return_value=["192.0.2.1"])
+    @patch.object(fetcher, "request_page")
+    def test_best_query_page_does_not_require_homepage_news_blocks(self, request, dns):
+        body = b'<div class="pgs-search"><div id="search-res"></div></div>'
+        request.return_value = (200, "text/html", None, body)
+        result = fetcher.fetch("https://seasonvar.ru/?mode=top", "default", 1)
+        self.assertEqual(result[0], body)
+        self.assertEqual(result[3], 0)
+
     def test_ajax_wire_request_uses_post_form_and_get_stays_unchanged(self):
         for ajax, mode in ((False, None), (True, "new"), (True, "pop"), (True, "newest")):
             with self.subTest(ajax=ajax, mode=mode), patch.object(fetcher.socket, "create_connection"), \

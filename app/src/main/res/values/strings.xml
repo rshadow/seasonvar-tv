@@ -6,6 +6,13 @@
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
     <string name="today_title">Сегодня</string>
+    <string name="best_title">Лучшие сериалы</string>
+    <string name="best_hint">Подборка сайта «Лучшие сериалы»</string>
+    <string name="best_count">Лучшие сериалы · всего: %1$d</string>
+    <string name="best_loading">Загружаем лучшие сериалы…</string>
+    <string name="best_empty">В подборке пока нет сериалов</string>
+    <string name="best_cached">Сохранённая подборка «Лучшие сериалы»</string>
+    <string name="best_cached_error">Не удалось обновить. Показана сохранённая подборка «Лучшие сериалы».</string>
     <string name="newest_title">Новинки</string>
     <string name="newest_hint">Новые сериалы сайта</string>
     <string name="newest_count">Новинки сайта · всего: %1$d</string>
