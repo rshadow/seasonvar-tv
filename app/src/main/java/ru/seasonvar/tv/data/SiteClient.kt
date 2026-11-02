@@ -18,6 +18,14 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
     override fun newCall(request: Request): Call =
         clients.forConfiguration(settings.configuration.value).newCall(request)
 
+    val mediaCalls = object : Call.Factory {
+        override fun newCall(request: Request): Call =
+            clients.forMedia(settings.configuration.value).newCall(request)
+    }
+
+    suspend fun resource(url: String, referer: String): String =
+        execute(Request.Builder().url(url).header("Referer", referer).build())
+
     override suspend fun get(url: String): String = execute(Request.Builder().url(url).build())
 
     override suspend fun sidebar(feed: PublicFeed): String = execute(sidebarRequest(feed))
@@ -71,7 +79,7 @@ class SiteClient(private val settings: NetworkSettings) : HtmlSource, Call.Facto
         continuation.invokeOnCancellation { cancel() }
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.w("SeasonvarNetwork", e.javaClass.simpleName + ": " + e.message)
+                if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.w("SeasonvarNetwork", e.javaClass.simpleName)
                 if (continuation.isActive) continuation.resumeWithException(e)
             }
 

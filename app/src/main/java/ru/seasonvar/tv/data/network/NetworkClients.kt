@@ -44,6 +44,17 @@ internal class NetworkClients {
 
     private val clients = mutableMapOf<NetworkConfiguration, OkHttpClient>()
 
+    private val mediaClients = mutableMapOf<NetworkConfiguration, OkHttpClient>()
+
+    @Synchronized
+    fun forMedia(configuration: NetworkConfiguration): OkHttpClient = mediaClients.getOrPut(configuration) {
+        forConfiguration(configuration).newBuilder()
+            .followRedirects(true)
+            .followSslRedirects(false)
+            .callTimeout(0, TimeUnit.SECONDS)
+            .build()
+    }
+
     @Synchronized
     fun forConfiguration(configuration: NetworkConfiguration): OkHttpClient =
         clients.getOrPut(configuration) {

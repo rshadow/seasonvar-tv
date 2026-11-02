@@ -62,6 +62,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.network.DnsProvider
@@ -101,6 +102,7 @@ fun SeasonvarApp(
     onDnsChange: (DnsProvider) -> Unit = {},
     onExit: () -> Unit = {},
     detailsModel: SeriesDetailsViewModel? = null,
+    onPlay: (PlaybackRequest) -> Unit = {},
 ) {
     SeasonvarTheme {
         SeasonvarContent(
@@ -121,6 +123,7 @@ fun SeasonvarApp(
             onDnsChange = onDnsChange,
             onExit = onExit,
             detailsModel = detailsModel,
+            onPlay = onPlay,
         )
     }
 }
@@ -145,6 +148,7 @@ private fun SeasonvarContent(
     onDnsChange: (DnsProvider) -> Unit = {},
     onExit: () -> Unit = {},
     detailsModel: SeriesDetailsViewModel? = null,
+    onPlay: (PlaybackRequest) -> Unit = {},
 ) {
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
     var activeFeed by rememberSaveable { mutableStateOf(PublicFeed.TODAY) }
@@ -384,6 +388,7 @@ private fun SeasonvarContent(
             } else if (detailsOpen && selected != null && detailsModel != null) {
                 SeriesDetailsPane(
                     selected, detailsModel,
+                    onPlay = onPlay,
                     menuFocus = if (searching) searchFocus else when (activeFeed) {
                         PublicFeed.TODAY -> todayFocus
                         PublicFeed.UPDATES -> updatesFocus

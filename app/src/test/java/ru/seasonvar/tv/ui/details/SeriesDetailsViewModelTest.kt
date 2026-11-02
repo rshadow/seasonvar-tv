@@ -85,4 +85,51 @@ class SeriesDetailsViewModelTest {
             assertNotNull(model.state.value.details)
         }
     }
+    @Test fun saved_local_point_selects_its_translation_and_episode_and_other_selection_starts_fresh() = runTest(dispatcher) {
+        val point = ResumePoint("1", "1", "sub_2", 45000)
+        val model = SeriesDetailsViewModel(loadResume = { point }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        assertEquals("1", model.state.value.translationId)
+        assertEquals("sub_2", model.state.value.episodeId)
+        assertEquals(point, model.state.value.resume)
+        assertEquals("2", model.playbackRequest()!!.episodeLabel)
+        model.selectTranslation("0")
+        assertEquals("2_seriya", model.playbackRequest()!!.episodeId)
+        assertNull(model.state.value.resume)
+        model.selectTranslation("1")
+        assertEquals(point, model.state.value.resume)
+    }
+
+    @Test fun unavailable_saved_translation_or_episode_falls_back_to_available_content() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel(loadResume = { ResumePoint("1", "9", "missing", 10000) }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        assertEquals("0", model.state.value.translationId)
+        assertEquals("1_seriya", model.state.value.episodeId)
+        assertNull(model.state.value.resume)
+        assertNull(model.playbackRequest("missing"))
+    }
+
+    @Test fun return_from_player_refreshes_position_without_changing_current_selection() = runTest(dispatcher) {
+        var point: ResumePoint? = null
+        val model = SeriesDetailsViewModel(loadResume = { point }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        model.selectEpisode("2_seriya")
+        point = ResumePoint("1", "0", "2_seriya", 15000)
+        model.refreshResume(); advanceUntilIdle()
+        assertEquals("2_seriya", model.state.value.episodeId)
+        assertEquals(point, model.state.value.resume)
+    }
+
+    @Test fun canceled_progress_read_cannot_overwrite_the_new_season_resume() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel(loadResume = { id ->
+            if (id == "1") withContext(NonCancellable) { delay(500) }
+            ResumePoint(id, "0", "2_seriya", 9000)
+        }) { details(it) }
+        model.open(entry("1")); runCurrent()
+        model.open(entry("2")); advanceUntilIdle()
+        assertEquals("2", model.state.value.entry!!.id)
+        model.selectEpisode("1_seriya"); model.selectEpisode("2_seriya")
+        assertEquals("2", model.state.value.resume!!.seasonId)
+    }
+
 }

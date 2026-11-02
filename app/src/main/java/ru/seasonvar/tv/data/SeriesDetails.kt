@@ -14,5 +14,5 @@ data class SeriesDetails(
     val defaultTranslationId: String?,
 )
 
-// Filled only from verified account history when that feature is implemented.
+// Last local playback position; account synchronization is a separate feature.
 data class ResumePoint(val seasonId: String, val translationId: String, val episodeId: String, val positionMillis: Long)

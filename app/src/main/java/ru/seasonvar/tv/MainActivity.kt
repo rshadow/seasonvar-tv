@@ -11,6 +11,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.seasonvar.tv.data.PublicFeed
+import ru.seasonvar.tv.ui.player.PlayerActivity
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.navigation.traceBackKey
@@ -18,6 +19,7 @@ import ru.seasonvar.tv.ui.catalog.CatalogViewModel
 import ru.seasonvar.tv.ui.search.SearchViewModel
 
 class MainActivity : ComponentActivity() {
+    private lateinit var detailsModel: SeriesDetailsViewModel
     private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
 
@@ -36,7 +38,7 @@ class MainActivity : ComponentActivity() {
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
-        val detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository))[SeriesDetailsViewModel::class.java]
+        detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress))[SeriesDetailsViewModel::class.java]
         setContent {
             val search by searchModel.state.collectAsStateWithLifecycle()
             val searchDescription by searchModel.description.collectAsStateWithLifecycle()
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             SeasonvarApp(
                 detailsModel = detailsModel,
+                onPlay = { startActivity(PlayerActivity.intent(this, it)) },
                 states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates,
                     PublicFeed.TOP to top, PublicFeed.NEWEST to newest, PublicFeed.BEST to best),
                 descriptions = mapOf(PublicFeed.TODAY to todayDescription, PublicFeed.UPDATES to updatesDescription,
@@ -103,5 +106,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         models.values.forEach { it.refreshIfDateChanged() }
+        detailsModel.refreshResume()
     }
 }

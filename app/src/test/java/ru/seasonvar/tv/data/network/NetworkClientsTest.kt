@@ -46,4 +46,17 @@ class NetworkClientsTest {
         assertEquals(DnsProvider.QUAD9_DOH, DnsProvider.fromStorage("future_provider"))
         assertEquals(DnsProvider.QUAD9_DOH, NetworkConfiguration().dnsProvider)
     }
+    @Test fun media_uses_same_dns_and_bypass_without_a_whole_video_deadline_or_tls_downgrade() {
+        val clients = NetworkClients()
+        val configuration = NetworkConfiguration(true, DnsProvider.QUAD9_DOH)
+        val site = clients.forConfiguration(configuration)
+        val media = clients.forMedia(configuration)
+        assertSame(site.dns, media.dns)
+        assertSame(site.sslSocketFactory, media.sslSocketFactory)
+        assertEquals(0, media.callTimeoutMillis)
+        assertTrue(media.followRedirects)
+        assertFalse(media.followSslRedirects)
+        assertSame(media, clients.forMedia(configuration))
+    }
+
 }

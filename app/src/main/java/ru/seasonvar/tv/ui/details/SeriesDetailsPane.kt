@@ -47,6 +47,7 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.catalog.LoadFailure
@@ -67,6 +68,7 @@ internal fun SeriesDetailsPane(
     model: SeriesDetailsViewModel,
     menuFocus: FocusRequester,
     onInteraction: () -> Unit,
+    onPlay: (PlaybackRequest) -> Unit,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
@@ -147,7 +149,10 @@ internal fun SeriesDetailsPane(
                         state.failure != null -> R.string.retry
                         state.resume != null -> R.string.details_continue
                         else -> R.string.details_watch
-                    }), onClick = { if (state.failure != null) model.retry() else onInteraction() },
+                    }), onClick = {
+                        onInteraction()
+                        if (state.failure != null) model.retry() else model.playbackRequest()?.let(onPlay)
+                    }, loading = preparing,
                         modifier = Modifier.height(d.headerButtonSize).then(actionScrolling).focusRequester(play).focusProperties {
                             left = menuFocus; up = FocusRequester.Cancel
                             right = when {
@@ -199,7 +204,7 @@ internal fun SeriesDetailsPane(
                         (details?.translations?.size ?: 0) > 1 -> translation
                         (details?.seasons?.size ?: 0) > 1 -> season
                         else -> play
-                    }, preparing = preparing, onInteraction = onInteraction,
+                    }, preparing = preparing, onInteraction = onInteraction, onPlay = onPlay,
                     allModifier = Modifier.bringIntoViewRequester(allEpisodesView),
                     onReadDescription = { forward ->
                         if (forward) {
@@ -253,7 +258,7 @@ internal fun SeriesDetailsPane(
                             horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
                             verticalArrangement = Arrangement.spacedBy(d.spacingSmall), contentPadding = PaddingValues(d.focusBorderWidth)) {
                             items(episodes, key = { it.id }) { episode ->
-                                ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id) },
+                                ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                                     Modifier.height(d.headerButtonSize).then(if (episode.id == state.episodeId) Modifier.focusRequester(focus) else Modifier),
                                     active = episode.id == state.episodeId)
                             }
@@ -324,6 +329,7 @@ private fun EpisodeList(
     state: DetailsUiState, model: SeriesDetailsViewModel, selectedFocus: FocusRequester,
     allFocus: FocusRequester, menuFocus: FocusRequester, up: FocusRequester, preparing: Boolean,
     onInteraction: () -> Unit, onAllEpisodes: () -> Unit,
+    onPlay: (PlaybackRequest) -> Unit,
     allModifier: Modifier, onReadDescription: (Boolean) -> Boolean,
 ) {
     val d = SeasonvarTheme.dimensions
@@ -342,7 +348,7 @@ private fun EpisodeList(
                 LazyRow(Modifier.fillMaxWidth().height(d.navigationButtonHeight), state = list,
                     horizontalArrangement = Arrangement.spacedBy(d.spacingSmall), contentPadding = PaddingValues(d.focusBorderWidth)) {
                     itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
-                        ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id) },
+                        ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                             modifier = Modifier.widthIn(min = d.episodeWidth).height(d.headerButtonSize)
                                 .then(if (episode.id == state.episodeId) Modifier.focusRequester(selectedFocus) else Modifier)
                                 .onFocusChanged { if (it.isFocused) model.selectEpisode(episode.id) }

@@ -29,10 +29,12 @@ SITE_STRATEGY ?= default
 SITE_SOURCE_IP ?=
 SITE_IP ?=
 SITE_TIMEOUT ?= 10
+SITE_TRANSLATION ?= 0
+SITE_EPISODE ?= 1
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay
+.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe
 
 help:
 	@printf '%s\n' \
@@ -64,6 +66,7 @@ help:
 		'make screenshot OUT=file    Save the current screen' \
 		'make devices                List connected devices' \
 		'make site-fetch             Fetch public Seasonvar HTML/JSON with DPI strategy' \
+		'make site-video-probe       Probe a real episode (SITE_URL=exact series page)' \
 		'make site-updates           Fetch the public updates AJAX fragment' \
 		'make site-top               Fetch the public Top AJAX fragment' \
 		'make site-newest            Fetch the public Newest AJAX fragment' \
@@ -233,3 +236,7 @@ site-scripts:
 	mkdir -p build/site
 	curl --fail --silent --show-error --location --max-time 20 \
 		'https://cdn.svstat.net/asset/js/main.min.js?$(SITE_SCRIPT_VERSION)' -o build/site/main.js
+
+site-video-probe:
+	python3 scripts/probe-video.py --url "$(SITE_URL)" --translation "$(SITE_TRANSLATION)" \
+		--episode "$(SITE_EPISODE)" --strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)"

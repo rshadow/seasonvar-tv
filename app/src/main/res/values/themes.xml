@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="seasonvar_player_background">#000000</color>
     <color name="seasonvar_accent">#F5B50C</color>
     <color name="seasonvar_on_accent">#2B2521</color>
     <color name="seasonvar_background">#2B2521</color>
@@ -45,6 +46,9 @@
 
     <dimen name="seasonvar_episode_width">60dp</dimen>
     <integer name="seasonvar_all_episodes_threshold">12</integer>
+    <integer name="seasonvar_player_seek_ms">10000</integer>
+    <integer name="seasonvar_player_controls_timeout_ms">3000</integer>
+    <integer name="seasonvar_player_progress_interval_ms">5000</integer>
 
     <style name="Theme.SeasonvarTV" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/seasonvar_background</item>
