@@ -15,4 +15,16 @@ class AccountStructureTest {
         assertFalse(summary.contains("123"))
         assertFalse(summary.contains("https:"))
     }
+    @Test fun history_summary_never_contains_account_titles_dates_or_links() {
+        val html = """<div class="pgs-history"><div data-result="history"><div class="pgs-history-c">
+            <a href="/serial-987-private-title.html"><span>private-date</span><b>private-name</b> (7 сезон)</a>
+            </div><div class="pgs-history-p"><a href="/?mod=history&page=2">2</a></div></div></div>"""
+        val summary = historyStructure(html)
+        assertTrue(summary.contains("historyRows=1"))
+        assertFalse(summary.contains("private"))
+        assertFalse(summary.contains("987"))
+        assertFalse(summary.contains("href="))
+        assertFalse(summary.contains("https:"))
+    }
+
 }

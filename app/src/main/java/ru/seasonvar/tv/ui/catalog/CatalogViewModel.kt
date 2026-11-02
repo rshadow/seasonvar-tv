@@ -26,6 +26,9 @@ data class CatalogUiState(
     val loaded: Boolean = false,
     val cached: Boolean = false,
     val failure: LoadFailure? = null,
+    val loadingMore: Boolean = false,
+    val moreFailure: LoadFailure? = null,
+    val hasMore: Boolean = false,
 )
 
 data class DescriptionState(

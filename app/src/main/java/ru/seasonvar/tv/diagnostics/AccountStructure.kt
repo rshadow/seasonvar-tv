@@ -24,3 +24,16 @@ internal fun accountStructure(html: String): String {
         " rows=" + doc.select(".pgs-marks-el").size + " tabs=" + tabs + " rowShape=" + rowShape +
         " avatarParsed=" + runCatching { ru.seasonvar.tv.data.account.AccountParser.user(html)?.avatarUrl != null }.getOrDefault(false)
 }
+
+internal fun historyStructure(html: String): String {
+    val doc = Jsoup.parse(html, "https://seasonvar.ru/")
+    val history = doc.selectFirst(".pgs-history") ?: doc.selectFirst(".content-wrap.profile")
+    val shape = history?.getAllElements()?.take(90)?.joinToString(";") { node ->
+        node.tagName() + "." + node.classNames().filter { it.startsWith("pgs-") && it.matches(Regex("[a-z-]+")) }.joinToString(".") +
+            "(" + node.attributes().asList().joinToString(",") { it.key } + ")"
+    }.orEmpty()
+    val pages = doc.select(".pgs-history-p a[href]").size
+    return "historyContainer=" + (doc.selectFirst(".pgs-history") != null) +
+        " historyRows=" + doc.select(".pgs-history-c a[href*=serial-]").size +
+        " historyShape=" + shape + " historyPageLinks=" + pages
+}

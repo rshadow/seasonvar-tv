@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.ui.account.AccountUiState
 import ru.seasonvar.tv.ui.account.AccountPane
-import ru.seasonvar.tv.ui.account.AccountMarkDetails
+import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
@@ -88,7 +88,7 @@ private const val CARD_WARMUP_FRAMES = 8
 private enum class Section(val personalFeed: PersonalFeed? = null) {
     SEARCH, ACCOUNT,
     RESUME(PersonalFeed.RESUME), PERSONAL_UPDATES(PersonalFeed.UPDATES),
-    PERSONAL_NO_UPDATES(PersonalFeed.NO_UPDATES), WANT(PersonalFeed.WANT), WATCHED(PersonalFeed.WATCHED),
+    PERSONAL_NO_UPDATES(PersonalFeed.NO_UPDATES), WANT(PersonalFeed.WANT), WATCHED(PersonalFeed.WATCHED), HISTORY(PersonalFeed.HISTORY),
     TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT,
 }
 
@@ -98,6 +98,7 @@ private fun personalTitle(feed: PersonalFeed) = when (feed) {
     PersonalFeed.NO_UPDATES -> R.string.personal_no_updates_title
     PersonalFeed.WANT -> R.string.personal_want_title
     PersonalFeed.WATCHED -> R.string.personal_watched_title
+    PersonalFeed.HISTORY -> R.string.history_title
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -130,6 +131,7 @@ fun SeasonvarApp(
     onCheckAccount: () -> Unit = {},
     onPersonalVisible: (PersonalFeed) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
+    onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
 ) {
     SeasonvarTheme {
@@ -155,7 +157,7 @@ fun SeasonvarApp(
             accountSession = accountSession, accountState = accountState,
             personalStates = personalStates, personalDescriptions = personalDescriptions,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
-            onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalSelect = onPersonalSelect,
+            onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore, onPersonalSelect = onPersonalSelect,
         )
     }
 }
@@ -190,6 +192,7 @@ private fun SeasonvarContent(
     onCheckAccount: () -> Unit = {},
     onPersonalVisible: (PersonalFeed) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
+    onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
 ) {
     var section by rememberSaveable { mutableStateOf(Section.TODAY) }
@@ -336,7 +339,7 @@ private fun SeasonvarContent(
             when (section) {
                 Section.SEARCH -> searchFocus.requestFocus()
                 Section.ACCOUNT -> accountFocus.requestFocus()
-                Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED ->
+                Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
                     personalFocus.getValue(requireNotNull(section.personalFeed)).requestFocus()
                 Section.TODAY -> todayFocus.requestFocus()
                 Section.UPDATES -> updatesFocus.requestFocus()
@@ -397,7 +400,7 @@ private fun SeasonvarContent(
                     val focus = when (item) {
                         Section.SEARCH -> searchFocus
                         Section.ACCOUNT -> accountFocus
-                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED ->
+                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
                             personalFocus.getValue(requireNotNull(item.personalFeed))
                         Section.TODAY -> todayFocus
                         Section.UPDATES -> updatesFocus
@@ -410,7 +413,7 @@ private fun SeasonvarContent(
                     val label = when (item) {
                         Section.SEARCH -> R.string.search_title
                         Section.ACCOUNT -> R.string.account_title
-                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED ->
+                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
                             personalTitle(requireNotNull(item.personalFeed))
                         Section.TODAY -> R.string.today_title
                         Section.UPDATES -> R.string.updates_title
@@ -493,6 +496,7 @@ private fun SeasonvarContent(
                     } } else null,
                     onRefresh = { if (searching) onSearchSubmit() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                     personalFeed = personalFeed, catalogKey = catalogKey,
+                    onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = {
                         backNavigation.reset()
@@ -637,6 +641,7 @@ private fun CatalogPane(
     searchHeader: (@Composable () -> Unit)? = null,
     personalFeed: PersonalFeed? = null,
     catalogKey: String = feed?.name ?: "SEARCH",
+    onLoadMore: () -> Unit = {},
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -651,9 +656,15 @@ private fun CatalogPane(
             R.string.search_hint, R.string.search_error)
         else catalogStrings(feed)
     }
+    val latestLoadMore by rememberUpdatedState(onLoadMore)
+    LaunchedEffect(catalogKey, listState, state.entries.size, state.hasMore, state.moreFailure) {
+        if (state.hasMore && state.moreFailure == null) snapshotFlow {
+            (listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) >= state.entries.size - 5
+        }.collect { nearEnd -> if (nearEnd) latestLoadMore() }
+    }
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
-    val cardFrames = remember(feed, state.entries, listState) { mutableIntStateOf(0) }
-    val firstCard = remember(feed, state.entries, listState) { listState.firstVisibleItemIndex }
+    val cardFrames = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { mutableIntStateOf(0) }
+    val firstCard = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { listState.firstVisibleItemIndex }
     LaunchedEffect(cardFrames) {
         if (state.entries.isNotEmpty()) repeat(CARD_WARMUP_FRAMES) {
             withFrameNanos { }
@@ -669,10 +680,11 @@ private fun CatalogPane(
                 if (feed != null || state.loaded) {
                     Text(
                         when {
+                            selected != null && state.moreFailure != null -> stringResource(R.string.history_more_error)
                             selected != null && state.failure != null -> stringResource(strings.cachedError)
                             selected != null && state.cached && !state.loading -> stringResource(strings.cached)
                             isToday -> if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
-                            state.loaded -> stringResource(strings.count, state.entries.size)
+                            state.loaded -> stringResource(if (personalFeed == PersonalFeed.HISTORY && state.hasMore) R.string.history_loaded_count else strings.count, state.entries.size)
                             else -> stringResource(strings.hint)
                         },
                         style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
@@ -681,10 +693,10 @@ private fun CatalogPane(
                 }
             }
             ThemeButton(
-                stringResource(R.string.refresh), onRefresh,
+                stringResource(if (state.moreFailure != null) R.string.retry else R.string.refresh), onRefresh,
                 Modifier.focusRequester(refreshFocus),
                 icon = R.drawable.ic_reload,
-                loading = state.loading,
+                loading = state.loading || state.loadingMore,
             )
         }
         Spacer(Modifier.height(d.spacingSmall))
@@ -707,6 +719,7 @@ private fun CatalogPane(
                 Text(
                     stringResource(if (state.loading && !state.loaded) R.string.today_loading_hint
                         else if (state.failure != null) R.string.today_error_hint
+                        else if (personalFeed == PersonalFeed.HISTORY) R.string.history_empty_hint
                         else if (personalFeed == PersonalFeed.RESUME) R.string.resume_empty_hint
                         else if (personal) R.string.personal_empty_hint else if (feed == null) {
                             if (query.isNullOrBlank()) R.string.search_input_hint else R.string.search_empty_hint
@@ -768,7 +781,7 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
             Spacer(Modifier.height(d.spacingSmall))
             if (entry.subtitle.isNotBlank()) Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium,
                 color = c.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            AccountMarkDetails(entry.accountMark)
+            AccountEntryDetails(entry)
             entry.season?.let {
                 Text(stringResource(R.string.season_number, it), color = c.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall)
@@ -820,7 +833,13 @@ private fun SeriesThumbnail(
             Spacer(Modifier.height(d.spacingSmall))
             Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(entry.subtitle.ifBlank { entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty() }, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
+            val subtitle = if (entry.historyEpisode != null) listOfNotNull(
+                entry.season?.let { stringResource(R.string.season_number, it) },
+                stringResource(R.string.episode_number, entry.historyEpisode),
+            ).joinToString(" · ") else entry.subtitle.ifBlank {
+                entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty()
+            }
+            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }

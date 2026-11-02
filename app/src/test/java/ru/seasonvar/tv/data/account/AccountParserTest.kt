@@ -104,14 +104,14 @@ class AccountParserTest {
         assertEquals(2, entries.map { it.key }.toSet().size)
     }
     @Test fun empty_tab_is_empty_without_importing_neighbouring_lists() {
-        PersonalFeed.entries.filter { it != PersonalFeed.RESUME }.forEach { feed ->
+        PersonalFeed.entries.filter { it != PersonalFeed.RESUME && it.tabs.isNotEmpty() }.forEach { feed ->
             val doc = org.jsoup.Jsoup.parse(current)
             doc.selectFirst("[data-tabr=${feed.tabs.single()}]")!!.empty()
             assertTrue(feed.name, AccountParser.personalList(doc.outerHtml(), feed).entries.isEmpty())
         }
     }
     @Test fun missing_tab_or_malformed_selected_row_is_an_error_for_every_section() {
-        PersonalFeed.entries.forEach { feed ->
+        PersonalFeed.entries.filter { it.tabs.isNotEmpty() }.forEach { feed ->
             val doc = org.jsoup.Jsoup.parse(current)
             doc.selectFirst("[data-tabr=${feed.tabs.first()}]")!!.remove()
             try { AccountParser.personalList(doc.outerHtml(), feed); fail(feed.name) } catch (_: MarkupChangedException) { }

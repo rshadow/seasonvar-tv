@@ -10,7 +10,7 @@ import ru.seasonvar.tv.data.SeriesEntry
 
 // Account data stays in memory; only encrypted session cookies survive a restart.
 data class AccountUser(val id: String, val name: String, val avatarUrl: String?)
-data class AccountPage(val user: AccountUser, val entries: List<SeriesEntry>)
+data class AccountPage(val user: AccountUser, val entries: List<SeriesEntry>, val nextPage: String? = null)
 class SessionExpiredException : Exception("Session expired")
 class LoginRejectedException : Exception("Login rejected")
 
@@ -39,7 +39,8 @@ object AccountParser {
     }
     fun resume(html: String): AccountPage = personalList(html, PersonalFeed.RESUME)
 
-    fun personalList(html: String, feed: PersonalFeed): AccountPage {
+    fun personalList(html: String, feed: PersonalFeed, pageUrl: String = feed.url): AccountPage {
+        if (feed == PersonalFeed.HISTORY) return HistoryParser.parse(html, pageUrl)
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         val user = user(doc) ?: throw SessionExpiredException()
         if (doc.selectFirst(".pgs-marks") == null) throw MarkupChangedException()

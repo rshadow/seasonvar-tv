@@ -50,7 +50,7 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
-import ru.seasonvar.tv.ui.account.AccountMarkDetails
+import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
@@ -287,7 +287,7 @@ private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifie
                 entry.originalTitle?.takeIf { it != entry.title }?.let {
                     Text(it, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
-                AccountMarkDetails(entry.accountMark)
+                AccountEntryDetails(entry)
                 details?.facts?.filter { it.first in headlineFacts }?.joinToString(" · ") { it.second }
                     ?.takeIf { it.isNotBlank() }?.let {
                         Text(it, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)

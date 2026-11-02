@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,22 +19,27 @@ import java.io.IOException
 class PersonalListViewModel internal constructor(
     private val session: StateFlow<AccountSession>,
     private val load: suspend () -> AccountPage,
+    private val loadNext: suspend (String) -> AccountPage = { throw MarkupChangedException() },
     private val describe: suspend (SeriesEntry) -> SeriesDescription,
 ) : ViewModel() {
     constructor(account: AccountRepository, catalog: CatalogRepository, feed: PersonalFeed) :
-        this(account.session, { account.personalList(feed) }, catalog::description)
+        this(account.session, { account.personalList(feed) }, { account.personalList(feed, it) }, catalog::description)
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
     private val mutableDescription = MutableStateFlow(DescriptionState())
     val description = mutableDescription.asStateFlow()
     private var refreshJob: Job? = null
     private var descriptionJob: Job? = null
+    private var moreJob: Job? = null
+    private var nextPage: String? = null
+    private val visitedPages = mutableSetOf<String>()
     private var version = -1L
     private var active = false
     init { viewModelScope.launch { session.collect { session ->
         if (version != session.version) {
             version = session.version
-            refreshJob?.cancel(); descriptionJob?.cancel()
+            refreshJob?.cancel(); descriptionJob?.cancel(); moreJob?.cancel()
+            nextPage = null; visitedPages.clear()
             mutableState.value = CatalogUiState(loading = false)
             mutableDescription.value = DescriptionState()
             if (active && session.user != null) refresh()
@@ -41,19 +47,51 @@ class PersonalListViewModel internal constructor(
     } } }
     fun activate() { active = true; if (!state.value.loaded && !state.value.loading) refresh() }
     fun refreshIfActive() { if (active) refresh() }
+    fun retryOrRefresh() { if (state.value.moreFailure != null) loadMore(retry = true) else refresh() }
     fun refresh() {
         if (session.value.user == null) return
-        refreshJob?.cancel()
-        mutableState.value = state.value.copy(loading = true, failure = null)
+        refreshJob?.cancel(); moreJob?.cancel()
+        nextPage = null; visitedPages.clear()
+        mutableState.value = state.value.copy(loading = true, failure = null, loadingMore = false, moreFailure = null, hasMore = false)
         val expected = session.value.version
         refreshJob = viewModelScope.launch {
             try {
                 val page = load()
-                if (session.value.version == expected) mutableState.value = CatalogUiState(entries = page.entries, loading = false, loaded = true)
+                ensureActive()
+                if (session.value.version == expected) {
+                    nextPage = page.nextPage
+                    mutableState.value = CatalogUiState(entries = page.entries, loading = false, loaded = true, hasMore = page.nextPage != null)
+                }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
+                ensureActive()
                 if (session.value.version == expected) mutableState.value = state.value.copy(loading = false,
                     failure = when (e) { is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP })
+            }
+        }
+    }
+    fun loadMore(retry: Boolean = false) {
+        val next = nextPage ?: return
+        if (session.value.user == null || state.value.loading || state.value.loadingMore || (!retry && state.value.moreFailure != null)) return
+        val expected = session.value.version
+        mutableState.value = state.value.copy(loadingMore = true, moreFailure = null)
+        moreJob = viewModelScope.launch {
+            try {
+                val page = loadNext(next)
+                ensureActive()
+                if (session.value.version != expected) return@launch
+                if (next in visitedPages || page.nextPage == next || page.nextPage in visitedPages ||
+                    (page.entries.isEmpty() && page.nextPage != null)) throw MarkupChangedException()
+                val entries = state.value.entries + page.entries
+                if (entries.map { it.key }.toSet().size != entries.size) throw MarkupChangedException()
+                visitedPages += next
+                nextPage = page.nextPage
+                mutableState.value = state.value.copy(entries = entries, loadingMore = false, hasMore = page.nextPage != null)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                ensureActive()
+                if (session.value.version == expected) mutableState.value = state.value.copy(loadingMore = false,
+                    moreFailure = when (e) { is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP })
             }
         }
     }

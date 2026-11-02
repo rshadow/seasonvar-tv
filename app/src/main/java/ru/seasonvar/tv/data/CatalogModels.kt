@@ -19,6 +19,8 @@ data class SeriesEntry(
     val previewDescription: String? = null,
     val sourceKey: String? = null,
     val accountMark: AccountMark? = null,
+    val historyVisitedAt: String? = null,
+    val historyEpisode: String? = null,
 ) {
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = sourceKey ?: (url + "|" + update)

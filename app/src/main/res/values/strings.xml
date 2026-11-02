@@ -63,6 +63,7 @@
     <string name="description_error">Не удалось загрузить описание.</string>
     <string name="description_empty">На сайте нет описания.</string>
     <string name="series_new_badge">новинка</string>
+    <string name="episode_number">Серия %1$s</string>
     <string name="season_number">Сезон %1$d</string>
     <string name="today_loading_hint">Связываемся с seasonvar.ru…</string>
     <string name="settings_title">Настройки</string>
@@ -115,6 +116,11 @@
     <string name="personal_updates_title">Есть обновления</string>
     <string name="personal_no_updates_title">Нет новых серий</string>
     <string name="personal_want_title">Хочу посмотреть</string>
+    <string name="history_visited_at">В истории сайта: %1$s</string>
+    <string name="history_loaded_count">Загружено записей: %1$d</string>
+    <string name="history_empty_hint">Здесь появятся записи из истории просмотров вашей учётной записи Seasonvar.</string>
+    <string name="history_more_error">Не удалось загрузить следующие записи. Нажмите обновление для повтора.</string>
+    <string name="history_title">История просмотров</string>
     <string name="personal_watched_title">Посмотрел</string>
     <string name="personal_empty_hint">В этой вкладке вашей учётной записи пока нет сериалов.</string>
     <string name="account_mark_progress">Отметка просмотра: %1$s</string>
