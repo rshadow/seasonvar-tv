@@ -1,0 +1,42 @@
+name: Auto-merge owner PRs
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+  workflow_run:
+    workflows: [Android build, CodeQL, Dependency graph, Publish dependency graph, Dependency review]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-automerge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    name: Merge owner PRs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+      checks: read
+      statuses: read
+    steps:
+      - name: Checkout trusted main automation only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Merge only owner PRs with all required checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: make owner-automerge
