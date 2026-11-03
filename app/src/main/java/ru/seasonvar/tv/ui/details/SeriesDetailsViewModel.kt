@@ -37,6 +37,7 @@ class SeriesDetailsViewModel(
     private val loadResume: suspend (String) -> ResumePoint? = { null },
     private val reload: (suspend (SeriesEntry) -> SeriesDetails)? = null,
     private val loadAccountProgress: suspend (SeriesDetails) -> AccountProgress? = { null },
+    private val loadAccountMark: suspend (SeriesEntry) -> ru.seasonvar.tv.data.account.AccountListMark? = { null },
     private val load: suspend (SeriesEntry) -> SeriesDetails,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DetailsUiState())
@@ -44,6 +45,7 @@ class SeriesDetailsViewModel(
     private var job: Job? = null
     private var resumeJob: Job? = null
     private var progressJob: Job? = null
+    private var markJob: Job? = null
     private var savedResume: ResumePoint? = null
     private var selectionIntent = EntrySelection()
 
@@ -60,12 +62,13 @@ class SeriesDetailsViewModel(
         episodeId = current.episode?.id, episodeLabel = current.episode?.label,
         translationId = current.translationId, translationLabel = current.translation?.label,
     )
-    fun close() { job?.cancel(); resumeJob?.cancel(); progressJob?.cancel(); savedResume = null; selectionIntent = EntrySelection(); mutableState.value = DetailsUiState() }
+    fun close() { job?.cancel(); resumeJob?.cancel(); progressJob?.cancel(); markJob?.cancel(); savedResume = null; selectionIntent = EntrySelection(); mutableState.value = DetailsUiState() }
 
     private fun fetch(entry: SeriesEntry, force: Boolean = false, selection: EntrySelection = entry.initialSelection) {
         job?.cancel()
         resumeJob?.cancel()
         progressJob?.cancel()
+        markJob?.cancel()
         savedResume = null
         selectionIntent = selection
         mutableState.value = DetailsUiState(entry = entry, loading = true)
@@ -81,6 +84,7 @@ class SeriesDetailsViewModel(
                     translationId = selected.translationId, episodeId = selected.episodeId,
                     resume = resumeFor(selected.translationId, selected.episodeId), selectionFailure = selected.failure)
                 refreshAccountProgress(details)
+                refreshAccountMark(details.entry)
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
                 ensureActive()
@@ -115,11 +119,34 @@ class SeriesDetailsViewModel(
         }
     }
 
+    private fun refreshAccountMark(entry: SeriesEntry) {
+        markJob?.cancel()
+        markJob = viewModelScope.launch {
+            try {
+                val mark = loadAccountMark(entry)
+                ensureActive()
+                val current = state.value
+                if (current.entry?.id != entry.id || current.details == null) return@launch
+                val updated = current.entry.copy(accountListMark = mark)
+                mutableState.value = current.copy(entry = updated, details = current.details.copy(entry = updated))
+            } catch (error: CancellationException) { throw error }
+            catch (_: Exception) { /* Keep a known list entry available when its refresh fails. */ }
+        }
+    }
+
+    fun markRemoved(target: ru.seasonvar.tv.data.account.AccountListMark) {
+        val current = state.value
+        if (current.entry?.id != target.seasonId || current.details == null) return
+        markJob?.cancel(); progressJob?.cancel()
+        val updated = current.entry.copy(accountListMark = null, accountMark = null, accountProgress = null)
+        mutableState.value = current.copy(entry = updated, details = current.details.copy(entry = updated))
+    }
+
     fun selectSeason(id: String) {
         val current = state.value
         if (current.loading || current.entry?.id == id) return
         val season = current.details?.seasons?.firstOrNull { it.id == id } ?: return
-        fetch(current.details.entry.copy(id = season.id, url = season.url, season = season.number, update = "", accountMark = null, accountProgress = null, historyVisitedAt = null, initialSelection = EntrySelection()))
+        fetch(current.details.entry.copy(id = season.id, url = season.url, season = season.number, update = "", accountMark = null, accountProgress = null, accountListMark = null, historyVisitedAt = null, initialSelection = EntrySelection()))
     }
 
     fun selectTranslation(id: String) {
@@ -172,6 +199,7 @@ class SeriesDetailsViewModel(
         val id = current.entry?.id ?: return
         if (current.details == null) return
         refreshAccountProgress(current.details)
+        refreshAccountMark(current.entry)
         resumeJob?.cancel()
         resumeJob = viewModelScope.launch {
             val point = loadResume(id)
@@ -207,6 +235,7 @@ class SeriesDetailsViewModel(
             @Suppress("UNCHECKED_CAST")
             return SeriesDetailsViewModel(loadResume = progress::read,
                 reload = { loadDetails(it, true) },
+                loadAccountMark = { entry -> account?.listMark(ru.seasonvar.tv.data.account.AccountListMark(entry.id, entry.url)) },
                 loadAccountProgress = { details -> account?.progressSnapshot()?.let { snapshot ->
                     val parsed = ru.seasonvar.tv.data.account.AccountProgressParser.forDetails(details, snapshot)
                     if (ru.seasonvar.tv.BuildConfig.DEBUG) {

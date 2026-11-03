@@ -71,6 +71,8 @@ internal fun SeriesDetailsPane(
     menuFocus: FocusRequester,
     onInteraction: () -> Unit,
     onPlay: (PlaybackRequest) -> Unit,
+    onRemove: ((SeriesEntry) -> Unit)? = null,
+    removalDialogOpen: Boolean = false,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
@@ -80,6 +82,9 @@ internal fun SeriesDetailsPane(
     val preparing = state.loading || state.entry == null
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
+    val remove = remember { FocusRequester() }
+    var restoreRemoval by remember { mutableStateOf(false) }
+    val canRemove = !preparing && entry.accountListMark != null && onRemove != null
     val season = remember { FocusRequester() }
     val translation = remember { FocusRequester() }
     val allEpisodes = remember { FocusRequester() }
@@ -115,6 +120,13 @@ internal fun SeriesDetailsPane(
             }
             focus.requestFocus()
             restoreFocus = null
+        }
+    }
+    LaunchedEffect(removalDialogOpen) {
+        if (!removalDialogOpen && restoreRemoval) {
+            repeat(2) { withFrameNanos { } }
+            if (canRemove) remove.requestFocus() else play.requestFocus()
+            restoreRemoval = false
         }
     }
     fun dismiss() { onInteraction(); dialog = null }
@@ -167,6 +179,7 @@ internal fun SeriesDetailsPane(
                             right = when {
                                 (details?.seasons?.size ?: 0) > 1 -> season
                                 (details?.translations?.size ?: 0) > 1 -> translation
+                                canRemove -> remove
                                 else -> FocusRequester.Cancel
                             }
                             down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
@@ -180,7 +193,7 @@ internal fun SeriesDetailsPane(
                             { show(DetailsDialog.SEASONS, season) }, Modifier.height(d.headerButtonSize).then(actionScrolling)
                                 .focusRequester(season).focusProperties {
                                     left = play; up = FocusRequester.Cancel
-                                    right = if (details.translations.size > 1) translation else FocusRequester.Cancel
+                                    right = if (details.translations.size > 1) translation else if (canRemove) remove else FocusRequester.Cancel
                                     down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                                 })
                         else if (currentSeason?.number != null || entry.season != null) Text(seasonLabel, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
@@ -193,13 +206,24 @@ internal fun SeriesDetailsPane(
                                     .focusRequester(translation).focusProperties {
                                         up = FocusRequester.Cancel
                                         left = if (details.seasons.size > 1) season else play
-                                        right = FocusRequester.Cancel
+                                        right = if (canRemove) remove else FocusRequester.Cancel
                                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                                     })
                             else Text(label, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
                                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
+                    if (canRemove) ThemeButton(stringResource(R.string.mark_remove_from_list), {
+                        onInteraction(); restoreRemoval = true; onRemove(entry)
+                    }, Modifier.height(d.headerButtonSize).then(actionScrolling).focusRequester(remove).focusProperties {
+                        up = FocusRequester.Cancel; right = FocusRequester.Cancel
+                        left = when {
+                            (details?.translations?.size ?: 0) > 1 -> translation
+                            (details?.seasons?.size ?: 0) > 1 -> season
+                            else -> play
+                        }
+                        down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                    })
                     AccountProgressLabel(entry, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight())
                 }
                 if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),

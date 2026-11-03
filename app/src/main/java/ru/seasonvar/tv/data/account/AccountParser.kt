@@ -56,6 +56,8 @@ object AccountParser {
                 val anchor = row.selectFirst("a[href*=serial-]") ?: throw MarkupChangedException()
                 val url = SeasonvarParser.pageUrl(anchor.attr("href").substringBefore('#')) ?: throw MarkupChangedException()
                 val id = seasonId(url)
+                val removeId = row.selectFirst("[data-click=mark-remove][data-id]")?.attr("data-id")
+                if (removeId != null && removeId != id) throw MarkupChangedException()
                 val name = row.selectFirst(".pgs-marks-name")?.text()?.trim().orEmpty()
                 if (name.isBlank()) throw MarkupChangedException()
                 val season = row.selectFirst(".pgs-marks-seas")?.text()?.let { Regex("[0-9]+").find(it)?.value?.toIntOrNull() }
@@ -68,7 +70,7 @@ object AccountParser {
                 val progress = counter?.let { AccountProgress(episodes = SeasonEpisodeProgress(id, it)) }
                 val mark = row.attr("data-marksel").takeIf { it.matches(Regex("[0-9]+")) } ?: "$id:$index"
                 SeriesEntry(id, url, title(name), season, "", "https://cdn.svstat.net/oblojka/$id.jpg",
-                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark, accountProgress = progress, initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")))
+                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark, accountProgress = progress, initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")), accountListMark = AccountListMark(id, url))
             } }
         } else {
             doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.map { anchor ->
@@ -77,7 +79,7 @@ object AccountParser {
                 val name = anchor.selectFirst(".pgs-marks-name")?.text() ?: anchor.text()
                 if (name.isBlank()) throw MarkupChangedException()
                 SeriesEntry(id, url, title(name), seasonNumber(name), "", "https://cdn.svstat.net/oblojka/$id.jpg",
-                    initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")))
+                    initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")), accountListMark = AccountListMark(id, url))
             }?.distinctBy { it.url }.orEmpty()
         }
         if (entries.map { it.key }.toSet().size != entries.size) throw MarkupChangedException()

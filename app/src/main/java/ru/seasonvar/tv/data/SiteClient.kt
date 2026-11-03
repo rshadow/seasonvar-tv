@@ -51,6 +51,9 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     suspend fun accountMark(mark: ru.seasonvar.tv.data.account.PlaybackMark, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
         execute(markRequest(mark), jar)
 
+    suspend fun accountRemoveMark(mark: ru.seasonvar.tv.data.account.AccountListMark, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
+        execute(removeMarkRequest(mark), jar)
+
     private suspend fun execute(initial: Request, jar: ru.seasonvar.tv.data.account.SessionCookies? = sessions?.current(), loginRedirect: Boolean = false): String {
         var request = initial
         repeat(5) {
@@ -79,6 +82,14 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        internal fun removeMarkRequest(mark: ru.seasonvar.tv.data.account.AccountListMark): Request = Request.Builder()
+            .url("https://seasonvar.ru/jsonMark.php")
+            .header("Referer", mark.pageUrl)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Accept", "application/json")
+            .post(FormBody.Builder().add("delId", mark.seasonId).build())
+            .build()
+
         internal fun markRequest(mark: ru.seasonvar.tv.data.account.PlaybackMark): Request = Request.Builder()
             .url("https://seasonvar.ru/jsonMark.php")
             .header("Referer", mark.pageUrl)

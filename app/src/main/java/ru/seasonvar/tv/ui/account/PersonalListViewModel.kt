@@ -95,6 +95,15 @@ class PersonalListViewModel internal constructor(
             }
         }
     }
+    fun markRemoved(target: AccountListMark) {
+        val entries = state.value.entries.filterNot { it.accountListMark?.seasonId == target.seasonId }
+        mutableState.value = state.value.copy(entries = entries)
+        if (description.value.key !in entries.map { it.key }) {
+            descriptionJob?.cancel()
+            mutableDescription.value = DescriptionState()
+        }
+    }
+
     fun select(entry: SeriesEntry, retry: Boolean) {
         if (!retry && description.value.key == entry.key) return
         descriptionJob?.cancel()

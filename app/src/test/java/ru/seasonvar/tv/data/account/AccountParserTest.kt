@@ -148,4 +148,16 @@ class AccountParserTest {
         assertNull(entries[1].initialSelection.episodeLabel)
     }
 
+
+    @Test fun personal_rows_carry_a_typed_season_mark_even_without_progress_text() {
+        for (feed in listOf(PersonalFeed.RESUME, PersonalFeed.WANT, PersonalFeed.WATCHED)) {
+            val entries = AccountParser.personalList(current, feed).entries
+            assertTrue(entries.isNotEmpty())
+            entries.forEach { assertEquals(AccountListMark(it.id, it.url), it.accountListMark) }
+        }
+    }
+    @Test(expected = MarkupChangedException::class)
+    fun refuses_a_remove_control_pointing_at_a_different_season() {
+        AccountParser.resume(current.replace("data-id=\"123\"", "data-id=\"999\""))
+    }
 }

@@ -13,6 +13,7 @@ import ru.seasonvar.tv.data.SiteClient
 interface AccountTransport {
     suspend fun get(url: String, jar: SessionCookies): String
     suspend fun login(login: String, password: String, jar: SessionCookies): String
+    suspend fun removeMark(mark: AccountListMark, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String
 }
 
@@ -32,6 +33,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             return html
         }
         override suspend fun login(login: String, password: String, jar: SessionCookies) = client.accountLogin(login, password, jar)
+        override suspend fun removeMark(mark: AccountListMark, jar: SessionCookies) = client.accountRemoveMark(mark, jar)
         override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = client.accountMark(mark, jar)
     })
     private val mutableSession = MutableStateFlow(AccountSession())
@@ -104,13 +106,47 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         mark
     } }
 
+    suspend fun listMark(target: AccountListMark): AccountListMark? = withContext(Dispatchers.IO) {
+        if (session.value.user == null) return@withContext null
+        val snapshot = PlaybackMarkParser.snapshot(authenticatedHtml(target.pageUrl), target.seasonId, target.pageUrl)
+        target.takeIf { snapshot.mark != null || snapshot.status != null }
+    }
+
+    suspend fun removeListMark(target: AccountListMark, ownerVersion: Long) = withContext(Dispatchers.IO) { mutex.withLock {
+        val expected = session.value
+        if (expected.user == null) throw SessionExpiredException()
+        if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
+        val jar = sessions.current()
+        suspend fun read(): PlaybackMarkSnapshot {
+            val html = transport.get(target.pageUrl, jar)
+            currentCoroutineContext().ensureActive()
+            if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+            if (AccountParser.user(html)?.id != expected.user.id) {
+                clear(expired = true)
+                throw SessionExpiredException()
+            }
+            return PlaybackMarkParser.snapshot(html, target.seasonId, target.pageUrl)
+        }
+        val before = read()
+        if (before.mark != null || before.status != null) {
+            val response = transport.removeMark(target, jar)
+            currentCoroutineContext().ensureActive()
+            if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+            try { PlaybackMarkParser.requireSuccess(response) }
+            catch (error: MarkSaveRejectedException) { read(); throw error }
+            val after = read()
+            if (after.mark != null || after.status != null) throw MarkVerificationException()
+        }
+        mutableMarksRevision.value++
+    } }
+
     private suspend fun authenticatedHtml(url: String): String {
         val expected = session.value
         if (expected.user == null) throw SessionExpiredException()
         val html = transport.get(url, sessions.current())
         currentCoroutineContext().ensureActive()
         if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
-        if (AccountParser.user(html) == null) {
+        if (AccountParser.user(html)?.id != expected.user.id) {
             mutex.withLock { if (session.value.version == expected.version) clear(expired = true) }
             throw SessionExpiredException()
         }

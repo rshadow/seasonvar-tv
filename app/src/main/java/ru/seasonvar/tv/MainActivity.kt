@@ -55,9 +55,16 @@ class MainActivity : ComponentActivity() {
         }
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account))[SeriesDetailsViewModel::class.java]
+        val details = detailsModel
+        val removalModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.MarkRemovalViewModel.Factory(
+            container.account, container.accountMarks, { target ->
+                personalModels.values.forEach { it.markRemoved(target) }
+                details.markRemoved(target)
+            }))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
+            val removalState by removalModel.state.collectAsStateWithLifecycle()
             val marksRevision by container.account.marksRevision.collectAsStateWithLifecycle()
             LaunchedEffect(marksRevision) {
                 if (marksRevision > 0) {
@@ -90,6 +97,9 @@ class MainActivity : ComponentActivity() {
             SeasonvarApp(
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 detailsModel = detailsModel,
+                removalState = removalState, onRemovalActions = { removalModel.show(it) },
+                onRemovalRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.CONFIRM) },
+                onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,
                 onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,

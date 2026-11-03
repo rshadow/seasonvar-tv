@@ -135,4 +135,16 @@ class PersonalListViewModelTest {
         assertFalse(model.state.value.loadingMore)
     }
 
+
+    @Test fun confirmed_mark_removal_filters_related_list_entries_but_keeps_history_records() = runTest(dispatcher) {
+        val mark = AccountListMark("1", entry("1").url)
+        val first = entry("1").copy(accountListMark = mark)
+        val history = entry("1").copy(sourceKey = "history:one", historyVisitedAt = "test")
+        val list = model("list") { AccountPage(user, listOf(first, entry("2"))) }
+        val visited = model("history") { AccountPage(user, listOf(history)) }
+        runCurrent(); list.activate(); visited.activate(); runCurrent()
+        list.markRemoved(mark); visited.markRemoved(mark)
+        assertEquals(listOf("2"), list.state.value.entries.map { it.id })
+        assertEquals(listOf(history), visited.state.value.entries)
+    }
 }

@@ -1,0 +1,83 @@
+package ru.seasonvar.tv.ui.account
+
+import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.*
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.account.*
+import java.io.IOException
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class MarkRemovalViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+    private val store = ViewModelStore()
+    private val session = MutableStateFlow(AccountSession(AccountUser("12", "Тест", null), 1))
+    private val target = AccountListMark("123", "https://seasonvar.ru/serial-123-Test.html")
+    private val entry = SeriesEntry("123", target.pageUrl, "Тестовый сериал", 2, "", "", accountListMark = target)
+    private val removed = mutableListOf<AccountListMark>()
+    private fun model(remove: suspend (AccountListMark, Long) -> Unit) =
+        MarkRemovalViewModel(session, remove, removed::add).also { store.put("removal", it) }
+    @Before fun setup() { Dispatchers.setMain(dispatcher) }
+    @After fun teardown() { store.clear(); Dispatchers.resetMain() }
+
+    @Test fun actions_and_cancellation_do_not_write_and_confirmation_cannot_be_submitted_twice() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        var calls = 0
+        val model = model { mark, version -> assertEquals(target, mark); assertEquals(1L, version); calls++; gate.await() }
+        runCurrent()
+        model.show(entry); model.confirm(); runCurrent()
+        assertEquals(0, calls)
+        model.dismiss()
+        assertFalse(model.state.value.visible)
+        model.show(entry); model.ask(); model.confirm(); model.confirm(); runCurrent()
+        assertEquals(1, calls)
+        assertTrue(model.state.value.busy)
+        gate.complete(Unit); runCurrent()
+        assertEquals(listOf(target), removed)
+        assertFalse(model.state.value.visible)
+    }
+
+    @Test fun failed_delete_keeps_confirmation_and_does_not_remove_a_card_until_retry_succeeds() = runTest(dispatcher) {
+        var fail = true
+        val model = model { _, _ -> if (fail) throw IOException() }
+        runCurrent()
+        model.show(entry, RemovalStage.CONFIRM); model.confirm(); runCurrent()
+        assertTrue(model.state.value.visible)
+        assertFalse(model.state.value.busy)
+        assertNotNull(model.state.value.failure)
+        assertTrue(removed.isEmpty())
+        fail = false
+        model.confirm(); runCurrent()
+        assertEquals(listOf(target), removed)
+    }
+
+    @Test fun account_change_closes_the_dialog_and_old_confirmation_cannot_delete_for_a_new_user() = runTest(dispatcher) {
+        var calls = 0
+        val model = model { _, _ -> calls++ }
+        runCurrent(); model.show(entry, RemovalStage.CONFIRM)
+        session.value = AccountSession(AccountUser("13", "Другой", null), 2)
+        runCurrent(); model.confirm(); runCurrent()
+        assertEquals(0, calls)
+        assertFalse(model.state.value.visible)
+        model.show(entry.copy(accountListMark = null))
+        assertFalse(model.state.value.visible)
+    }
+
+    @Test fun closing_the_progress_dialog_does_not_abort_a_confirmed_deletion() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val model = model { _, _ -> gate.await() }
+        runCurrent(); model.show(entry, RemovalStage.CONFIRM); model.confirm(); runCurrent()
+        model.dismiss()
+        assertFalse(model.state.value.visible)
+        gate.complete(Unit); runCurrent()
+        assertEquals(listOf(target), removed)
+        assertFalse(model.state.value.busy)
+    }
+}

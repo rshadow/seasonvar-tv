@@ -44,6 +44,12 @@ class PlaybackMarkRepositoryTest {
                 .hostOnlyDomain("seasonvar.ru").secure().build()))
             return ""
         }
+        override suspend fun removeMark(mark: AccountListMark, jar: SessionCookies): String {
+            calls += "POST remove"
+            if (persist) { saved = null; status = null }
+            if (expireAfterWrite) expired = true
+            return response
+        }
         override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String {
             calls += "POST mark"
             writes += mark
@@ -138,6 +144,74 @@ class PlaybackMarkRepositoryTest {
             catch (error: Exception) { assertTrue(error is MarkupChangedException || error is IOException) }
             assertTrue(transport.writes.isEmpty())
             assertNotNull(repository.session.value.user)
+        }
+    }
+
+    @Test fun removing_a_mark_requires_post_success_and_authenticated_empty_readback() = runBlocking {
+        val transport = Transport().apply { saved = point }
+        val repository = loggedIn(transport)
+        repository.removeListMark(AccountListMark("123", page), repository.session.value.version)
+        assertEquals(listOf("GET $page", "POST remove", "GET $page"), transport.calls)
+        assertNull(transport.saved)
+        assertEquals(1L, repository.marksRevision.value)
+    }
+
+    @Test fun removing_an_absent_mark_is_idempotent_and_sends_no_post() = runBlocking {
+        val transport = Transport()
+        val repository = loggedIn(transport)
+        repository.removeListMark(AccountListMark("123", page), repository.session.value.version)
+        assertEquals(listOf("GET $page"), transport.calls)
+    }
+
+    @Test fun removing_wishlist_watched_and_blacklist_marks_is_supported() = runBlocking {
+        for (status in listOf(-1, -2, -3)) {
+            val transport = Transport().apply { this.status = status }
+            val repository = loggedIn(transport)
+            repository.removeListMark(AccountListMark("123", page), repository.session.value.version)
+            assertNull(transport.status)
+            assertTrue(transport.calls.contains("POST remove"))
+        }
+    }
+
+    @Test fun deletion_without_persistence_or_valid_success_is_not_confirmed() = runBlocking {
+        for (persist in listOf(false, true)) {
+            val transport = Transport().apply {
+                saved = point
+                this.persist = persist
+                if (persist) response = "{\"msg\":\"error\"}"
+            }
+            val repository = loggedIn(transport)
+            try { repository.removeListMark(AccountListMark("123", page), repository.session.value.version); fail() }
+            catch (error: Exception) { assertTrue(error is MarkVerificationException || error is MarkSaveRejectedException) }
+            assertEquals(0L, repository.marksRevision.value)
+        }
+    }
+
+    @Test fun deletion_rejects_stale_owner_and_invalid_or_expired_readback() = runBlocking {
+        val transport = Transport().apply { saved = point }
+        val repository = loggedIn(transport)
+        val owner = repository.session.value.version
+        repository.logout(); repository.login("other", "dummy-password")
+        transport.calls.clear()
+        try { repository.removeListMark(AccountListMark("123", page), owner); fail() } catch (_: CancellationException) { }
+        assertTrue(transport.calls.isEmpty())
+        transport.expireAfterWrite = true
+        try { repository.removeListMark(AccountListMark("123", page), repository.session.value.version); fail() }
+        catch (_: SessionExpiredException) { }
+        assertTrue(repository.session.value.expired)
+    }
+
+    @Test fun deletion_form_contains_only_the_validated_season_identifier() {
+        val request = ru.seasonvar.tv.data.SiteClient.removeMarkRequest(AccountListMark("123", page))
+        val body = request.body as okhttp3.FormBody
+        assertEquals("POST", request.method)
+        assertEquals("https://seasonvar.ru/jsonMark.php", request.url.toString())
+        assertEquals(page, request.header("Referer"))
+        assertEquals(1, body.size)
+        assertEquals("delId", body.name(0))
+        assertEquals("123", body.value(0))
+        for (url in listOf("https://foreign.test/serial-123-test.html", page.replace("123", "124"))) {
+            try { AccountListMark("123", url); fail() } catch (_: IllegalArgumentException) { }
         }
     }
 }

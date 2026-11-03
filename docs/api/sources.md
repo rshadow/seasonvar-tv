@@ -160,3 +160,7 @@ DoH-запрос использовал `https://dns.quad9.net/dns-query`, фо�
 ## Проверка записи постоянной отметки аккаунта
 
 2026-11-04 агент выполнил make mark-probe DEVICE=emulator-5554 MARK_PROBE_MODE=roundtrip с уже авторизованной сессией приложения. Для существующей отметки были проверены POST jsonMark.php, msg=success, последующее чтение var mark.href/trans и восстановление исходного значения. Результаты инструмента: authenticated=true, mark_parsed=true, post_verified=true, original_restored=true. Персональные значения и cookie не выводились.
+
+### Удаление отметки сезона — 2026-11-04
+
+Повторно загружен публичный `pg.marks.min.js?25.4.1`: `svfunc.markRemove` → POST `jsonMark.php` с `delId`, успех `msg=success`. Обратимая проверка в авторизованном эмуляторе подтвердила исчезновение отметки со страницы и из пяти личных подборок; исходная отметка восстановлена. История не очищалась. Команда — `make mark-probe DEVICE=emulator-5554 MARK_PROBE_MODE=delete-roundtrip`; аккаунт и cookie не экспортировались.

@@ -2,6 +2,8 @@ package ru.seasonvar.tv.data.playback
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import ru.seasonvar.tv.data.account.AccountListMark
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
@@ -181,5 +183,54 @@ class AccountMarkWriterTest {
         assertNull(MarkOutboxCodec.decode(encoded.replace("seasonvar.ru", "foreign.example.test")))
         assertNull(MarkOutboxCodec.decode("{}"))
         assertNull(markOwner(AccountUser("session", "Аккаунт", null)))
+    }
+
+    @Test fun removing_discards_offline_pending_marks_but_new_playback_may_create_a_mark() = runTest {
+        val session = MutableStateFlow(account())
+        val outbox = MemoryOutbox()
+        var writes = 0
+        var deletes = 0
+        val writer = AccountMarkWriter(backgroundScope, session, outbox, { _, _ -> writes++; throw IOException() },
+            retryMillis = 1000, remove = { _, _ -> deletes++ })
+        runCurrent()
+        writer.enqueue(mark, 1); runCurrent()
+        writer.removeMark(AccountListMark(mark.seasonId, mark.pageUrl), 1)
+        advanceTimeBy(2000); runCurrent()
+        assertEquals(1, deletes)
+        assertEquals(1, writes)
+        assertTrue(outbox.all().isEmpty())
+        writer.enqueue(mark.copy(positionSeconds = 90), 1); runCurrent()
+        assertEquals(2, writes)
+    }
+
+    @Test fun deletion_waits_for_in_flight_save_then_removes_its_newer_pending_successor() = runTest {
+        val session = MutableStateFlow(account())
+        val outbox = MemoryOutbox()
+        val release = CompletableDeferred<Unit>()
+        val calls = mutableListOf<String>()
+        val writer = AccountMarkWriter(backgroundScope, session, outbox, { _, _ -> calls += "save"; release.await() },
+            remove = { _, _ -> calls += "remove" })
+        runCurrent()
+        writer.enqueue(mark, 1); runCurrent()
+        val deletion = launch { writer.removeMark(AccountListMark(mark.seasonId, mark.pageUrl), 1) }
+        runCurrent()
+        writer.enqueue(mark.copy(positionSeconds = 80), 1); runCurrent()
+        assertEquals(listOf("save"), calls)
+        release.complete(Unit); runCurrent(); deletion.join()
+        assertEquals(listOf("save", "remove"), calls)
+        assertTrue(outbox.all().isEmpty())
+    }
+
+    @Test fun enqueue_scheduled_before_removal_cannot_resurrect_a_deleted_mark() = runTest {
+        val session = MutableStateFlow(account())
+        val outbox = MemoryOutbox()
+        val writes = mutableListOf<PlaybackMark>()
+        val writer = AccountMarkWriter(backgroundScope, session, outbox, { value, _ -> writes += value }, remove = { _, _ -> })
+        runCurrent()
+        writer.enqueue(mark, 1)
+        writer.removeMark(AccountListMark(mark.seasonId, mark.pageUrl), 1)
+        runCurrent()
+        assertTrue(writes.isEmpty())
+        assertTrue(outbox.all().isEmpty())
     }
 }

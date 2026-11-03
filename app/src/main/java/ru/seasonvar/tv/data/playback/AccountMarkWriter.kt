@@ -20,6 +20,8 @@ import ru.seasonvar.tv.data.account.PlaybackMarkSnapshot
 import ru.seasonvar.tv.data.account.SessionExpiredException
 import ru.seasonvar.tv.data.account.markSupersedes
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
+import ru.seasonvar.tv.data.account.AccountListMark
 
 enum class MarkSyncPhase { IDLE, SAVING, RETRYING, FAILED }
 data class MarkSyncState(val owner: String? = null, val phase: MarkSyncPhase = MarkSyncPhase.IDLE)
@@ -31,14 +33,18 @@ class AccountMarkWriter internal constructor(
     private val save: suspend (PlaybackMark, Long) -> Unit,
     private val retryMillis: Long = 15_000,
     private val log: (String) -> Unit = {},
+    private val remove: suspend (AccountListMark, Long) -> Unit = { _, _ -> throw UnsupportedOperationException() },
 ) {
     constructor(scope: CoroutineScope, account: AccountRepository, outbox: MarkOutbox) :
         this(scope, account.session, outbox, { mark, version ->
             val saved = account.savePlaybackMark(mark, version, automatic = true)
             if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark",
                 if (saved != null) "write_verified" else "already_current")
-        }, log = { phase -> if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark", phase) })
+        }, log = { phase -> if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark", phase) },
+            remove = account::removeListMark)
     private val mutex = Mutex()
+    private val mutations = Mutex()
+    private val generations = ConcurrentHashMap<Pair<String, String>, Long>()
     private val wake = Channel<Unit>(Channel.CONFLATED)
     private val mutableState = MutableStateFlow(MarkSyncState())
     val state = mutableState.asStateFlow()
@@ -73,7 +79,10 @@ class AccountMarkWriter internal constructor(
                     }
                     try {
                         mutableState.value = MarkSyncState(owner, MarkSyncPhase.SAVING)
-                        save(pending.mark, account.version)
+                        mutations.withLock {
+                            val stillPending = mutex.withLock { pending in outbox.all() }
+                            if (stillPending && session.value.version == account.version) save(pending.mark, account.version)
+                        }
                         mutex.withLock { outbox.remove(pending) }
                         mutableState.value = MarkSyncState(markOwner(session.value.user))
                         retryDelay = retryMillis
@@ -98,11 +107,14 @@ class AccountMarkWriter internal constructor(
     }
 
     fun enqueue(mark: PlaybackMark, ownerVersion: Long) {
+        val owner = markOwner(session.value.user) ?: return
+        val key = owner to mark.seasonId
+        val generation = generations[key] ?: 0L
         scope.launch {
             mutex.withLock {
                 val account = session.value
-                val owner = markOwner(account.user) ?: return@withLock
-                if (account.version != ownerVersion) return@withLock
+                if (markOwner(account.user) != owner || account.version != ownerVersion ||
+                    (generations[key] ?: 0L) != generation) return@withLock
                 val stored = outbox.all()
                 val previous = stored.firstOrNull { it.owner == owner && it.mark.seasonId == mark.seasonId }
                 if (previous == null || !markSupersedes(PlaybackMarkSnapshot(previous.mark), mark)) {
@@ -113,6 +125,18 @@ class AccountMarkWriter internal constructor(
                 retry()
             }
         }
+    }
+
+    suspend fun removeMark(target: AccountListMark, ownerVersion: Long) = mutations.withLock {
+        val owner = markOwner(session.value.user) ?: throw SessionExpiredException()
+        mutex.withLock {
+            if (session.value.version != ownerVersion) throw CancellationException()
+            val key = owner to target.seasonId
+            generations[key] = (generations[key] ?: 0L) + 1
+            outbox.all().filter { it.owner == owner && it.mark.seasonId == target.seasonId }.forEach(outbox::remove)
+        }
+        try { remove(target, ownerVersion) }
+        finally { retry() }
     }
 
     fun retry() { wake.trySend(Unit) }

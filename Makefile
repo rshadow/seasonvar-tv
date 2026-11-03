@@ -56,7 +56,7 @@ help:
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
 		'make account-test           Check account, personal lists, cookies and private cache' \
-		'make mark-probe             Inspect live account mark (MARK_PROBE_MODE=roundtrip verifies and restores a write)' \
+		'make mark-probe             Inspect live account mark (MARK_PROBE_MODE=roundtrip or delete-roundtrip verifies and restores a change)' \
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \

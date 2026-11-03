@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -67,6 +68,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.*
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import ru.seasonvar.tv.ui.navigation.CardActivation
+import ru.seasonvar.tv.ui.navigation.removalNeighbor
+import ru.seasonvar.tv.ui.account.MarkRemovalUiState
+import ru.seasonvar.tv.ui.account.MarkRemovalDialog
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.ui.account.AccountUiState
 import ru.seasonvar.tv.ui.account.AccountPane
@@ -92,6 +99,7 @@ import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
 private const val CARD_WARMUP_FRAMES = 8
+private data class RemovalFocusOrigin(val catalogKey: String, val keys: List<String>, val selected: String)
 
 private fun personalTitle(feed: PersonalFeed) = when (feed) {
     PersonalFeed.RESUME -> R.string.resume_title
@@ -150,6 +158,12 @@ internal fun SeasonvarApp(
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
+    removalState: MarkRemovalUiState = MarkRemovalUiState(),
+    onRemovalActions: (SeriesEntry) -> Unit = {},
+    onRemovalRequest: (SeriesEntry) -> Unit = {},
+    onRemovalAsk: () -> Unit = {},
+    onRemovalDismiss: () -> Unit = {},
+    onRemovalConfirm: () -> Unit = {},
 ) {
     SeasonvarTheme {
         SeasonvarContent(
@@ -172,6 +186,8 @@ internal fun SeasonvarApp(
             onExit = onExit,
             detailsModel = detailsModel,
             onPlay = onPlay,
+            removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
+            onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState,
             personalStates = personalStates, personalDescriptions = personalDescriptions,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
@@ -214,6 +230,12 @@ private fun SeasonvarContent(
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
+    removalState: MarkRemovalUiState = MarkRemovalUiState(),
+    onRemovalActions: (SeriesEntry) -> Unit = {},
+    onRemovalRequest: (SeriesEntry) -> Unit = {},
+    onRemovalAsk: () -> Unit = {},
+    onRemovalDismiss: () -> Unit = {},
+    onRemovalConfirm: () -> Unit = {},
 ) {
     val initialStartPage = remember { startPage }
     var startupPending by rememberSaveable { mutableStateOf(true) }
@@ -229,6 +251,9 @@ private fun SeasonvarContent(
     val selectedKey = selectedKeys[catalogKey]
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
+    var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
+    var removalOrigin by remember { mutableStateOf<RemovalFocusOrigin?>(null) }
+    var removalWasVisible by remember { mutableStateOf(false) }
     val todayListState = rememberLazyListState()
     val updatesListState = rememberLazyListState()
     val topListState = rememberLazyListState()
@@ -312,8 +337,10 @@ private fun SeasonvarContent(
         searchListState.scrollToItem(0)
     }
     LaunchedEffect(catalogKey, state.entries) {
-        if (selectedKey != null && state.entries.none { it.key == selectedKey }) detailsOpen = false
-        if (state.entries.none { it.key == selectedKey }) selectEntry(selected?.key)
+        if (state.entries.none { it.key == selectedKey }) {
+            val origin = removalOrigin?.takeIf { it.catalogKey == catalogKey && it.selected == selectedKey }
+            selectEntry(if (origin != null) removalNeighbor(origin.keys, state.entries.map { it.key }, origin.selected) else selected?.key)
+        }
     }
     LaunchedEffect(catalogKey, selected?.key, description.key) {
         selected?.let { if (searching) onSearchSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
@@ -339,6 +366,7 @@ private fun SeasonvarContent(
         val menuTarget = section.takeIf { menuOwnsInput }
         val personalKeys = PersonalFeed.entries.map { it.catalogKey }.toSet()
         selectedKeys = selectedKeys - personalKeys
+        removalOrigin = null
         cards.keys.removeAll { it.substringBefore('|') in personalKeys }
         personalListStates.values.forEach { it.requestScrollToItem(0) }
         detailsOpen = false
@@ -411,6 +439,25 @@ private fun SeasonvarContent(
     fun closeDetails() {
         detailsOpen = false
         enterContent()
+    }
+
+    fun openDetails(entry: SeriesEntry) {
+        backNavigation.reset()
+        inputModeManager.requestInputMode(InputMode.Keyboard)
+        selectEntry(entry.key)
+        detailsSource = entry
+        searchEditRequest = 0
+        keyboard?.hide()
+        detailsOpen = true
+    }
+
+    LaunchedEffect(removalState.visible) {
+        if (removalWasVisible && !removalState.visible) {
+            repeat(2) { withFrameNanos { } }
+            if (!detailsOpen && removalOrigin?.catalogKey == catalogKey) enterContent()
+            removalOrigin = null
+        }
+        removalWasVisible = removalState.visible
     }
 
     fun navigateBack() {
@@ -521,9 +568,13 @@ private fun SeasonvarContent(
                 )
             } else if (section == Section.ABOUT) {
                 AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset)
-            } else if (detailsOpen && selected != null && detailsModel != null) {
+            } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                 SeriesDetailsPane(
-                    selected, detailsModel,
+                    detailsSource!!, detailsModel,
+                    onRemove = { entry ->
+                        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, selectedKey ?: entry.key)
+                        onRemovalRequest(entry)
+                    }, removalDialogOpen = removalState.visible,
                     onPlay = onPlay,
                     menuFocus = if (searching) searchFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
                         PublicFeed.TODAY -> todayFocus
@@ -560,18 +611,23 @@ private fun SeasonvarContent(
                     personalFeed = personalFeed, catalogKey = catalogKey,
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
-                    onOpen = {
+                    onOpen = ::openDetails,
+                    onActions = { entry ->
                         backNavigation.reset()
-                        inputModeManager.requestInputMode(InputMode.Keyboard)
-                        selectEntry(it.key)
-                        searchEditRequest = 0
-                        keyboard?.hide()
-                        detailsOpen = true
+                        selectEntry(entry.key)
+                        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, entry.key)
+                        onRemovalActions(entry)
                     },
                 )
             }
         }
     }
+    MarkRemovalDialog(removalState,
+        onDismiss = { backNavigation.reset(); onRemovalDismiss() },
+        onAsk = { backNavigation.reset(); onRemovalAsk() },
+        onConfirm = { backNavigation.reset(); onRemovalConfirm() },
+        onOpen = { removalState.entry?.let { entry -> onRemovalDismiss(); openDetails(entry) } },
+        onInteraction = backNavigation::reset)
 }
 
 @Composable
@@ -704,6 +760,7 @@ private fun CatalogPane(
     personalFeed: PersonalFeed? = null,
     catalogKey: String = feed?.name ?: "SEARCH",
     onLoadMore: () -> Unit = {},
+    onActions: (SeriesEntry) -> Unit = {},
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -761,6 +818,8 @@ private fun CatalogPane(
                 loading = state.loading || state.loadingMore,
             )
         }
+        if (personalFeed != null && personalFeed != PersonalFeed.HISTORY) Text(stringResource(R.string.mark_long_press_hint),
+            color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(d.spacingSmall))
         if (selected == null) {
             Column(
@@ -825,6 +884,7 @@ private fun CatalogPane(
                         right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
                         contentReady = { contentReady.value },
                         onFocused = { onFocused(item) }, onClick = { onOpen(item) },
+                        onLongClick = if (personal && item.accountListMark != null) ({ onActions(item) }) else null,
                     )
                 }
             }
@@ -872,9 +932,16 @@ private fun SeriesThumbnail(
     contentReady: () -> Boolean,
     onFocused: () -> Unit,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    val scope = rememberCoroutineScope()
+    val activation = remember { CardActivation() }
+    var holdJob by remember { mutableStateOf<Job?>(null) }
+    val latestLongClick by rememberUpdatedState(onLongClick)
+    val latestClick by rememberUpdatedState(onClick)
+    DisposableEffect(Unit) { onDispose { holdJob?.cancel(); activation.cancel() } }
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(d.cardCornerRadius)
     Column(
@@ -884,10 +951,32 @@ private fun SeriesThumbnail(
                 this.right = right
                 if (left != null) this.left = left
             }
-            .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused() }
+            .onFocusChanged {
+                focused = it.isFocused
+                if (it.isFocused) onFocused() else { holdJob?.cancel(); activation.cancel() }
+            }
+            .onPreviewKeyEvent { event ->
+                if (onLongClick == null || event.nativeKeyEvent.keyCode !in setOf(
+                        android.view.KeyEvent.KEYCODE_DPAD_CENTER, android.view.KeyEvent.KEYCODE_ENTER,
+                        android.view.KeyEvent.KEYCODE_NUMPAD_ENTER)) false
+                else {
+                    if (event.type == KeyEventType.KeyDown && activation.press()) {
+                        holdJob = scope.launch {
+                            delay(android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                            if (activation.hold()) latestLongClick?.invoke()
+                        }
+                    } else if (event.type == KeyEventType.KeyUp) {
+                        holdJob?.cancel()
+                        if (event.nativeKeyEvent.isCanceled) activation.cancel()
+                        else if (activation.release()) latestClick()
+                    }
+                    true
+                }
+            }
             .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, shape)
             .background(c.surface, shape)
-            .clickable(role = Role.Button, onClick = onClick)
+            .combinedClickable(role = Role.Button, onClick = onClick, onLongClick = onLongClick,
+                onLongClickLabel = if (onLongClick != null) stringResource(R.string.mark_actions_title) else null)
             .padding(d.cardPadding),
     ) {
         if (contentReady()) {

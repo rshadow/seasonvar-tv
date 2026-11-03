@@ -319,4 +319,17 @@ class SeriesDetailsViewModelTest {
         assertEquals(original, model.state.value.entry)
     }
 
+
+    @Test fun account_mark_is_resolved_for_the_selected_season_and_removed_without_changing_episode_selection() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel(loadAccountMark = { ru.seasonvar.tv.data.account.AccountListMark(it.id, it.url) }) { details(it) }
+        model.open(entry("1")); advanceUntilIdle()
+        model.selectEpisode("2_seriya")
+        val target = model.state.value.entry!!.accountListMark!!
+        assertEquals("1", target.seasonId)
+        model.markRemoved(target)
+        assertNull(model.state.value.entry!!.accountListMark)
+        assertEquals("2_seriya", model.state.value.episodeId)
+        model.selectSeason("2"); advanceUntilIdle()
+        assertEquals("2", model.state.value.entry!!.accountListMark!!.seasonId)
+    }
 }

@@ -26,7 +26,7 @@ class AccountMarkProbe : Instrumentation() {
         val result = Bundle()
         var phase = "restore_session"
         try {
-            check(mode in setOf("inspect", "roundtrip"))
+            check(mode in setOf("inspect", "roundtrip", "delete-roundtrip"))
             runBlocking { withContext(Dispatchers.IO) {
                 val app = targetContext.applicationContext as SeasonvarApplication
                 app.account.restore()
@@ -57,6 +57,34 @@ class AccountMarkProbe : Instrumentation() {
                 val before = PlaybackMarkParser.snapshot(originalHtml, entry.id, entry.url)
                 result.putBoolean("mark_parsed", true)
                 result.putBoolean("existing_playback_mark", before.mark != null)
+                if (mode == "delete-roundtrip") {
+                    val original = checkNotNull(before.mark) { "An existing playback mark is required" }
+                    val target = checkNotNull(entry.accountListMark)
+                    val version = app.account.session.value.version
+                    try {
+                        phase = "delete_and_readback"
+                        app.accountMarks.removeMark(target, version)
+                        val current = PlaybackMarkParser.snapshot(html(), entry.id, entry.url)
+                        check(current.mark == null && current.status == null)
+                        result.putBoolean("post_verified", true)
+                        val feeds = ru.seasonvar.tv.data.account.PersonalFeed.entries.filter {
+                            it != ru.seasonvar.tv.data.account.PersonalFeed.HISTORY
+                        }
+                        val absent = feeds.all { feed -> app.account.personalList(feed).entries.none { it.id == entry.id } }
+                        result.putBoolean("removed_from_lists", absent)
+                        check(absent)
+                    } finally {
+                        phase = "restore_original"
+                        val current = PlaybackMarkParser.snapshot(html(), entry.id, entry.url)
+                        if (current.mark == null && current.status == null) {
+                            app.account.savePlaybackMark(original, version)
+                            result.putBoolean("original_restored", PlaybackMarkParser.parse(html(), entry.id, entry.url) == original)
+                        } else {
+                            result.putBoolean("original_restored", current.mark == original)
+                            result.putBoolean("concurrent_change_left_intact", current.mark != original)
+                        }
+                    }
+                }
                 if (mode == "roundtrip") {
                     val original = checkNotNull(before.mark) { "An existing playback mark is required for a reversible probe" }
                     val temporary = original.copy(positionSeconds = if (original.positionSeconds == 17L) 18 else 17)
