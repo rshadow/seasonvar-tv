@@ -27,4 +27,12 @@ class AccountStructureTest {
         assertFalse(summary.contains("https:"))
     }
 
+    @Test fun progress_shape_masks_private_text_and_all_numeric_values() {
+        val summary = accountProgressStructure("""<div class="pgs-marks-el"><div class="pgs-marks-seas">Сезон 98765</div>
+            <div class="pgs-marks-current">12345 из <strong title="private-token">45678</strong></div>
+            <div class="pgs-marks-last">private-title 22222 серия</div></div>""")
+        assertFalse(summary.contains("98765")); assertFalse(summary.contains("12345")); assertFalse(summary.contains("45678"))
+        assertFalse(summary.contains("private")); assertFalse(summary.contains("token"))
+    }
+
 }

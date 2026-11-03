@@ -23,6 +23,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val html = client.accountGet(url, jar)
             if (ru.seasonvar.tv.BuildConfig.DEBUG && url == "https://seasonvar.ru/resume") {
                 android.util.Log.d("SeasonvarAccount", ru.seasonvar.tv.diagnostics.accountStructure(html))
+                android.util.Log.d("SeasonvarAccount", ru.seasonvar.tv.diagnostics.accountProgressStructure(html))
             }
             if (ru.seasonvar.tv.BuildConfig.DEBUG && HistoryParser.pageUrl(url) != null) {
                 android.util.Log.d("SeasonvarAccount", ru.seasonvar.tv.diagnostics.historyStructure(html))
@@ -62,17 +63,25 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             require(feed == PersonalFeed.HISTORY)
             HistoryParser.pageUrl(pageUrl) ?: throw ru.seasonvar.tv.data.MarkupChangedException()
         }
+        AccountParser.personalList(authenticatedHtml(url), feed, url)
+    }
+
+    suspend fun progressSnapshot(): AccountProgressSnapshot? = withContext(Dispatchers.IO) {
+        if (session.value.user == null) return@withContext null
+        AccountProgressParser.snapshot(authenticatedHtml("https://seasonvar.ru/resume"))
+    }
+
+    private suspend fun authenticatedHtml(url: String): String {
         val expected = session.value
         if (expected.user == null) throw SessionExpiredException()
-        val jar = sessions.current()
-        val html = transport.get(url, jar)
+        val html = transport.get(url, sessions.current())
         currentCoroutineContext().ensureActive()
         if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
         if (AccountParser.user(html) == null) {
             mutex.withLock { if (session.value.version == expected.version) clear(expired = true) }
             throw SessionExpiredException()
         }
-        AccountParser.personalList(html, feed, url)
+        return html
     }
 
     suspend fun logout(): Unit = withContext(Dispatchers.IO) { mutex.withLock {

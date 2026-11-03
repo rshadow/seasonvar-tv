@@ -4,6 +4,9 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import ru.seasonvar.tv.data.AccountMark
+import ru.seasonvar.tv.data.AccountProgress
+import ru.seasonvar.tv.data.SeasonEpisodeProgress
+import ru.seasonvar.tv.data.EntrySelectionParser
 import ru.seasonvar.tv.data.MarkupChangedException
 import ru.seasonvar.tv.data.SeasonvarParser
 import ru.seasonvar.tv.data.SeriesEntry
@@ -59,10 +62,13 @@ object AccountParser {
                     ?: seasonNumber(name)
                 val current = row.selectFirst(".pgs-marks-current")?.text()?.trim().orEmpty()
                 val message = row.selectFirst(".pgs-marks-mess")?.text()?.trim().orEmpty()
-                val accountMark = if (current.isNotBlank() || message.isNotBlank()) AccountMark(current, message) else null
+                val counter = AccountProgressParser.episodes(current)
+                val complete = tab.attr("data-tabr") == "marks-watched" || (counter != null && counter.marked == counter.total)
+                val accountMark = if (current.isNotBlank() || message.isNotBlank() || complete) AccountMark(current, message, complete) else null
+                val progress = counter?.let { AccountProgress(episodes = SeasonEpisodeProgress(id, it)) }
                 val mark = row.attr("data-marksel").takeIf { it.matches(Regex("[0-9]+")) } ?: "$id:$index"
                 SeriesEntry(id, url, title(name), season, "", "https://cdn.svstat.net/oblojka/$id.jpg",
-                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark)
+                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark, accountProgress = progress, initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")))
             } }
         } else {
             doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.map { anchor ->
@@ -70,7 +76,8 @@ object AccountParser {
                 val id = seasonId(url)
                 val name = anchor.selectFirst(".pgs-marks-name")?.text() ?: anchor.text()
                 if (name.isBlank()) throw MarkupChangedException()
-                SeriesEntry(id, url, title(name), seasonNumber(name), "", "https://cdn.svstat.net/oblojka/$id.jpg")
+                SeriesEntry(id, url, title(name), seasonNumber(name), "", "https://cdn.svstat.net/oblojka/$id.jpg",
+                    initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")))
             }?.distinctBy { it.url }.orEmpty()
         }
         if (entries.map { it.key }.toSet().size != entries.size) throw MarkupChangedException()

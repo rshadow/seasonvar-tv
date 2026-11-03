@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
-        detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress))[SeriesDetailsViewModel::class.java]
+        detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account))[SeriesDetailsViewModel::class.java]
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()

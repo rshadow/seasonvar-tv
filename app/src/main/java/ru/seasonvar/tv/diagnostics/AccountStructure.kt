@@ -37,3 +37,21 @@ internal fun historyStructure(html: String): String {
         " historyRows=" + doc.select(".pgs-history-c a[href*=serial-]").size +
         " historyShape=" + shape + " historyPageLinks=" + pages
 }
+
+internal fun accountProgressStructure(html: String): String {
+    val words = setOf("отмечено", "просмотрено", "вышло", "всего", "из", "сезон", "сезона", "сезонов", "сезоны", "серия", "серии", "серий", "эпизодов", "эпизод", "по")
+    fun shape(text: String) = Regex("[\\p{L}]+|[0-9]+").replace(text) {
+        val word = it.value.lowercase(java.util.Locale.ROOT)
+        when { word.all { c -> c.isDigit() } -> "#"; word in words -> word; else -> "word" }
+    }.take(200)
+    val doc = Jsoup.parse(html)
+    return "progressShapes=" + doc.select(".pgs-marks-el").take(6).joinToString(";") { row ->
+        listOf("pgs-marks-seas", "pgs-marks-current", "pgs-marks-last").joinToString("|") { field ->
+            field + ":" + row.select(".$field").joinToString(",") { node ->
+                shape(node.ownText()) + " children=" + node.children().joinToString(",") { child ->
+                    child.tagName() + "[" + shape(child.text()) + "] title=[" + shape(child.attr("title")) + "]"
+                }
+            }
+        }
+    }
+}

@@ -6,6 +6,7 @@ import java.security.MessageDigest
 import ru.seasonvar.tv.data.MarkupChangedException
 import ru.seasonvar.tv.data.SeasonvarParser
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.EntrySelectionParser
 
 object HistoryParser {
     fun pageUrl(raw: String): String? {
@@ -38,15 +39,15 @@ object HistoryParser {
             val names = name.split(Regex("\\s*/\\s+"), limit = 2)
             val title = names.first().ifBlank { names.getOrNull(1).orEmpty() }
             val season = Regex("([0-9]+)\\s*сезон", RegexOption.IGNORE_CASE).find(link.ownText())?.groupValues?.get(1)?.toIntOrNull()
-            val episode = Regex("([0-9]+(?:\\s*[-–]\\s*[0-9]+)?)\\s*сери[яиюй]", RegexOption.IGNORE_CASE)
-                .find(link.ownText())?.groupValues?.get(1)?.replace(Regex("\\s+"), "")
+            val selection = EntrySelectionParser.text(link.ownText())
+            val episode = selection.episodeLabel
             val fingerprint = MessageDigest.getInstance("SHA-256").digest("$url|$episode|$at".toByteArray(Charsets.UTF_8))
                 .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
             val occurrence = (occurrences[fingerprint] ?: 0) + 1
             occurrences[fingerprint] = occurrence
             SeriesEntry(id, url, title, season, "", "https://cdn.svstat.net/oblojka/$id.jpg",
                 originalTitle = names.getOrNull(1)?.takeIf { it.isNotBlank() && it != title },
-                sourceKey = "history:$current:$fingerprint:$occurrence", historyVisitedAt = at, historyEpisode = episode)
+                sourceKey = "history:$current:$fingerprint:$occurrence", historyVisitedAt = at, initialSelection = selection)
         }
         val pages = result.select(".pgs-history-p a[href]").map { a ->
             pageUrl(a.absUrl("href")) ?: throw MarkupChangedException()

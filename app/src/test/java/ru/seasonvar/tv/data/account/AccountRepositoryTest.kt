@@ -114,4 +114,16 @@ class AccountRepositoryTest {
         assertEquals(listOf("https://seasonvar.ru/?mod=history&page=2"), transport.calls)
     }
 
+    @Test fun progress_snapshot_requires_verified_authentication_and_contains_server_marks() = runBlocking {
+        val transport = Transport().apply { page = javaClass.getResource("/account-resume-current.html")!!.readText() }
+        val repository = AccountRepository(SessionManager(MemorySessionStore()), transport)
+        assertNull(repository.progressSnapshot()); assertTrue(transport.calls.isEmpty())
+        repository.login("example", "dummy-password")
+        val snapshot = repository.progressSnapshot()!!
+        assertEquals(setOf("456", "999"), snapshot.completedSeasonIds)
+        transport.expired = true
+        try { repository.progressSnapshot(); fail() } catch (_: SessionExpiredException) { }
+        assertNull(repository.session.value.user)
+    }
+
 }

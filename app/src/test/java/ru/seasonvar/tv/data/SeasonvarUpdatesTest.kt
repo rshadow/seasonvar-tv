@@ -176,4 +176,10 @@ class SeasonvarUpdatesTest {
                 return response ?: throw IOException("offline")
             }
         }, ZoneOffset.UTC, { now })
+    @Test fun structured_selection_is_available_without_reparsing_display_text() {
+        val entries = SeasonvarParser.sidebar(page, day).entries
+        assertEquals(EntrySelection(episodeLabel = "6", translationLabel = "Студия"), entries[0].initialSelection)
+        assertEquals(EntrySelection(episodeLabel = "10-12"), entries[1].initialSelection)
+    }
+
 }

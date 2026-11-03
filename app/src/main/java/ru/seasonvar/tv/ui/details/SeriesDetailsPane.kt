@@ -51,6 +51,7 @@ import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.account.AccountEntryDetails
+import ru.seasonvar.tv.ui.account.AccountProgressLabel
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
@@ -148,12 +149,18 @@ internal fun SeriesDetailsPane(
                     verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                     ThemeButton(stringResource(when {
                         state.failure != null -> R.string.retry
+                        state.selectionFailure != null -> R.string.details_choose_episode
                         !preparing && !state.canPlay -> R.string.details_reload
                         state.resume != null -> R.string.details_continue
                         else -> R.string.details_watch
                     }), onClick = {
                         onInteraction()
-                        if (state.failure != null || !state.canPlay) model.retry() else model.playbackRequest()?.let(onPlay)
+                        when {
+                            state.failure != null -> model.retry()
+                            state.selectionFailure != null -> show(DetailsDialog.EPISODES, play)
+                            !state.canPlay -> model.retry()
+                            else -> model.playbackRequest()?.let(onPlay)
+                        }
                     }, loading = preparing,
                         modifier = Modifier.height(d.headerButtonSize).then(actionScrolling).focusRequester(play).focusProperties {
                             left = menuFocus; up = FocusRequester.Cancel
@@ -178,9 +185,10 @@ internal fun SeriesDetailsPane(
                                 })
                         else if (currentSeason?.number != null || entry.season != null) Text(seasonLabel, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
                             color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                        state.translation?.let { selected ->
-                            val label = stringResource(R.string.details_translation, selected.label)
-                            if (details.translations.size > 1) ThemeButton(label + " ▾",
+                        if (details.translations.isNotEmpty()) {
+                            val label = state.translation?.let { stringResource(R.string.details_translation, it.label) }
+                                ?: stringResource(R.string.details_choose_translation)
+                            if (details.translations.size > 1 || state.translation == null) ThemeButton(label + " ▾",
                                 { show(DetailsDialog.TRANSLATIONS, translation) }, Modifier.height(d.headerButtonSize).then(actionScrolling)
                                     .focusRequester(translation).focusProperties {
                                         up = FocusRequester.Cancel
@@ -192,6 +200,13 @@ internal fun SeriesDetailsPane(
                                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
+                    AccountProgressLabel(entry, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight())
+                }
+                if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),
+                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                state.selectionFailure?.let { failure ->
+                    Text(stringResource(R.string.details_requested_episode_unavailable, failure.requested),
+                        color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
                 state.resume?.let { resume ->
                     val label = details?.takeIf { it.entry.id == resume.seasonId }?.translations
@@ -287,7 +302,7 @@ private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifie
                 entry.originalTitle?.takeIf { it != entry.title }?.let {
                     Text(it, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
-                AccountEntryDetails(entry)
+                AccountEntryDetails(entry, includeProgress = false)
                 details?.facts?.filter { it.first in headlineFacts }?.joinToString(" · ") { it.second }
                     ?.takeIf { it.isNotBlank() }?.let {
                         Text(it, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -353,6 +368,7 @@ private fun EpisodeList(
                     itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
                         ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                             modifier = Modifier.widthIn(min = d.episodeWidth).height(d.headerButtonSize)
+
                                 .then(if (episode.id == state.episodeId) Modifier.focusRequester(selectedFocus) else Modifier)
                                 .onFocusChanged { if (it.isFocused) model.selectEpisode(episode.id) }
                                 .onPreviewKeyEvent {

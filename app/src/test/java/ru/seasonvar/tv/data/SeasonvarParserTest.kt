@@ -36,6 +36,7 @@ class SeasonvarParserTest {
         assertEquals("Сериал & история / Story", item.fullTitle)
         assertEquals(2, item.season)
         assertEquals("4-5 серия (Студия А)", item.update)
+        assertEquals(EntrySelection(episodeLabel = "4-5", translationLabel = "Студия А"), item.initialSelection)
         assertEquals("https://seasonvar.ru/serial-100-Test.html", item.url)
         assertEquals("https://cdn.svstat.net/oblojka/100.jpg", item.posterUrl)
     }

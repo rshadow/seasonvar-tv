@@ -51,6 +51,7 @@ object SeasonvarParser {
                     update = update,
                     posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
                     originalTitle = original.takeIf { it.isNotBlank() },
+                    initialSelection = EntrySelectionParser.updates(anchor.select("span.news_s").map { it.text() }),
                 )
             }
         }
@@ -77,7 +78,8 @@ object SeasonvarParser {
             SeriesEntry(id, url, title,
                 season, update, "https://cdn.svstat.net/oblojka/" + id + ".jpg",
                 isNew = anchor.hasClass("rside-p-new"),
-                originalTitle = original.takeIf { it.isNotBlank() })
+                originalTitle = original.takeIf { it.isNotBlank() },
+                initialSelection = EntrySelectionParser.updates(info.select("span").map { it.text() }))
         }
         return CatalogPage(day, entries.distinctBy { it.key })
     }

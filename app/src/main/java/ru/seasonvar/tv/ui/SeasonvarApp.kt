@@ -833,9 +833,9 @@ private fun SeriesThumbnail(
             Spacer(Modifier.height(d.spacingSmall))
             Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val subtitle = if (entry.historyEpisode != null) listOfNotNull(
+            val subtitle = if (entry.historyVisitedAt != null && entry.initialSelection.episodeLabel != null) listOfNotNull(
                 entry.season?.let { stringResource(R.string.season_number, it) },
-                stringResource(R.string.episode_number, entry.historyEpisode),
+                stringResource(R.string.episode_number, entry.initialSelection.episodeLabel),
             ).joinToString(" · ") else entry.subtitle.ifBlank {
                 entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty()
             }

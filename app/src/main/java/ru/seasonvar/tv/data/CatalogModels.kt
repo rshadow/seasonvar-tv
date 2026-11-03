@@ -4,8 +4,22 @@ import java.time.LocalDate
 
 enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST, BEST }
 
-data class AccountMark(val progress: String, val status: String)
+data class ProgressCounter(val marked: Int, val total: Int)
+data class SeasonEpisodeProgress(val seasonId: String, val counter: ProgressCounter)
+data class AccountProgress(val seasons: ProgressCounter? = null, val episodes: SeasonEpisodeProgress? = null)
+data class AccountMark(val progress: String, val status: String, val completedSeason: Boolean = false)
 
+data class EntrySelection(
+    val episodeId: String? = null,
+    val episodeLabel: String? = null,
+    val translationId: String? = null,
+    val translationLabel: String? = null,
+) {
+    val hasEpisode get() = !episodeId.isNullOrBlank() || !episodeLabel.isNullOrBlank()
+    val hasTranslation get() = !translationId.isNullOrBlank() || !translationLabel.isNullOrBlank()
+}
+
+/** Parsed list record; id/url identify the exact season, while optional metadata may be absent. */
 data class SeriesEntry(
     val id: String,
     val url: String,
@@ -19,8 +33,9 @@ data class SeriesEntry(
     val previewDescription: String? = null,
     val sourceKey: String? = null,
     val accountMark: AccountMark? = null,
+    val accountProgress: AccountProgress? = null,
     val historyVisitedAt: String? = null,
-    val historyEpisode: String? = null,
+    val initialSelection: EntrySelection = EntrySelection(),
 ) {
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = sourceKey ?: (url + "|" + update)

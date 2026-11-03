@@ -141,4 +141,11 @@ class AccountParserTest {
         assertTrue(withoutStatus.subtitle.isEmpty())
     }
 
+    @Test fun account_mark_keeps_the_exact_episode_id_but_does_not_confuse_count_with_id() {
+        val entries = AccountParser.resume(current.replace("rewind=3_example", "rewind=7_seriya")).entries
+        assertEquals("7_seriya", entries[0].initialSelection.episodeId)
+        assertNull(entries[1].initialSelection.episodeId)
+        assertNull(entries[1].initialSelection.episodeLabel)
+    }
+
 }

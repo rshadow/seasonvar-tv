@@ -14,7 +14,8 @@ class HistoryParserTest {
         assertEquals("Test History", result.entries.first().originalTitle)
         assertEquals("English Only", result.entries[1].title)
         assertEquals(2, result.entries.first().season)
-        assertEquals(listOf("7", "9", "6"), result.entries.map { it.historyEpisode })
+        assertEquals(listOf("7", "9", "6"), result.entries.map { it.initialSelection.episodeLabel })
+        assertEquals("Тестовая озвучка", result.entries.first().initialSelection.translationLabel)
         assertEquals("Вчера, 19:10", result.entries[1].historyVisitedAt)
         assertEquals(3, result.entries.map { it.key }.toSet().size)
         assertEquals(result.entries.first().url, result.entries.last().url)
@@ -83,11 +84,11 @@ class HistoryParserTest {
         val doc = Jsoup.parse(html)
         val link = doc.selectFirst(".pgs-history-c a")!!
         link.textNodes().forEach { it.text(it.text().replace("7 серия", "7–8 серии")) }
-        assertEquals("7–8", HistoryParser.parse(doc.outerHtml()).entries.first().historyEpisode)
+        assertEquals("7–8", HistoryParser.parse(doc.outerHtml()).entries.first().initialSelection.episodeLabel)
         link.textNodes().forEach { it.text(it.text().replace("7–8 серии", "")) }
         link.attr("href", "/serial-123-example.html#rewind=99_seriya")
         val entry = HistoryParser.parse(doc.outerHtml()).entries.first()
-        assertNull(entry.historyEpisode)
+        assertNull(entry.initialSelection.episodeLabel)
         assertEquals(2, entry.season)
     }
 

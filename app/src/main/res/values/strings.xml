@@ -81,6 +81,9 @@
     <string name="details_resume">Серия %1$s · %2$s</string>
     <string name="details_translation">Перевод: %1$s</string>
     <string name="details_season">Сезон</string>
+    <string name="details_choose_translation">Выбрать озвучку</string>
+    <string name="details_choose_episode">Выбрать серию</string>
+    <string name="details_requested_episode_unavailable">Не удалось выбрать серию «%1$s» в этой озвучке. Выберите серию или другую озвучку.</string>
     <string name="details_translation_title">Перевод</string>
     <string name="details_episodes">Серии</string>
     <string name="details_all_episodes">Все серии</string>
@@ -123,7 +126,10 @@
     <string name="history_title">История просмотров</string>
     <string name="personal_watched_title">Посмотрел</string>
     <string name="personal_empty_hint">В этой вкладке вашей учётной записи пока нет сериалов.</string>
-    <string name="account_mark_progress">Отметка просмотра: %1$s</string>
+    <string name="account_progress_seasons">сезоны %1$d из %2$d</string>
+    <string name="account_progress_episodes">серии %1$d из %2$d</string>
+    <string name="account_progress_error">Не удалось обновить прогресс аккаунта.</string>
+    <string name="account_mark_progress">Прогресс: %1$s</string>
     <string name="resume_title">На чём остановились</string>
     <string name="resume_hint">Список из вашей учётной записи Seasonvar</string>
     <string name="resume_count">В списке: %1$d</string>

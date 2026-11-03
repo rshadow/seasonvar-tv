@@ -157,15 +157,145 @@ class SeriesDetailsViewModelTest {
     @Test fun account_mark_survives_details_load_but_is_not_applied_to_another_season() = runTest(dispatcher) {
         val mark = AccountMark("Отмечено 3 из 10", "Новые серии")
         val model = SeriesDetailsViewModel { details(it) }
-        model.open(entry().copy(accountMark = mark, historyVisitedAt = "03.11.2026", historyEpisode = "7")); advanceUntilIdle()
+        model.open(entry().copy(accountMark = mark, historyVisitedAt = "03.11.2026", initialSelection = EntrySelection(episodeLabel = "7"))); advanceUntilIdle()
         assertEquals(mark, model.state.value.entry!!.accountMark)
         assertEquals("03.11.2026", model.state.value.entry!!.historyVisitedAt)
-        assertEquals("7", model.state.value.entry!!.historyEpisode)
+        assertEquals("7", model.state.value.entry!!.initialSelection.episodeLabel)
         model.selectSeason("2"); advanceUntilIdle()
         assertEquals("2", model.state.value.entry!!.id)
         assertNull(model.state.value.entry!!.accountMark)
         assertNull(model.state.value.entry!!.historyVisitedAt)
-        assertNull(model.state.value.entry!!.historyEpisode)
+        assertNull(model.state.value.entry!!.initialSelection.episodeLabel)
+    }
+
+    @Test fun history_context_selects_exact_episode_and_voice_instead_of_local_progress() = runTest(dispatcher) {
+        val point = ResumePoint("1", "0", "1_seriya", 12000)
+        val model = SeriesDetailsViewModel(loadResume = { point }) { details(it) }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "2", translationLabel = "Субтитры")))
+        advanceUntilIdle()
+        assertEquals("1", model.state.value.translationId)
+        assertEquals("sub_2", model.state.value.episodeId)
+        assertNull(model.state.value.resume)
+        assertEquals("sub_2", model.playbackRequest()!!.episodeId)
+    }
+    @Test fun exact_source_selection_keeps_resume_time_only_for_the_same_episode_and_voice() = runTest(dispatcher) {
+        val point = ResumePoint("1", "1", "sub_2", 12000)
+        val model = SeriesDetailsViewModel(loadResume = { point }) { details(it) }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "2", translationId = "1")))
+        advanceUntilIdle(); assertEquals(point, model.state.value.resume)
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "1", translationId = "0")))
+        advanceUntilIdle(); assertNull(model.state.value.resume)
+    }
+    @Test fun missing_source_voice_falls_back_to_standard_without_losing_the_source_episode() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "2", translationLabel = "Удалённая")))
+        advanceUntilIdle()
+        assertEquals("0", model.state.value.translationId)
+        assertEquals("2_seriya", model.state.value.episodeId)
+        assertNull(model.state.value.selectionFailure)
+        assertTrue(model.state.value.canPlay)
+        model.selectTranslation("1")
+        assertEquals("sub_2", model.state.value.episodeId)
+        assertTrue(model.state.value.canPlay)
+    }
+    @Test fun missing_source_episode_is_not_played_as_the_first_episode() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "99", translationId = "0")))
+        advanceUntilIdle()
+        assertNotNull(model.state.value.selectionFailure)
+        assertNull(model.state.value.episodeId); assertNull(model.playbackRequest())
+        model.selectEpisode("2_seriya")
+        assertNull(model.state.value.selectionFailure)
+        assertEquals("2_seriya", model.playbackRequest()!!.episodeId)
+    }
+    @Test fun retry_and_late_resume_read_do_not_undo_manual_selection() = runTest(dispatcher) {
+        var point = ResumePoint("1", "0", "1_seriya", 12000)
+        val model = SeriesDetailsViewModel(loadResume = { delay(100); point }) { details(it) }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "2", translationId = "1")))
+        advanceUntilIdle(); model.selectTranslation("0"); model.selectEpisode("2_seriya")
+        model.refreshResume(); runCurrent(); model.selectEpisode("1_seriya"); advanceUntilIdle()
+        assertEquals("1_seriya", model.state.value.episodeId)
+        model.selectTranslation("1"); model.retry(); advanceUntilIdle()
+        assertEquals("1", model.state.value.translationId)
+        assertEquals("sub_2", model.state.value.episodeId)
+        assertNull(model.state.value.resume)
+    }
+    @Test fun two_records_of_the_same_season_do_not_share_their_initial_selection() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel {
+            if (it.initialSelection.episodeLabel == "1") withContext(NonCancellable) { delay(500) }
+            details(it)
+        }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "1", translationId = "0")))
+        runCurrent()
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "2", translationId = "1")))
+        advanceUntilIdle()
+        assertEquals("1", model.state.value.translationId)
+        assertEquals("sub_2", model.state.value.episodeId)
+    }
+
+    @Test fun manual_selection_and_retry_do_not_rewrite_metadata_of_the_original_history_record() = runTest(dispatcher) {
+        val source = entry().copy(historyVisitedAt = "03.11.2026", initialSelection = EntrySelection(episodeLabel = "1", translationId = "0"))
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(source); advanceUntilIdle(); model.selectEpisode("2_seriya"); model.retry(); advanceUntilIdle()
+        assertEquals("2_seriya", model.state.value.episodeId)
+        assertEquals(source.initialSelection, model.state.value.entry!!.initialSelection)
+        assertEquals(source.historyVisitedAt, model.state.value.entry!!.historyVisitedAt)
+    }
+
+    @Test fun choosing_voice_when_episode_data_is_missing_keeps_the_known_episode() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel { entry -> details(entry).copy(translations = listOf(
+            Translation("0", "Стандартная", null),
+            Translation("1", "Субтитры", listOf(Episode("sub3", "3"), Episode("sub_2", "2"))),
+        )) }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "2", translationId = "0")))
+        advanceUntilIdle(); assertNull(model.state.value.episodeId)
+        model.selectTranslation("1")
+        assertEquals("sub_2", model.state.value.episodeId)
+        assertTrue(model.state.value.canPlay)
+    }
+
+    @Test fun progress_loads_in_background_without_resetting_manual_episode_selection() = runTest(dispatcher) {
+        val pending = kotlinx.coroutines.CompletableDeferred<AccountProgress?>()
+        val model = SeriesDetailsViewModel(loadAccountProgress = { pending.await() }) { details(it) }
+        model.open(entry()); runCurrent()
+        assertFalse(model.state.value.loading)
+        assertTrue(model.state.value.canPlay)
+        model.selectEpisode("2_seriya")
+        val progress = AccountProgress(ProgressCounter(2, 5), SeasonEpisodeProgress("1", ProgressCounter(3, 10)))
+        pending.complete(progress); advanceUntilIdle()
+        assertEquals("2_seriya", model.state.value.episodeId)
+        assertEquals(progress, model.state.value.entry!!.accountProgress)
+        assertEquals(progress, model.state.value.details!!.entry.accountProgress)
+    }
+    @Test fun progress_network_error_does_not_break_playback_or_fabricate_zero_counters() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel(loadAccountProgress = { throw IOException() }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        assertTrue(model.state.value.canPlay)
+        assertEquals(LoadFailure.NETWORK, model.state.value.progressFailure)
+        assertNull(model.state.value.entry!!.accountProgress)
+    }
+    @Test fun season_change_clears_the_previous_mark_until_new_progress_arrives() = runTest(dispatcher) {
+        val pending = kotlinx.coroutines.CompletableDeferred<AccountProgress?>()
+        val model = SeriesDetailsViewModel(loadAccountProgress = { d ->
+            if (d.entry.id == "1") AccountProgress(ProgressCounter(2, 5), SeasonEpisodeProgress("1", ProgressCounter(3, 10)))
+            else pending.await()
+        }) { details(it) }
+        model.open(entry()); advanceUntilIdle(); model.selectSeason("2"); runCurrent()
+        assertNull(model.state.value.entry!!.accountProgress)
+        pending.complete(AccountProgress(ProgressCounter(2, 5), SeasonEpisodeProgress("2", ProgressCounter(1, 8))))
+        advanceUntilIdle()
+        assertEquals("2", model.state.value.entry!!.accountProgress!!.episodes!!.seasonId)
+    }
+    @Test fun old_progress_cannot_overwrite_another_record_or_restore_a_closed_card() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel(loadAccountProgress = { d ->
+            if (d.entry.title == "old") withContext(NonCancellable) { delay(1000) }
+            AccountProgress(ProgressCounter(if (d.entry.title == "old") 1 else 2, 5))
+        }) { details(it) }
+        model.open(entry().copy(title = "old")); runCurrent()
+        model.open(entry().copy(title = "new")); advanceUntilIdle()
+        assertEquals(ProgressCounter(2, 5), model.state.value.entry!!.accountProgress!!.seasons)
+        model.open(entry().copy(title = "old")); runCurrent(); model.close(); advanceUntilIdle()
+        assertNull(model.state.value.entry)
     }
 
 }
