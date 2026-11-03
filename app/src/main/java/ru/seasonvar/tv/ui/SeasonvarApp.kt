@@ -1,5 +1,8 @@
 package ru.seasonvar.tv.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
@@ -42,6 +45,7 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -252,6 +256,7 @@ private fun SeasonvarContent(
     val settingsFocus = remember { FocusRequester() }
     val settingsContentFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
+    val aboutContentFocus = remember { FocusRequester() }
     val refreshFocus = remember { FocusRequester() }
     val retryFocus = remember { FocusRequester() }
     val cards = remember { mutableMapOf<String, FocusRequester>() }
@@ -364,7 +369,7 @@ private fun SeasonvarContent(
             } else if (section == Section.SETTINGS) {
                 settingsContentFocus.requestFocus()
             } else if (section == Section.ABOUT) {
-                aboutFocus.requestFocus()
+                aboutContentFocus.requestFocus()
             } else if (selected == null) {
                 if (searching) searchInputFocus.requestFocus()
                 else if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
@@ -515,7 +520,7 @@ private fun SeasonvarContent(
                     onInteraction = backNavigation::reset,
                 )
             } else if (section == Section.ABOUT) {
-                AboutPane()
+                AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset)
             } else if (detailsOpen && selected != null && detailsModel != null) {
                 SeriesDetailsPane(
                     selected, detailsModel,
@@ -1147,9 +1152,16 @@ private fun dnsLabel(provider: DnsProvider): Int = when (provider) {
 }
 
 @Composable
-private fun AboutPane() {
+private fun AboutPane(
+    contentFocus: FocusRequester,
+    menuFocus: FocusRequester,
+    onInteraction: () -> Unit,
+) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val githubUrl = stringResource(R.string.about_github_url)
+    var linkUnavailable by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
         Text(stringResource(R.string.about_title), style = MaterialTheme.typography.headlineLarge,
             color = c.onBackground)
@@ -1160,6 +1172,34 @@ private fun AboutPane() {
         Spacer(Modifier.height(d.spacingMedium))
         Text(stringResource(R.string.about_description), color = c.onBackground)
         Text(stringResource(R.string.about_source), color = c.onSurfaceVariant)
+        Spacer(Modifier.height(d.spacingLarge))
+        ThemeButton(
+            stringResource(R.string.about_github),
+            onClick = {
+                onInteraction()
+                linkUnavailable = false
+                try {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
+                        .addCategory(Intent.CATEGORY_BROWSABLE))
+                } catch (_: ActivityNotFoundException) {
+                    linkUnavailable = true
+                } catch (_: SecurityException) {
+                    linkUnavailable = true
+                }
+            },
+            modifier = Modifier.focusRequester(contentFocus).focusProperties {
+                left = menuFocus
+                right = FocusRequester.Cancel
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+            },
+        )
+        Spacer(Modifier.height(d.spacingSmall))
+        Text(githubUrl, style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+        if (linkUnavailable) {
+            Spacer(Modifier.height(d.spacingSmall))
+            Text(stringResource(R.string.about_github_unavailable), color = c.onSurfaceVariant)
+        }
     }
 }
 

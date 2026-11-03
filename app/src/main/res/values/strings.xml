@@ -14,6 +14,9 @@
     <string name="about_description">Клиент Seasonvar для телевизоров и ТВ-приставок.</string>
     <string name="about_version">Версия %1$s</string>
     <string name="about_source">Независимый клиент сайта seasonvar.ru.</string>
+    <string name="about_github">Проект на GitHub</string>
+    <string name="about_github_url" translatable="false">https://github.com/rshadow/seasonvar-tv</string>
+    <string name="about_github_unavailable">Не удалось открыть ссылку. Откройте этот адрес на телефоне или компьютере.</string>
     <string name="search_title">Поиск</string>
     <string name="search_hint">Найдите сериал по названию</string>
     <string name="search_input_hint">Введите название сериала</string>
