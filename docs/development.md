@@ -173,12 +173,12 @@ make check
 make release-package
 ~~~
 
-Результат — `build/release/seasonvar-tv-<versionName>-universal.apk` и `build/release/SHA256SUMS`. После коммита отправить изменения и тег, совпадающий с версией, например для текущей `0.2.0`:
+Результат — `build/release/seasonvar-tv-<versionName>-universal.apk` и `build/release/SHA256SUMS`. После коммита отправить изменения и тег, совпадающий с версией, например для версии `0.3.0`:
 
 ~~~bash
 git push
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ~~~
 
 Релизный тег создаётся и отправляется только по явной команде пользователя — [ADR-0053](adr/0053-explicit-release-tag-command.md). Просьба закоммитить изменения или проверить автосборку сама по себе не запускает выпуск.
