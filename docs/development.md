@@ -4,6 +4,8 @@
 
 Все команды запускаются из корня проекта через [Makefile](../Makefile).
 
+Совместимость обновлений Kotlin, Compose и coroutines определена в [ADR-0060](adr/0060-compatible-dependency-updates.md). После обновления зависимостей выполнять `make check`, `make ci-lint` и `make build BUILD_TYPE=release`; обновлять версии и контрольные суммы соответствующих артефактов в `toolchain.lock.json`.
+
 ## Подготовка другого компьютера
 
 Требуются Python 3.12+, make и curl. Для локального эмулятора также нужна доступная аппаратная виртуализация.
