@@ -11,6 +11,7 @@
 | [dependency-graph.yml](../.github/workflows/dependency-graph.yml) | Разрешённые Gradle-зависимости, включая транзитивные; код сборки исполняется с read-only токеном |
 | [dependency-submit.yml](../.github/workflows/dependency-submit.yml) | Публикация готового графа и статуса Dependency snapshot на исходном коммите; код PR не исполняется |
 | [dependency-review.yml](../.github/workflows/dependency-review.yml) | Проверка новых high/critical уязвимостей в PR |
+| [owner-automerge.yml](../.github/workflows/owner-automerge.yml) | Автослияние только готовых PR rshadow после всех проверок и активации защиты main |
 | [main.json](../.github/rulesets/main.json) | Обязательные PR и проверки, защита main |
 | [release-tags.json](../.github/rulesets/release-tags.json) | Защита v* от удаления и force push |
 
@@ -34,7 +35,7 @@
 
 ## Повседневная работа
 
-Изменения отправляются в отдельную ветку, затем открывается PR в main. После зелёных проверок PR можно слить самостоятельно. Dependabot тоже создаёт обычные PR: их проверяют тесты и сканеры, автоматического слияния нет. При обновлении Kotlin/AGP/SDK сохранять совместимость с toolchain.lock.json; одного зелёного обновления текста зависимости недостаточно для изменения инструментария.
+Изменения отправляются в отдельную ветку, затем открывается PR в main. Готовые PR rshadow после зелёных проверок и импорта защиты main автоматически сливает workflow; Draft остаются под управлением автора. Для изменений плеера перевести PR из Draft только после обязательной визуальной проверки видео. Другие авторы сливаются вручную. Решение — [ADR-0059](adr/0059-owner-pull-request-auto-merge.md). Dependabot тоже создаёт обычные PR: их проверяют тесты и сканеры, автоматического слияния нет. При обновлении Kotlin/AGP/SDK сохранять совместимость с toolchain.lock.json; при обновлении Actions синхронизировать их SHA с security_ci в этом файле; одного зелёного обновления текста зависимости недостаточно для изменения инструментария.
 
 Проверки доступны в Actions, находки — во вкладке Security and quality. Зависимости видны в Insights → Dependency graph. Обнаружение API-токенов не гарантирует обнаружение любого пользовательского пароля; secrets.env и файлы cookie остаются вне Git.
 
@@ -55,3 +56,15 @@ make codeql-build
 `make ci-tools` устанавливает закреплённые JDK/SDK без загрузки эмулятора, `make codeql-build` повторно компилирует Kotlin/Java и инструмент подписи без запуска подписи и чтения секретов. Сам анализ CodeQL выполняется workflow GitHub. `make ci-export-env` нужен только внутри GitHub Actions: экспортирует пути JDK/SDK в GITHUB_ENV для официального Gradle action.
 
 Приложение не меняется; установка на эмулятор или телевизор для настройки CI не требуется.
+
+## Автослияние своих PR
+
+Workflow проверяет GitHub user ID 737152, актуальные head SHA и все статусы. Он работает только после импорта правил main. Без активной защиты слияние не выполняется. Для этого варианта Allow auto-merge в General включать не требуется. Метод — merge commit; в настройках репозитория должна быть разрешена кнопка Merge pull request.
+
+После автоматического слияния отдельно запускаются Android build, CodeQL и Dependency graph на main: события от GITHUB_TOKEN не запускают обычные push-workflow. Нового релиза не возникает. Обработка ошибок и политики покрыты автономными тестами make site-test; команда make owner-automerge предназначена только для Actions.
+
+При конфликте или отставании от main обновить ветку PR и дождаться новых проверок. Дополнительная проверка доступна через Actions → Auto-merge owner PRs → Run workflow.
+
+## Проверка первоначальной настройки
+
+2026-11-04 владелец подтвердил включение серверных опций безопасности. Построение и публикация графа main прошли, статус Dependency snapshot установлен приложением GitHub Actions. На [PR №6](https://github.com/rshadow/seasonvar-tv/pull/6) прошли сборка/тесты/Lint, три анализа CodeQL, граф и Dependency review; снимок head был опубликован. Владелец слил PR. Импорт правил main и тегов выполняется отдельно по инструкции выше.
