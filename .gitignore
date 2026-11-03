@@ -10,3 +10,10 @@ captures/
 .cxx/
 .tools/
 __pycache__/
+.env
+*.env
+/secrets.env
+*.jks
+*.keystore
+*.p12
+*.pfx

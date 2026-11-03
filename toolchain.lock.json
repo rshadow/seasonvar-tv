@@ -1158,6 +1158,38 @@
       "-use-keycode-forwarding"
     ]
   },
+  "workflow_lint": {
+    "darwin-arm64": {
+      "version": "1.7.12",
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_darwin_arm64.tar.gz",
+      "size": 2164202,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f"
+      }
+    },
+    "darwin-x86_64": {
+      "version": "1.7.12",
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_darwin_amd64.tar.gz",
+      "size": 2355828,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644"
+      }
+    },
+    "linux-x86_64": {
+      "version": "1.7.12",
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz",
+      "size": 2353908,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+      }
+    }
+  },
+  "release": {
+    "apksigner_jar": "build-tools/35.0.0/lib/apksigner.jar"
+  },
   "performance": {
     "build_type": "profile",
     "navigation_rounds": 3,

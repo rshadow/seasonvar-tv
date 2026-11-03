@@ -122,6 +122,7 @@ def main():
         raise SystemExit("Python 3.12+ is required")
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache-dir", type=Path, default=Path.home() / ".cache/seasonvar/downloads")
+    parser.add_argument("--build-only", action="store_true", help="Skip the emulator and system image")
     args = parser.parse_args()
     if not shutil.which("curl"):
         raise SystemExit("curl is required")
@@ -137,7 +138,10 @@ def main():
     licenses = lock["licenses"]
     install(selected["jdk"], TOOLS / "jdk", cache, licenses, jdk=True)
     sdk = TOOLS / "android-sdk"
-    packages = selected["sdk"] + [selected["image"]]
+    packages = [package for package in selected["sdk"]
+                if not args.build_only or package["package"] != "emulator"]
+    if not args.build_only:
+        packages.append(selected["image"])
     for package in packages:
         install(package, sdk / package["destination"], cache, licenses)
     previous_sdk = Path(os.environ.get(

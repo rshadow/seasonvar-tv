@@ -64,3 +64,6 @@
 | [0045 — Раздел при запуске приложения](0045-start-page-setting.md) | 2026-11-03 | Принято |
 | [0046 — Предыдущая и следующая серия в плеере](0046-player-episode-navigation.md) | 2026-11-03 | Уточнено ADR-0047 |
 | [0047 — Полная передача событий видеоплеера и визуальная проверка](0047-player-video-event-forwarding.md) | 2026-11-03 | Принято |
+| [0048 — Постоянная подпись release APK](0048-release-apk-signing.md) | 2026-11-03 | Уточнено ADR-0049 |
+| [0049 — Секреты Seasonvar в корне проекта](0049-project-local-secrets.md) | 2026-11-03 | Принято |
+| [0050 — Автосборка и релизы APK через GitHub Actions](0050-github-actions-builds-and-releases.md) | 2026-11-03 | Принято |

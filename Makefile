@@ -22,6 +22,7 @@ PROFILE_ARGS ?=
 BUILD_TYPE ?= debug
 BUILD_VARIANT := $(shell python3 -c 'import sys; print(sys.argv[1].capitalize())' "$(BUILD_TYPE)")
 APK := app/build/outputs/apk/$(BUILD_TYPE)/app-$(BUILD_TYPE).apk
+SIGNER_JAR := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["release"]["apksigner_jar"])')
 ADB := $(ENV) adb -s "$(DEVICE)"
 SITE_URL ?= https://seasonvar.ru/
 SITE_OUT ?= build/site/index.html
@@ -34,7 +35,7 @@ SITE_EPISODE ?= 1
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 
-.PHONY: help bootstrap licenses doctor deps build test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test
+.PHONY: help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test
 
 help:
 	@printf '%s\n' \
@@ -43,6 +44,10 @@ help:
 		'make doctor                 Check local tools and versions' \
 		'make deps                   Download build dependencies' \
 		'make build                  Build the debug APK' \
+		'make release                Build and sign the release APK using project secrets.env' \
+		'make release-package        Prepare versioned release APK and SHA256SUMS' \
+		'make ci-prepare             Install build tools, accept SDK licenses and fetch dependencies' \
+		'make ci-lint                Validate GitHub Actions workflows with pinned actionlint' \
 		'make build-profile          Build an optimized profileable APK' \
 		'make run-profile DEVICE=... Install and launch the profile build' \
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
@@ -94,6 +99,21 @@ deps:
 
 build:
 	$(GRADLE) :app:assemble$(BUILD_VARIANT)
+
+release:
+	$(MAKE) build BUILD_TYPE=release
+	$(ENV) sh -c 'exec java --class-path "$$ANDROID_HOME/$(SIGNER_JAR)" scripts/SignRelease.java app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/app-release.apk'
+
+release-package: release
+	python3 scripts/package-release.py
+
+ci-prepare:
+	python3 scripts/bootstrap.py --build-only --cache-dir "$(BOOTSTRAP_CACHE)"
+	@printf 'y\n%.0s' {1..100} | $(ENV) sh -c 'exec sdkmanager --sdk_root="$$ANDROID_HOME" --licenses'
+	$(MAKE) deps
+
+ci-lint:
+	python3 scripts/lint-workflows.py --cache-dir "$(BOOTSTRAP_CACHE)"
 
 build-profile:
 	$(MAKE) build BUILD_TYPE=$(PROFILE_BUILD_TYPE)
