@@ -9,7 +9,7 @@
 | [.github/dependabot.yml](../.github/dependabot.yml) | PR обновлений Gradle и GitHub Actions по понедельникам, без автослияния |
 | [codeql.yml](../.github/workflows/codeql.yml) | Java/Kotlin, Python и workflow Actions: анализ на PR/main и раз в неделю |
 | [dependency-graph.yml](../.github/workflows/dependency-graph.yml) | Разрешённые Gradle-зависимости, включая транзитивные; код сборки исполняется с read-only токеном |
-| [dependency-submit.yml](../.github/workflows/dependency-submit.yml) | Публикация готового графа, включая forks; код PR не исполняется |
+| [dependency-submit.yml](../.github/workflows/dependency-submit.yml) | Публикация готового графа и статуса Dependency snapshot на исходном коммите; код PR не исполняется |
 | [dependency-review.yml](../.github/workflows/dependency-review.yml) | Проверка новых high/critical уязвимостей в PR |
 | [main.json](../.github/rulesets/main.json) | Обязательные PR и проверки, защита main |
 | [release-tags.json](../.github/rulesets/release-tags.json) | Защита v* от удаления и force push |
