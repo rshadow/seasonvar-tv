@@ -37,7 +37,7 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe
+.PHONY: help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -49,6 +49,8 @@ help:
 		'make release                Build and sign the release APK using project secrets.env' \
 		'make release-package        Prepare versioned release APK and SHA256SUMS' \
 		'make ci-prepare             Install build tools, accept SDK licenses and fetch dependencies' \
+		'make codeql-build           Compile app and signing tool for CodeQL without signing' \
+		'make ci-export-env          Export pinned tool paths to GitHub Actions' \
 		'make ci-lint                Validate GitHub Actions workflows with pinned actionlint' \
 		'make build-profile          Build an optimized profileable APK' \
 		'make run-profile DEVICE=... Install and launch the profile build' \
@@ -110,10 +112,19 @@ release:
 release-package: release
 	python3 scripts/package-release.py
 
-ci-prepare:
+ci-tools:
 	python3 scripts/bootstrap.py --build-only --cache-dir "$(BOOTSTRAP_CACHE)"
 	@printf 'y\n%.0s' {1..100} | $(ENV) sh -c 'exec sdkmanager --sdk_root="$$ANDROID_HOME" --licenses'
+
+ci-export-env:
+	$(ENV) sh -c 'test -n "$${GITHUB_ENV:-}" || { echo "This target requires GitHub Actions GITHUB_ENV" >&2; exit 1; }; printf "%s\n" "JAVA_HOME=$$JAVA_HOME" "ANDROID_HOME=$$ANDROID_HOME" "ANDROID_SDK_ROOT=$$ANDROID_SDK_ROOT" >> "$$GITHUB_ENV"'
+
+ci-prepare: ci-tools
 	$(MAKE) deps
+
+codeql-build:
+	$(GRADLE) --no-daemon --no-build-cache --no-configuration-cache --rerun-tasks -Pkotlin.incremental=false -Pkotlin.compiler.execution.strategy=in-process :app:assembleDebug
+	$(ENV) sh -c 'mkdir -p build/security; exec javac --class-path "$$ANDROID_HOME/$(SIGNER_JAR)" -d build/security scripts/SignRelease.java'
 
 ci-lint:
 	python3 scripts/lint-workflows.py --cache-dir "$(BOOTSTRAP_CACHE)"

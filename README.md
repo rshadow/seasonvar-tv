@@ -108,6 +108,10 @@ Media3 1.11.1 получает временный MP4 из свежего пле
 
 Пароли, API-ключи и cookie в репозиторий не добавляются. Секреты Seasonvar, включая ключ и пароли подписи Android, хранятся в корневом `secrets.env`, исключённом из Git, согласно [ADR-0049](docs/adr/0049-project-local-secrets.md). Другие секреты локальных инструментов берутся из `~/secrets.env`. Значения не выводятся. Подписанный APK собирается командой `make release`: `app/build/outputs/apk/release/app-release.apk`, см. [ADR-0048](docs/adr/0048-release-apk-signing.md).
 
+## Безопасность GitHub
+
+CodeQL проверяет Kotlin/Java, Python и workflow; Gradle dependency graph и Dependency review проверяют зависимости, Dependabot готовит еженедельные PR обновлений. Серверные переключатели защиты секретов и импорт правил main/релизных тегов выполняет владелец по [инструкции](docs/github-security.md). Конфигурация принята в [ADR-0058](docs/adr/0058-github-security-checks.md); наличие файлов не означает, что правила уже активированы на GitHub.
+
 ## Лицензия
 
 Собственный код проекта распространяется по [GNU General Public License v3.0](LICENSE), только версия 3 (SPDX: `GPL-3.0-only`). Copyright © 2026 rshadow.

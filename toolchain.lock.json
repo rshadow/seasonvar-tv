@@ -1198,5 +1198,23 @@
     "navigation_rounds": 3,
     "navigation_key_interval_seconds": 0.2,
     "method_sample_interval_us": 1000
+  },
+  "security_ci": {
+    "codeql_action": {
+      "repository": "github/codeql-action",
+      "version": "v4",
+      "sha": "1fc58d04a4d4374f921bdac573c3811c240f9c26"
+    },
+    "gradle_actions": {
+      "repository": "gradle/actions",
+      "version": "v6.4.1",
+      "sha": "8da46b539cd8fe6ab27ca75128919a18d757604c"
+    },
+    "dependency_review_action": {
+      "repository": "actions/dependency-review-action",
+      "version": "v5.0.0",
+      "sha": "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
+    },
+    "verified_on": "2026-11-04"
   }
 }
