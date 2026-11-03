@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
+import android.view.View
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
@@ -49,6 +51,7 @@ import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.ResumePoint
 import ru.seasonvar.tv.data.SiteHttpException
 import ru.seasonvar.tv.data.playback.PlaybackRequest
+import ru.seasonvar.tv.data.playback.playbackEpisodes
 import ru.seasonvar.tv.data.playback.VideoUnavailableException
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
@@ -56,7 +59,9 @@ import java.io.IOException
 
 @androidx.annotation.OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
-    private var request: PlaybackRequest? = null
+    private var request by mutableStateOf<PlaybackRequest?>(null)
+    private var controlsPlayer by mutableStateOf<Player?>(null)
+    private var navigatingControls = false
     private var playback by mutableStateOf<ExoPlayer?>(null)
     private var loading by mutableStateOf(true)
     private var failure by mutableStateOf<Int?>(null)
@@ -69,7 +74,8 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        request = readRequest(intent)
+        val initial = readRequest(intent)
+        request = savedInstanceState?.getString("current_episode")?.let { initial?.selectEpisode(it) } ?: initial
         if (request == null) { finish(); return }
         // Media3's diagnostic exceptions may contain temporary media URLs.
         androidx.media3.common.util.Log.setLogLevel(androidx.media3.common.util.Log.LOG_LEVEL_OFF)
@@ -90,20 +96,33 @@ class PlayerActivity : ComponentActivity() {
                     .focusRequester(surface).onPreviewKeyEvent { handlePlaybackKey(it.nativeKeyEvent) }.focusable()) {
                     AndroidView(factory = { context ->
                         object : PlayerView(context) {
-                            override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-                                handlePlaybackKey(event) || super.dispatchKeyEvent(event)
+                            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                                val handled = handlePlaybackKey(event) || super.dispatchKeyEvent(event)
+                                if (navigatingControls) traceControls()
+                                return handled
+                            }
                         }.apply {
-                            setShowNextButton(false)
-                            setShowPreviousButton(false)
+                            setShowNextButton(true)
+                            setShowPreviousButton(true)
                             findViewById<android.view.View>(androidx.media3.ui.R.id.exo_settings)?.visibility = android.view.View.GONE
                             controllerShowTimeoutMs = resources.getInteger(R.integer.seasonvar_player_controls_timeout_ms)
-                            setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { controlsVisible = it == android.view.View.VISIBLE })
+                            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                            findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.contentDescription = getString(R.string.player_previous_episode)
+                            findViewById<View>(androidx.media3.ui.R.id.exo_next)?.contentDescription = getString(R.string.player_next_episode)
+                            setControllerVisibilityListener(PlayerView.ControllerVisibilityListener {
+                                controlsVisible = it == View.VISIBLE
+                                if (!controlsVisible && navigatingControls) {
+                                    navigatingControls = false
+                                    descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                                    requestFocus()
+                                }
+                            })
                             view = this
                         }
                     }, update = { native ->
-                        if (native.player !== playback) {
-                            native.player = playback
-                            if (playback != null) native.requestFocus()
+                        if (native.player !== controlsPlayer) {
+                            native.player = controlsPlayer
+                            if (controlsPlayer != null) native.requestFocus()
                         }
                         native.useController = failure == null
                         native.isFocusable = failure == null
@@ -119,8 +138,14 @@ class PlayerActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                         Text(stringResource(failure ?: R.string.player_loading), color = MaterialTheme.colorScheme.onBackground,
                             style = MaterialTheme.typography.titleLarge)
-                        if (failure != null) ThemeButton(stringResource(R.string.retry), ::preparePlayback,
-                            Modifier.focusRequester(retry).height(d.headerButtonSize))
+                        if (failure != null) Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                            if (request?.adjacent(-1) != null) ThemeButton(stringResource(R.string.player_previous_episode),
+                                { switchEpisode(-1) }, Modifier.height(d.headerButtonSize))
+                            ThemeButton(stringResource(R.string.retry), { preparePlayback() },
+                                Modifier.focusRequester(retry).height(d.headerButtonSize))
+                            if (request?.adjacent(1) != null) ThemeButton(stringResource(R.string.player_next_episode),
+                                { switchEpisode(1) }, Modifier.height(d.headerButtonSize))
+                        }
                     }
                 }
                 LaunchedEffect(playback, failure) {
@@ -135,17 +160,24 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStart() { super.onStart(); preparePlayback() }
 
-    private fun preparePlayback() {
-        val selected = request ?: return
+    private fun switchEpisode(direction: Int) {
+        val next = request?.adjacent(direction) ?: return
+        preparePlayback(next, resume = false)
+    }
+
+    private fun preparePlayback(selected: PlaybackRequest? = request, resume: Boolean = true) {
+        selected ?: return
         trace("open season=" + selected.seasonId + " translation=" + selected.translationId + " episode=" + selected.episodeId)
         resolveJob?.cancel()
         releasePlayback()
+        request = selected
+        intent = intent(this, selected)
         loading = true
         failure = null
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         resolveJob = lifecycleScope.launch {
             try {
-                val point = container.playbackProgress.read(selected.seasonId)?.takeIf {
+                val point = if (!resume) null else container.playbackProgress.read(selected.seasonId)?.takeIf {
                     it.translationId == selected.translationId && it.episodeId == selected.episodeId
                 }
                 val source = container.videos.resolve(selected)
@@ -163,13 +195,17 @@ class PlayerActivity : ComponentActivity() {
                 player.setHandleAudioBecomingNoisy(true)
                 player.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
+                        if (playback !== player) return
                         loading = state == Player.STATE_BUFFERING
                         if (state == Player.STATE_READY) ready = true
                         if (state == Player.STATE_ENDED) savePosition()
                         trace("state=" + state + " positionMs=" + player.currentPosition)
                     }
-                    override fun onRenderedFirstFrame() { trace("first-frame positionMs=" + player.currentPosition) }
+                    override fun onRenderedFirstFrame() {
+                        if (playback === player) trace("first-frame positionMs=" + player.currentPosition)
+                    }
                     override fun onPlayerError(error: PlaybackException) {
+                        if (playback !== player) return
                         loading = false
                         failure = R.string.player_playback_error
                         trace("error=" + error.errorCodeName + " " + failureSummary(error))
@@ -177,6 +213,7 @@ class PlayerActivity : ComponentActivity() {
                 })
                 playback = player
                 player.setMediaItem(MediaItem.fromUri(source.url))
+                controlsPlayer = EpisodeControlsPlayer(player, selected, ::switchEpisode)
                 if (point != null) player.seekTo(point.positionMillis)
                 player.prepare()
                 player.playWhenReady = true
@@ -186,6 +223,7 @@ class PlayerActivity : ComponentActivity() {
                 }
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
+                ensureActive()
                 loading = false
                 failure = when (e) {
                     is IOException -> R.string.player_network_error
@@ -210,7 +248,10 @@ class PlayerActivity : ComponentActivity() {
     private fun releasePlayback() {
         progressJob?.cancel()
         savePosition()
+        navigatingControls = false
+        view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         view?.player = null
+        controlsPlayer = null
         playback?.release()
         playback = null
         ready = false
@@ -228,13 +269,54 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
     }
 
+    override fun finish() {
+        savePosition()
+        request?.let { selected ->
+            setResult(RESULT_OK, Intent().putExtra("season", selected.seasonId)
+                .putExtra("translation", selected.translationId).putExtra("episode", selected.episodeId))
+        }
+        super.finish()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        request?.let { outState.putString("current_episode", it.episodeId) }
+        super.onSaveInstanceState(outState)
+    }
+
     private fun handlePlaybackKey(event: KeyEvent): Boolean {
         if (event.keyCode in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)) {
             if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) finish()
             return true
         }
+        if (event.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT || event.keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                switchEpisode(if (event.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT) 1 else -1)
+            }
+            return true
+        }
         val player = playback
         if (player != null && failure == null) {
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    navigatingControls = true
+                    view?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+                    view?.showController()
+                    view?.findViewById<View>(androidx.media3.ui.R.id.exo_play_pause)?.requestFocus()
+                    traceControls()
+                }
+                return true
+            }
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && navigatingControls) {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    navigatingControls = false
+                    view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                    view?.hideController()
+                    view?.requestFocus()
+                }
+                return true
+            }
+            if (navigatingControls && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER)) return false
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE,
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
@@ -268,6 +350,20 @@ class PlayerActivity : ComponentActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
         handlePlaybackKey(event) || super.onKeyUp(keyCode, event)
 
+    private fun traceControls() {
+        if (!BuildConfig.DEBUG) return
+        val focus = when (view?.findFocus()?.id) {
+            androidx.media3.ui.R.id.exo_prev -> "previous"
+            androidx.media3.ui.R.id.exo_next -> "next"
+            androidx.media3.ui.R.id.exo_play_pause -> "play_pause"
+            androidx.media3.ui.R.id.exo_rew -> "rewind"
+            androidx.media3.ui.R.id.exo_ffwd -> "forward"
+            else -> "video"
+        }
+        trace("controls previous=" + (view?.findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.isEnabled == true) +
+            " next=" + (view?.findViewById<View>(androidx.media3.ui.R.id.exo_next)?.isEnabled == true) + " focus=" + focus)
+    }
+
     private fun trace(message: String) { if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarPlayback", message) }
 
     companion object {
@@ -275,6 +371,8 @@ class PlayerActivity : ComponentActivity() {
             .putExtra("season", request.seasonId).putExtra("page", request.pageUrl)
             .putExtra("translation", request.translationId).putExtra("episode", request.episodeId)
             .putExtra("label", request.episodeLabel).putExtra("title", request.title)
+            .putStringArrayListExtra("episode_ids", ArrayList(request.episodes.map { it.id }))
+            .putStringArrayListExtra("episode_labels", ArrayList(request.episodes.map { it.label }))
 
         private fun readRequest(intent: Intent): PlaybackRequest? {
             val season = intent.getStringExtra("season") ?: return null
@@ -282,7 +380,8 @@ class PlayerActivity : ComponentActivity() {
             val translation = intent.getStringExtra("translation") ?: return null
             val episode = intent.getStringExtra("episode") ?: return null
             val label = intent.getStringExtra("label") ?: return null
-            return PlaybackRequest(season, page, translation, episode, label, intent.getStringExtra("title").orEmpty())
+            return PlaybackRequest(season, page, translation, episode, label, intent.getStringExtra("title").orEmpty(),
+                playbackEpisodes(intent.getStringArrayListExtra("episode_ids"), intent.getStringArrayListExtra("episode_labels")))
         }
     }
 }

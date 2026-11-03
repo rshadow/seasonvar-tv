@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import ru.seasonvar.tv.ui.account.AccountViewModel
@@ -26,6 +27,12 @@ class MainActivity : ComponentActivity() {
     private lateinit var detailsModel: SeriesDetailsViewModel
     private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
+
+    private val playbackLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) result.data?.let { data ->
+            detailsModel.onPlaybackFinished(data.getStringExtra("season"), data.getStringExtra("translation"), data.getStringExtra("episode"))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,7 +90,7 @@ class MainActivity : ComponentActivity() {
                 onPersonalRefresh = { personalModels.getValue(it).retryOrRefresh() },
                 onPersonalMore = { personalModels.getValue(it).loadMore() },
                 onPersonalSelect = { feed, entry, retry -> personalModels.getValue(feed).select(entry, retry) },
-                onPlay = { startActivity(PlayerActivity.intent(this, it)) },
+                onPlay = { playbackLauncher.launch(PlayerActivity.intent(this, it)) },
                 states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates,
                     PublicFeed.TOP to top, PublicFeed.NEWEST to newest, PublicFeed.BEST to best),
                 descriptions = mapOf(PublicFeed.TODAY to todayDescription, PublicFeed.UPDATES to updatesDescription,

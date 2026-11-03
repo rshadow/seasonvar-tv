@@ -298,4 +298,25 @@ class SeriesDetailsViewModelTest {
         assertNull(model.state.value.entry)
     }
 
+    @Test fun playback_request_contains_only_selected_translations_ordered_episodes() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        assertEquals(listOf("1_seriya", "2_seriya"), model.playbackRequest()!!.episodes.map { it.id })
+        model.selectTranslation("1")
+        assertEquals(listOf(Episode("sub_2", "2")), model.playbackRequest()!!.episodes)
+    }
+
+    @Test fun player_return_selects_last_episode_only_in_matching_season_and_translation() = runTest(dispatcher) {
+        val original = entry().copy(initialSelection = EntrySelection(episodeLabel = "1"))
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(original); advanceUntilIdle()
+        model.onPlaybackFinished("2", "0", "2_seriya")
+        model.onPlaybackFinished("1", "1", "2_seriya")
+        model.onPlaybackFinished("1", "0", "missing")
+        assertEquals("1_seriya", model.state.value.episodeId)
+        model.onPlaybackFinished("1", "0", "2_seriya")
+        assertEquals("2_seriya", model.state.value.episodeId)
+        assertEquals(original, model.state.value.entry)
+    }
+
 }

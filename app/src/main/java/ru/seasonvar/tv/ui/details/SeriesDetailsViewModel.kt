@@ -157,7 +157,13 @@ class SeriesDetailsViewModel(
         if (details.playbackUnavailableReason != null || current.selectionFailure != null) return null
         val translation = current.translation ?: return null
         val episode = translation.episodes?.firstOrNull { it.id == episodeId } ?: return null
-        return PlaybackRequest(details.entry.id, details.entry.url, translation.id, episode.id, episode.label, details.entry.title)
+        return PlaybackRequest(details.entry.id, details.entry.url, translation.id, episode.id, episode.label, details.entry.title, translation.episodes.toList())
+    }
+
+    fun onPlaybackFinished(seasonId: String?, translationId: String?, episodeId: String?) {
+        val current = state.value
+        if (current.entry?.id != seasonId || current.translationId != translationId || episodeId == null) return
+        selectEpisode(episodeId)
     }
 
     fun refreshResume() {
