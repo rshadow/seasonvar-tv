@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -395,49 +396,62 @@ private fun SeasonvarContent(
                 Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
             ) {
-                (listOf(Section.TODAY) + (if (accountSession.user != null) Section.entries.filter { it.personalFeed != null } else emptyList()) +
-                    listOf(Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.SETTINGS, Section.ABOUT)).forEach { item ->
-                    val focus = when (item) {
-                        Section.SEARCH -> searchFocus
-                        Section.ACCOUNT -> accountFocus
-                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
-                            personalFocus.getValue(requireNotNull(item.personalFeed))
-                        Section.TODAY -> todayFocus
-                        Section.UPDATES -> updatesFocus
-                        Section.TOP -> topFocus
-                        Section.NEWEST -> newestFocus
-                        Section.BEST -> bestFocus
-                        Section.SETTINGS -> settingsFocus
-                        Section.ABOUT -> aboutFocus
-                    }
-                    val label = when (item) {
-                        Section.SEARCH -> R.string.search_title
-                        Section.ACCOUNT -> R.string.account_title
-                        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
-                            personalTitle(requireNotNull(item.personalFeed))
-                        Section.TODAY -> R.string.today_title
-                        Section.UPDATES -> R.string.updates_title
-                        Section.TOP -> R.string.top_title
-                        Section.NEWEST -> R.string.newest_title
-                        Section.BEST -> R.string.best_title
-                        Section.SETTINGS -> R.string.settings_title
-                        Section.ABOUT -> R.string.about_title
-                    }
-                    ThemeButton(
-                        stringResource(label),
-                        onClick = { backNavigation.reset(); selectSection(item); enterContent() },
-                        modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
-                            .focusRequester(focus).focusProperties { if (item == Section.TODAY) up = searchFocus }
-                            .onFocusChanged { if (it.isFocused) selectSection(item) }
-                            .onPreviewKeyEvent {
-                                if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                    selectSection(item)
-                                    enterContent()
-                                    true
-                                } else false
-                            },
-                        active = section == item,
+                val groups = listOf(R.string.menu_catalog to listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST)) +
+                    (if (accountSession.user != null) listOf(R.string.menu_personal to Section.entries.filter { it.personalFeed != null }) else emptyList()) +
+                    listOf(R.string.menu_system to listOf(Section.SETTINGS, Section.ABOUT))
+                groups.forEachIndexed { index, (title, sections) ->
+                    Text(
+                        stringResource(title),
+                        modifier = Modifier.fillMaxWidth()
+                            .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
+                            .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
+                            .semantics { heading() },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    sections.forEach { item ->
+                        val focus = when (item) {
+                            Section.SEARCH -> searchFocus
+                            Section.ACCOUNT -> accountFocus
+                            Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
+                                personalFocus.getValue(requireNotNull(item.personalFeed))
+                            Section.TODAY -> todayFocus
+                            Section.UPDATES -> updatesFocus
+                            Section.TOP -> topFocus
+                            Section.NEWEST -> newestFocus
+                            Section.BEST -> bestFocus
+                            Section.SETTINGS -> settingsFocus
+                            Section.ABOUT -> aboutFocus
+                        }
+                        val label = when (item) {
+                            Section.SEARCH -> R.string.search_title
+                            Section.ACCOUNT -> R.string.account_title
+                            Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
+                                personalTitle(requireNotNull(item.personalFeed))
+                            Section.TODAY -> R.string.today_title
+                            Section.UPDATES -> R.string.updates_title
+                            Section.TOP -> R.string.top_title
+                            Section.NEWEST -> R.string.newest_title
+                            Section.BEST -> R.string.best_title
+                            Section.SETTINGS -> R.string.settings_title
+                            Section.ABOUT -> R.string.about_title
+                        }
+                        ThemeButton(
+                            stringResource(label),
+                            onClick = { backNavigation.reset(); selectSection(item); enterContent() },
+                            modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
+                                .focusRequester(focus).focusProperties { if (item == Section.TODAY) up = searchFocus }
+                                .onFocusChanged { if (it.isFocused) selectSection(item) }
+                                .onPreviewKeyEvent {
+                                    if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
+                                        selectSection(item)
+                                        enterContent()
+                                        true
+                                    } else false
+                                },
+                            active = section == item,
+                        )
+                    }
                 }
             }
         }
