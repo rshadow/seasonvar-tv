@@ -49,7 +49,11 @@ make run
 
 ## APK и автосборка
 
-[GitHub Actions](https://github.com/rshadow/seasonvar-tv/actions/workflows/android.yml) проверяет каждый push в `main` и pull request. В артефактах запуска доступен debug APK, а для `main` и ручных запусков также подписанный APK с SHA256. Теги `v<versionName>` дополнительно создают [GitHub Release](https://github.com/rshadow/seasonvar-tv/releases) с установочным APK. Подробности — [ADR-0050](docs/adr/0050-github-actions-builds-and-releases.md) и [руководство по выпуску](docs/development.md#автосборка-и-выпуск-на-github).
+[GitHub Actions](https://github.com/rshadow/seasonvar-tv/actions/workflows/android.yml) проверяет каждый push в `main` и pull request. В артефактах запуска доступен debug APK, а для `main` и ручных запусков также подписанный APK с SHA256.
+
+Подписанный файл называется `seasonvar-tv-<versionName>-universal.apk`: один APK для `armeabi-v7a`, `arm64-v8a`, `x86` и `x86_64` — [ADR-0051](docs/adr/0051-universal-apk-filename.md).
+
+Теги `v<versionName>` дополнительно создают [GitHub Release](https://github.com/rshadow/seasonvar-tv/releases) с установочным APK. Подробности — [ADR-0050](docs/adr/0050-github-actions-builds-and-releases.md) и [руководство по выпуску](docs/development.md#автосборка-и-выпуск-на-github).
 
 ## Текущее состояние
 

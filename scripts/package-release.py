@@ -22,7 +22,7 @@ def package_release(metadata, apk, output, tag=""):
     output.mkdir(parents=True, exist_ok=True)
     for previous in output.glob("seasonvar-tv-*.apk"):
         previous.unlink()
-    name = "seasonvar-tv-" + version + ".apk"
+    name = "seasonvar-tv-" + version + "-universal.apk"
     shutil.copyfile(apk, output / name)
     (output / "SHA256SUMS").write_text(digest + "  " + name + "\n")
     return output / name

@@ -21,7 +21,7 @@ class ReleasePackageTests(unittest.TestCase):
 
     def test_packages_apk_with_matching_checksum(self):
         result = release.package_release(self.metadata, self.apk, self.output, "v0.2.0")
-        self.assertEqual(result.name, "seasonvar-tv-0.2.0.apk")
+        self.assertEqual(result.name, "seasonvar-tv-0.2.0-universal.apk")
         self.assertEqual(result.read_bytes(), self.apk.read_bytes())
         expected = hashlib.sha256(self.apk.read_bytes()).hexdigest() + "  " + result.name + "\n"
         self.assertEqual((self.output / "SHA256SUMS").read_text(), expected)
@@ -48,4 +48,5 @@ class ReleasePackageTests(unittest.TestCase):
         release.package_release(self.metadata, self.apk, self.output)
         self.metadata["elements"][0]["versionName"] = "0.3.0-beta.1"
         result = release.package_release(self.metadata, self.apk, self.output, "v0.3.0-beta.1")
+        self.assertEqual(result.name, "seasonvar-tv-0.3.0-beta.1-universal.apk")
         self.assertEqual([path.name for path in self.output.glob("*.apk")], [result.name])

@@ -141,7 +141,7 @@ make check
 make release-package
 ~~~
 
-Результат — `build/release/seasonvar-tv-<versionName>.apk` и `build/release/SHA256SUMS`. После коммита отправить изменения и тег, совпадающий с версией, например для текущей `0.2.0`:
+Результат — `build/release/seasonvar-tv-<versionName>-universal.apk` и `build/release/SHA256SUMS`. После коммита отправить изменения и тег, совпадающий с версией, например для текущей `0.2.0`:
 
 ~~~bash
 git push
