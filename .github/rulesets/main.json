@@ -57,6 +57,10 @@
           {
             "context": "Dependency review",
             "integration_id": 15368
+          },
+          {
+            "context": "Dependency snapshot",
+            "integration_id": 15368
           }
         ]
       }

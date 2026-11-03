@@ -8,16 +8,47 @@ on:
 permissions:
   actions: read
   contents: write
+  statuses: write
 
 jobs:
   submit:
     name: Publish dependency graph
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - name: Mark source commit as awaiting its dependency snapshot
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              ...context.repo,
+              sha: context.payload.workflow_run.head_sha,
+              state: 'pending',
+              context: 'Dependency snapshot',
+              description: 'Publishing resolved Gradle dependencies',
+              target_url: context.payload.workflow_run.html_url,
+            });
       - name: Submit saved graph without checking out or executing PR code
+        if: github.event.workflow_run.conclusion == 'success'
         uses: gradle/actions/dependency-submission@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           dependency-graph: download-and-submit
           cache-provider: external
+      - name: Record snapshot publication result on the source commit
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          SUBMISSION_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const source = context.payload.workflow_run;
+            const success = process.env.SUBMISSION_STATUS === 'success' && source.conclusion === 'success';
+            await github.rest.repos.createCommitStatus({
+              ...context.repo,
+              sha: source.head_sha,
+              state: success ? 'success' : 'failure',
+              context: 'Dependency snapshot',
+              description: success ? 'Resolved dependency snapshot published' : 'Dependency snapshot unavailable',
+              target_url: source.html_url,
+            });
+            if (!success) core.setFailed('Dependency graph generation or submission failed');
