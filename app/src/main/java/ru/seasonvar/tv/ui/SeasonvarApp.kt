@@ -18,6 +18,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
@@ -74,6 +76,7 @@ import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.navigation.BackNavigation
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.catalog.DescriptionState
@@ -86,13 +89,6 @@ import java.time.format.DateTimeFormatter
 
 private const val CARD_WARMUP_FRAMES = 8
 
-private enum class Section(val personalFeed: PersonalFeed? = null) {
-    SEARCH, ACCOUNT,
-    RESUME(PersonalFeed.RESUME), PERSONAL_UPDATES(PersonalFeed.UPDATES),
-    PERSONAL_NO_UPDATES(PersonalFeed.NO_UPDATES), WANT(PersonalFeed.WANT), WATCHED(PersonalFeed.WATCHED), HISTORY(PersonalFeed.HISTORY),
-    TODAY, UPDATES, TOP, NEWEST, BEST, SETTINGS, ABOUT,
-}
-
 private fun personalTitle(feed: PersonalFeed) = when (feed) {
     PersonalFeed.RESUME -> R.string.resume_title
     PersonalFeed.UPDATES -> R.string.personal_updates_title
@@ -102,9 +98,23 @@ private fun personalTitle(feed: PersonalFeed) = when (feed) {
     PersonalFeed.HISTORY -> R.string.history_title
 }
 
+private fun sectionTitle(item: Section): Int = when (item) {
+    Section.SEARCH -> R.string.search_title
+    Section.ACCOUNT -> R.string.account_title
+    Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
+        personalTitle(requireNotNull(item.personalFeed))
+    Section.TODAY -> R.string.today_title
+    Section.UPDATES -> R.string.updates_title
+    Section.TOP -> R.string.top_title
+    Section.NEWEST -> R.string.newest_title
+    Section.BEST -> R.string.best_title
+    Section.SETTINGS -> R.string.settings_title
+    Section.ABOUT -> R.string.about_title
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SeasonvarApp(
+internal fun SeasonvarApp(
     states: Map<PublicFeed, CatalogUiState>,
     descriptions: Map<PublicFeed, DescriptionState>,
     onRefresh: (PublicFeed) -> Unit,
@@ -120,6 +130,8 @@ fun SeasonvarApp(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    startPage: Section = Section.TODAY,
+    onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
     detailsModel: SeriesDetailsViewModel? = null,
     onPlay: (PlaybackRequest) -> Unit = {},
@@ -152,6 +164,7 @@ fun SeasonvarApp(
             onBypassChange = onBypassChange,
             dnsProvider = dnsProvider,
             onDnsChange = onDnsChange,
+            startPage = startPage, onStartPageChange = onStartPageChange,
             onExit = onExit,
             detailsModel = detailsModel,
             onPlay = onPlay,
@@ -181,6 +194,8 @@ private fun SeasonvarContent(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    startPage: Section = Section.TODAY,
+    onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
     detailsModel: SeriesDetailsViewModel? = null,
     onPlay: (PlaybackRequest) -> Unit = {},
@@ -196,8 +211,11 @@ private fun SeasonvarContent(
     onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
 ) {
-    var section by rememberSaveable { mutableStateOf(Section.TODAY) }
-    var activeFeed by rememberSaveable { mutableStateOf(PublicFeed.TODAY) }
+    val initialStartPage = remember { startPage }
+    var startupPending by rememberSaveable { mutableStateOf(true) }
+    var menuOwnsInput by remember { mutableStateOf(true) }
+    var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null)) }
+    var activeFeed by rememberSaveable { mutableStateOf(section.publicFeed ?: PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
     val searching = section == Section.SEARCH
     val personalFeed = section.personalFeed
@@ -224,6 +242,7 @@ private fun SeasonvarContent(
     val searchFocus = remember { FocusRequester() }
     val accountFocus = remember { FocusRequester() }
     val personalFocus = remember { PersonalFeed.entries.associateWith { FocusRequester() } }
+    val menuBringIntoView = remember { Section.entries.associateWith { BringIntoViewRequester() } }
     val searchInputFocus = remember { FocusRequester() }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
@@ -231,7 +250,7 @@ private fun SeasonvarContent(
     val newestFocus = remember { FocusRequester() }
     val bestFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
-    val toggleFocus = remember { FocusRequester() }
+    val settingsContentFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
     val refreshFocus = remember { FocusRequester() }
     val retryFocus = remember { FocusRequester() }
@@ -258,18 +277,25 @@ private fun SeasonvarContent(
         detailsOpen = false
         section = item
         item.personalFeed?.let(onPersonalVisible)
-        val feed = when (item) {
-            Section.TODAY -> PublicFeed.TODAY
-            Section.UPDATES -> PublicFeed.UPDATES
-            Section.TOP -> PublicFeed.TOP
-            Section.NEWEST -> PublicFeed.NEWEST
-            Section.BEST -> PublicFeed.BEST
-            else -> null
-        }
+        val feed = item.publicFeed
         if (feed != null) {
             activeFeed = feed
             onFeedVisible(feed)
         }
+    }
+
+    fun sectionFocus(item: Section): FocusRequester = when (item) {
+        Section.SEARCH -> searchFocus
+        Section.ACCOUNT -> accountFocus
+        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
+            personalFocus.getValue(requireNotNull(item.personalFeed))
+        Section.TODAY -> todayFocus
+        Section.UPDATES -> updatesFocus
+        Section.TOP -> topFocus
+        Section.NEWEST -> newestFocus
+        Section.BEST -> bestFocus
+        Section.SETTINGS -> settingsFocus
+        Section.ABOUT -> aboutFocus
     }
 
     DisposableEffect(searching) {
@@ -287,17 +313,41 @@ private fun SeasonvarContent(
     LaunchedEffect(catalogKey, selected?.key, description.key) {
         selected?.let { if (searching) onSearchSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
     }
-    LaunchedEffect(Unit) { todayFocus.requestFocus() }
+    val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy)
+    LaunchedEffect(startupTarget) {
+        if (!startupPending) return@LaunchedEffect
+        val target = startupTarget ?: Section.TODAY
+        if (startupTarget != null) selectSection(target)
+        repeat(2) { withFrameNanos { } }
+        if (startupPending && section == target) {
+            if (startupTarget != null) startupPending = false
+            sectionFocus(target).requestFocus()
+        }
+    }
+    LaunchedEffect(Unit) {
+        if (!startupPending) {
+            repeat(2) { withFrameNanos { } }
+            sectionFocus(section).requestFocus()
+        }
+    }
     LaunchedEffect(accountSession.version) {
+        val menuTarget = section.takeIf { menuOwnsInput }
         val personalKeys = PersonalFeed.entries.map { it.catalogKey }.toSet()
         selectedKeys = selectedKeys - personalKeys
         cards.keys.removeAll { it.substringBefore('|') in personalKeys }
-        personalListStates.values.forEach { it.scrollToItem(0) }
+        personalListStates.values.forEach { it.requestScrollToItem(0) }
         detailsOpen = false
         if (section.personalFeed != null && accountSession.user == null) section = Section.ACCOUNT
         if (section == Section.ACCOUNT && accountSession.user != null) {
             selectSection(Section.RESUME)
             repeat(2) { withFrameNanos { } }; personalFocus.getValue(PersonalFeed.RESUME).requestFocus()
+        }
+        if (menuTarget != null) {
+            repeat(2) { withFrameNanos { } }
+            if (menuOwnsInput && section == menuTarget) {
+                sectionFocus(menuTarget).requestFocus()
+                if (menuTarget in Section.startPages(true)) menuBringIntoView.getValue(menuTarget).bringIntoView()
+            }
         }
     }
 
@@ -312,7 +362,7 @@ private fun SeasonvarContent(
             if (section == Section.ACCOUNT) {
                 accountFocus.requestFocus()
             } else if (section == Section.SETTINGS) {
-                toggleFocus.requestFocus()
+                settingsContentFocus.requestFocus()
             } else if (section == Section.ABOUT) {
                 aboutFocus.requestFocus()
             } else if (selected == null) {
@@ -359,6 +409,7 @@ private fun SeasonvarContent(
     }
 
     fun navigateBack() {
+        startupPending = false
         if ((searching || section == Section.ACCOUNT) && !detailsOpen && imeVisible) {
             keyboard?.hide()
             backNavigation.reset()
@@ -375,19 +426,27 @@ private fun SeasonvarContent(
     val d = SeasonvarTheme.dimensions
     Row(
         Modifier.fillMaxSize()
+            .onPreviewKeyEvent {
+                if (it.type == KeyEventType.KeyDown && it.nativeKeyEvent.keyCode !in setOf(
+                        android.view.KeyEvent.KEYCODE_WAKEUP, android.view.KeyEvent.KEYCODE_SLEEP, android.view.KeyEvent.KEYCODE_POWER)) {
+                    startupPending = false
+                }
+                false
+            }
             .backNavigationKeys(::navigateBack, backNavigation::reset)
             .background(MaterialTheme.colorScheme.background)
             .padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
         horizontalArrangement = Arrangement.spacedBy(d.contentGap),
     ) {
-        Column(Modifier.width(d.menuWidth).fillMaxHeight()) {
+        Column(Modifier.width(d.menuWidth).fillMaxHeight()
+            .onFocusChanged { if (it.hasFocus) menuOwnsInput = true }.focusGroup()) {
             Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 ThemeButton(stringResource(R.string.search_title), onClick = {
-                    backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
+                    startupPending = false; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
                 }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = todayFocus; right = accountFocus },
                     icon = R.drawable.ic_search)
                 ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
-                    onClick = { backNavigation.reset(); selectSection(Section.ACCOUNT) },
+                    onClick = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
                     modifier = Modifier.focusRequester(accountFocus).focusProperties { left = searchFocus; right = FocusRequester.Cancel; down = todayFocus },
                     icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
             }
@@ -396,77 +455,61 @@ private fun SeasonvarContent(
                 Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
             ) {
-                val groups = listOf(R.string.menu_catalog to listOf(Section.TODAY, Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST)) +
-                    (if (accountSession.user != null) listOf(R.string.menu_personal to Section.entries.filter { it.personalFeed != null }) else emptyList()) +
-                    listOf(R.string.menu_system to listOf(Section.SETTINGS, Section.ABOUT))
+                val groups = listOf(R.string.menu_catalog to Section.catalogPages) +
+                    (if (accountSession.user != null) listOf(R.string.menu_personal to Section.personalPages) else emptyList()) +
+                    listOf(R.string.menu_system to Section.systemPages)
                 groups.forEachIndexed { index, (title, sections) ->
-                    Text(
-                        stringResource(title),
-                        modifier = Modifier.fillMaxWidth()
-                            .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
-                            .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
-                            .semantics { heading() },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    sections.forEach { item ->
-                        val focus = when (item) {
-                            Section.SEARCH -> searchFocus
-                            Section.ACCOUNT -> accountFocus
-                            Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
-                                personalFocus.getValue(requireNotNull(item.personalFeed))
-                            Section.TODAY -> todayFocus
-                            Section.UPDATES -> updatesFocus
-                            Section.TOP -> topFocus
-                            Section.NEWEST -> newestFocus
-                            Section.BEST -> bestFocus
-                            Section.SETTINGS -> settingsFocus
-                            Section.ABOUT -> aboutFocus
-                        }
-                        val label = when (item) {
-                            Section.SEARCH -> R.string.search_title
-                            Section.ACCOUNT -> R.string.account_title
-                            Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
-                                personalTitle(requireNotNull(item.personalFeed))
-                            Section.TODAY -> R.string.today_title
-                            Section.UPDATES -> R.string.updates_title
-                            Section.TOP -> R.string.top_title
-                            Section.NEWEST -> R.string.newest_title
-                            Section.BEST -> R.string.best_title
-                            Section.SETTINGS -> R.string.settings_title
-                            Section.ABOUT -> R.string.about_title
-                        }
-                        ThemeButton(
-                            stringResource(label),
-                            onClick = { backNavigation.reset(); selectSection(item); enterContent() },
-                            modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
-                                .focusRequester(focus).focusProperties { if (item == Section.TODAY) up = searchFocus }
-                                .onFocusChanged { if (it.isFocused) selectSection(item) }
-                                .onPreviewKeyEvent {
-                                    if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                        selectSection(item)
-                                        enterContent()
-                                        true
-                                    } else false
-                                },
-                            active = section == item,
+                    key(title) {
+                        Text(
+                            stringResource(title),
+                            modifier = Modifier.fillMaxWidth()
+                                .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
+                                .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
+                                .semantics { heading() },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        sections.forEach { item ->
+                            val focus = sectionFocus(item)
+                            val label = sectionTitle(item)
+                            ThemeButton(
+                                stringResource(label),
+                                onClick = { startupPending = false; backNavigation.reset(); selectSection(item); enterContent() },
+                                modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
+                                    .bringIntoViewRequester(menuBringIntoView.getValue(item))
+                                    .focusRequester(focus).focusProperties { if (item == Section.TODAY) up = searchFocus }
+                                    .onFocusChanged {
+                                        if (it.isFocused) selectSection(item)
+                                    }
+                                    .onPreviewKeyEvent {
+                                        if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
+                                            selectSection(item)
+                                            enterContent()
+                                            true
+                                        } else false
+                                    },
+                                active = section == item,
+                            )
+                        }
                     }
                 }
             }
         }
         Box(
-            Modifier.weight(1f).fillMaxHeight().focusGroup()
+            Modifier.weight(1f).fillMaxHeight()
+                .onFocusChanged { if (it.hasFocus) menuOwnsInput = false }.focusGroup()
         ) {
             if (section == Section.ACCOUNT) {
                 AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
             } else if (section == Section.SETTINGS) {
                 SettingsPane(
-                    bypassEnabled, toggleFocus,
+                    bypassEnabled, settingsContentFocus,
                     menuFocus = settingsFocus,
                     onBypassChange = onBypassChange,
                     dnsProvider = dnsProvider,
                     onDnsChange = onDnsChange,
+                    startPage = startPage, onStartPageChange = onStartPageChange,
+                    signedIn = accountSession.user != null,
                     onBack = ::navigateBack,
                     onCloseDialog = { backNavigation.reset(); returnToMenu() },
                     onInteraction = backNavigation::reset,
@@ -903,34 +946,65 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
 @Composable
 private fun SettingsPane(
     bypassEnabled: Boolean,
-    toggleFocus: FocusRequester,
+    settingsContentFocus: FocusRequester,
     menuFocus: FocusRequester,
     onBypassChange: (Boolean) -> Unit,
     dnsProvider: DnsProvider,
     onDnsChange: (DnsProvider) -> Unit,
+    startPage: Section,
+    onStartPageChange: (Section) -> Unit,
+    signedIn: Boolean,
     onBack: () -> Unit,
     onCloseDialog: () -> Unit,
     onInteraction: () -> Unit,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    var startDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var startFocused by remember { mutableStateOf(false) }
+    val bypassFocus = remember { FocusRequester() }
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     var dnsFocused by remember { mutableStateOf(false) }
     val dnsFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium, color = c.onBackground)
+        Spacer(Modifier.height(d.spacingLarge))
+        Text(stringResource(R.string.application_settings_title),
+            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+        Spacer(Modifier.height(d.spacingMedium))
+        Row(
+            Modifier.fillMaxWidth().focusRequester(settingsContentFocus)
+                .focusProperties { left = menuFocus; up = FocusRequester.Cancel; down = bypassFocus }
+                .onFocusChanged { startFocused = it.isFocused }
+                .border(d.focusBorderWidth, if (startFocused) c.primary else Color.Transparent,
+                    RoundedCornerShape(d.cardCornerRadius))
+                .clickable(role = Role.Button, onClick = { onInteraction(); startDialogOpen = true })
+                .padding(d.spacingMedium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.start_page_title), color = c.onBackground,
+                    style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.start_page_description), color = c.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge)
+            }
+            Spacer(Modifier.width(d.spacingMedium))
+            Text(stringResource(sectionTitle(startPage)), color = c.primary,
+                style = MaterialTheme.typography.bodyLarge)
+        }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(
-            Modifier.fillMaxWidth().focusRequester(toggleFocus)
+            Modifier.fillMaxWidth().focusRequester(bypassFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = FocusRequester.Cancel
+                    up = settingsContentFocus
                     down = dnsFocus
                 }
                 .onFocusChanged { focused = it.isFocused }
@@ -956,7 +1030,7 @@ private fun SettingsPane(
             Modifier.fillMaxWidth().focusRequester(dnsFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = toggleFocus
+                    up = bypassFocus
                     down = FocusRequester.Cancel
                 }
                 .onFocusChanged { dnsFocused = it.isFocused }
@@ -981,9 +1055,23 @@ private fun SettingsPane(
         Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge)
     }
+    if (startDialogOpen) {
+        SettingsChoiceDialog(
+            title = R.string.start_page_dialog_title,
+            options = Section.startPages(signedIn), selected = startPage.availableAtStart(signedIn), label = ::sectionTitle,
+            onSelect = { selected ->
+                onStartPageChange(selected)
+                startDialogOpen = false
+                scope.launch { repeat(2) { withFrameNanos { } }; settingsContentFocus.requestFocus() }
+            },
+            onClose = { startDialogOpen = false; onCloseDialog() },
+            onBack = { startDialogOpen = false; onBack() },
+            onInteraction = onInteraction,
+        )
+    }
     if (dnsDialogOpen) {
-        DnsDialog(
-            dnsProvider,
+        SettingsChoiceDialog(
+            title = R.string.dns_title, options = DnsProvider.entries, selected = dnsProvider, label = ::dnsLabel,
             onSelect = { provider ->
                 onDnsChange(provider)
                 dnsDialogOpen = false
@@ -997,51 +1085,60 @@ private fun SettingsPane(
 }
 
 @Composable
-private fun DnsDialog(
-    selected: DnsProvider,
-    onSelect: (DnsProvider) -> Unit,
+private fun <T> SettingsChoiceDialog(
+    @StringRes title: Int,
+    options: List<T>,
+    selected: T,
+    label: (T) -> Int,
+    onSelect: (T) -> Unit,
     onClose: () -> Unit,
     onBack: () -> Unit,
     onInteraction: () -> Unit,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
-    val options = remember { DnsProvider.entries.associateWith { FocusRequester() } }
+    val optionFocus = remember(options) { options.associateWith { FocusRequester() } }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         BackHandler(onBack = onBack)
         Column(
             Modifier.width(d.dialogWidth).heightIn(max = d.dialogHeight)
                 .backNavigationKeys(onBack, onInteraction)
                 .background(c.background, RoundedCornerShape(d.cardCornerRadius))
-                .padding(d.spacingLarge)
-                .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                .selectableGroup(),
+                .padding(d.spacingLarge),
             verticalArrangement = Arrangement.spacedBy(d.spacingMedium),
         ) {
-            Text(stringResource(R.string.dns_title), color = c.onBackground,
+            Text(stringResource(title), color = c.onBackground,
                 style = MaterialTheme.typography.headlineMedium)
-            DnsProvider.entries.forEach { provider ->
-                var focused by remember { mutableStateOf(false) }
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = d.navigationButtonHeight)
-                        .focusRequester(options.getValue(provider))
-                        .onFocusChanged { focused = it.isFocused }
-                        .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent,
-                            RoundedCornerShape(d.cardCornerRadius))
-                        .selectable(selected = selected == provider, role = Role.RadioButton,
-                            onClick = { onInteraction(); onSelect(provider) })
-                        .padding(d.spacingMedium),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(dnsLabel(provider)), color = c.onBackground,
-                        style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                    Spacer(Modifier.width(d.spacingMedium))
-                    RadioButton(selected = selected == provider, onClick = null)
+            Column(
+                Modifier.fillMaxWidth().weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()).selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(d.spacingMedium),
+            ) {
+                options.forEach { provider ->
+                    key(provider) {
+                        var focused by remember { mutableStateOf(false) }
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = d.navigationButtonHeight)
+                                .focusRequester(optionFocus.getValue(provider))
+                                .onFocusChanged { focused = it.isFocused }
+                                .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent,
+                                    RoundedCornerShape(d.cardCornerRadius))
+                                .selectable(selected = selected == provider, role = Role.RadioButton,
+                                    onClick = { onInteraction(); onSelect(provider) })
+                                .padding(d.spacingMedium),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(stringResource(label(provider)), color = c.onBackground,
+                                style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                            Spacer(Modifier.width(d.spacingMedium))
+                            RadioButton(selected = selected == provider, onClick = null)
+                        }
+                    }
                 }
             }
         }
     }
-    LaunchedEffect(Unit) { options.getValue(selected).requestFocus() }
+    LaunchedEffect(Unit) { optionFocus.getValue(selected).requestFocus() }
 }
 
 private fun dnsLabel(provider: DnsProvider): Int = when (provider) {

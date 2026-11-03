@@ -72,7 +72,9 @@ class MainActivity : ComponentActivity() {
             val newestDescription by models.getValue(PublicFeed.NEWEST).description.collectAsStateWithLifecycle()
             val bestDescription by models.getValue(PublicFeed.BEST).description.collectAsStateWithLifecycle()
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
+            val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             SeasonvarApp(
+                startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 detailsModel = detailsModel,
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,

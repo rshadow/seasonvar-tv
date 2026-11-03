@@ -11,6 +11,7 @@ import ru.seasonvar.tv.data.network.NetworkSettings
 import java.io.File
 
 class SeasonvarApplication : Application(), ImageLoaderFactory {
+    internal val interfaceSettings by lazy { ru.seasonvar.tv.ui.settings.InterfaceSettings(this) }
     val networkSettings by lazy { NetworkSettings(this) }
     val sessions by lazy { ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) }
     val siteClient by lazy { SiteClient(networkSettings, sessions) }
