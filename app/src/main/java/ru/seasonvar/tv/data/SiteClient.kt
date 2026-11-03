@@ -48,6 +48,9 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
             .header("Referer", "https://seasonvar.ru/")
             .post(FormBody.Builder().add("login", login).add("password", password).build()).build(), jar, true)
 
+    suspend fun accountMark(mark: ru.seasonvar.tv.data.account.PlaybackMark, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
+        execute(markRequest(mark), jar)
+
     private suspend fun execute(initial: Request, jar: ru.seasonvar.tv.data.account.SessionCookies? = sessions?.current(), loginRedirect: Boolean = false): String {
         var request = initial
         repeat(5) {
@@ -76,6 +79,14 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        internal fun markRequest(mark: ru.seasonvar.tv.data.account.PlaybackMark): Request = Request.Builder()
+            .url("https://seasonvar.ru/jsonMark.php")
+            .header("Referer", mark.pageUrl)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Accept", "application/json")
+            .post(FormBody.Builder().apply { mark.form().forEach { (name, value) -> add(name, value) } }.build())
+            .build()
+
         internal fun sidebarRequest(feed: PublicFeed): Request {
             val mode = when (feed) {
                 PublicFeed.UPDATES -> "new"

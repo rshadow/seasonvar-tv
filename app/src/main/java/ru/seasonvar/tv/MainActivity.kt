@@ -58,6 +58,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
+            val marksRevision by container.account.marksRevision.collectAsStateWithLifecycle()
+            LaunchedEffect(marksRevision) {
+                if (marksRevision > 0) {
+                    personalModels.values.forEach { it.refreshIfActive() }
+                    detailsModel.refreshResume()
+                }
+            }
             val personalStates = personalModels.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
             val personalDescriptions = personalModels.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             LaunchedEffect(accountSession.version) {
@@ -144,5 +151,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         models.values.forEach { it.refreshIfDateChanged() }
         detailsModel.refreshResume()
+        (application as SeasonvarApplication).accountMarks.retry()
     }
 }

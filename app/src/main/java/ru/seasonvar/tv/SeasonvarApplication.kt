@@ -11,6 +11,7 @@ import ru.seasonvar.tv.data.network.NetworkSettings
 import java.io.File
 
 class SeasonvarApplication : Application(), ImageLoaderFactory {
+    private val applicationScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
     internal val interfaceSettings by lazy { ru.seasonvar.tv.ui.settings.InterfaceSettings(this) }
     val networkSettings by lazy { NetworkSettings(this) }
     val sessions by lazy { ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) }
@@ -24,6 +25,8 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
         siteClient.resource(url, referer)
     } }
     val playbackProgress by lazy { PlaybackProgress(this) }
+    val accountMarks by lazy { ru.seasonvar.tv.data.playback.AccountMarkWriter(applicationScope, account,
+        ru.seasonvar.tv.data.playback.PreferencesMarkOutbox(this)) }
 
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this).callFactory(siteClient).build()

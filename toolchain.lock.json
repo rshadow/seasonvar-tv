@@ -1190,6 +1190,9 @@
   "release": {
     "apksigner_jar": "build-tools/35.0.0/lib/apksigner.jar"
   },
+  "verification": {
+    "account_mark_runner": "ru.seasonvar.tv.probe.AccountMarkProbe"
+  },
   "performance": {
     "build_type": "profile",
     "navigation_rounds": 3,

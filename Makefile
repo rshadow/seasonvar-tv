@@ -34,8 +34,10 @@ SITE_TRANSLATION ?= 0
 SITE_EPISODE ?= 1
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
+MARK_PROBE_MODE ?= inspect
+ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test
+.PHONY: help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe
 
 help:
 	@printf '%s\n' \
@@ -54,6 +56,7 @@ help:
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
 		'make account-test           Check account, personal lists, cookies and private cache' \
+		'make mark-probe             Inspect live account mark (MARK_PROBE_MODE=roundtrip verifies and restores a write)' \
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \
@@ -263,4 +266,11 @@ site-video-probe:
 		--episode "$(SITE_EPISODE)" --strategy "$(SITE_STRATEGY)" --timeout "$(SITE_TIMEOUT)"
 
 account-test:
-	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.account.*' --tests 'ru.seasonvar.tv.ui.account.*'
+	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.account.*' --tests 'ru.seasonvar.tv.ui.account.*' --tests 'ru.seasonvar.tv.data.playback.AccountMark*'
+
+mark-probe:
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ENV) python3 scripts/probe-account-mark.py --device "$(DEVICE)" --mode "$(MARK_PROBE_MODE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"

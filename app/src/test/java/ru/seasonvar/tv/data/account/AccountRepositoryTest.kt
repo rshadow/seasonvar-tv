@@ -25,6 +25,7 @@ class AccountRepositoryTest {
                 if (HistoryParser.pageUrl(url) != null) historyPage else page
             } else guest
         }
+        override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String = error("Unexpected mark write")
         override suspend fun login(login: String, password: String, jar: SessionCookies): String {
             calls += "POST login"
             jar.saveFromResponse(site, listOf(Cookie.Builder().name("svid1").value("dummy-session").hostOnlyDomain("seasonvar.ru").secure().build()))

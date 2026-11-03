@@ -3,6 +3,7 @@ package ru.seasonvar.tv.ui.player
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.view.View
@@ -26,6 +27,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -50,6 +52,11 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.ResumePoint
 import ru.seasonvar.tv.data.SiteHttpException
+import ru.seasonvar.tv.data.playback.AccountMarkPolicy
+import ru.seasonvar.tv.data.playback.MarkEvent
+import ru.seasonvar.tv.data.playback.PlaybackSample
+import ru.seasonvar.tv.data.playback.MarkSyncPhase
+import ru.seasonvar.tv.data.playback.markOwner
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.playback.playbackEpisodes
 import ru.seasonvar.tv.data.playback.VideoUnavailableException
@@ -70,6 +77,8 @@ class PlayerActivity : ComponentActivity() {
     private var resolveJob: Job? = null
     private var progressJob: Job? = null
     private var ready = false
+    private var markPolicy: AccountMarkPolicy? = null
+    private var markOwnerVersion: Long? = null
     private val container get() = application as SeasonvarApplication
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,6 +99,8 @@ class PlayerActivity : ComponentActivity() {
         setContent {
             SeasonvarTheme {
                 val d = SeasonvarTheme.dimensions
+                val markSync by container.accountMarks.state.collectAsStateWithLifecycle()
+                val accountSession by container.account.session.collectAsStateWithLifecycle()
                 val retry = remember { FocusRequester() }
                 val surface = remember { FocusRequester() }
                 Box(Modifier.fillMaxSize().background(colorResource(R.color.seasonvar_player_background))
@@ -127,12 +138,23 @@ class PlayerActivity : ComponentActivity() {
                         native.useController = failure == null
                         native.isFocusable = failure == null
                     }, modifier = Modifier.fillMaxSize())
-                    if (controlsVisible || loading || failure != null) Text(
-                        stringResource(R.string.player_title, request!!.title, request!!.episodeLabel),
+                    if (controlsVisible || loading || failure != null) Column(
                         Modifier.align(Alignment.TopStart).padding(d.spacingLarge),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    ) {
+                        Text(stringResource(R.string.player_title, request!!.title, request!!.episodeLabel),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.titleMedium)
+                        val syncMessage = when {
+                            accountSession.expired -> R.string.account_expired
+                            markSync.owner != markOwner(accountSession.user) -> null
+                            markSync.phase == MarkSyncPhase.RETRYING -> R.string.player_progress_sync_retry
+                            markSync.phase == MarkSyncPhase.FAILED -> R.string.player_progress_sync_error
+                            else -> null
+                        }
+                        if (syncMessage != null) Text(stringResource(syncMessage),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
                     if (loading || failure != null) Column(Modifier.align(Alignment.Center).padding(d.spacingLarge),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
@@ -198,8 +220,16 @@ class PlayerActivity : ComponentActivity() {
                         if (playback !== player) return
                         loading = state == Player.STATE_BUFFERING
                         if (state == Player.STATE_READY) ready = true
-                        if (state == Player.STATE_ENDED) savePosition()
+                        if (state == Player.STATE_ENDED) savePosition(MarkEvent.ENDED)
+                        else sampleAccountMark()
                         trace("state=" + state + " positionMs=" + player.currentPosition)
+                    }
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        if (playback === player) sampleAccountMark()
+                    }
+                    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                        if (playback !== player) return
+                        if (!playWhenReady) savePosition(MarkEvent.PAUSE) else sampleAccountMark()
                     }
                     override fun onRenderedFirstFrame() {
                         if (playback === player) trace("first-frame positionMs=" + player.currentPosition)
@@ -212,6 +242,9 @@ class PlayerActivity : ComponentActivity() {
                     }
                 })
                 playback = player
+                val account = container.account.session.value
+                markPolicy = if (markOwner(account.user) != null) AccountMarkPolicy(selected) else null
+                markOwnerVersion = account.version
                 player.setMediaItem(MediaItem.fromUri(source.url))
                 controlsPlayer = EpisodeControlsPlayer(player, selected, ::switchEpisode)
                 if (point != null) player.seekTo(point.positionMillis)
@@ -236,29 +269,42 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    private fun savePosition() {
+    private fun savePosition(event: MarkEvent = MarkEvent.SAMPLE) {
         val player = playback ?: return
         val selected = request ?: return
         if (!ready) return
         val position = if (player.playbackState == Player.STATE_ENDED) 0L else player.currentPosition.coerceAtLeast(0)
         container.playbackProgress.save(ResumePoint(selected.seasonId, selected.translationId, selected.episodeId, position))
         trace("saved positionMs=" + position)
+        sampleAccountMark(event)
+    }
+
+    private fun sampleAccountMark(event: MarkEvent = MarkEvent.SAMPLE) {
+        val player = playback ?: return
+        val version = markOwnerVersion ?: return
+        if (!ready || container.account.session.value.version != version) return
+        val mark = markPolicy?.sample(PlaybackSample(player.currentPosition.coerceAtLeast(0), player.duration,
+            player.isPlaying, SystemClock.elapsedRealtime()), event) ?: return
+        container.accountMarks.enqueue(mark, version)
     }
 
     private fun releasePlayback() {
         progressJob?.cancel()
-        savePosition()
+        savePosition(MarkEvent.STOP)
         navigatingControls = false
         view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         view?.player = null
         controlsPlayer = null
-        playback?.release()
+        val previous = playback
         playback = null
         ready = false
+        markPolicy = null
+        markOwnerVersion = null
+        previous?.release()
     }
 
     override fun onPause() {
-        savePosition()
+        savePosition(MarkEvent.STOP)
         playback?.pause()
         super.onPause()
     }
@@ -270,7 +316,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun finish() {
-        savePosition()
+        savePosition(MarkEvent.STOP)
         request?.let { selected ->
             setResult(RESULT_OK, Intent().putExtra("season", selected.seasonId)
                 .putExtra("translation", selected.translationId).putExtra("episode", selected.episodeId))
@@ -321,7 +367,7 @@ class PlayerActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE,
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                     if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                        if (player.playWhenReady) { player.pause(); savePosition() } else player.play()
+                        if (player.playWhenReady) { player.pause(); savePosition(MarkEvent.PAUSE) } else player.play()
                         view?.showController()
                         trace("toggle playing=" + player.playWhenReady)
                     }

@@ -95,6 +95,7 @@ class SeriesDetailsViewModel(
     }
 
     private fun refreshAccountProgress(details: SeriesDetails) {
+        progressJob?.cancel()
         progressJob = viewModelScope.launch {
             try {
                 val progress = loadAccountProgress(details) ?: return@launch
@@ -170,6 +171,7 @@ class SeriesDetailsViewModel(
         val current = state.value
         val id = current.entry?.id ?: return
         if (current.details == null) return
+        refreshAccountProgress(current.details)
         resumeJob?.cancel()
         resumeJob = viewModelScope.launch {
             val point = loadResume(id)

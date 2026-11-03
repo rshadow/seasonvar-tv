@@ -13,6 +13,7 @@ import ru.seasonvar.tv.data.SiteClient
 interface AccountTransport {
     suspend fun get(url: String, jar: SessionCookies): String
     suspend fun login(login: String, password: String, jar: SessionCookies): String
+    suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String
 }
 
 data class AccountSession(val user: AccountUser? = null, val version: Long = 0, val expired: Boolean = false)
@@ -31,10 +32,13 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             return html
         }
         override suspend fun login(login: String, password: String, jar: SessionCookies) = client.accountLogin(login, password, jar)
+        override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = client.accountMark(mark, jar)
     })
     private val mutableSession = MutableStateFlow(AccountSession())
     val session = mutableSession.asStateFlow()
     private val mutex = Mutex()
+    private val mutableMarksRevision = MutableStateFlow(0L)
+    val marksRevision = mutableMarksRevision.asStateFlow()
 
     suspend fun restore(): Unit = withContext(Dispatchers.IO) { mutex.withLock {
         if (!sessions.hasSession()) return@withLock
@@ -70,6 +74,35 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         if (session.value.user == null) return@withContext null
         AccountProgressParser.snapshot(authenticatedHtml("https://seasonvar.ru/resume"))
     }
+
+    suspend fun savePlaybackMark(mark: PlaybackMark, ownerVersion: Long = session.value.version, automatic: Boolean = false): PlaybackMark? = withContext(Dispatchers.IO) { mutex.withLock {
+        val expected = session.value
+        if (expected.user == null) throw SessionExpiredException()
+        if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
+        val jar = sessions.current()
+        suspend fun read(): String {
+            val html = transport.get(mark.pageUrl, jar)
+            currentCoroutineContext().ensureActive()
+            if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+            if (AccountParser.user(html)?.id != expected.user.id) {
+                clear(expired = true)
+                throw SessionExpiredException()
+            }
+            return html
+        }
+        val before = PlaybackMarkParser.snapshot(read(), mark.seasonId, mark.pageUrl)
+        if (automatic && markSupersedes(before, mark)) return@withLock null
+        currentCoroutineContext().ensureActive()
+        val response = transport.saveMark(mark, jar)
+        currentCoroutineContext().ensureActive()
+        if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+        try { PlaybackMarkParser.requireSuccess(response) }
+        catch (error: MarkSaveRejectedException) { read(); throw error }
+        val confirmed = PlaybackMarkParser.parse(read(), mark.seasonId, mark.pageUrl)
+        if (confirmed != mark) throw MarkVerificationException()
+        mutableMarksRevision.value++
+        mark
+    } }
 
     private suspend fun authenticatedHtml(url: String): String {
         val expected = session.value

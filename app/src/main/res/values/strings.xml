@@ -106,6 +106,8 @@
     <string name="details_description">Описание</string>
     <string name="player_title">%1$s · Серия %2$s</string>
     <string name="player_loading">Подготовка видео…</string>
+    <string name="player_progress_sync_retry">Прогресс пока сохранён только на устройстве. Повторим сохранение на сайте.</string>
+    <string name="player_progress_sync_error">Не удалось сохранить прогресс на сайте. Повторим попытку позже.</string>
     <string name="player_network_error">Не удалось подключиться к видео</string>
     <string name="player_http_error">Сайт временно не отдаёт видео</string>
     <string name="player_unavailable">Видео этой серии недоступно</string>
