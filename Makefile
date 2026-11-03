@@ -48,6 +48,7 @@ help:
 		'make build                  Build the debug APK' \
 		'make release                Build and sign the release APK using project secrets.env' \
 		'make release-package        Prepare versioned release APK and SHA256SUMS' \
+		'make ci-tools               Install the pinned build tools without compiling the app' \
 		'make ci-prepare             Install build tools, accept SDK licenses and fetch dependencies' \
 		'make codeql-build           Compile app and signing tool for CodeQL without signing' \
 		'make ci-export-env          Export pinned tool paths to GitHub Actions' \
