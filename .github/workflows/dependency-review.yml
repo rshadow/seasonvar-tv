@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  statuses: read
 
 concurrency:
   group: dependency-review-${{ github.event.pull_request.number }}
@@ -15,12 +16,34 @@ jobs:
   review:
     name: Dependency review
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
+      - name: Wait for confirmed base and head dependency snapshots
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const refs = [...new Set([pr.base.sha, pr.head.sha])];
+            const deadline = Date.now() + 25 * 60 * 1000;
+            while (true) {
+              const statuses = await Promise.all(refs.map(async ref => {
+                const { data } = await github.rest.repos.listCommitStatusesForRef({
+                  ...context.repo, ref, per_page: 100,
+                });
+                return data.find(status => status.context === 'Dependency snapshot');
+              }));
+              if (statuses.some(status => status && ['error', 'failure'].includes(status.state))) {
+                throw new Error('Dependency snapshot failed; fix or rerun its graph workflow first');
+              }
+              if (statuses.every(status => status?.state === 'success')) break;
+              if (Date.now() >= deadline) throw new Error('Timed out awaiting confirmed dependency snapshots');
+              core.info('Waiting for dependency graph publication for base and head commits');
+              await new Promise(resolve => setTimeout(resolve, 20000));
+            }
       - name: Review dependency changes
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
           comment-summary-in-pr: never
           retry-on-snapshot-warnings: true
-          retry-on-snapshot-warnings-timeout: 1500
+          retry-on-snapshot-warnings-timeout: 300

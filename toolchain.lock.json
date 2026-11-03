@@ -1215,6 +1215,11 @@
       "version": "v5.0.0",
       "sha": "a1d282b36b6f3519aa1f3fc636f609c47dddb294"
     },
-    "verified_on": "2026-11-04"
+    "verified_on": "2026-11-04",
+    "github_script": {
+      "repository": "actions/github-script",
+      "version": "v9.0.0",
+      "sha": "3a2844b7e9c422d3c10d287c895573f7108da1b3"
+    }
   }
 }
