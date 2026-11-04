@@ -66,7 +66,7 @@
 | [0047 — Полная передача событий видеоплеера и визуальная проверка](0047-player-video-event-forwarding.md) | 2026-11-03 | Принято |
 | [0048 — Постоянная подпись release APK](0048-release-apk-signing.md) | 2026-11-03 | Уточнено ADR-0049 |
 | [0049 — Секреты Seasonvar в корне проекта](0049-project-local-secrets.md) | 2026-11-03 | Принято |
-| [0050 — Автосборка и релизы APK через GitHub Actions](0050-github-actions-builds-and-releases.md) | 2026-11-03 | Уточнено ADR-0051 и ADR-0053 |
+| [0050 — Автосборка и релизы APK через GitHub Actions](0050-github-actions-builds-and-releases.md) | 2026-11-03 | Уточнено ADR-0051, ADR-0053 и ADR-0069 |
 | [0051 — Суффикс universal в имени APK](0051-universal-apk-filename.md) | 2026-11-03 | Принято |
 | [0052 — Ссылка на GitHub в «О программе»](0052-about-github-link.md) | 2026-11-03 | Принято |
 | [0053 — Релизный тег только по явной команде пользователя](0053-explicit-release-tag-command.md) | 2026-11-03 | Принято |
@@ -85,3 +85,4 @@
 | [0066 — Исправленная jose4j в инструментарии сборки](0066-patched-build-jose4j.md) | 2026-11-04 | Принято |
 | [0067 — Исправленный Apache HttpClient в инструментарии сборки](0067-patched-build-httpclient.md) | 2026-11-04 | Принято |
 | [0068 — Исправленный Commons Lang в инструментарии сборки](0068-patched-build-commons-lang.md) | 2026-11-04 | Принято |
+| [0069 — Короткое описание релиза для пользователей](0069-short-release-notes.md) | 2026-11-04 | Принято |

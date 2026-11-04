@@ -21,8 +21,8 @@ android {
         applicationId = "ru.seasonvar.tv"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.3.0"
+        versionCode = 3
+        versionName = "0.3.1"
         testInstrumentationRunner = "ru.seasonvar.tv.probe.AccountMarkProbe"
     }
 
