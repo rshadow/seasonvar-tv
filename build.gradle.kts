@@ -2,6 +2,7 @@ buildscript {
     val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
     val guavaVersion = providers.gradleProperty("guavaVersion").get()
     val buildJdomVersion = providers.gradleProperty("buildJdomVersion").get()
+    val buildJose4jVersion = providers.gradleProperty("buildJose4jVersion").get()
     repositories {
         google()
         mavenCentral()
@@ -9,6 +10,9 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
         constraints {
+            add("classpath", "org.bitbucket.b_c:jose4j:$buildJose4jVersion") {
+                because("Fix CVE-2024-29371 in AGP tooling")
+            }
             add("classpath", "org.jdom:jdom2:$buildJdomVersion") {
                 because("Fix CVE-2021-33813 in AGP tooling")
             }

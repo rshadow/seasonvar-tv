@@ -27,6 +27,7 @@ def minimum_versions(properties):
     result = {"org.bouncycastle:" + module: crypto for module in CRYPTO_MODULES}
     result["com.google.guava:guava"] = required("guavaVersion")
     result["org.jdom:jdom2"] = required("buildJdomVersion")
+    result["org.bitbucket.b_c:jose4j"] = required("buildJose4jVersion")
     return result
 
 
