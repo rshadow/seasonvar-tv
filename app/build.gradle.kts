@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
+val guavaVersion = providers.gradleProperty("guavaVersion").get()
+
 android {
     namespace = "ru.seasonvar.tv"
     compileSdk {
@@ -51,6 +54,11 @@ kotlin {
 }
 
 dependencies {
+    constraints {
+        implementation("com.google.guava:guava:$guavaVersion-android") {
+            because("Fix CVE-2026-102554 in Media3 transitive dependencies")
+        }
+    }
     implementation(platform("androidx.compose:compose-bom:2026.06.01"))
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.ui:ui")
@@ -77,7 +85,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
 configurations.configureEach {
     if (name == "androidLintTool") {
         resolutionStrategy.eachDependency {
@@ -85,6 +92,10 @@ configurations.configureEach {
                 setOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on")) {
                 useVersion(buildCryptoVersion)
                 because("Fix CVE-2026-8763 and CVE-2026-13506 in Android Lint tooling")
+            }
+            if (requested.group == "com.google.guava" && requested.name == "guava") {
+                useVersion("$guavaVersion-jre")
+                because("Fix CVE-2026-102554 in Android Lint tooling")
             }
         }
     }

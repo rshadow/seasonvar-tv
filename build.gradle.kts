@@ -1,5 +1,6 @@
 buildscript {
     val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
+    val guavaVersion = providers.gradleProperty("guavaVersion").get()
     repositories {
         google()
         mavenCentral()
@@ -7,6 +8,9 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
         constraints {
+            add("classpath", "com.google.guava:guava:$guavaVersion-jre") {
+                because("Fix CVE-2026-102554 in AGP tooling")
+            }
             listOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on").forEach { module ->
                 add("classpath", "org.bouncycastle:$module:$buildCryptoVersion") {
                     because("Fix CVE-2026-8763 and CVE-2026-13506 in AGP tooling")

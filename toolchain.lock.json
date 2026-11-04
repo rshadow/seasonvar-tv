@@ -1248,6 +1248,58 @@
         "algorithm": "sha256",
         "value": "4fb3ab160c677c16bd14b59a4d584f5e821eb0d1f839c049e2b764ef39605713"
       }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-jre",
+      "file": "guava-33.7.2-jre.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-jre/guava-33.7.2-jre.pom",
+      "size": 9732,
+      "sha1": "aa78c19dd6023ef92b554d13ab4f6ed467e9f7bf",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "5d1501a97230f90df54ea33164831a61c6714a8b2a4c6a04e90bb729581bbabc"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-jre",
+      "file": "guava-33.7.2-jre.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-jre/guava-33.7.2-jre.jar",
+      "size": 3057659,
+      "sha1": "e70def5b06cfb109ea050de99870e79c8ce80dbc",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b530942257fb935f8b2cfaa5f8eb5bd59c555fd8e8d01b8ce98912e077ea606c"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-android",
+      "file": "guava-33.7.2-android.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-android/guava-33.7.2-android.pom",
+      "size": 9982,
+      "sha1": "2e3c1c2d0554a43bd8fc033a777049a963cc20c4",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "f7f6481d044bb0c3fd94f8be74a703c61dce54bc5d6c84bdcec9c1d9bfa27f1d"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-android",
+      "file": "guava-33.7.2-android.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-android/guava-33.7.2-android.jar",
+      "size": 2982159,
+      "sha1": "0e601df8fa35293ad4fa7c6ec4522152d304eb41",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b949fe975a32421c1a2633c07a4f1578b462f2f467668aa0a4023c5ff7c4a808"
+      }
     }
   ],
   "avd": {
