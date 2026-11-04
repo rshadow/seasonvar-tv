@@ -2,7 +2,7 @@
 
 Дата: 2026-11-04
 
-Статус: Принято
+Статус: Заменено [ADR-0073](0073-native-github-auto-merge.md)
 
 Дополняет [ADR-0058](0058-github-security-checks.md). Выпуск релизов остаётся по [ADR-0053](0053-explicit-release-tag-command.md).
 

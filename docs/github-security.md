@@ -6,12 +6,11 @@
 
 | Файл | Назначение |
 | --- | --- |
-| [.github/dependabot.yml](../.github/dependabot.yml) | PR обновлений Gradle и GitHub Actions по понедельникам, без автослияния |
+| [.github/dependabot.yml](../.github/dependabot.yml) | PR обновлений Gradle и GitHub Actions по понедельникам; Auto-merge включается только после выбора владельца |
 | [codeql.yml](../.github/workflows/codeql.yml) | Java/Kotlin, Python и workflow Actions: анализ на PR/main и раз в неделю |
 | [dependency-graph.yml](../.github/workflows/dependency-graph.yml) | Разрешённые Gradle-зависимости, включая транзитивные; код сборки исполняется с read-only токеном |
 | [dependency-submit.yml](../.github/workflows/dependency-submit.yml) | Публикация готового графа и статуса Dependency snapshot на исходном коммите; код PR не исполняется |
 | [dependency-review.yml](../.github/workflows/dependency-review.yml) | Проверка новых high/critical уязвимостей в PR |
-| [owner-automerge.yml](../.github/workflows/owner-automerge.yml) | Автослияние только готовых PR rshadow после всех проверок и активации защиты main |
 | [main.json](../.github/rulesets/main.json) | Обязательные PR и проверки, защита main |
 | [release-tags.json](../.github/rulesets/release-tags.json) | Защита v* от удаления и force push |
 
@@ -35,7 +34,7 @@
 
 ## Повседневная работа
 
-Изменения отправляются в отдельную ветку, затем открывается PR в main. Готовые PR rshadow после зелёных проверок и импорта защиты main автоматически сливает workflow; Draft остаются под управлением автора. Для изменений плеера перевести PR из Draft только после обязательной визуальной проверки видео. Другие авторы сливаются вручную. Решение — [ADR-0059](adr/0059-owner-pull-request-auto-merge.md). Dependabot тоже создаёт обычные PR: их проверяют тесты и сканеры, автоматического слияния нет. При обновлении Kotlin/AGP/SDK сохранять совместимость с toolchain.lock.json; при обновлении Actions синхронизировать их SHA с security_ci в этом файле; одного зелёного обновления текста зависимости недостаточно для изменения инструментария.
+Изменения отправляются в отдельную ветку, затем открывается PR в main. Для готовых PR rshadow агент может включать штатный Auto-merge GitHub; PR Dependabot и других авторов выбирает владелец. Без включённого Auto-merge PR сливается вручную. Для изменений плеера перевести PR из Draft и разрешить слияние только после обязательной визуальной проверки видео. Решение — [ADR-0073](adr/0073-native-github-auto-merge.md). При обновлении Kotlin/AGP/SDK сохранять совместимость с toolchain.lock.json; при обновлении Actions синхронизировать их SHA с security_ci в этом файле; одного зелёного обновления текста зависимости недостаточно для изменения инструментария.
 
 Проверки доступны в Actions, находки — во вкладке Security and quality. Зависимости видны в Insights → Dependency graph. Обнаружение API-токенов не гарантирует обнаружение любого пользовательского пароля; secrets.env и файлы cookie остаются вне Git.
 
@@ -57,13 +56,15 @@ make codeql-build
 
 Приложение не меняется; установка на эмулятор или телевизор для настройки CI не требуется.
 
-## Автослияние своих PR
+## Штатный Auto-merge GitHub
 
-Workflow проверяет GitHub user ID 737152, актуальные head SHA и все статусы. Он работает только после импорта правил main. Без активной защиты слияние не выполняется. Для этого варианта Allow auto-merge в General включать не требуется. Метод — merge commit; в настройках репозитория должна быть разрешена кнопка Merge pull request.
+В Settings → General → Pull Requests включён Allow auto-merge. Эта настройка разрешает функцию для репозитория; каждый PR выбирается отдельно. В блоке слияния PR нажать Enable auto-merge, выбрать способ слияния и подтвердить Confirm auto-merge. Если все условия уже выполнены, доступна обычная кнопка Merge. Включить Auto-merge может владелец или подключённый им агент с правами записи.
 
-После автоматического слияния отдельно запускаются Android build, CodeQL и Dependency graph на main: события от GITHUB_TOKEN не запускают обычные push-workflow. Нового релиза не возникает. Обработка ошибок и политики покрыты автономными тестами make site-test; команда make owner-automerge предназначена только для Actions.
+GitHub ждёт обязательные проверки и требования защиты main. При конфликте или отставании от main обновить ветку PR и дождаться новых проверок. Draft остаётся под управлением автора. Для PR Dependabot и других авторов агент включает Auto-merge только по явной команде пользователя.
 
-При конфликте или отставании от main обновить ветку PR и дождаться новых проверок. Дополнительная проверка доступна через Actions → Auto-merge owner PRs → Run workflow.
+После слияния обычные push-workflow запускают Android build, CodeQL и Dependency graph на main; Publish dependency graph публикует снимок и статус Dependency snapshot. Включено удаление слитых веток репозитория. Релиз по-прежнему требует отдельной команды на создание и отправку тега.
+
+Для проверки перехода провести PR через штатный Auto-merge, дождаться публикации снимка нового main и проверить, что следующий PR получает снимок базы без ручного запуска. Старые записи запусков удалённого workflow могут оставаться в истории Actions.
 
 ## Проверка первоначальной настройки
 
