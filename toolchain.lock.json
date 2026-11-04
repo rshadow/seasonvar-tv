@@ -1587,6 +1587,32 @@
         "algorithm": "sha256",
         "value": "7314af50cde9c99e8eaf43eee617a23edcc6bb43036221064355094999d837ef"
       }
+    },
+    {
+      "group": "org.apache.httpcomponents",
+      "artifact": "httpclient",
+      "version": "4.5.14",
+      "file": "httpclient-4.5.14.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/apache/httpcomponents/httpclient/4.5.14/httpclient-4.5.14.pom",
+      "size": 6623,
+      "sha1": "f62c6a311407cc4b47d0ea9eec6cf97ed25b8cee",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "f18355af4cf80a8a4ef04ebd742a47e90a7eaf080c725b2095dbc4fc5dbdefb7"
+      }
+    },
+    {
+      "group": "org.apache.httpcomponents",
+      "artifact": "httpclient",
+      "version": "4.5.14",
+      "file": "httpclient-4.5.14.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/apache/httpcomponents/httpclient/4.5.14/httpclient-4.5.14.jar",
+      "size": 785639,
+      "sha1": "1194890e6f56ec29177673f2f12d0b8e627dec98",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "c8bc7e1c51a6d4ce72f40d2ebbabf1c4b68bfe76e732104b04381b493478e9d6"
+      }
     }
   ],
   "avd": {

@@ -5,6 +5,7 @@ plugins {
 
 val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
 val guavaVersion = providers.gradleProperty("guavaVersion").get()
+val buildHttpClientVersion = providers.gradleProperty("buildHttpClientVersion").get()
 
 android {
     namespace = "ru.seasonvar.tv"
@@ -88,6 +89,10 @@ dependencies {
 configurations.configureEach {
     if (name == "androidLintTool") {
         resolutionStrategy.eachDependency {
+            if (requested.group == "org.apache.httpcomponents" && requested.name == "httpclient") {
+                useVersion(buildHttpClientVersion)
+                because("Fix CVE-2020-13956 in Android Lint tooling")
+            }
             if (requested.group == "org.bouncycastle" && requested.name in
                 setOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on")) {
                 useVersion(buildCryptoVersion)
