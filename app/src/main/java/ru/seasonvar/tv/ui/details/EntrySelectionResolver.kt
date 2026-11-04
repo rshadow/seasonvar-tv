@@ -28,14 +28,16 @@ internal object EntrySelectionResolver {
             ?: details.translations.firstOrNull { it.id == details.defaultTranslationId }
             ?: details.translations.firstOrNull()
 
-    fun resolve(details: SeriesDetails, hint: EntrySelection, point: ResumePoint?): ResolvedSelection {
+    fun resolve(details: SeriesDetails, hint: EntrySelection, point: ResumePoint?, preferred: List<String> = emptyList()): ResolvedSelection {
         val translations = details.translations
         if (translations.isEmpty() || details.playbackUnavailableReason != null) return ResolvedSelection(null, null)
         val resume = validResume(point, details)
-        val ordered = (listOfNotNull(
-            translations.firstOrNull { it.id == resume?.translationId },
-            translations.firstOrNull { it.id == details.defaultTranslationId },
-        ) + translations).distinctBy { it.id }
+        val preferences = preferred.mapNotNull { value ->
+            translations.filter { name(it.label) == TranslationPriorities.name(value) }.singleOrNull()
+        }.distinctBy { it.id }
+        val ordered = (listOfNotNull(translations.firstOrNull { it.id == resume?.translationId }) +
+            preferences + listOfNotNull(standard(details), translations.firstOrNull { it.id == details.defaultTranslationId }) +
+            translations).distinctBy { it.id }
         val explicit = if (hint.hasTranslation) {
             hint.translationId?.let { id -> translations.singleOrNull { it.id == id } }
                 ?: hint.translationLabel?.let { label -> translations.filter { name(it.label) == name(label) }.singleOrNull() }

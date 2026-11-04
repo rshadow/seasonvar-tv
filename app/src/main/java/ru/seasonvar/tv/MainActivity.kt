@@ -46,6 +46,8 @@ class MainActivity : ComponentActivity() {
         val container = application as SeasonvarApplication
         updateModel = ViewModelProvider(this, ru.seasonvar.tv.ui.update.UpdateViewModel.Factory(
             container.updates, BuildConfig.VERSION_NAME))[ru.seasonvar.tv.ui.update.UpdateViewModel::class.java]
+        val translationSettingsModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel.Factory(
+            container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java]
         val repository = container.repository
         models = PublicFeed.entries.associateWith { feed ->
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed))
@@ -57,7 +59,8 @@ class MainActivity : ComponentActivity() {
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
-        detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account))[SeriesDetailsViewModel::class.java]
+        detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
+            preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
         val details = detailsModel
         val removalModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.MarkRemovalViewModel.Factory(
             container.account, container.accountMarks, { target ->
@@ -92,7 +95,7 @@ class MainActivity : ComponentActivity() {
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             SeasonvarApp(
-                updateModel = updateModel,
+                updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
