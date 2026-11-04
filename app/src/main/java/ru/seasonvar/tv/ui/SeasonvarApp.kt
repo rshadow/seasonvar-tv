@@ -1196,6 +1196,9 @@ private fun SettingsPane(
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(d.spacingSmall))
+        Text(stringResource(R.string.network_external_tools_hint), color = c.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyLarge)
     }
     if (startDialogOpen) {
         SettingsChoiceDialog(
