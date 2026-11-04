@@ -1613,6 +1613,32 @@
         "algorithm": "sha256",
         "value": "c8bc7e1c51a6d4ce72f40d2ebbabf1c4b68bfe76e732104b04381b493478e9d6"
       }
+    },
+    {
+      "group": "org.apache.commons",
+      "artifact": "commons-lang3",
+      "version": "3.18.0",
+      "file": "commons-lang3-3.18.0.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.18.0/commons-lang3-3.18.0.pom",
+      "size": 32038,
+      "sha1": "03e931ac2bbab520654e06ac5ca7088098886bb3",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "aa254b373b6f6d46bc9dca86331b072a8ab86eb25ea9921fd439618392e98a16"
+      }
+    },
+    {
+      "group": "org.apache.commons",
+      "artifact": "commons-lang3",
+      "version": "3.18.0",
+      "file": "commons-lang3-3.18.0.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.18.0/commons-lang3-3.18.0.jar",
+      "size": 702952,
+      "sha1": "fb14946f0e39748a6571de0635acbe44e7885491",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4eeeae8d20c078abb64b015ec158add383ac581571cddc45c68f0c9ae0230720"
+      }
     }
   ],
   "avd": {
