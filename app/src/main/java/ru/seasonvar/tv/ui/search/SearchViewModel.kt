@@ -67,6 +67,12 @@ class SearchViewModel(
         if (active) submit()
     }
 
+    fun marksChanged() {
+        if (active) submit()
+        else mutableState.value = mutableState.value.copy(
+            results = mutableState.value.results.copy(loaded = false))
+    }
+
     fun networkChanged() {
         if (active) {
             mutableDescription.value = DescriptionState()

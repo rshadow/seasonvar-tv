@@ -26,12 +26,49 @@ class AccountMarkProbe : Instrumentation() {
         val result = Bundle()
         var phase = "restore_session"
         try {
-            check(mode in setOf("inspect", "roundtrip", "delete-roundtrip"))
+            check(mode in setOf("inspect", "roundtrip", "delete-roundtrip", "catalog-badges"))
             runBlocking { withContext(Dispatchers.IO) {
                 val app = targetContext.applicationContext as SeasonvarApplication
                 app.account.restore()
                 val user = checkNotNull(app.account.session.value.user)
                 result.putBoolean("authenticated", true)
+                if (mode == "catalog-badges") {
+                    phase = "catalog_badges"
+                    val home = app.siteClient.accountGet("https://seasonvar.ru/", app.sessions.current())
+                    check(AccountParser.user(home)?.id == user.id)
+                    val updates = app.siteClient.sidebar(ru.seasonvar.tv.data.PublicFeed.UPDATES)
+                    fun record(prefix: String, html: String, selector: String) {
+                        val document = Jsoup.parse(html, "https://seasonvar.ru/")
+                        val anchor = document.select(selector).firstOrNull {
+                            it.text().contains("Сильнейшая ведьма", ignoreCase = true)
+                        }
+                        result.putBoolean(prefix + "_target_found", anchor != null)
+                        val parsed = if (prefix == "today") ru.seasonvar.tv.data.SeasonvarParser.today(html, java.time.LocalDate.now())
+                            else ru.seasonvar.tv.data.SeasonvarParser.sidebar(html, java.time.LocalDate.now())
+                        val index = parsed.entries.indexOfFirst { it.title.contains("Сильнейшая ведьма", ignoreCase = true) }
+                        result.putString(prefix + "_target_index", index.toString())
+                        result.putBoolean(prefix + "_watching_parsed", parsed.entries.getOrNull(index)?.isWatching == true)
+                        if (anchor != null) {
+                            result.putString(prefix + "_classes", anchor.classNames().sorted().joinToString(","))
+                            result.putString(prefix + "_child_classes", anchor.select("*")
+                                .flatMap { it.classNames() }.distinct().sorted().joinToString(","))
+                            result.putString(prefix + "_marker_parents", anchor.select(".svico-mwatch").map {
+                                it.tagName() + "." + it.classNames().sorted().joinToString(".") + "_in_" +
+                                    it.parent()!!.tagName() + "." + it.parent()!!.classNames().sorted().joinToString(".")
+                            }.distinct().joinToString(","))
+                            result.putString(prefix + "_attributes", anchor.attributes().asList()
+                                .map { it.key }.sorted().joinToString(","))
+                        }
+                        result.putString(prefix + "_script_variables", document.select("script:not([src])")
+                            .flatMap { script -> Regex("""(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*(?:mark|watch|view)[A-Za-z0-9_]*)\s*=""",
+                                RegexOption.IGNORE_CASE).findAll(script.data()).map { it.groupValues[1] }.toList() }
+                            .distinct().sorted().joinToString(","))
+                    }
+                    record("today", home, ".news a[data-id]")
+                    record("updates", updates, "a.pst.rside-p")
+                    phase = "complete"
+                    return@withContext
+                }
                 phase = "read_existing_mark"
                 val entries = app.account.resume().entries
                 val entry = entries.firstOrNull() ?: error("No existing viewing entries")
