@@ -38,6 +38,7 @@ data class SeriesEntry(
     val initialSelection: EntrySelection = EntrySelection(),
     val accountListMark: ru.seasonvar.tv.data.account.AccountListMark? = null,
     val expectedReleaseDate: String? = null,
+    val isWatching: Boolean = false,
 ) {
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = sourceKey ?: (url + "|" + update)

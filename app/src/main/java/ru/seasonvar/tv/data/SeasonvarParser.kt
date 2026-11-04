@@ -1,6 +1,7 @@
 package ru.seasonvar.tv.data
 
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
 import org.json.JSONException
@@ -51,6 +52,7 @@ object SeasonvarParser {
                     update = update,
                     posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
                     originalTitle = original.takeIf { it.isNotBlank() },
+                    isWatching = watchingMark(anchor),
                     initialSelection = EntrySelectionParser.updates(anchor.select("span.news_s").map { it.text() }),
                 )
             }
@@ -77,7 +79,7 @@ object SeasonvarParser {
                 .find(info.ownText())?.groupValues?.get(1)?.toIntOrNull()
             SeriesEntry(id, url, title,
                 season, update, "https://cdn.svstat.net/oblojka/" + id + ".jpg",
-                isNew = anchor.hasClass("rside-p-new"),
+                isNew = anchor.hasClass("rside-p-new"), isWatching = watchingMark(anchor),
                 originalTitle = original.takeIf { it.isNotBlank() },
                 initialSelection = EntrySelectionParser.updates(info.select("span").map { it.text() }))
         }
@@ -112,6 +114,7 @@ object SeasonvarParser {
                 id = id, url = url, title = title, season = season, update = release,
                 posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
                 originalTitle = original, expectedReleaseDate = expected, sourceKey = "announcements:$id",
+                isWatching = watchingMark(row),
                 previewDescription = info.selectFirst("p")?.text()?.takeIf { it.isNotBlank() },
             )
         }
@@ -143,6 +146,7 @@ object SeasonvarParser {
                 id = id, url = url, title = names.first(), season = null, update = "",
                 posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
                 originalTitle = names.getOrNull(1), seasonCountLabel = count,
+                isWatching = watchingMark(row),
                 previewDescription = info.selectFirst("p")?.text()?.takeIf { it.isNotBlank() },
             )
         }
@@ -182,7 +186,8 @@ object SeasonvarParser {
                 if (!id.matches(Regex("\\d+")) ||
                     Regex("/serial-(\\d+)").find(URI(url).path)?.groupValues?.get(1) != id
                 ) throw MarkupChangedException()
-                val name = Jsoup.parseBodyFragment(rawName).text().trim()
+                val nameDocument = Jsoup.parseBodyFragment(rawName)
+                val name = nameDocument.text().trim()
                 val match = seasonPattern.find(name)
                 val title = name.replace(seasonPattern, "").trim()
                 val parts = title.split(Regex("""\s*/\s+"""), limit = 2)
@@ -190,7 +195,8 @@ object SeasonvarParser {
                 if (preferred.isBlank()) throw MarkupChangedException()
                 SeriesEntry(id, url, preferred, match?.groupValues?.get(1)?.toIntOrNull(), "",
                     "https://cdn.svstat.net/oblojka/" + id + ".jpg",
-                    originalTitle = parts.getOrNull(1)?.takeIf { it.isNotBlank() && it != preferred })
+                    originalTitle = parts.getOrNull(1)?.takeIf { it.isNotBlank() && it != preferred },
+                    isWatching = watchingMark(nameDocument.body()))
             }.distinctBy { it.key }
         } catch (_: JSONException) {
             throw MarkupChangedException()
@@ -208,6 +214,10 @@ object SeasonvarParser {
         return SeriesDescription(
             paragraphs.ifEmpty { if (fallback.isBlank()) emptyList() else listOf(fallback) }
         )
+    }
+
+    private fun watchingMark(element: Element): Boolean = element.select(".svico-mwatch").any { icon ->
+        icon.parents().takeWhile { it !== element }.none { it.hasClass("rside-d") }
     }
 
     internal fun pageUrl(path: String): String? = runCatching {

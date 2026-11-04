@@ -39,6 +39,9 @@
     <dimen name="seasonvar_focus_border_width">2dp</dimen>
     <dimen name="seasonvar_badge_padding_horizontal">8dp</dimen>
     <dimen name="seasonvar_badge_height">20dp</dimen>
+    <dimen name="seasonvar_watch_badge_size">28dp</dimen>
+    <dimen name="seasonvar_watch_badge_icon_size">18dp</dimen>
+    <dimen name="seasonvar_watch_badge_inset">6dp</dimen>
     <dimen name="seasonvar_badge_text_offset_horizontal">-0.5sp</dimen>
     <dimen name="seasonvar_badge_text_offset_vertical">-0.5sp</dimen>
     <dimen name="seasonvar_dialog_width">720dp</dimen>

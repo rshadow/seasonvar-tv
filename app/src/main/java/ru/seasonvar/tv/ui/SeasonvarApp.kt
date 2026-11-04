@@ -1052,6 +1052,21 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
                 )
             }
         }
+        if (entry.isWatching) {
+            Box(
+                modifier = Modifier.align(Alignment.TopStart)
+                    .padding(start = d.watchBadgeInset,
+                        top = if (entry.isNew) d.badgeHeight + d.watchBadgeInset else d.watchBadgeInset)
+                    .size(d.watchBadgeSize)
+                    .background(c.surface, RoundedCornerShape(d.buttonCornerRadius)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(R.drawable.ic_watching),
+                    contentDescription = stringResource(R.string.series_watching_badge),
+                    tint = c.onSurface, modifier = Modifier.size(d.watchBadgeIconSize))
+            }
+        }
+
     }
 }
 
