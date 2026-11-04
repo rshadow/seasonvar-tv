@@ -92,6 +92,7 @@
     <string name="bypass_title">Обход блокировок</string>
     <string name="bypass_description">Помогает открыть сайт при сетевых ограничениях. Проверка HTTPS-сертификатов остаётся включённой.</string>
     <string name="network_applies">Настройки сохраняются и применяются к новым запросам страниц и постеров. Список «Сегодня» обновляется при изменении.</string>
+    <string name="network_external_tools_hint">Если настройки не помогают, отключите их и попробуйте внешние инструменты для решения сетевых проблем.</string>
     <string name="dns_title" translatable="false">DNS</string>
     <string name="dns_setting_title">DNS-сервер</string>
     <string name="dns_description">Определяет адреса сайтов. Можно использовать DNS устройства или Quad9 с запросами по HTTPS.</string>
