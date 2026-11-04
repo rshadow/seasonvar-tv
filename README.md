@@ -110,7 +110,7 @@ Media3 1.11.1 получает временный MP4 из свежего пле
 
 ## Безопасность GitHub
 
-CodeQL проверяет Kotlin/Java, Python и workflow; Gradle dependency graph и Dependency review проверяют зависимости, Dependabot готовит еженедельные PR обновлений. Серверные переключатели защиты секретов и импорт правил main/релизных тегов выполняет владелец по [инструкции](docs/github-security.md). Конфигурация принята в [ADR-0058](docs/adr/0058-github-security-checks.md); наличие файлов не означает, что правила уже активированы на GitHub. После их импорта готовые PR владельца rshadow автоматически сливаются только после всех проверок — [ADR-0059](docs/adr/0059-owner-pull-request-auto-merge.md).
+CodeQL проверяет Kotlin/Java, Python и workflow; Gradle dependency graph и Dependency review проверяют зависимости, Dependabot готовит еженедельные PR обновлений. Серверные переключатели защиты секретов и импорт правил main/релизных тегов выполняет владелец по [инструкции](docs/github-security.md). Конфигурация принята в [ADR-0058](docs/adr/0058-github-security-checks.md); наличие файлов не означает, что правила уже активированы на GitHub. Для выбранного PR включается штатный Auto-merge GitHub: слияние выполняется после всех обязательных проверок — [ADR-0072](docs/adr/0072-native-github-auto-merge.md).
 
 ## Лицензия
 
