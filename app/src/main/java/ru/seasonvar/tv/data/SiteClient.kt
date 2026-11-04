@@ -4,6 +4,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.FormBody
 import okhttp3.Callback
+import okhttp3.CertificatePinner
 import okhttp3.Request
 import ru.seasonvar.tv.data.network.NetworkClients
 import ru.seasonvar.tv.data.network.NetworkSettings
@@ -82,6 +83,15 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        // Replace with real SPKI SHA-256 pin(s) for seasonvar.ru certificate chain.
+        // Example format: "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        private const val SEASONVAR_PIN = "sha256/REPLACE_WITH_REAL_PIN_BASE64="
+
+        internal fun seasonvarCertificatePinner(): CertificatePinner = CertificatePinner.Builder()
+            .add("seasonvar.ru", SEASONVAR_PIN)
+            .add("*.seasonvar.ru", SEASONVAR_PIN)
+            .build()
+
         internal fun removeMarkRequest(mark: ru.seasonvar.tv.data.account.AccountListMark): Request = Request.Builder()
             .url("https://seasonvar.ru/jsonMark.php")
             .header("Referer", mark.pageUrl)
