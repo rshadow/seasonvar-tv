@@ -147,6 +147,7 @@ internal fun SeasonvarApp(
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
     updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
+    translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel? = null,
     detailsModel: SeriesDetailsViewModel? = null,
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
@@ -186,7 +187,7 @@ internal fun SeasonvarApp(
             onDnsChange = onDnsChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             onExit = onExit,
-            updateModel = updateModel,
+            updateModel = updateModel, translationSettingsModel = translationSettingsModel,
             detailsModel = detailsModel,
             onPlay = onPlay,
             removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
@@ -221,6 +222,7 @@ private fun SeasonvarContent(
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
     updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
+    translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel? = null,
     detailsModel: SeriesDetailsViewModel? = null,
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
@@ -564,7 +566,8 @@ private fun SeasonvarContent(
                 AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
             } else if (section == Section.SETTINGS) {
                 SettingsPane(
-                    bypassEnabled, settingsContentFocus,
+                    bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
+                    translationSettingsModel = translationSettingsModel,
                     menuFocus = settingsFocus,
                     onBypassChange = onBypassChange,
                     dnsProvider = dnsProvider,
@@ -652,15 +655,17 @@ internal fun ThemeButton(
     loadingLabel: String? = null,
     avatarUrl: String? = null,
     avatarKey: Long = 0,
+    enabled: Boolean = true,
 ) {
     var focused by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val c = MaterialTheme.colorScheme
     val d = SeasonvarTheme.dimensions
-    val action = { if (!loading) onClick() }
+    val action = { if (enabled && !loading) onClick() }
     val loadingDescription = if (loading) loadingLabel ?: stringResource(R.string.today_updating) else null
-    val buttonModifier = modifier.focusRequester(focus).onFocusChanged { focused = it.isFocused }
-        .pointerInput(action) { detectTapGestures { focus.requestFocus(); action() } }
+    val buttonModifier = modifier.focusRequester(focus).focusProperties { canFocus = enabled }
+        .onFocusChanged { focused = it.isFocused }
+        .pointerInput(action, enabled) { detectTapGestures { if (enabled) { focus.requestFocus(); action() } } }
         .then(if (loadingDescription != null) Modifier.semantics {
             stateDescription = loadingDescription
             progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
@@ -677,10 +682,12 @@ internal fun ThemeButton(
         contentColor = if (focused) c.onPrimary else c.onSurface,
         focusedContainerColor = c.primary,
         focusedContentColor = c.onPrimary,
+        disabledContainerColor = Color.Transparent,
+        disabledContentColor = c.onSurfaceVariant,
     )
     if (icon != null) {
         IconButton(
-            onClick = action,
+            onClick = action, enabled = enabled,
             modifier = buttonModifier.size(d.headerButtonSize),
             shape = shape,
             scale = scale,
@@ -712,7 +719,7 @@ internal fun ThemeButton(
                 modifier = Modifier.size(d.headerButtonIconSize).then(rotation))
         }
     } else {
-        Button(onClick = action, modifier = buttonModifier,
+        Button(onClick = action, enabled = enabled, modifier = buttonModifier,
             shape = shape, scale = scale, colors = colors) {
             Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -1075,6 +1082,7 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
 
 @Composable
 private fun SettingsPane(
+    translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel?,
     bypassEnabled: Boolean,
     settingsContentFocus: FocusRequester,
     menuFocus: FocusRequester,
@@ -1093,6 +1101,7 @@ private fun SettingsPane(
     var startDialogOpen by rememberSaveable { mutableStateOf(false) }
     var startFocused by remember { mutableStateOf(false) }
     val bypassFocus = remember { FocusRequester() }
+    val translationFocus = remember { FocusRequester() }
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     var dnsFocused by remember { mutableStateOf(false) }
@@ -1107,7 +1116,7 @@ private fun SettingsPane(
         Spacer(Modifier.height(d.spacingMedium))
         Row(
             Modifier.fillMaxWidth().focusRequester(settingsContentFocus)
-                .focusProperties { left = menuFocus; up = FocusRequester.Cancel; down = bypassFocus }
+                .focusProperties { left = menuFocus; up = FocusRequester.Cancel; down = translationFocus }
                 .onFocusChanged { startFocused = it.isFocused }
                 .border(d.focusBorderWidth, if (startFocused) c.primary else Color.Transparent,
                     RoundedCornerShape(d.cardCornerRadius))
@@ -1126,6 +1135,9 @@ private fun SettingsPane(
             Text(stringResource(sectionTitle(startPage)), color = c.primary,
                 style = MaterialTheme.typography.bodyLarge)
         }
+        Spacer(Modifier.height(d.spacingMedium))
+        ru.seasonvar.tv.ui.settings.PreferredTranslationsSetting(translationSettingsModel, translationFocus,
+            menuFocus, settingsContentFocus, bypassFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
@@ -1134,7 +1146,7 @@ private fun SettingsPane(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = settingsContentFocus
+                    up = translationFocus
                     down = dnsFocus
                 }
                 .onFocusChanged { focused = it.isFocused }

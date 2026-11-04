@@ -187,4 +187,25 @@
     <string name="update_package_error">Этот файл не подходит для обновления установленного приложения.</string>
     <string name="update_permission_error">Для установки разрешите Seasonvar TV устанавливать приложения в настройках Android.</string>
     <string name="update_installer_error">Не удалось открыть установщик Android. Попробуйте ещё раз.</string>
+    <string name="preferred_translation_title">Предпочитаемые озвучки</string>
+    <string name="preferred_translation_description">Выбираем первую доступную из списка. Продолжение просмотра сохраняет прежнюю озвучку.</string>
+    <string name="preferred_translation_standard">Стандартная</string>
+    <string name="preferred_translation_search">Найти озвучку</string>
+    <string name="preferred_translation_loading">Загружаем озвучки с сайта…</string>
+    <string name="preferred_translation_network_error">Не удалось загрузить озвучки. Проверьте подключение к интернету. Ваш выбор сохранён.</string>
+    <string name="preferred_translation_http_error">Сайт временно не отвечает. Ваш выбор сохранён.</string>
+    <string name="preferred_translation_markup_error">Не удалось прочитать список озвучек сайта. Ваш выбор сохранён.</string>
+    <string name="preferred_translation_retry">Повторить загрузку</string>
+    <string name="preferred_translation_empty">Ничего не найдено</string>
+    <string name="preferred_translations_summary">%1$s и ещё %2$d</string>
+    <string name="preferred_translations_order">Первая доступная используется для просмотра.</string>
+    <string name="preferred_translations_fallback">Если ни одна не доступна — стандартная.</string>
+    <string name="preferred_translations_empty">Добавьте озвучки в порядке предпочтения.</string>
+    <string name="preferred_translations_add">+ Добавить озвучку</string>
+    <string name="preferred_translations_add_title">Добавить озвучку</string>
+    <string name="preferred_translations_all_added">Все доступные озвучки уже добавлены.</string>
+    <string name="preferred_translations_up">Поднять %1$s выше</string>
+    <string name="preferred_translations_down">Опустить %1$s ниже</string>
+    <string name="preferred_translations_remove">Удалить %1$s из предпочтений</string>
+    <string name="preferred_translations_add_hint">Добавленная озвучка появится в конце списка.</string>
 </resources>

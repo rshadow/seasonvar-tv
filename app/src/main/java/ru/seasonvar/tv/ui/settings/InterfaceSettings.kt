@@ -10,6 +10,16 @@ internal class InterfaceSettings(context: Context) {
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 
+    private val mutablePreferredTranslations = MutableStateFlow(ru.seasonvar.tv.data.TranslationPriorities.decode(
+        preferences.getString("preferred_translations", null)))
+    val preferredTranslations = mutablePreferredTranslations.asStateFlow()
+
+    fun setPreferredTranslations(values: List<String>) {
+        val selected = ru.seasonvar.tv.data.TranslationPriorities.clean(values)
+        preferences.edit().putString("preferred_translations", ru.seasonvar.tv.data.TranslationPriorities.encode(selected)).apply()
+        mutablePreferredTranslations.value = selected
+    }
+
     fun setStartPage(section: Section) {
         require(section in Section.startPages(true))
         preferences.edit().putString("start_page", section.storageId).apply()

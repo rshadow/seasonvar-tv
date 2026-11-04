@@ -17,6 +17,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val sessions by lazy { ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) }
     val siteClient by lazy { SiteClient(networkSettings, sessions) }
     val account by lazy { ru.seasonvar.tv.data.account.AccountRepository(sessions, siteClient) }
+    val translationCatalog by lazy { ru.seasonvar.tv.data.TranslationCatalogRepository(siteClient) }
     val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient, cacheToken = sessions::cacheToken) }
 
     val videos by lazy { VideoRepository { url, referer ->

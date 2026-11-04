@@ -38,6 +38,7 @@ class SeriesDetailsViewModel(
     private val reload: (suspend (SeriesEntry) -> SeriesDetails)? = null,
     private val loadAccountProgress: suspend (SeriesDetails) -> AccountProgress? = { null },
     private val loadAccountMark: suspend (SeriesEntry) -> ru.seasonvar.tv.data.account.AccountListMark? = { null },
+    private val preferredTranslations: () -> List<String> = { emptyList() },
     private val load: suspend (SeriesEntry) -> SeriesDetails,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DetailsUiState())
@@ -79,7 +80,7 @@ class SeriesDetailsViewModel(
                 val point = loadResume(entry.id)
                 ensureActive()
                 savedResume = EntrySelectionResolver.validResume(point, details)
-                val selected = EntrySelectionResolver.resolve(details, selection, savedResume)
+                val selected = EntrySelectionResolver.resolve(details, selection, savedResume, preferredTranslations())
                 mutableState.value = DetailsUiState(details.entry, details,
                     translationId = selected.translationId, episodeId = selected.episodeId,
                     resume = resumeFor(selected.translationId, selected.episodeId), selectionFailure = selected.failure)
@@ -212,7 +213,8 @@ class SeriesDetailsViewModel(
     }
 
     class Factory(private val repository: CatalogRepository, private val progress: PlaybackProgress,
-        private val account: ru.seasonvar.tv.data.account.AccountRepository? = null) : ViewModelProvider.Factory {
+        private val account: ru.seasonvar.tv.data.account.AccountRepository? = null,
+        private val preferredTranslations: () -> List<String> = { emptyList() }) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SeriesDetailsViewModel::class.java))
             suspend fun loadDetails(entry: SeriesEntry, force: Boolean): SeriesDetails =
@@ -233,7 +235,7 @@ class SeriesDetailsViewModel(
                     throw e
                 }
             @Suppress("UNCHECKED_CAST")
-            return SeriesDetailsViewModel(loadResume = progress::read,
+            return SeriesDetailsViewModel(loadResume = progress::read, preferredTranslations = preferredTranslations,
                 reload = { loadDetails(it, true) },
                 loadAccountMark = { entry -> account?.listMark(ru.seasonvar.tv.data.account.AccountListMark(entry.id, entry.url)) },
                 loadAccountProgress = { details -> account?.progressSnapshot()?.let { snapshot ->
