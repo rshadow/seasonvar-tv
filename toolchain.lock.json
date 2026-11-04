@@ -1535,6 +1535,32 @@
         "algorithm": "sha256",
         "value": "b97b640557a650d15411f2be29aef558c4e422a83653cb18ba494311dbed18be"
       }
+    },
+    {
+      "group": "org.jdom",
+      "artifact": "jdom2",
+      "version": "2.0.6.1",
+      "file": "jdom2-2.0.6.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.pom",
+      "size": 4600,
+      "sha1": "172940c5c8e5198f95111b14aa4de1cf99528073",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "55795e1018b8ae647b937967cf810a99b08582c2374e7873c128734c8c914bf3"
+      }
+    },
+    {
+      "group": "org.jdom",
+      "artifact": "jdom2",
+      "version": "2.0.6.1",
+      "file": "jdom2-2.0.6.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.jar",
+      "size": 327806,
+      "sha1": "dc15dff8f701b227ee523eeb7a17f77c10eafe2f",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "0b20f45e3a0fd8f0d12cdc5316b06776e902b1365db00118876f9175c60f302c"
+      }
     }
   ],
   "avd": {
