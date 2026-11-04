@@ -9,7 +9,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", required=True)
     parser.add_argument("--runner", required=True)
-    parser.add_argument("--mode", choices=("inspect", "roundtrip", "delete-roundtrip"), default="inspect")
+    parser.add_argument("--mode", choices=("inspect", "roundtrip", "delete-roundtrip", "catalog-badges"), default="inspect")
     args = parser.parse_args()
     result = subprocess.run(["adb", "-s", args.device, "shell", "am", "instrument", "-w", "-r",
                              "-e", "mode", args.mode, args.runner], capture_output=True, text=True, timeout=120)
@@ -17,6 +17,8 @@ def main():
     allowed = {"authenticated", "existing_playback_mark", "mark_declaration_present", "mark_parsed",
                "probe_success", "post_verified", "original_restored", "concurrent_change_left_intact",
                "removed_from_lists", "mark_field_names", "href_type", "translation_type", "phase", "failure_type"}
+    allowed.update(prefix + suffix for prefix in ("today", "updates") for suffix in
+                   ("_target_found", "_classes", "_child_classes", "_attributes", "_script_variables", "_marker_parents", "_target_index", "_watching_parsed"))
     for line in result.stdout.splitlines():
         if not line.startswith("INSTRUMENTATION_RESULT: "):
             continue
@@ -25,7 +27,7 @@ def main():
             continue
         if value in ("true", "false"):
             fields[key] = value == "true"
-        elif re.fullmatch(r"[A-Za-z0-9_,]+", value):
+        elif re.fullmatch(r"[A-Za-z0-9_.,:-]+", value):
             fields[key] = value
     print(json.dumps(fields, sort_keys=True))
     success = result.returncode == 0 and fields.get("probe_success") is True

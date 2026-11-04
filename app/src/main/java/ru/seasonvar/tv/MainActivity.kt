@@ -69,6 +69,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(marksRevision) {
                 if (marksRevision > 0) {
                     personalModels.values.forEach { it.refreshIfActive() }
+                    models.values.forEach { it.refreshIfStarted() }
+                    searchModel.marksChanged()
                     detailsModel.refreshResume()
                 }
             }
@@ -117,6 +119,8 @@ class MainActivity : ComponentActivity() {
                     models.values.forEach { it.networkChanged() }
                     searchModel.networkChanged()
                     personalModels.values.forEach { it.refreshIfActive() }
+                    models.values.forEach { it.refreshIfStarted() }
+                    searchModel.marksChanged()
                 },
                 onExit = ::finishAndRemoveTask,
                 dnsProvider = network.dnsProvider,
@@ -126,6 +130,8 @@ class MainActivity : ComponentActivity() {
                         models.values.forEach { it.networkChanged() }
                         searchModel.networkChanged()
                         personalModels.values.forEach { it.refreshIfActive() }
+                    models.values.forEach { it.refreshIfStarted() }
+                    searchModel.marksChanged()
                     }
                 },
             )

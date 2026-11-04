@@ -102,6 +102,10 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         selected?.let { select(it, true) }
     }
 
+    fun refreshIfStarted() {
+        if (started) refresh()
+    }
+
     fun refreshIfDateChanged() {
         if (started && mutableState.value.date != LocalDate.now()) refresh()
     }

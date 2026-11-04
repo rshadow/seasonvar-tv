@@ -1,4 +1,4 @@
-# ADR-0072: Штатный Auto-merge GitHub вместо собственного workflow слияния
+# ADR-0073: Штатный Auto-merge GitHub вместо собственного workflow слияния
 
 Дата: 2026-11-04
 
