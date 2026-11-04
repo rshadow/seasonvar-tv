@@ -1222,6 +1222,32 @@
         "algorithm": "sha256",
         "value": "1c268e15f785aafb1e4670d8d6e5f856f69475e96c162dadcd1ff9b350e9139f"
       }
+    },
+    {
+      "group": "org.gradle",
+      "artifact": "github-dependency-graph-gradle-plugin",
+      "version": "1.5.1",
+      "file": "github-dependency-graph-gradle-plugin-1.5.1.pom",
+      "url": "https://plugins.gradle.org/m2/org/gradle/github-dependency-graph-gradle-plugin/1.5.1/github-dependency-graph-gradle-plugin-1.5.1.pom",
+      "size": 774,
+      "sha1": "7e1c767b5f3ee76712cf30b8958b1835a8df06e8",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "34806a7a8a1406fa793f62311d2c20cdbd75967886fd2ab1add48aad39a467b7"
+      }
+    },
+    {
+      "group": "org.gradle",
+      "artifact": "github-dependency-graph-gradle-plugin",
+      "version": "1.5.1",
+      "file": "github-dependency-graph-gradle-plugin-1.5.1.jar",
+      "url": "https://plugins.gradle.org/m2/org/gradle/github-dependency-graph-gradle-plugin/1.5.1/github-dependency-graph-gradle-plugin-1.5.1.jar",
+      "size": 2517747,
+      "sha1": "e80aeaeb238a2af4cbe5ac653f2a7312124b2350",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4fb3ab160c677c16bd14b59a4d584f5e821eb0d1f839c049e2b764ef39605713"
+      }
     }
   ],
   "avd": {
@@ -1298,6 +1324,7 @@
       "repository": "actions/github-script",
       "version": "v9.0.0",
       "sha": "3a2844b7e9c422d3c10d287c895573f7108da1b3"
-    }
+    },
+    "dependency_graph_plugin": "1.5.1"
   }
 }

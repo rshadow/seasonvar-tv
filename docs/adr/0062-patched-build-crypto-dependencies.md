@@ -10,9 +10,9 @@
 
 ## Решение
 
-В classpath корневого `build.gradle.kts` задать ограничения версии не ниже `1.86` для `bcprov-jdk18on`, `bcpkix-jdk18on` и `bcutil-jdk18on`. Согласованный набор относится к инструментам сборки; эти ограничения не добавляют Bouncy Castle в зависимости Android-приложения. Артефакты предварительной загрузки закрепить с URL и контрольными суммами в `toolchain.lock.json`.
+Версию `1.86` хранить в `gradle.properties` как `buildCryptoVersion`. В classpath корневого `build.gradle.kts` задать ограничения для `bcprov-jdk18on`, `bcpkix-jdk18on` и `bcutil-jdk18on`; ту же версию применять при разрешении `:app/androidLintTool`. Корневой classpath и classpath Android Lint разрешаются независимо: исправление только первого оставляет уязвимую версию в полном графе. Согласованный набор относится к инструментам сборки; эти ограничения не добавляют Bouncy Castle в зависимости Android-приложения. Артефакты предварительной загрузки закрепить с URL и контрольными суммами в `toolchain.lock.json`.
 
-Команда `make build-environment` показывает реально разрешённые зависимости сборки и используется для проверки применённых ограничений. После изменения выполнить тесты, Lint, компиляцию для CodeQL и оптимизированную сборку; перед слиянием дождаться Dependency review для нового коммита с подтверждённым графом зависимостей.
+Команда `make build-environment` показывает classpath сборки. Для полной проверки использовать `make dependency-report`: тот же официальный Gradle-плагин 1.5.1, что используется в CI, записывает все разрешённые конфигурации и их источники. `make check-build-crypto` проверяет этот граф и отклоняет старые версии в любой конфигурации, включая Android Lint. Проверка включена в `make check`; регрессионные тесты воспроизводят частичное исправление корневого classpath при старой версии в Lint. После изменения выполнить тесты, Lint, компиляцию для CodeQL и оптимизированную сборку; перед слиянием дождаться Dependency review для нового коммита с подтверждённым графом зависимостей.
 
 Порог Dependency review остаётся `high`. Предупреждения не исключаются из проверки и не получают разрешающий список ради слияния PR.
 
@@ -33,3 +33,4 @@
 - [CVE-2026-8763 / GHSA-9pwp-9qqc-pr26](https://github.com/advisories/GHSA-9pwp-9qqc-pr26).
 - [CVE-2026-13506 / GHSA-qp49-qgx5-5m26](https://github.com/advisories/GHSA-qp49-qgx5-5m26).
 - [Официальный выпуск Bouncy Castle Java 1.86](https://www.bouncycastle.org/download/bouncy-castle-java/).
+- [Полный граф и поиск источника зависимости](https://github.com/gradle/github-dependency-graph-gradle-plugin#using-the-plugin-to-generate-dependency-reports).

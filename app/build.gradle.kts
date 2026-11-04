@@ -76,3 +76,16 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
+configurations.configureEach {
+    if (name == "androidLintTool") {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "org.bouncycastle" && requested.name in
+                setOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on")) {
+                useVersion(buildCryptoVersion)
+                because("Fix CVE-2026-8763 and CVE-2026-13506 in Android Lint tooling")
+            }
+        }
+    }
+}

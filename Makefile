@@ -37,10 +37,12 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
+.PHONY: check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
 
 help:
 	@printf '%s\n' \
+		'make check-build-crypto     Verify patched crypto in every build-tool configuration' \
+		'make dependency-report      Reproduce the complete CI dependency graph locally' \
 		'make build-environment      Inspect resolved build-tool dependencies' \
 		'make wrapper                Regenerate wrapper files for the pinned Gradle version' \
 		'make bootstrap              Install the pinned JDK and SDK locally' \
@@ -151,7 +153,7 @@ test: site-test
 lint:
 	$(GRADLE) :app:lintDebug
 
-check: site-test
+check: site-test check-build-crypto
 	$(GRADLE) :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 
 clean:
@@ -297,4 +299,11 @@ wrapper:
 	$(GRADLE) wrapper --network-timeout 60000
 
 build-environment:
-	$(GRADLE) buildEnvironment
+	$(GRADLE) buildEnvironment :app:buildEnvironment
+
+dependency-report:
+	python3 scripts/prefetch-gradle.py --cache-dir "$(BOOTSTRAP_CACHE)"
+	$(GRADLE) --no-configuration-cache --no-configure-on-demand --init-script gradle/dependency-report.init.gradle :ForceDependencyResolutionPlugin_resolveAllDependencies
+
+check-build-crypto: dependency-report
+	python3 scripts/check-build-crypto.py
