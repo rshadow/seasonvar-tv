@@ -98,7 +98,7 @@ make run
 
 Правила сегодняшней ленты — [ADR-0010](docs/adr/0010-today-feed.md), подборки «Обновления» — [ADR-0016](docs/adr/0016-updates-feed.md) и [ADR-0017](docs/adr/0017-updates-via-ajax.md), галочки обхода — [ADR-0011](docs/adr/0011-network-bypass-setting.md), выбора DNS — [ADR-0012](docs/adr/0012-dns-provider-setting.md).
 
-Принят нативный стек **Kotlin + Compose for TV + Media3 ExoPlayer** — [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md).
+Принят нативный стек **Kotlin + Compose for TV + Media3 ExoPlayer** — [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md). Текущий совместимый набор: Kotlin 2.4.21, Compose BOM 2026.06.01 и coroutines 1.11.0 при SDK 36, AGP 8.13.2 и D8/R8 9.1.57 — [ADR-0060](docs/adr/0060-compatible-dependency-updates.md).
 
 [ADR-0003](docs/adr/0003-performance-principles.md) закрепляет показ каталога из кэша с обновлением в фоне, кеширование постеров под размер карточек, фоновую обработку данных, ленивые списки, восстановление фокуса и позиции, управление ресурсами плеера и измерения release-сборки на Ugoos.
 
