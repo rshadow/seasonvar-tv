@@ -57,7 +57,7 @@ make run
 
 Подписанный файл называется `seasonvar-tv-<versionName>-universal.apk`: один APK для `armeabi-v7a`, `arm64-v8a`, `x86` и `x86_64` — [ADR-0051](docs/adr/0051-universal-apk-filename.md).
 
-Теги `v<versionName>` дополнительно создают [GitHub Release](https://github.com/rshadow/seasonvar-tv/releases) с установочным APK. Подробности — [ADR-0050](docs/adr/0050-github-actions-builds-and-releases.md) и [руководство по выпуску](docs/development.md#автосборка-и-выпуск-на-github).
+Теги `v<versionName>` дополнительно создают [GitHub Release](https://github.com/rshadow/seasonvar-tv/releases) с установочным APK. Краткие описания опубликованных версий хранятся в [docs/releases](docs/releases). Подробности — [ADR-0050](docs/adr/0050-github-actions-builds-and-releases.md) и [руководство по выпуску](docs/development.md#автосборка-и-выпуск-на-github).
 
 ## Текущее состояние
 
