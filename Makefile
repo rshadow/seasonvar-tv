@@ -37,10 +37,11 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
+.PHONY: wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
 
 help:
 	@printf '%s\n' \
+		'make wrapper                Regenerate wrapper files for the pinned Gradle version' \
 		'make bootstrap              Install the pinned JDK and SDK locally' \
 		'make licenses               Review Android SDK licenses' \
 		'make doctor                 Check local tools and versions' \
@@ -290,3 +291,6 @@ mark-probe:
 	$(GRADLE) :app:assembleDebugAndroidTest
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ENV) python3 scripts/probe-account-mark.py --device "$(DEVICE)" --mode "$(MARK_PROBE_MODE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"
+
+wrapper:
+	$(GRADLE) wrapper --network-timeout 60000

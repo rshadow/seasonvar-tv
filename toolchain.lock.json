@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sdk_api": 36,
+  "sdk_api": 37,
   "tv_api": 34,
   "hosts": {
     "darwin-arm64": {
@@ -15,30 +15,30 @@
       },
       "sdk": [
         {
-          "package": "platforms;android-36",
+          "package": "platforms;android-37.0",
           "revision": "2.0.0",
-          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
-          "size": 65878410,
+          "url": "https://dl.google.com/android/repository/platform-37.0_r02.zip",
+          "size": 67281901,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+            "value": "ed8ebf7f8822a4de5686d427f237d2fa30ff7410"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "platforms/android-36",
-          "root": "android-36"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-37.0\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>37.0</api-level>\n      <codename />\n      <extension-level>22</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 37.0</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "platforms/android-37.0",
+          "root": "android-37.0"
         },
         {
-          "package": "build-tools;35.0.0",
-          "revision": "35.0.0",
-          "url": "https://dl.google.com/android/repository/build-tools_r35_macosx.zip",
-          "size": 76857898,
+          "package": "build-tools;36.0.0",
+          "revision": "36.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_macosx.zip",
+          "size": 79121749,
           "checksum": {
             "algorithm": "sha1",
-            "value": "93ab8ce91230e067b5add4bfa79919c52b27f072"
+            "value": "199ae0047ee61e842f8ee0c6d3918e44fb9a1f83"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "build-tools/35.0.0",
-          "root": "android-15"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;36.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>36</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "build-tools/36.0.0",
+          "root": "android-16"
         },
         {
           "package": "platform-tools",
@@ -106,30 +106,30 @@
       },
       "sdk": [
         {
-          "package": "platforms;android-36",
+          "package": "platforms;android-37.0",
           "revision": "2.0.0",
-          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
-          "size": 65878410,
+          "url": "https://dl.google.com/android/repository/platform-37.0_r02.zip",
+          "size": 67281901,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+            "value": "ed8ebf7f8822a4de5686d427f237d2fa30ff7410"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "platforms/android-36",
-          "root": "android-36"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-37.0\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>37.0</api-level>\n      <codename />\n      <extension-level>22</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 37.0</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "platforms/android-37.0",
+          "root": "android-37.0"
         },
         {
-          "package": "build-tools;35.0.0",
-          "revision": "35.0.0",
-          "url": "https://dl.google.com/android/repository/build-tools_r35_macosx.zip",
-          "size": 76857898,
+          "package": "build-tools;36.0.0",
+          "revision": "36.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_macosx.zip",
+          "size": 79121749,
           "checksum": {
             "algorithm": "sha1",
-            "value": "93ab8ce91230e067b5add4bfa79919c52b27f072"
+            "value": "199ae0047ee61e842f8ee0c6d3918e44fb9a1f83"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "build-tools/35.0.0",
-          "root": "android-15"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;36.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>36</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "build-tools/36.0.0",
+          "root": "android-16"
         },
         {
           "package": "platform-tools",
@@ -197,30 +197,30 @@
       },
       "sdk": [
         {
-          "package": "platforms;android-36",
+          "package": "platforms;android-37.0",
           "revision": "2.0.0",
-          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
-          "size": 65878410,
+          "url": "https://dl.google.com/android/repository/platform-37.0_r02.zip",
+          "size": 67281901,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+            "value": "ed8ebf7f8822a4de5686d427f237d2fa30ff7410"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "platforms/android-36",
-          "root": "android-36"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-37.0\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>37.0</api-level>\n      <codename />\n      <extension-level>22</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 37.0</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "platforms/android-37.0",
+          "root": "android-37.0"
         },
         {
-          "package": "build-tools;35.0.0",
-          "revision": "35.0.0",
-          "url": "https://dl.google.com/android/repository/build-tools_r35_linux.zip",
-          "size": 61958799,
+          "package": "build-tools;36.0.0",
+          "revision": "36.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_linux.zip",
+          "size": 63737259,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2cfaa0bbb2336e9ec18ed3ecea84fa2e2af607bc"
+            "value": "b0b6376977657e8ad9b969bacf4093601da2c6fb"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "build-tools/35.0.0",
-          "root": "android-15"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;36.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>36</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "build-tools/36.0.0",
+          "root": "android-16"
         },
         {
           "package": "platform-tools",
@@ -285,370 +285,370 @@
     {
       "group": "com.android.tools.build",
       "artifact": "gradle",
-      "version": "8.13.2",
-      "file": "gradle-8.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.13.2/gradle-8.13.2.jar",
-      "size": 13116808,
-      "sha1": "5975ee61ee7e3f9413fbe10270f230cfb6d227fc",
+      "version": "9.5.0",
+      "file": "gradle-9.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.5.0/gradle-9.5.0.jar",
+      "size": 12343675,
+      "sha1": "65fbc058e1a93257cff17f72abd94a7ba6dcb375",
       "checksum": {
         "algorithm": "sha256",
-        "value": "e494f7ce75ca6c1abff301d4a70b18fdd3d6af855875f4f85082bb7608f041de"
+        "value": "cc67fb686cbc10a252aca9395df3cef64345b02cf2c12cb9a8f032e8b8953490"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "builder",
-      "version": "8.13.2",
-      "file": "builder-8.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/builder/8.13.2/builder-8.13.2.jar",
-      "size": 15823022,
-      "sha1": "92e06fde9f28276c57c4c81eefce4e72ec9cefc9",
+      "version": "9.5.0",
+      "file": "builder-9.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/builder/9.5.0/builder-9.5.0.jar",
+      "size": 17901541,
+      "sha1": "a4c80a399819c3b217c52608a7d9efe96a1e937b",
       "checksum": {
         "algorithm": "sha256",
-        "value": "7d393f8553120c7d7a869cb33c4279aad9485986773f63af97af08ea2e1ff37a"
+        "value": "9345243b3461be7aa4778d064689f279d7ec3133d79c98820e6516a4571a099b"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "bundletool",
-      "version": "1.18.1",
-      "file": "bundletool-1.18.1.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/bundletool/1.18.1/bundletool-1.18.1.jar",
-      "size": 13356668,
-      "sha1": "76bb1aa21a19495ca070bfb6abd194daf91dccd1",
+      "version": "1.18.3",
+      "file": "bundletool-1.18.3.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/bundletool/1.18.3/bundletool-1.18.3.jar",
+      "size": 13371507,
+      "sha1": "8d7bee8e57a4158a872ed99190a60a498c2adc8d",
       "checksum": {
         "algorithm": "sha256",
-        "value": "a73341a7945abcb0e6b8971c7b1b2801bd765006447ca0d2437a4260d572ceac"
+        "value": "ccad18514fd97db010856b2bbed40f481f8ba9349368c97ae54d72e3567d0171"
       }
     },
     {
       "group": "com.android.tools.analytics-library",
       "artifact": "protos",
-      "version": "31.13.2",
-      "file": "protos-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/analytics-library/protos/31.13.2/protos-31.13.2.jar",
-      "size": 9027320,
-      "sha1": "568520224f5c347add38c2bef3d0288ae11f8d31",
+      "version": "32.5.0",
+      "file": "protos-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/analytics-library/protos/32.5.0/protos-32.5.0.jar",
+      "size": 12503269,
+      "sha1": "71131cf58e8f12eadfa5a9ae2f7844dd1a938ac9",
       "checksum": {
         "algorithm": "sha256",
-        "value": "b2ded20a897fba9649efeb18ba2fc062ee39e500d4eb712045cb0e34b43b5efb"
+        "value": "14f8d58007454b193ff189f3ac6743373e384db3b32659e9314dd68d92d17876"
       }
     },
     {
       "group": "androidx.compose.foundation",
       "artifact": "foundation-android",
-      "version": "1.10.4",
-      "file": "foundation-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "foundation-android-1.11.4.aar",
       "cache_file": "foundation.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-android/1.10.4/foundation-android-1.10.4.aar",
-      "size": 4948956,
-      "sha1": "ee7bbb31da7860fe075f72ad3d497507f3ebad8b",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-android/1.11.4/foundation-android-1.11.4.aar",
+      "size": 4234237,
+      "sha1": "90a234e3eec71a1d9600c60db2711253798e474e",
       "checksum": {
         "algorithm": "sha256",
-        "value": "184c45ff50559af0b00abfd5b5c0224fd0cf25b55c6098a8874bf4b1fb5f9c33"
+        "value": "a6aac6be46b7756982436b11118d3e630f9a1845e167bf821ae6986ef2c45895"
       }
     },
     {
       "group": "androidx.compose.foundation",
       "artifact": "foundation-layout-android",
-      "version": "1.10.4",
-      "file": "foundation-layout-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "foundation-layout-android-1.11.4.aar",
       "cache_file": "foundation-layout.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-layout-android/1.10.4/foundation-layout-android-1.10.4.aar",
-      "size": 546455,
-      "sha1": "341cb7bbb89b4200048aaaba430b6899a5f14177",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-layout-android/1.11.4/foundation-layout-android-1.11.4.aar",
+      "size": 681902,
+      "sha1": "2bebd947c918878f67e3d6f67bf74f8078de390b",
       "checksum": {
         "algorithm": "sha256",
-        "value": "dbd371f7d041bfd89c55ce5a5dd6d7c60da9641009d2b3e794dd9b5e4f772881"
+        "value": "23ff32f548deccf48d1e2094a868b08ed738a01de1d65940d68633bcdd04bf33"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-android",
-      "version": "1.10.4",
-      "file": "ui-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-android-1.11.4.aar",
       "cache_file": "ui.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.10.4/ui-android-1.10.4.aar",
-      "size": 5760687,
-      "sha1": "27238bf26a9042c3e02257b1fa7c0e6053fc87c1",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.11.4/ui-android-1.11.4.aar",
+      "size": 4331972,
+      "sha1": "f74c70bffcd2668943ad9b48969c0dd85a54e698",
       "checksum": {
         "algorithm": "sha256",
-        "value": "b860014180d5cabaa0656e9379b1445cf794ed5a8724457d442e816279a2694f"
+        "value": "893c3b0a4f90631bbd8cc053a0271e51c525b427b900cc10c6f1a4b3c89e3041"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-text-android",
-      "version": "1.10.4",
-      "file": "ui-text-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-text-android-1.11.4.aar",
       "cache_file": "ui-text.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text-android/1.10.4/ui-text-android-1.10.4.aar",
-      "size": 821593,
-      "sha1": "bf994f7a7d1afac6a5f81fddc8540b219ab91e59",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text-android/1.11.4/ui-text-android-1.11.4.aar",
+      "size": 817343,
+      "sha1": "53ca21e16daf30b221eb358bceec8c267d0676f9",
       "checksum": {
         "algorithm": "sha256",
-        "value": "39c6a93a3d4cf18ab255e93ae29fed6d5672e81d30795c3dbb812fc00e670577"
+        "value": "01284212abb9ab6bba5de336adbe392888bba53711d8293c6713f5c2b56313fd"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-graphics-android",
-      "version": "1.10.4",
-      "file": "ui-graphics-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-graphics-android-1.11.4.aar",
       "cache_file": "ui-graphics.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics-android/1.10.4/ui-graphics-android-1.10.4.aar",
-      "size": 1695013,
-      "sha1": "596580e56c87a0da9e5ee4144b465e3038fb8f8e",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics-android/1.11.4/ui-graphics-android-1.11.4.aar",
+      "size": 738360,
+      "sha1": "b3242992162a91aa990906aa1ae850cca33840a3",
       "checksum": {
         "algorithm": "sha256",
-        "value": "d47fb0d1caa62106481948a5af7ba0466f9fa92db3167b8c33cca9543b7f09fa"
+        "value": "4ccaf8e169c158f74c15a1377a28d62197f8ca209db1a997a81a54624f5db306"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-unit-android",
-      "version": "1.10.4",
-      "file": "ui-unit-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-unit-android-1.11.4.aar",
       "cache_file": "ui-unit.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-unit-android/1.10.4/ui-unit-android-1.10.4.aar",
-      "size": 100767,
-      "sha1": "2acb802e7f46d90becedb302c22d56c64b7b0955",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-unit-android/1.11.4/ui-unit-android-1.11.4.aar",
+      "size": 99724,
+      "sha1": "16a43bfcdd4f6b544be0ec59787c6b972bcbc27c",
       "checksum": {
         "algorithm": "sha256",
-        "value": "8571829fd05919b8415750e1028dd2b95c2ad7a07421286917268de06e2d55f4"
+        "value": "8b778afa16102b89da672c3324566e66bbf90e29a2fc7acdc1db1595d976933f"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-geometry-android",
-      "version": "1.10.4",
-      "file": "ui-geometry-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-geometry-android-1.11.4.aar",
       "cache_file": "ui-geometry.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-geometry-android/1.10.4/ui-geometry-android-1.10.4.aar",
-      "size": 59772,
-      "sha1": "f3aa766a263476fcbe7ec82760a938059331d3b6",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-geometry-android/1.11.4/ui-geometry-android-1.11.4.aar",
+      "size": 59122,
+      "sha1": "72308721ed7c16991bc1a6312ad4cba92e1409ab",
       "checksum": {
         "algorithm": "sha256",
-        "value": "ad1c76c7fd6b2964d28ac45862c1e13951aa35114cda1c4eab63bd3ce69b44d8"
+        "value": "393066ecd102f8cd60e585367dd7bc1c5d2d3ecc3ed82a43aab0668e5ce85285"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-util-android",
-      "version": "1.10.4",
-      "file": "ui-util-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-util-android-1.11.4.aar",
       "cache_file": "ui-util.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-util-android/1.10.4/ui-util-android-1.10.4.aar",
-      "size": 22302,
-      "sha1": "ee386f2af2c8a90aa955dfd3aafb8506f87a4978",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-util-android/1.11.4/ui-util-android-1.11.4.aar",
+      "size": 22863,
+      "sha1": "dcae86c559e12d46b6f4d4f652e5661e94b35faa",
       "checksum": {
         "algorithm": "sha256",
-        "value": "8098bca31a4a9b125c46666926f8f095e60306e2463a4b0883454325bee3461a"
+        "value": "d6ca2aaed3f71455988b2d7bcc708d7811640309e12f0482598f9d318d1efa45"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-tooling-android",
-      "version": "1.10.4",
-      "file": "ui-tooling-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-tooling-android-1.11.4.aar",
       "cache_file": "ui-tooling.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-android/1.10.4/ui-tooling-android-1.10.4.aar",
-      "size": 177848,
-      "sha1": "e89430535a7be8c2eb0c44bf201e59ffec488089",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-android/1.11.4/ui-tooling-android-1.11.4.aar",
+      "size": 198830,
+      "sha1": "5919241f9d9c2ae0102676af0eeaace0ea385a97",
       "checksum": {
         "algorithm": "sha256",
-        "value": "41edf69399401ca786301a86d7435bd373c7f1013d4cc551a98fc4174a5afa98"
+        "value": "dd50fb8e34deeba0cf30c5ff33cd7e528f1b82c9ad28bf7960027ae522d0b346"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-tooling-preview-android",
-      "version": "1.10.4",
-      "file": "ui-tooling-preview-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-tooling-preview-android-1.11.4.aar",
       "cache_file": "ui-tooling-preview.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-preview-android/1.10.4/ui-tooling-preview-android-1.10.4.aar",
-      "size": 22131,
-      "sha1": "ebd1a1e1ef69db67954c13d2dee0fbb2adabbf14",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-preview-android/1.11.4/ui-tooling-preview-android-1.11.4.aar",
+      "size": 23175,
+      "sha1": "5960b002ec6dc92edfc0ce01be17b0bc328722d7",
       "checksum": {
         "algorithm": "sha256",
-        "value": "c372e41b9d38b78ae3673d6ef7a95f280f2ab05203a703b2193c83062dea60dd"
+        "value": "86124401724b7e188b09af7f6b5cde5b215a3a273f3d7d6f8a15f898b5803793"
       }
     },
     {
       "group": "androidx.compose.ui",
       "artifact": "ui-tooling-data-android",
-      "version": "1.10.4",
-      "file": "ui-tooling-data-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "ui-tooling-data-android-1.11.4.aar",
       "cache_file": "ui-tooling-data.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-data-android/1.10.4/ui-tooling-data-android-1.10.4.aar",
-      "size": 47227,
-      "sha1": "472d0d507d227a8816576b383cf8615ecf31879e",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-data-android/1.11.4/ui-tooling-data-android-1.11.4.aar",
+      "size": 45707,
+      "sha1": "5f98f06a4d26d4779b9e0279a66059b7a5801e50",
       "checksum": {
         "algorithm": "sha256",
-        "value": "e964fea22d292e2ed8cad11286f9a885692810fe00fbc2f004e272383ab9dc0f"
+        "value": "d3503757d5d0c3be25fe648ed0cd103ee339c6901ae560306e7b380e9182bf1a"
       }
     },
     {
       "group": "androidx.compose.runtime",
       "artifact": "runtime-android",
-      "version": "1.10.4",
-      "file": "runtime-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "runtime-android-1.11.4.aar",
       "cache_file": "runtime.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-android/1.10.4/runtime-android-1.10.4.aar",
-      "size": 2495395,
-      "sha1": "b9dec198b64eae52102916e2e05dfce2258d7b30",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-android/1.11.4/runtime-android-1.11.4.aar",
+      "size": 1989355,
+      "sha1": "7caeabfd454cd468cef499a8e84d069124bfb900",
       "checksum": {
         "algorithm": "sha256",
-        "value": "14a0ec47c992112cace7f7c2a93d8bd9b800fe20f71cae18a32ddeff9d86a8a2"
+        "value": "18fd863f42c06100a046dbc2e04f420db0c1b5196d2b63a9006ee8464c69738d"
       }
     },
     {
       "group": "androidx.compose.runtime",
       "artifact": "runtime-retain-android",
-      "version": "1.10.4",
-      "file": "runtime-retain-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "runtime-retain-android-1.11.4.aar",
       "cache_file": "runtime-retain.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain-android/1.10.4/runtime-retain-android-1.10.4.aar",
-      "size": 1061098,
-      "sha1": "8f918fe3ae49f3681970efa7fa9439a5df791810",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain-android/1.11.4/runtime-retain-android-1.11.4.aar",
+      "size": 106873,
+      "sha1": "9dac0fb7c9be55c4398695e9a3c17cbc61b1a48a",
       "checksum": {
         "algorithm": "sha256",
-        "value": "59ab12402c50581b8b34da40f70009584d2beacdbe78b547b4f1c91938f6fad9"
+        "value": "48d960544c81e82b674e86e04ead25eeb5d05a54948b6b2ca8690cc94067e600"
       }
     },
     {
       "group": "androidx.compose.runtime",
       "artifact": "runtime-saveable-android",
-      "version": "1.10.4",
-      "file": "runtime-saveable-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "runtime-saveable-android-1.11.4.aar",
       "cache_file": "runtime-saveable.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-saveable-android/1.10.4/runtime-saveable-android-1.10.4.aar",
-      "size": 1058083,
-      "sha1": "478886097ddd2fce0c65383c931712baeb955739",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-saveable-android/1.11.4/runtime-saveable-android-1.11.4.aar",
+      "size": 103642,
+      "sha1": "6de0b09898943d7b52f7dbbc49e27962c43a6315",
       "checksum": {
         "algorithm": "sha256",
-        "value": "ff0862c0a626c1de8524b83bd9ee81ee8aad9b24edeab5a56711ba658e8433bd"
+        "value": "75acd64c040fc768dd38b6f40c2e46de0dee13cd1f828e4c3480dd7745c737c1"
       }
     },
     {
       "group": "androidx.compose.animation",
       "artifact": "animation-android",
-      "version": "1.10.4",
-      "file": "animation-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "animation-android-1.11.4.aar",
       "cache_file": "animation.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-android/1.10.4/animation-android-1.10.4.aar",
-      "size": 1524409,
-      "sha1": "ed112ae32e2f9af301061e2b928079a064d5946c",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-android/1.11.4/animation-android-1.11.4.aar",
+      "size": 618208,
+      "sha1": "e1cfda539bd46229491a4030f4452ffacbce2609",
       "checksum": {
         "algorithm": "sha256",
-        "value": "215da14c3e1ada35d4c71177dc6af1a2d50cc473ca4f126f152deae6cb0fc5b6"
+        "value": "4a9534afa595551d97b991319055c73b76014a89cf43b811aa99102e2d6ffd73"
       }
     },
     {
       "group": "androidx.compose.animation",
       "artifact": "animation-core-android",
-      "version": "1.10.4",
-      "file": "animation-core-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "animation-core-android-1.11.4.aar",
       "cache_file": "animation-core.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-core-android/1.10.4/animation-core-android-1.10.4.aar",
-      "size": 1369853,
-      "sha1": "1dcb9cc3abdc675f328527e1528f5e914b24221e",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-core-android/1.11.4/animation-core-android-1.11.4.aar",
+      "size": 420868,
+      "sha1": "aea280c2b92f4903d734b256811a6de18a983f00",
       "checksum": {
         "algorithm": "sha256",
-        "value": "05ee8844cca8c8e77fe6a3809472326270a1247b48a4ced590635c928cf80a83"
+        "value": "66d489454bfcb1230b60ae33c3c1c6c756358ce0ba3ca96c98cda9430c67e21f"
       }
     },
     {
       "group": "androidx.compose.material",
       "artifact": "material-android",
-      "version": "1.10.4",
-      "file": "material-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "material-android-1.11.4.aar",
       "cache_file": "material.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-android/1.10.4/material-android-1.10.4.aar",
-      "size": 2336352,
-      "sha1": "bb7eb0acd57f5601684441083eea94f73349a33c",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-android/1.11.4/material-android-1.11.4.aar",
+      "size": 1390449,
+      "sha1": "118feda09dc27a9e3fc34f11315f3cabe98f5663",
       "checksum": {
         "algorithm": "sha256",
-        "value": "1a989502e4d34528c25656899385fab892c7b04a5e8b650131f74df660cacadd"
+        "value": "668ada188c871fa7348a05533659e9d3afe678780dab00fa298fe4e0bb994756"
       }
     },
     {
       "group": "androidx.compose.material",
       "artifact": "material-ripple-android",
-      "version": "1.10.4",
-      "file": "material-ripple-android-1.10.4.aar",
+      "version": "1.11.4",
+      "file": "material-ripple-android-1.11.4.aar",
       "cache_file": "material-ripple.aar",
-      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-ripple-android/1.10.4/material-ripple-android-1.10.4.aar",
-      "size": 96259,
-      "sha1": "93a1716f3e0eda657e274da7ec685d5daafb40b6",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-ripple-android/1.11.4/material-ripple-android-1.11.4.aar",
+      "size": 93870,
+      "sha1": "9e744282c3c90ea6c503be55820c58bfb5e30501",
       "checksum": {
         "algorithm": "sha256",
-        "value": "35d721595659b108a10d773e62ef409074ae2b08cfe62a73f30576b5abc2ed68"
+        "value": "38bd10db57ffd6f82fc6f32443e379fb640ae93e138bdd31daea0d584441b10e"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "aapt2",
-      "version": "8.13.2-14304508",
-      "file": "aapt2-8.13.2-14304508-osx.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/8.13.2-14304508/aapt2-8.13.2-14304508-osx.jar",
-      "size": 5324976,
-      "sha1": "6b73169c0a1b4f52d66ddebb49de47432be2c031",
+      "version": "9.5.0-16666295",
+      "file": "aapt2-9.5.0-16666295-osx.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/9.5.0-16666295/aapt2-9.5.0-16666295-osx.jar",
+      "size": 4611291,
+      "sha1": "37a458ae8d938461d5ab3a707d5989af4ac79051",
       "checksum": {
         "algorithm": "sha256",
-        "value": "0d47f17c3924e5472b6125aa608d949dd7f46510889729671f31f2f4d801e8e7"
+        "value": "a43df4c45549e8a877a8d61b130ee255669eec8a36064f2fc8cd58206457f2a3"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "aapt2",
-      "version": "8.13.2-14304508",
-      "file": "aapt2-8.13.2-14304508-linux.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/8.13.2-14304508/aapt2-8.13.2-14304508-linux.jar",
-      "size": 2815427,
-      "sha1": "2285a625f089775f58866eccfe3e70cc3c2c7495",
+      "version": "9.5.0-16666295",
+      "file": "aapt2-9.5.0-16666295-linux.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/9.5.0-16666295/aapt2-9.5.0-16666295-linux.jar",
+      "size": 2451278,
+      "sha1": "85f5b91e2900e470aeb0c4d19786bd82146c2f0a",
       "checksum": {
         "algorithm": "sha256",
-        "value": "839609d6d776d6dd60a02aa577d97193ce3e650cf1deaabf062321e23bbd6bf6"
+        "value": "fa1014cb1431622d292ef55ba870e75882ea19987bec541698b912f446a2d08f"
       }
     },
     {
       "group": "com.android.tools.lint",
       "artifact": "lint-checks",
-      "version": "31.13.2",
-      "file": "lint-checks-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/lint/lint-checks/31.13.2/lint-checks-31.13.2.jar",
-      "size": 7070496,
-      "sha1": "e2f3f7637e4e711839115773d649f9fc6974c1a9",
+      "version": "32.5.0",
+      "file": "lint-checks-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/lint/lint-checks/32.5.0/lint-checks-32.5.0.jar",
+      "size": 7601406,
+      "sha1": "be8bb33b08494bfe0a2bc3773662340e81682a78",
       "checksum": {
         "algorithm": "sha256",
-        "value": "3b64f395ae17fcea104882b00a4acdc7dc691f5daca5dff2bdde89fa052bb199"
+        "value": "5e864fbe1f29a2fe48258b37f45d5b93af64b55b6de918da77704b4d9732bd44"
       }
     },
     {
       "group": "com.android.tools.external.com-intellij",
       "artifact": "intellij-core",
-      "version": "31.13.2",
-      "file": "intellij-core-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/intellij-core/31.13.2/intellij-core-31.13.2.jar",
-      "size": 37723447,
-      "sha1": "311f867deee610b6eab4ee138b3c97e29eb5db38",
+      "version": "32.5.0",
+      "file": "intellij-core-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/intellij-core/32.5.0/intellij-core-32.5.0.jar",
+      "size": 34451148,
+      "sha1": "96f9dd733b0d0bf6b4d80512b6712c5c0223e145",
       "checksum": {
         "algorithm": "sha256",
-        "value": "9a6faa6061d0f3d54a64decb61944c1b2c6927f8d325cd298c82c2a8d867ee68"
+        "value": "a60df35d8d9104d31790f645dad97105bc9483a136dd535e65ddb6fa4a2535d3"
       }
     },
     {
       "group": "com.android.tools.external.com-intellij",
       "artifact": "kotlin-compiler",
-      "version": "31.13.2",
-      "file": "kotlin-compiler-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/kotlin-compiler/31.13.2/kotlin-compiler-31.13.2.jar",
-      "size": 51117829,
-      "sha1": "8f7c8905b9e5bb7960dcfd46c198d496ca8c3b1c",
+      "version": "32.5.0",
+      "file": "kotlin-compiler-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/kotlin-compiler/32.5.0/kotlin-compiler-32.5.0.jar",
+      "size": 51566947,
+      "sha1": "e14fa86be18b0780ef7d1fa2cd734e6bbf739bf0",
       "checksum": {
         "algorithm": "sha256",
-        "value": "552dfaffe295d08504870816c27fc09007e1231fb9b14c1ff9bbf861f9b35990"
+        "value": "5cd8d9d8076fa1b811c81b1704c2c5d70bb3d5b0819fe36b78c1d71a78ea8883"
       }
     },
     {
@@ -667,92 +667,92 @@
     {
       "group": "org.json",
       "artifact": "json",
-      "version": "20240303",
-      "file": "json-20240303.pom",
-      "url": "https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.pom",
-      "size": 7696,
-      "sha1": "78c0fa2a26888461731e26603ef4b19cc53239ca",
+      "version": "20260814",
+      "file": "json-20260814.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/json/json/20260814/json-20260814.pom",
+      "size": 9631,
+      "sha1": "deaeb635893a6158e19fadf852d172ede6374384",
       "checksum": {
         "algorithm": "sha256",
-        "value": "994baf5d89bf4caa5ce968e4c4eab135c8f9783ecf4d2b7b0e9d1c8a4ddf1e4f"
+        "value": "61937e25d261f93d16e8d9f5ccdb1b700780ec1ccb4876444654736628c62095"
       }
     },
     {
       "group": "org.json",
       "artifact": "json",
-      "version": "20240303",
-      "file": "json-20240303.jar",
-      "url": "https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar",
-      "size": 78332,
-      "sha1": "0ebb88e8fb5122b7506d5cf1d69f1ccdb790d22a",
+      "version": "20260814",
+      "file": "json-20260814.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/json/json/20260814/json-20260814.jar",
+      "size": 89800,
+      "sha1": "a1d979d4b336516526d00ff423e4a8d4ba27670f",
       "checksum": {
         "algorithm": "sha256",
-        "value": "3cf6cd6892e32e2b4c1c39e0f52f5248a2f5b37646fdfbb79a66b46b618414ed"
+        "value": "7dd2de1533e766e2b6c07d8194da85145ad313a167a4760050f5c9b6839604fe"
       }
     },
     {
       "group": "org.jetbrains.kotlinx",
       "artifact": "kotlinx-coroutines-test",
-      "version": "1.9.0",
-      "file": "kotlinx-coroutines-test-1.9.0.module",
-      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.9.0/kotlinx-coroutines-test-1.9.0.module",
-      "size": 45747,
-      "sha1": "7ff92fa82f78b094d619f8b3b36f54d5a02f962f",
+      "version": "1.11.0",
+      "file": "kotlinx-coroutines-test-1.11.0.module",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.11.0/kotlinx-coroutines-test-1.11.0.module",
+      "size": 47330,
+      "sha1": "eda965c7969c35808f222112e1b8435d116acaa4",
       "checksum": {
         "algorithm": "sha256",
-        "value": "3a5f38700b2a4eb290e3507a0e3e4f9cc0bd63e70cca7f15e911dbf37c4f44ca"
+        "value": "ba1e78c5397aa934a74b9e799d290e6b769f604daadb30640f91ae6fcaf81d6d"
       }
     },
     {
       "group": "org.jetbrains.kotlinx",
       "artifact": "kotlinx-coroutines-test",
-      "version": "1.9.0",
-      "file": "kotlinx-coroutines-test-1.9.0.pom",
-      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.9.0/kotlinx-coroutines-test-1.9.0.pom",
-      "size": 2057,
-      "sha1": "9dfcdb02a88d639041c8fdfc989fd787f9cbe29d",
+      "version": "1.11.0",
+      "file": "kotlinx-coroutines-test-1.11.0.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.11.0/kotlinx-coroutines-test-1.11.0.pom",
+      "size": 2030,
+      "sha1": "f6c6f6e97ec4e688820d56a20e882d31241401e8",
       "checksum": {
         "algorithm": "sha256",
-        "value": "e6b4aae143750cb1b64e0397d4b96dc6135ba6ab2c337386df54df0d98cdf121"
+        "value": "9fe5cd4c606c785cc14fc4692ed1ec6cb4053c1f5e67fa8b3fa3adf1c71af9aa"
       }
     },
     {
       "group": "org.jetbrains.kotlinx",
       "artifact": "kotlinx-coroutines-test-jvm",
-      "version": "1.9.0",
-      "file": "kotlinx-coroutines-test-jvm-1.9.0.jar",
-      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.9.0/kotlinx-coroutines-test-jvm-1.9.0.jar",
-      "size": 135030,
-      "sha1": "7227c0691a604e2b32f525b628014dda862d0eed",
+      "version": "1.11.0",
+      "file": "kotlinx-coroutines-test-jvm-1.11.0.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.11.0/kotlinx-coroutines-test-jvm-1.11.0.jar",
+      "size": 105295,
+      "sha1": "1dfe8ce2b805d913922f283b386895bd0979dfcb",
       "checksum": {
         "algorithm": "sha256",
-        "value": "68b87fa90db3dab1e794ff6078364087c07f87e5e4a4d0c8d3272a222ee8fe7e"
+        "value": "d4f7ee71da708af4719dceb6d3200c8f9dc5146ea1a812cb628ed53c64196f96"
       }
     },
     {
       "group": "org.jetbrains.kotlinx",
       "artifact": "kotlinx-coroutines-test-jvm",
-      "version": "1.9.0",
-      "file": "kotlinx-coroutines-test-jvm-1.9.0.pom",
-      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.9.0/kotlinx-coroutines-test-jvm-1.9.0.pom",
-      "size": 2396,
-      "sha1": "7229f7e71d584c697077c719af354d838d738162",
+      "version": "1.11.0",
+      "file": "kotlinx-coroutines-test-jvm-1.11.0.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.11.0/kotlinx-coroutines-test-jvm-1.11.0.pom",
+      "size": 2370,
+      "sha1": "645ccb28c1e4f8041b0532d55a06b2e785540417",
       "checksum": {
         "algorithm": "sha256",
-        "value": "e808f2810b1d6b94de8e4dc9718df5bd33eebdada3fdbf2f7eecfafd56982bfd"
+        "value": "84d119326de6496b8f20a985abe33d18e2d262b0cf2045305a91ebc57fb1f5b6"
       }
     },
     {
       "group": "org.jetbrains.kotlinx",
       "artifact": "kotlinx-coroutines-test-jvm",
-      "version": "1.9.0",
-      "file": "kotlinx-coroutines-test-jvm-1.9.0.module",
-      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.9.0/kotlinx-coroutines-test-jvm-1.9.0.module",
-      "size": 4793,
-      "sha1": "d33518ddfeccdc23eb07a9886f8ab424e1347690",
+      "version": "1.11.0",
+      "file": "kotlinx-coroutines-test-jvm-1.11.0.module",
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.11.0/kotlinx-coroutines-test-jvm-1.11.0.module",
+      "size": 4811,
+      "sha1": "f6cb9eaefd985f53257df55134a6793956161893",
       "checksum": {
         "algorithm": "sha256",
-        "value": "e2364beb540720b3c117957853379d4ae222058ad88f73a2ac73026c836f839f"
+        "value": "83553592a446adf922dc66afb7565a3b00c52958708c210c284e7761d31d0f86"
       }
     },
     {
@@ -1188,7 +1188,7 @@
     }
   },
   "release": {
-    "apksigner_jar": "build-tools/35.0.0/lib/apksigner.jar"
+    "apksigner_jar": "build-tools/36.0.0/lib/apksigner.jar"
   },
   "verification": {
     "account_mark_runner": "ru.seasonvar.tv.probe.AccountMarkProbe"

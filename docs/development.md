@@ -4,6 +4,8 @@
 
 Все команды запускаются из корня проекта через [Makefile](../Makefile).
 
+Совместимость библиотек описана в [ADR-0060](adr/0060-compatible-dependency-updates.md), переход на AGP 9.5.0, встроенный Kotlin, SDK 37.0 и Build Tools 36.0.0 — в [ADR-0061](adr/0061-agp9-built-in-kotlin-and-sdk37.md). Wrapper пересоздаётся командой `make wrapper` для закреплённой в `gradle-wrapper.properties` версии Gradle. После обновления зависимостей выполнять `make check`, `make ci-lint`, `make codeql-build` и `make build BUILD_TYPE=release`; обновлять версии и контрольные суммы соответствующих артефактов в `toolchain.lock.json`.
+
 ## Подготовка другого компьютера
 
 Требуются Python 3.12+, make и curl. Для локального эмулятора также нужна доступная аппаратная виртуализация.
