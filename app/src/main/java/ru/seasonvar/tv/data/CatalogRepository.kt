@@ -22,7 +22,7 @@ class CatalogRepository(
             val fresh = when (feed) {
                 PublicFeed.TODAY -> java.time.Instant.ofEpochMilli(file.lastModified())
                     .atZone(zone).toLocalDate() == day
-                PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST, PublicFeed.BEST -> nowMillis() - file.lastModified() in 0 until 86_400_000L
+                PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST, PublicFeed.BEST, PublicFeed.ANNOUNCEMENTS -> nowMillis() - file.lastModified() in 0 until 86_400_000L
             }
             if (!fresh) return@withContext null
             runCatching { parse(file.readText(), day, feed) }.getOrNull()
@@ -34,6 +34,7 @@ class CatalogRepository(
             val html = when (feed) {
                 PublicFeed.TODAY -> source.get("https://seasonvar.ru/")
                 PublicFeed.BEST -> source.get("https://seasonvar.ru/?mode=top")
+                PublicFeed.ANNOUNCEMENTS -> source.get("https://seasonvar.ru/?mode=soon")
                 PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> source.sidebar(feed)
             }
             val parsed = parse(html, day, feed)
@@ -44,6 +45,7 @@ class CatalogRepository(
     private fun parse(html: String, day: LocalDate, feed: PublicFeed): CatalogPage = when (feed) {
         PublicFeed.TODAY -> SeasonvarParser.today(html, day)
         PublicFeed.BEST -> SeasonvarParser.best(html, day)
+        PublicFeed.ANNOUNCEMENTS -> SeasonvarParser.announcements(html, day)
         PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> SeasonvarParser.sidebar(html, day)
     }
 
@@ -53,6 +55,7 @@ class CatalogRepository(
         PublicFeed.TOP -> "top-ajax.html"
         PublicFeed.NEWEST -> "newest-ajax.html"
         PublicFeed.BEST -> "best.html"
+        PublicFeed.ANNOUNCEMENTS -> "announcements.html"
     }
 
     suspend fun search(query: String): List<SeriesEntry> = withContext(Dispatchers.IO) {

@@ -2,7 +2,7 @@ package ru.seasonvar.tv.data
 
 import java.time.LocalDate
 
-enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST, BEST }
+enum class PublicFeed { TODAY, UPDATES, TOP, NEWEST, BEST, ANNOUNCEMENTS }
 
 data class ProgressCounter(val marked: Int, val total: Int)
 data class SeasonEpisodeProgress(val seasonId: String, val counter: ProgressCounter)
@@ -37,6 +37,7 @@ data class SeriesEntry(
     val historyVisitedAt: String? = null,
     val initialSelection: EntrySelection = EntrySelection(),
     val accountListMark: ru.seasonvar.tv.data.account.AccountListMark? = null,
+    val expectedReleaseDate: String? = null,
 ) {
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = sourceKey ?: (url + "|" + update)

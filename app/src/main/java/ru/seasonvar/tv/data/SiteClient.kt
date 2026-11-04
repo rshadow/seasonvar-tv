@@ -103,7 +103,7 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
                 PublicFeed.UPDATES -> "new"
                 PublicFeed.TOP -> "pop"
                 PublicFeed.NEWEST -> "newest"
-                PublicFeed.TODAY, PublicFeed.BEST -> throw IllegalArgumentException("Feed is not a sidebar feed")
+                PublicFeed.TODAY, PublicFeed.BEST, PublicFeed.ANNOUNCEMENTS -> throw IllegalArgumentException("Feed is not a sidebar feed")
             }
             return Request.Builder()
                 .url("https://seasonvar.ru/ajax.php?mode=" + mode)

@@ -120,6 +120,7 @@ private fun sectionTitle(item: Section): Int = when (item) {
     Section.TOP -> R.string.top_title
     Section.NEWEST -> R.string.newest_title
     Section.BEST -> R.string.best_title
+    Section.ANNOUNCEMENTS -> R.string.announcements_title
     Section.SETTINGS -> R.string.settings_title
     Section.ABOUT -> R.string.about_title
 }
@@ -259,6 +260,7 @@ private fun SeasonvarContent(
     val topListState = rememberLazyListState()
     val newestListState = rememberLazyListState()
     val bestListState = rememberLazyListState()
+    val announcementsListState = rememberLazyListState()
     val searchListState = rememberLazyListState()
     val personalListStates = PersonalFeed.entries.associateWith { rememberLazyListState() }
     val listState = if (searching) searchListState else if (personalFeed != null) personalListStates.getValue(personalFeed) else when (activeFeed) {
@@ -267,6 +269,7 @@ private fun SeasonvarContent(
         PublicFeed.TOP -> topListState
         PublicFeed.NEWEST -> newestListState
         PublicFeed.BEST -> bestListState
+        PublicFeed.ANNOUNCEMENTS -> announcementsListState
     }
     val searchFocus = remember { FocusRequester() }
     val accountFocus = remember { FocusRequester() }
@@ -278,6 +281,7 @@ private fun SeasonvarContent(
     val topFocus = remember { FocusRequester() }
     val newestFocus = remember { FocusRequester() }
     val bestFocus = remember { FocusRequester() }
+    val announcementsFocus = remember { FocusRequester() }
     val settingsFocus = remember { FocusRequester() }
     val settingsContentFocus = remember { FocusRequester() }
     val aboutFocus = remember { FocusRequester() }
@@ -324,6 +328,7 @@ private fun SeasonvarContent(
         Section.TOP -> topFocus
         Section.NEWEST -> newestFocus
         Section.BEST -> bestFocus
+        Section.ANNOUNCEMENTS -> announcementsFocus
         Section.SETTINGS -> settingsFocus
         Section.ABOUT -> aboutFocus
     }
@@ -430,6 +435,7 @@ private fun SeasonvarContent(
                 Section.TOP -> topFocus.requestFocus()
                 Section.NEWEST -> newestFocus.requestFocus()
                 Section.BEST -> bestFocus.requestFocus()
+                Section.ANNOUNCEMENTS -> announcementsFocus.requestFocus()
                 Section.SETTINGS -> settingsFocus.requestFocus()
                 Section.ABOUT -> aboutFocus.requestFocus()
             }
@@ -582,6 +588,7 @@ private fun SeasonvarContent(
                         PublicFeed.TOP -> topFocus
                         PublicFeed.NEWEST -> newestFocus
                         PublicFeed.BEST -> bestFocus
+                        PublicFeed.ANNOUNCEMENTS -> announcementsFocus
                     },
                     onInteraction = backNavigation::reset,
                 )
@@ -594,6 +601,7 @@ private fun SeasonvarContent(
                         PublicFeed.TOP -> topFocus
                         PublicFeed.NEWEST -> newestFocus
                         PublicFeed.BEST -> bestFocus
+                        PublicFeed.ANNOUNCEMENTS -> announcementsFocus
                     }, refreshFocus, retryFocus,
                     query = if (searching) searchState.query else null,
                     searchHeader = if (searching) { {
@@ -734,6 +742,10 @@ private fun catalogStrings(feed: PublicFeed): CatalogStrings = when (feed) {
     PublicFeed.NEWEST -> CatalogStrings(
         R.string.newest_title, R.string.newest_hint, R.string.newest_count,
         R.string.newest_loading, R.string.newest_empty, R.string.newest_cached, R.string.newest_cached_error,
+    )
+    PublicFeed.ANNOUNCEMENTS -> CatalogStrings(
+        R.string.announcements_title, R.string.announcements_hint, R.string.announcements_count,
+        R.string.announcements_loading, R.string.announcements_empty, R.string.announcements_cached, R.string.announcements_cached_error,
     )
     PublicFeed.BEST -> CatalogStrings(
         R.string.best_title, R.string.best_hint, R.string.best_count,
@@ -988,7 +1000,9 @@ private fun SeriesThumbnail(
             Spacer(Modifier.height(d.spacingSmall))
             Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val subtitle = if (entry.historyVisitedAt != null && entry.initialSelection.episodeLabel != null) listOfNotNull(
+            val subtitle = if (entry.expectedReleaseDate != null)
+                stringResource(R.string.announcements_expected, entry.expectedReleaseDate)
+            else if (entry.historyVisitedAt != null && entry.initialSelection.episodeLabel != null) listOfNotNull(
                 entry.season?.let { stringResource(R.string.season_number, it) },
                 stringResource(R.string.episode_number, entry.initialSelection.episodeLabel),
             ).joinToString(" · ") else entry.subtitle.ifBlank {
