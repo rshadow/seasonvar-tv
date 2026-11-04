@@ -177,7 +177,7 @@ make check
 make release-package
 ~~~
 
-Перед выпуском добавить `docs/releases/<versionName>.md`: список на русском, одно короткое предложение до 10 слов в пункте, без технических подробностей. Принцип — [ADR-0069](adr/0069-short-release-notes.md). `make release-package` проверяет формат и переносит описание в `build/release/NOTES.md`; GitHub публикует его как текст релиза.
+Перед выпуском добавить `docs/releases/<versionName>.md`: список на русском, максимально краткое предложение в каждом пункте; около 10 слов — ориентир, а не жёсткий лимит, без технических подробностей. Принцип — [ADR-0069](adr/0069-short-release-notes.md). `make release-package` проверяет формат и переносит описание в `build/release/NOTES.md`; GitHub публикует его как текст релиза.
 
 Результат — `build/release/seasonvar-tv-<versionName>-universal.apk`, `build/release/SHA256SUMS` и `build/release/NOTES.md`. После коммита отправить изменения и тег, совпадающий с версией, например для версии `0.3.1`:
 

@@ -54,8 +54,12 @@ class ReleasePackageTests(unittest.TestCase):
         self.assertEqual([path.name for path in self.output.glob("*.apk")], [result.name])
 
 
-    def test_invalid_release_notes_fail_before_writing_artifacts(self):
-        for notes in ("", "Список изменений", "- ", "- " + "слово " * 11):
+    def test_requires_a_nonempty_list_without_a_hard_word_limit(self):
+        for notes in ("", "Список изменений", "- "):
             with self.subTest(notes=notes), self.assertRaisesRegex(ValueError, "Release notes"):
                 release.package_release(self.metadata, self.apk, self.output, notes=notes)
             self.assertFalse(self.output.exists())
+
+        longer_note = "- " + " ".join(["слово"] * 11) + "\n"
+        release.package_release(self.metadata, self.apk, self.output, notes=longer_note)
+        self.assertEqual((self.output / "NOTES.md").read_text(), longer_note)

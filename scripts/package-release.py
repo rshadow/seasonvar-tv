@@ -18,9 +18,8 @@ def package_release(metadata, apk, output, tag="", notes=""):
     if tag and tag != "v" + version:
         raise ValueError("Release tag must match APK versionName: v" + version)
     lines = [line.strip() for line in notes.splitlines() if line.strip()]
-    if not lines or any(not line.startswith("- ") or not 1 <= len(line[2:].split()) <= 10
-                        for line in lines):
-        raise ValueError("Release notes must be a bullet list with 1 to 10 words per item")
+    if not lines or any(not line.startswith("- ") or not line[2:].strip() for line in lines):
+        raise ValueError("Release notes must be a non-empty bullet list")
     contents = apk.read_bytes()
     digest = hashlib.sha256(contents).hexdigest()
     output.mkdir(parents=True, exist_ok=True)
