@@ -1561,6 +1561,32 @@
         "algorithm": "sha256",
         "value": "0b20f45e3a0fd8f0d12cdc5316b06776e902b1365db00118876f9175c60f302c"
       }
+    },
+    {
+      "group": "org.bitbucket.b_c",
+      "artifact": "jose4j",
+      "version": "0.9.6",
+      "file": "jose4j-0.9.6.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bitbucket/b_c/jose4j/0.9.6/jose4j-0.9.6.pom",
+      "size": 8856,
+      "sha1": "45355d60dac69a030c3d2be6386985f2a963da4c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3fb7fa713e89d42784bdf4d192ece217400040bda7e933886a9f45ce8b9b557e"
+      }
+    },
+    {
+      "group": "org.bitbucket.b_c",
+      "artifact": "jose4j",
+      "version": "0.9.6",
+      "file": "jose4j-0.9.6.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bitbucket/b_c/jose4j/0.9.6/jose4j-0.9.6.jar",
+      "size": 299502,
+      "sha1": "357a3836bb5da16f314f3a1e954518e5468cd915",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "7314af50cde9c99e8eaf43eee617a23edcc6bb43036221064355094999d837ef"
+      }
     }
   ],
   "avd": {
