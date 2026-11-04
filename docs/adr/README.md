@@ -78,3 +78,4 @@
 | [0059 — Автослияние PR владельца](0059-owner-pull-request-auto-merge.md) | 2026-11-04 | Принято |
 | [0060 — Совместимое обновление Kotlin, Compose и coroutines](0060-compatible-dependency-updates.md) | 2026-11-04 | Уточнено ADR-0061 |
 | [0061 — AGP 9, встроенный Kotlin и SDK 37](0061-agp9-built-in-kotlin-and-sdk37.md) | 2026-11-04 | Принято |
+| [0062 — Исправленные криптографические зависимости инструментария](0062-patched-build-crypto-dependencies.md) | 2026-11-04 | Принято |

@@ -1144,6 +1144,84 @@
         "algorithm": "sha256",
         "value": "6043eb8c0e42c20ee274d70a73223d498d1f5628f76f0ae9d8267905cc4ed34a"
       }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcprov-jdk18on",
+      "version": "1.86",
+      "file": "bcprov-jdk18on-1.86.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.86/bcprov-jdk18on-1.86.pom",
+      "size": 1160,
+      "sha1": "f2771a55662c2d3164cf79bfe12fd22e606151e8",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "970b70cb75a184639b6fb9ba3c465aca6a4e1a5f3fff4d65ce8574b2fd79ef38"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcprov-jdk18on",
+      "version": "1.86",
+      "file": "bcprov-jdk18on-1.86.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.86/bcprov-jdk18on-1.86.jar",
+      "size": 7224011,
+      "sha1": "830c8467bed8e4c1148262386b09fc42aedcf262",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "2af190b300cbb0b35e248ccf5f4a06b6072030aeb3da7a98ec73abe5b4cb371f"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcpkix-jdk18on",
+      "version": "1.86",
+      "file": "bcpkix-jdk18on-1.86.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.86/bcpkix-jdk18on-1.86.pom",
+      "size": 1522,
+      "sha1": "683b45697bf54b9027f0d05340bc612182dcedcb",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "44989844fb17b39eb08eabeaf81e1fd16ac50c994d5c02119f891220c3ac5878"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcpkix-jdk18on",
+      "version": "1.86",
+      "file": "bcpkix-jdk18on-1.86.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.86/bcpkix-jdk18on-1.86.jar",
+      "size": 1341621,
+      "sha1": "fb5ea65959db10fe5d61148bb2b77f6e231455b1",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "8d8b41a4b149bdae8d331f059a578870954d1e3ff29f8269a9eb3ee19a7e4ef7"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcutil-jdk18on",
+      "version": "1.86",
+      "file": "bcutil-jdk18on-1.86.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.86/bcutil-jdk18on-1.86.pom",
+      "size": 1344,
+      "sha1": "3f67142b2639296da6e5348270b4019942c31c0f",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "2209b3e5d1eb2bb3c593b824c1b8f142b05dea8e9df7400b0f33f2b91a0741fa"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcutil-jdk18on",
+      "version": "1.86",
+      "file": "bcutil-jdk18on-1.86.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.86/bcutil-jdk18on-1.86.jar",
+      "size": 789287,
+      "sha1": "2c8e77f5601c2b84c8773af4caf403a34daca357",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1c268e15f785aafb1e4670d8d6e5f856f69475e96c162dadcd1ff9b350e9139f"
+      }
     }
   ],
   "avd": {
