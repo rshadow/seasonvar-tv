@@ -30,6 +30,14 @@
     <string name="search_voice_unavailable">Голосовой ввод недоступен на этом устройстве. Введите название с клавиатуры.</string>
     <string name="search_voice_failed">Не удалось распознать речь. Попробуйте ещё раз.</string>
     <string name="today_title">Сегодня</string>
+    <string name="announcements_title">Анонсы</string>
+    <string name="announcements_hint">Ожидаемые сериалы и новые сезоны</string>
+    <string name="announcements_count">Анонсы · всего: %1$d</string>
+    <string name="announcements_loading">Загружаем анонсы…</string>
+    <string name="announcements_empty">Анонсов пока нет</string>
+    <string name="announcements_cached">Сохранённый список анонсов</string>
+    <string name="announcements_cached_error">Не удалось обновить. Показан сохранённый список анонсов.</string>
+    <string name="announcements_expected">%1$s</string>
     <string name="best_title">Лучшие сериалы</string>
     <string name="best_hint">Подборка сайта «Лучшие сериалы»</string>
     <string name="best_count">Лучшие сериалы · всего: %1$d</string>

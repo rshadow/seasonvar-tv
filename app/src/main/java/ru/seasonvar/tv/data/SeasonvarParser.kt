@@ -84,6 +84,40 @@ object SeasonvarParser {
         return CatalogPage(day, entries.distinctBy { it.key })
     }
 
+    fun announcements(html: String, day: LocalDate): CatalogPage {
+        val content = Jsoup.parse(html, "https://seasonvar.ru/")
+            .selectFirst(".content .content-wrap") ?: throw MarkupChangedException()
+        if (content.selectFirst(".pgs-head")?.text() != "Скоро на сайте") throw MarkupChangedException()
+        val panel = content.selectFirst(".pgs-search > .tabs-result > li.act") ?: throw MarkupChangedException()
+        if (panel.ownText().isNotBlank() || panel.children().any {
+                !it.hasClass("pgs-search-wrap") && !it.hasClass("pgs-msg")
+            }) throw MarkupChangedException()
+        val entries = panel.children().filter { it.hasClass("pgs-search-wrap") }.map { row ->
+            val url = pageUrl(row.selectFirst("a.pst[href]")?.attr("href").orEmpty())
+                ?: throw MarkupChangedException()
+            val id = Regex("/serial-([0-9]+)").find(URI(url).path)?.groupValues?.get(1)
+                ?: throw MarkupChangedException()
+            val info = row.selectFirst(".pgs-search-info") ?: throw MarkupChangedException()
+            val links = info.children().filter { it.tagName() == "a" && it.hasAttr("href") }
+            if (links.isEmpty() || links.any { pageUrl(it.attr("href")) != url }) throw MarkupChangedException()
+            val original = links.getOrNull(1)?.text()?.takeIf { it.isNotBlank() }
+            val title = links.first().text().ifBlank { original.orEmpty() }
+            val release = info.selectFirst("span")?.text()?.takeIf { it.isNotBlank() }
+                ?: throw MarkupChangedException()
+            val expected = release.substringAfter(':', release).trim()
+            if (title.isBlank() || expected.isBlank()) throw MarkupChangedException()
+            val season = Regex("([0-9]+)\\s*сезон", RegexOption.IGNORE_CASE)
+                .find(info.ownText())?.groupValues?.get(1)?.toIntOrNull()
+            SeriesEntry(
+                id = id, url = url, title = title, season = season, update = release,
+                posterUrl = "https://cdn.svstat.net/oblojka/" + id + ".jpg",
+                originalTitle = original, expectedReleaseDate = expected, sourceKey = "announcements:$id",
+                previewDescription = info.selectFirst("p")?.text()?.takeIf { it.isNotBlank() },
+            )
+        }
+        return CatalogPage(day, entries)
+    }
+
     fun best(html: String, day: LocalDate): CatalogPage {
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         val content = doc.selectFirst(".content .content-wrap") ?: throw MarkupChangedException()

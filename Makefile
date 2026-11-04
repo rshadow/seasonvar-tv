@@ -37,7 +37,7 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
+.PHONY: check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
 
 help:
 	@printf '%s\n' \
@@ -88,6 +88,7 @@ help:
 		'make site-updates           Fetch the public updates AJAX fragment' \
 		'make site-top               Fetch the public Top AJAX fragment' \
 		'make site-newest            Fetch the public Newest AJAX fragment' \
+		'make site-announcements     Fetch the public upcoming series page' \
 		'make site-search            Fetch search JSON (SEARCH_QUERY=...)' \
 		'make site-best              Fetch the public Best Series page' \
 		'make site-test              Test the standalone website fetcher' \
@@ -266,6 +267,9 @@ site-newest:
 
 site-best:
 	$(MAKE) site-fetch SITE_URL='https://seasonvar.ru/?mode=top' SITE_OUT=build/site/best.html
+
+site-announcements:
+	$(MAKE) site-fetch SITE_URL='https://seasonvar.ru/?mode=soon' SITE_OUT=build/site/announcements.html
 
 site-search:
 	@url="$$(python3 -c 'import os,urllib.parse; print("https://seasonvar.ru/autocomplete.php?" + urllib.parse.urlencode({"query": os.environ["SEARCH_QUERY"]}))')"; \

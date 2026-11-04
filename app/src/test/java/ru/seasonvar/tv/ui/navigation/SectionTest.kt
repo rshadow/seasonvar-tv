@@ -12,6 +12,7 @@ class SectionTest {
 
     @Test fun stable_saved_values_restore_public_personal_and_system_pages() {
         assertEquals(Section.UPDATES, Section.fromStorage("updates"))
+        assertEquals(Section.ANNOUNCEMENTS, Section.fromStorage("announcements"))
         assertEquals(Section.RESUME, Section.fromStorage("resume"))
         assertEquals(Section.HISTORY, Section.fromStorage("history"))
         assertEquals(Section.SETTINGS, Section.fromStorage("settings"))
@@ -26,7 +27,7 @@ class SectionTest {
     }
 
     @Test fun public_and_system_start_do_not_wait_for_network_or_account() {
-        listOf(Section.UPDATES, Section.SETTINGS).forEach {
+        listOf(Section.UPDATES, Section.ANNOUNCEMENTS, Section.SETTINGS).forEach {
             assertEquals(it, it.atStartup(signedIn = false, restoringAccount = true))
         }
     }

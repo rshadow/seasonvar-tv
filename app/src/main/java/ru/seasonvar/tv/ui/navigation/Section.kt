@@ -17,6 +17,7 @@ internal enum class Section(
     HISTORY("history", personalFeed = PersonalFeed.HISTORY),
     TODAY("today", PublicFeed.TODAY), UPDATES("updates", PublicFeed.UPDATES),
     TOP("top", PublicFeed.TOP), NEWEST("newest", PublicFeed.NEWEST), BEST("best", PublicFeed.BEST),
+    ANNOUNCEMENTS("announcements", PublicFeed.ANNOUNCEMENTS),
     SETTINGS("settings"), ABOUT("about");
 
     fun availableAtStart(signedIn: Boolean): Section =
@@ -26,7 +27,7 @@ internal enum class Section(
         if (personalFeed != null && restoringAccount) null else availableAtStart(signedIn)
 
     companion object {
-        val catalogPages = listOf(TODAY, UPDATES, TOP, NEWEST, BEST)
+        val catalogPages = listOf(TODAY, UPDATES, TOP, NEWEST, BEST, ANNOUNCEMENTS)
         val personalPages = entries.filter { it.personalFeed != null }
         val systemPages = listOf(SETTINGS, ABOUT)
 

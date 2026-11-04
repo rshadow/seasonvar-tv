@@ -82,16 +82,8 @@ class MainActivity : ComponentActivity() {
             }
             val search by searchModel.state.collectAsStateWithLifecycle()
             val searchDescription by searchModel.description.collectAsStateWithLifecycle()
-            val today by models.getValue(PublicFeed.TODAY).state.collectAsStateWithLifecycle()
-            val updates by models.getValue(PublicFeed.UPDATES).state.collectAsStateWithLifecycle()
-            val top by models.getValue(PublicFeed.TOP).state.collectAsStateWithLifecycle()
-            val newest by models.getValue(PublicFeed.NEWEST).state.collectAsStateWithLifecycle()
-            val best by models.getValue(PublicFeed.BEST).state.collectAsStateWithLifecycle()
-            val todayDescription by models.getValue(PublicFeed.TODAY).description.collectAsStateWithLifecycle()
-            val updatesDescription by models.getValue(PublicFeed.UPDATES).description.collectAsStateWithLifecycle()
-            val topDescription by models.getValue(PublicFeed.TOP).description.collectAsStateWithLifecycle()
-            val newestDescription by models.getValue(PublicFeed.NEWEST).description.collectAsStateWithLifecycle()
-            val bestDescription by models.getValue(PublicFeed.BEST).description.collectAsStateWithLifecycle()
+            val states = models.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
+            val descriptions = models.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             SeasonvarApp(
@@ -108,10 +100,8 @@ class MainActivity : ComponentActivity() {
                 onPersonalMore = { personalModels.getValue(it).loadMore() },
                 onPersonalSelect = { feed, entry, retry -> personalModels.getValue(feed).select(entry, retry) },
                 onPlay = { playbackLauncher.launch(PlayerActivity.intent(this, it)) },
-                states = mapOf(PublicFeed.TODAY to today, PublicFeed.UPDATES to updates,
-                    PublicFeed.TOP to top, PublicFeed.NEWEST to newest, PublicFeed.BEST to best),
-                descriptions = mapOf(PublicFeed.TODAY to todayDescription, PublicFeed.UPDATES to updatesDescription,
-                    PublicFeed.TOP to topDescription, PublicFeed.NEWEST to newestDescription, PublicFeed.BEST to bestDescription),
+                states = states,
+                descriptions = descriptions,
                 searchState = search,
                 searchDescription = searchDescription,
                 onSearchQuery = searchModel::queryChanged,
