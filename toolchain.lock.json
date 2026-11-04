@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sdk_api": 36,
+  "sdk_api": 37,
   "tv_api": 34,
   "hosts": {
     "darwin-arm64": {
@@ -15,30 +15,30 @@
       },
       "sdk": [
         {
-          "package": "platforms;android-36",
+          "package": "platforms;android-37.0",
           "revision": "2.0.0",
-          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
-          "size": 65878410,
+          "url": "https://dl.google.com/android/repository/platform-37.0_r02.zip",
+          "size": 67281901,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+            "value": "ed8ebf7f8822a4de5686d427f237d2fa30ff7410"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "platforms/android-36",
-          "root": "android-36"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-37.0\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>37.0</api-level>\n      <codename />\n      <extension-level>22</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 37.0</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "platforms/android-37.0",
+          "root": "android-37.0"
         },
         {
-          "package": "build-tools;35.0.0",
-          "revision": "35.0.0",
-          "url": "https://dl.google.com/android/repository/build-tools_r35_macosx.zip",
-          "size": 76857898,
+          "package": "build-tools;36.0.0",
+          "revision": "36.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_macosx.zip",
+          "size": 79121749,
           "checksum": {
             "algorithm": "sha1",
-            "value": "93ab8ce91230e067b5add4bfa79919c52b27f072"
+            "value": "199ae0047ee61e842f8ee0c6d3918e44fb9a1f83"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "build-tools/35.0.0",
-          "root": "android-15"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;36.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>36</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "build-tools/36.0.0",
+          "root": "android-16"
         },
         {
           "package": "platform-tools",
@@ -106,30 +106,30 @@
       },
       "sdk": [
         {
-          "package": "platforms;android-36",
+          "package": "platforms;android-37.0",
           "revision": "2.0.0",
-          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
-          "size": 65878410,
+          "url": "https://dl.google.com/android/repository/platform-37.0_r02.zip",
+          "size": 67281901,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+            "value": "ed8ebf7f8822a4de5686d427f237d2fa30ff7410"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "platforms/android-36",
-          "root": "android-36"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-37.0\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>37.0</api-level>\n      <codename />\n      <extension-level>22</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 37.0</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "platforms/android-37.0",
+          "root": "android-37.0"
         },
         {
-          "package": "build-tools;35.0.0",
-          "revision": "35.0.0",
-          "url": "https://dl.google.com/android/repository/build-tools_r35_macosx.zip",
-          "size": 76857898,
+          "package": "build-tools;36.0.0",
+          "revision": "36.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_macosx.zip",
+          "size": 79121749,
           "checksum": {
             "algorithm": "sha1",
-            "value": "93ab8ce91230e067b5add4bfa79919c52b27f072"
+            "value": "199ae0047ee61e842f8ee0c6d3918e44fb9a1f83"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "build-tools/35.0.0",
-          "root": "android-15"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;36.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>36</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "build-tools/36.0.0",
+          "root": "android-16"
         },
         {
           "package": "platform-tools",
@@ -197,30 +197,30 @@
       },
       "sdk": [
         {
-          "package": "platforms;android-36",
+          "package": "platforms;android-37.0",
           "revision": "2.0.0",
-          "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
-          "size": 65878410,
+          "url": "https://dl.google.com/android/repository/platform-37.0_r02.zip",
+          "size": 67281901,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576"
+            "value": "ed8ebf7f8822a4de5686d427f237d2fa30ff7410"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-36\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>36</api-level>\n      <extension-level>17</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "platforms/android-36",
-          "root": "android-36"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"platforms;android-37.0\">\n    <type-details xsi:type=\"sdk:platformDetailsType\">\n      <api-level>37.0</api-level>\n      <codename />\n      <extension-level>22</extension-level>\n      <base-extension>true</base-extension>\n      <layoutlib api=\"15\" />\n    </type-details>\n    <revision>\n      <major>2</major>\n    </revision>\n    <display-name>Android SDK Platform 37.0</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "platforms/android-37.0",
+          "root": "android-37.0"
         },
         {
-          "package": "build-tools;35.0.0",
-          "revision": "35.0.0",
-          "url": "https://dl.google.com/android/repository/build-tools_r35_linux.zip",
-          "size": 61958799,
+          "package": "build-tools;36.0.0",
+          "revision": "36.0.0",
+          "url": "https://dl.google.com/android/repository/build-tools_r36_linux.zip",
+          "size": 63737259,
           "checksum": {
             "algorithm": "sha1",
-            "value": "2cfaa0bbb2336e9ec18ed3ecea84fa2e2af607bc"
+            "value": "b0b6376977657e8ad9b969bacf4093601da2c6fb"
           },
-          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;35.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>35</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 35</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n  </local:repository>\n",
-          "destination": "build-tools/35.0.0",
-          "root": "android-15"
+          "package_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<local:repository xmlns:local=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk=\"http://schemas.android.com/sdk/android/repo/repository2/03\" xmlns:common=\"http://schemas.android.com/repository/android/common/02\" xmlns:sdk-common=\"http://schemas.android.com/sdk/android/repo/common/03\" xmlns:generic=\"http://schemas.android.com/repository/android/generic/02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"><localPackage xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" path=\"build-tools;36.0.0\">\n    <type-details xsi:type=\"generic:genericDetailsType\" />\n    <revision>\n      <major>36</major>\n      <minor>0</minor>\n      <micro>0</micro>\n    </revision>\n    <display-name>Android SDK Build-Tools 36</display-name>\n    <uses-license ref=\"android-sdk-license\" />\n    </localPackage>\n</local:repository>\n",
+          "destination": "build-tools/36.0.0",
+          "root": "android-16"
         },
         {
           "package": "platform-tools",
@@ -283,68 +283,55 @@
   },
   "gradle_artifacts": [
     {
-      "group": "com.android.tools",
-      "artifact": "r8",
-      "version": "9.1.57",
-      "file": "r8-9.1.57.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/r8/9.1.57/r8-9.1.57.jar",
-      "size": 18957282,
-      "sha1": "3bc2c28ca66025d097a98777a0d6ad08a2167432",
-      "checksum": {
-        "algorithm": "sha256",
-        "value": "2c21870df0294bba3d5597a3de8f79e385650ea309d6dc55ffbeaa700bad18a5"
-      }
-    },
-    {
       "group": "com.android.tools.build",
       "artifact": "gradle",
-      "version": "8.13.2",
-      "file": "gradle-8.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.13.2/gradle-8.13.2.jar",
-      "size": 13116808,
-      "sha1": "5975ee61ee7e3f9413fbe10270f230cfb6d227fc",
+      "version": "9.5.0",
+      "file": "gradle-9.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/9.5.0/gradle-9.5.0.jar",
+      "size": 12343675,
+      "sha1": "65fbc058e1a93257cff17f72abd94a7ba6dcb375",
       "checksum": {
         "algorithm": "sha256",
-        "value": "e494f7ce75ca6c1abff301d4a70b18fdd3d6af855875f4f85082bb7608f041de"
+        "value": "cc67fb686cbc10a252aca9395df3cef64345b02cf2c12cb9a8f032e8b8953490"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "builder",
-      "version": "8.13.2",
-      "file": "builder-8.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/builder/8.13.2/builder-8.13.2.jar",
-      "size": 15823022,
-      "sha1": "92e06fde9f28276c57c4c81eefce4e72ec9cefc9",
+      "version": "9.5.0",
+      "file": "builder-9.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/builder/9.5.0/builder-9.5.0.jar",
+      "size": 17901541,
+      "sha1": "a4c80a399819c3b217c52608a7d9efe96a1e937b",
       "checksum": {
         "algorithm": "sha256",
-        "value": "7d393f8553120c7d7a869cb33c4279aad9485986773f63af97af08ea2e1ff37a"
+        "value": "9345243b3461be7aa4778d064689f279d7ec3133d79c98820e6516a4571a099b"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "bundletool",
-      "version": "1.18.1",
-      "file": "bundletool-1.18.1.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/bundletool/1.18.1/bundletool-1.18.1.jar",
-      "size": 13356668,
-      "sha1": "76bb1aa21a19495ca070bfb6abd194daf91dccd1",
+      "version": "1.18.3",
+      "file": "bundletool-1.18.3.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/bundletool/1.18.3/bundletool-1.18.3.jar",
+      "size": 13371507,
+      "sha1": "8d7bee8e57a4158a872ed99190a60a498c2adc8d",
       "checksum": {
         "algorithm": "sha256",
-        "value": "a73341a7945abcb0e6b8971c7b1b2801bd765006447ca0d2437a4260d572ceac"
+        "value": "ccad18514fd97db010856b2bbed40f481f8ba9349368c97ae54d72e3567d0171"
       }
     },
     {
       "group": "com.android.tools.analytics-library",
       "artifact": "protos",
-      "version": "31.13.2",
-      "file": "protos-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/analytics-library/protos/31.13.2/protos-31.13.2.jar",
-      "size": 9027320,
-      "sha1": "568520224f5c347add38c2bef3d0288ae11f8d31",
+      "version": "32.5.0",
+      "file": "protos-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/analytics-library/protos/32.5.0/protos-32.5.0.jar",
+      "size": 12503269,
+      "sha1": "71131cf58e8f12eadfa5a9ae2f7844dd1a938ac9",
       "checksum": {
         "algorithm": "sha256",
-        "value": "b2ded20a897fba9649efeb18ba2fc062ee39e500d4eb712045cb0e34b43b5efb"
+        "value": "14f8d58007454b193ff189f3ac6743373e384db3b32659e9314dd68d92d17876"
       }
     },
     {
@@ -602,66 +589,66 @@
     {
       "group": "com.android.tools.build",
       "artifact": "aapt2",
-      "version": "8.13.2-14304508",
-      "file": "aapt2-8.13.2-14304508-osx.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/8.13.2-14304508/aapt2-8.13.2-14304508-osx.jar",
-      "size": 5324976,
-      "sha1": "6b73169c0a1b4f52d66ddebb49de47432be2c031",
+      "version": "9.5.0-16666295",
+      "file": "aapt2-9.5.0-16666295-osx.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/9.5.0-16666295/aapt2-9.5.0-16666295-osx.jar",
+      "size": 4611291,
+      "sha1": "37a458ae8d938461d5ab3a707d5989af4ac79051",
       "checksum": {
         "algorithm": "sha256",
-        "value": "0d47f17c3924e5472b6125aa608d949dd7f46510889729671f31f2f4d801e8e7"
+        "value": "a43df4c45549e8a877a8d61b130ee255669eec8a36064f2fc8cd58206457f2a3"
       }
     },
     {
       "group": "com.android.tools.build",
       "artifact": "aapt2",
-      "version": "8.13.2-14304508",
-      "file": "aapt2-8.13.2-14304508-linux.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/8.13.2-14304508/aapt2-8.13.2-14304508-linux.jar",
-      "size": 2815427,
-      "sha1": "2285a625f089775f58866eccfe3e70cc3c2c7495",
+      "version": "9.5.0-16666295",
+      "file": "aapt2-9.5.0-16666295-linux.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/9.5.0-16666295/aapt2-9.5.0-16666295-linux.jar",
+      "size": 2451278,
+      "sha1": "85f5b91e2900e470aeb0c4d19786bd82146c2f0a",
       "checksum": {
         "algorithm": "sha256",
-        "value": "839609d6d776d6dd60a02aa577d97193ce3e650cf1deaabf062321e23bbd6bf6"
+        "value": "fa1014cb1431622d292ef55ba870e75882ea19987bec541698b912f446a2d08f"
       }
     },
     {
       "group": "com.android.tools.lint",
       "artifact": "lint-checks",
-      "version": "31.13.2",
-      "file": "lint-checks-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/lint/lint-checks/31.13.2/lint-checks-31.13.2.jar",
-      "size": 7070496,
-      "sha1": "e2f3f7637e4e711839115773d649f9fc6974c1a9",
+      "version": "32.5.0",
+      "file": "lint-checks-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/lint/lint-checks/32.5.0/lint-checks-32.5.0.jar",
+      "size": 7601406,
+      "sha1": "be8bb33b08494bfe0a2bc3773662340e81682a78",
       "checksum": {
         "algorithm": "sha256",
-        "value": "3b64f395ae17fcea104882b00a4acdc7dc691f5daca5dff2bdde89fa052bb199"
+        "value": "5e864fbe1f29a2fe48258b37f45d5b93af64b55b6de918da77704b4d9732bd44"
       }
     },
     {
       "group": "com.android.tools.external.com-intellij",
       "artifact": "intellij-core",
-      "version": "31.13.2",
-      "file": "intellij-core-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/intellij-core/31.13.2/intellij-core-31.13.2.jar",
-      "size": 37723447,
-      "sha1": "311f867deee610b6eab4ee138b3c97e29eb5db38",
+      "version": "32.5.0",
+      "file": "intellij-core-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/intellij-core/32.5.0/intellij-core-32.5.0.jar",
+      "size": 34451148,
+      "sha1": "96f9dd733b0d0bf6b4d80512b6712c5c0223e145",
       "checksum": {
         "algorithm": "sha256",
-        "value": "9a6faa6061d0f3d54a64decb61944c1b2c6927f8d325cd298c82c2a8d867ee68"
+        "value": "a60df35d8d9104d31790f645dad97105bc9483a136dd535e65ddb6fa4a2535d3"
       }
     },
     {
       "group": "com.android.tools.external.com-intellij",
       "artifact": "kotlin-compiler",
-      "version": "31.13.2",
-      "file": "kotlin-compiler-31.13.2.jar",
-      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/kotlin-compiler/31.13.2/kotlin-compiler-31.13.2.jar",
-      "size": 51117829,
-      "sha1": "8f7c8905b9e5bb7960dcfd46c198d496ca8c3b1c",
+      "version": "32.5.0",
+      "file": "kotlin-compiler-32.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/com/android/tools/external/com-intellij/kotlin-compiler/32.5.0/kotlin-compiler-32.5.0.jar",
+      "size": 51566947,
+      "sha1": "e14fa86be18b0780ef7d1fa2cd734e6bbf739bf0",
       "checksum": {
         "algorithm": "sha256",
-        "value": "552dfaffe295d08504870816c27fc09007e1231fb9b14c1ff9bbf861f9b35990"
+        "value": "5cd8d9d8076fa1b811c81b1704c2c5d70bb3d5b0819fe36b78c1d71a78ea8883"
       }
     },
     {
@@ -1157,6 +1144,162 @@
         "algorithm": "sha256",
         "value": "6043eb8c0e42c20ee274d70a73223d498d1f5628f76f0ae9d8267905cc4ed34a"
       }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcprov-jdk18on",
+      "version": "1.86",
+      "file": "bcprov-jdk18on-1.86.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.86/bcprov-jdk18on-1.86.pom",
+      "size": 1160,
+      "sha1": "f2771a55662c2d3164cf79bfe12fd22e606151e8",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "970b70cb75a184639b6fb9ba3c465aca6a4e1a5f3fff4d65ce8574b2fd79ef38"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcprov-jdk18on",
+      "version": "1.86",
+      "file": "bcprov-jdk18on-1.86.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.86/bcprov-jdk18on-1.86.jar",
+      "size": 7224011,
+      "sha1": "830c8467bed8e4c1148262386b09fc42aedcf262",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "2af190b300cbb0b35e248ccf5f4a06b6072030aeb3da7a98ec73abe5b4cb371f"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcpkix-jdk18on",
+      "version": "1.86",
+      "file": "bcpkix-jdk18on-1.86.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.86/bcpkix-jdk18on-1.86.pom",
+      "size": 1522,
+      "sha1": "683b45697bf54b9027f0d05340bc612182dcedcb",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "44989844fb17b39eb08eabeaf81e1fd16ac50c994d5c02119f891220c3ac5878"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcpkix-jdk18on",
+      "version": "1.86",
+      "file": "bcpkix-jdk18on-1.86.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.86/bcpkix-jdk18on-1.86.jar",
+      "size": 1341621,
+      "sha1": "fb5ea65959db10fe5d61148bb2b77f6e231455b1",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "8d8b41a4b149bdae8d331f059a578870954d1e3ff29f8269a9eb3ee19a7e4ef7"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcutil-jdk18on",
+      "version": "1.86",
+      "file": "bcutil-jdk18on-1.86.pom",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.86/bcutil-jdk18on-1.86.pom",
+      "size": 1344,
+      "sha1": "3f67142b2639296da6e5348270b4019942c31c0f",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "2209b3e5d1eb2bb3c593b824c1b8f142b05dea8e9df7400b0f33f2b91a0741fa"
+      }
+    },
+    {
+      "group": "org.bouncycastle",
+      "artifact": "bcutil-jdk18on",
+      "version": "1.86",
+      "file": "bcutil-jdk18on-1.86.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.86/bcutil-jdk18on-1.86.jar",
+      "size": 789287,
+      "sha1": "2c8e77f5601c2b84c8773af4caf403a34daca357",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1c268e15f785aafb1e4670d8d6e5f856f69475e96c162dadcd1ff9b350e9139f"
+      }
+    },
+    {
+      "group": "org.gradle",
+      "artifact": "github-dependency-graph-gradle-plugin",
+      "version": "1.5.1",
+      "file": "github-dependency-graph-gradle-plugin-1.5.1.pom",
+      "url": "https://plugins.gradle.org/m2/org/gradle/github-dependency-graph-gradle-plugin/1.5.1/github-dependency-graph-gradle-plugin-1.5.1.pom",
+      "size": 774,
+      "sha1": "7e1c767b5f3ee76712cf30b8958b1835a8df06e8",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "34806a7a8a1406fa793f62311d2c20cdbd75967886fd2ab1add48aad39a467b7"
+      }
+    },
+    {
+      "group": "org.gradle",
+      "artifact": "github-dependency-graph-gradle-plugin",
+      "version": "1.5.1",
+      "file": "github-dependency-graph-gradle-plugin-1.5.1.jar",
+      "url": "https://plugins.gradle.org/m2/org/gradle/github-dependency-graph-gradle-plugin/1.5.1/github-dependency-graph-gradle-plugin-1.5.1.jar",
+      "size": 2517747,
+      "sha1": "e80aeaeb238a2af4cbe5ac653f2a7312124b2350",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4fb3ab160c677c16bd14b59a4d584f5e821eb0d1f839c049e2b764ef39605713"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-jre",
+      "file": "guava-33.7.2-jre.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-jre/guava-33.7.2-jre.pom",
+      "size": 9732,
+      "sha1": "aa78c19dd6023ef92b554d13ab4f6ed467e9f7bf",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "5d1501a97230f90df54ea33164831a61c6714a8b2a4c6a04e90bb729581bbabc"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-jre",
+      "file": "guava-33.7.2-jre.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-jre/guava-33.7.2-jre.jar",
+      "size": 3057659,
+      "sha1": "e70def5b06cfb109ea050de99870e79c8ce80dbc",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b530942257fb935f8b2cfaa5f8eb5bd59c555fd8e8d01b8ce98912e077ea606c"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-android",
+      "file": "guava-33.7.2-android.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-android/guava-33.7.2-android.pom",
+      "size": 9982,
+      "sha1": "2e3c1c2d0554a43bd8fc033a777049a963cc20c4",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "f7f6481d044bb0c3fd94f8be74a703c61dce54bc5d6c84bdcec9c1d9bfa27f1d"
+      }
+    },
+    {
+      "group": "com.google.guava",
+      "artifact": "guava",
+      "version": "33.7.2-android",
+      "file": "guava-33.7.2-android.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.7.2-android/guava-33.7.2-android.jar",
+      "size": 2982159,
+      "sha1": "0e601df8fa35293ad4fa7c6ec4522152d304eb41",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b949fe975a32421c1a2633c07a4f1578b462f2f467668aa0a4023c5ff7c4a808"
+      }
     }
   ],
   "avd": {
@@ -1201,7 +1344,7 @@
     }
   },
   "release": {
-    "apksigner_jar": "build-tools/35.0.0/lib/apksigner.jar"
+    "apksigner_jar": "build-tools/36.0.0/lib/apksigner.jar"
   },
   "verification": {
     "account_mark_runner": "ru.seasonvar.tv.probe.AccountMarkProbe"
@@ -1233,6 +1376,7 @@
       "repository": "actions/github-script",
       "version": "v9.0.0",
       "sha": "3a2844b7e9c422d3c10d287c895573f7108da1b3"
-    }
+    },
+    "dependency_graph_plugin": "1.5.1"
   }
 }
