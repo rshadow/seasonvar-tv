@@ -80,3 +80,4 @@
 | [0061 — AGP 9, встроенный Kotlin и SDK 37](0061-agp9-built-in-kotlin-and-sdk37.md) | 2026-11-04 | Принято |
 | [0062 — Исправленные криптографические зависимости инструментария](0062-patched-build-crypto-dependencies.md) | 2026-11-04 | Принято |
 | [0063 — Исправленная Guava для сборки и Android](0063-patched-guava-dependencies.md) | 2026-11-04 | Принято |
+| [0064 — Сетевой клиент OkHttp 5](0064-okhttp5-network-client.md) | 2026-11-04 | Принято |

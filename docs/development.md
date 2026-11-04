@@ -295,6 +295,8 @@ make profile-navigation DEVICE=<serial> PROFILE_OUT=build/performance/cpu PROFIL
 
 ## Проверка воспроизведения
 
+Сетевой клиент HTTP/DoH — OkHttp 5.5.1 с Android-вариантом основного клиента и Okio 3.18.1; переход описан в [ADR-0064](adr/0064-okhttp5-network-client.md).
+
 Media3 ExoPlayer/UI/OkHttp/HLS закреплены на версии 1.11.1 в Gradle и `toolchain.lock.json`. `make deps` загружает артефакты с проверкой контрольных сумм и собирает проект.
 
 ~~~bash

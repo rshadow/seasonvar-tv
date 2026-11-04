@@ -98,7 +98,7 @@ make run
 
 Правила сегодняшней ленты — [ADR-0010](docs/adr/0010-today-feed.md), подборки «Обновления» — [ADR-0016](docs/adr/0016-updates-feed.md) и [ADR-0017](docs/adr/0017-updates-via-ajax.md), галочки обхода — [ADR-0011](docs/adr/0011-network-bypass-setting.md), выбора DNS — [ADR-0012](docs/adr/0012-dns-provider-setting.md).
 
-Принят нативный стек **Kotlin + Compose for TV + Media3 ExoPlayer** — [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md). Используются Kotlin 2.4.21, Compose BOM 2026.06.01 и coroutines 1.11.0. Инструментарий: AGP 9.5.0 со встроенным Kotlin, Gradle 9.8.2, SDK 37.0 и Build Tools 36.0.0 — [ADR-0061](docs/adr/0061-agp9-built-in-kotlin-and-sdk37.md).
+Принят нативный стек **Kotlin + Compose for TV + Media3 ExoPlayer** — [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md). Сетевой клиент HTTP и DoH — OkHttp 5.5.1 ([ADR-0064](docs/adr/0064-okhttp5-network-client.md)). Используются Kotlin 2.4.21, Compose BOM 2026.06.01 и coroutines 1.11.0. Инструментарий: AGP 9.5.0 со встроенным Kotlin, Gradle 9.8.2, SDK 37.0 и Build Tools 36.0.0 — [ADR-0061](docs/adr/0061-agp9-built-in-kotlin-and-sdk37.md).
 
 [ADR-0003](docs/adr/0003-performance-principles.md) закрепляет показ каталога из кэша с обновлением в фоне, кеширование постеров под размер карточек, фоновую обработку данных, ленивые списки, восстановление фокуса и позиции, управление ресурсами плеера и измерения release-сборки на Ugoos.
 

@@ -1300,6 +1300,241 @@
         "algorithm": "sha256",
         "value": "b949fe975a32421c1a2633c07a4f1578b462f2f467668aa0a4023c5ff7c4a808"
       }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp",
+      "version": "5.5.1",
+      "file": "okhttp-5.5.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp/5.5.1/okhttp-5.5.1.pom",
+      "size": 1862,
+      "sha1": "8c3c3aaee0dc592f9a9200f89e42f08540efc23f",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a834a8f02cbcaaf6a3968b439596e14d528a32160d4b235d95f2ab51163bbf2f"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp",
+      "version": "5.5.1",
+      "file": "okhttp-5.5.1.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp/5.5.1/okhttp-5.5.1.module",
+      "size": 5883,
+      "sha1": "0e08f0027dad499f2b9fce7e87db73d6973322ac",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1c5b0837a46d13aec4493b97066c896f0f8f26e5c6b3535bec4355bce2a8e1bb"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp",
+      "version": "5.5.1",
+      "file": "okhttp-5.5.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp/5.5.1/okhttp-5.5.1.jar",
+      "size": 754,
+      "sha1": "eb39f0d8a8bb9d0ad292551b830d662fea547d90",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "aebaab3fe77633befcf69fd0ee3052083999a7eaa98d6f2f7c4b498e7bdbb732"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-android",
+      "version": "5.5.1",
+      "file": "okhttp-android-5.5.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-android/5.5.1/okhttp-android-5.5.1.pom",
+      "size": 2270,
+      "sha1": "29b142b551106180b9d2c3f16810ec0d0a57dc10",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "d9aa6a615a54146f08ce0e298b382e79ebe310161992040b07ed52ed29de8c3b"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-android",
+      "version": "5.5.1",
+      "file": "okhttp-android-5.5.1.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-android/5.5.1/okhttp-android-5.5.1.module",
+      "size": 4355,
+      "sha1": "60360da2793a523382e0730ab39aed594327efdc",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "67a1f222960668845bb00002aa63424ff804584000bde84f1269ae188184e496"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-android",
+      "version": "5.5.1",
+      "file": "okhttp-android-5.5.1.aar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-android/5.5.1/okhttp-android-5.5.1.aar",
+      "size": 949648,
+      "sha1": "8901fb7a84be05aa777639120071a89bb16ab813",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "ce00fd7751cf7e4f28ba73a0287b3cc0c62b8b83f038e428592eeef189513ee1"
+      },
+      "cache_file": "okhttp.aar"
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-jvm",
+      "version": "5.5.1",
+      "file": "okhttp-jvm-5.5.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-jvm/5.5.1/okhttp-jvm-5.5.1.pom",
+      "size": 1866,
+      "sha1": "9f6ddea3dcd0ae03b837943ac2521558ab8a87e8",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "146234d3d3554709dc77e99d25dcd74c6e1dc00d9a33aa55010090b566a7bfd2"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-jvm",
+      "version": "5.5.1",
+      "file": "okhttp-jvm-5.5.1.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-jvm/5.5.1/okhttp-jvm-5.5.1.module",
+      "size": 4010,
+      "sha1": "245c2a6c0acb2af7b26058391bdd3887c97813b2",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "7050e29ffb6337322c1c73f29105cef67221c0234ebea869a127362a23be5023"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-jvm",
+      "version": "5.5.1",
+      "file": "okhttp-jvm-5.5.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-jvm/5.5.1/okhttp-jvm-5.5.1.jar",
+      "size": 963622,
+      "sha1": "1df922f9db18f897722b7e566c21bcaf0a73d484",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4039527bd1f2e40b66e20b0e52c689cf56074b938ea02678141495f5160f1047"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-dnsoverhttps",
+      "version": "5.5.1",
+      "file": "okhttp-dnsoverhttps-5.5.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-dnsoverhttps/5.5.1/okhttp-dnsoverhttps-5.5.1.pom",
+      "size": 1892,
+      "sha1": "3b8f39ab6e0351f883ab7635ba8479341cb9b658",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "6a125dd925d505d2819b9ba3bda71b8e4838458f8719357f1fb1182556756188"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-dnsoverhttps",
+      "version": "5.5.1",
+      "file": "okhttp-dnsoverhttps-5.5.1.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-dnsoverhttps/5.5.1/okhttp-dnsoverhttps-5.5.1.module",
+      "size": 3681,
+      "sha1": "9910270927284009d5e4af0af8b6d388b6f9b491",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "0a331e82c5c45f52c04bd9cbccbe49efc88b12bdce31714063793b08952efdd6"
+      }
+    },
+    {
+      "group": "com.squareup.okhttp3",
+      "artifact": "okhttp-dnsoverhttps",
+      "version": "5.5.1",
+      "file": "okhttp-dnsoverhttps-5.5.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okhttp3/okhttp-dnsoverhttps/5.5.1/okhttp-dnsoverhttps-5.5.1.jar",
+      "size": 21659,
+      "sha1": "62403834d2eefbc2d668d306992854060cc6bb91",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "10ee7118a490e3b602fdbb2b07786b82a2c62d45bf315f5961bc3f1a6dfeb9ae"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio",
+      "version": "3.18.1",
+      "file": "okio-3.18.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio/3.18.1/okio-3.18.1.pom",
+      "size": 1703,
+      "sha1": "b2769184d707fbf7bc197d6b022a98cf4517c92b",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3320a24236b2b43db1515b56587b18a8a1cdf238f4465e20e3e19e5f4fd10214"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio",
+      "version": "3.18.1",
+      "file": "okio-3.18.1.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio/3.18.1/okio-3.18.1.module",
+      "size": 37605,
+      "sha1": "9d512f7e6abea6ec10c5ad01eea1f92cea10dddb",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1616f212eabcb6c1c2d04ff5c80d9132c0e5f4e408c659d5ee47aef28ebc5d10"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio",
+      "version": "3.18.1",
+      "file": "okio-3.18.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio/3.18.1/okio-3.18.1.jar",
+      "size": 85247,
+      "sha1": "7ec22ddfb3b3178d882f0b71e49d924f8233afa3",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "6d9746592170dee6db877969b520a5f79d974083835c911a3e1a58295ee51f67"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio-jvm",
+      "version": "3.18.1",
+      "file": "okio-jvm-3.18.1.pom",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio-jvm/3.18.1/okio-jvm-3.18.1.pom",
+      "size": 1715,
+      "sha1": "51534d5e27a48a859b242b74f1197bed87f59ced",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "6457712bf7dfdfa0d1b25a303600288c34a1ff8613d55c24c8c99bcc63301dd0"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio-jvm",
+      "version": "3.18.1",
+      "file": "okio-jvm-3.18.1.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio-jvm/3.18.1/okio-jvm-3.18.1.module",
+      "size": 3346,
+      "sha1": "2108a8a1c78076163ed334b5d84edab640703224",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3581865143cbe7556e1975be4c823834a7b775534de856d0b355c77af946027b"
+      }
+    },
+    {
+      "group": "com.squareup.okio",
+      "artifact": "okio-jvm",
+      "version": "3.18.1",
+      "file": "okio-jvm-3.18.1.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio-jvm/3.18.1/okio-jvm-3.18.1.jar",
+      "size": 392463,
+      "sha1": "a3a8128bb3a0157d23ecc18c17e8330d9c0ac96c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b97b640557a650d15411f2be29aef558c4e422a83653cb18ba494311dbed18be"
+      }
     }
   ],
   "avd": {
