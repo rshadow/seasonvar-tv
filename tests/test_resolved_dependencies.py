@@ -6,17 +6,20 @@ spec = importlib.util.spec_from_file_location(
     "resolved_dependencies", Path(__file__).resolve().parents[1] / "scripts/check-resolved-dependencies.py")
 dependencies = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dependencies)
-MINIMUMS = dependencies.minimum_versions("buildCryptoVersion=1.86\nguavaVersion=33.7.2\n")
+MINIMUMS = dependencies.minimum_versions(
+    "buildCryptoVersion=1.86\nguavaVersion=33.7.2\nbuildJdomVersion=2.0.6.1\n")
 
 
-def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-android"):
+def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-android",
+          jdom_version="2.0.6.1"):
     entries = [
         {"dependency": "org.bouncycastle:" + module + ":" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
         for module in sorted(dependencies.CRYPTO_MODULES)
         for path, configuration, version in [
             (":", "classpath", "1.86"), (":app", "androidLintTool", lint_version)]
-    ]
+    ] + [{"dependency": "org.jdom:jdom2:" + jdom_version,
+          "resolvedBy": [{"path": ":", "configuration": "classpath", "scope": "Unknown"}]}]
     return entries + [
         {"dependency": "com.google.guava:guava:" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
@@ -31,10 +34,10 @@ class ResolvedDependenciesTests(unittest.TestCase):
             dependencies.check_report(graph("1.80.2"), MINIMUMS)
 
     def test_all_build_lint_and_runtime_resolutions_are_accepted_after_fix(self):
-        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 8)
+        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 9)
 
     def test_newer_patched_versions_are_accepted(self):
-        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 8)
+        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 9)
 
     def test_missing_or_wrong_graph_is_not_a_success(self):
         for report in ([], {}, ["invalid"]):
@@ -72,3 +75,14 @@ class ResolvedDependenciesTests(unittest.TestCase):
     def test_missing_minimum_version_is_not_a_success(self):
         with self.assertRaisesRegex(ValueError, "guavaVersion"):
             dependencies.minimum_versions("buildCryptoVersion=1.86\n")
+
+    def test_vulnerable_jdom_in_agp_classpath_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, r"org\.jdom:jdom2:2\.0\.6 in :/classpath"):
+            dependencies.check_report(graph(jdom_version="2.0.6"), MINIMUMS)
+
+    def test_patched_root_does_not_hide_old_jdom_in_another_configuration(self):
+        report = graph()
+        report.append({"dependency": "org.jdom:jdom2:2.0.6",
+                       "resolvedBy": [{"path": ":app", "configuration": "androidLintTool"}]})
+        with self.assertRaisesRegex(ValueError, "androidLintTool"):
+            dependencies.check_report(report, MINIMUMS)
