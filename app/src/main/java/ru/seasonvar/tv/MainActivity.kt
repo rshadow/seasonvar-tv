@@ -24,6 +24,7 @@ import ru.seasonvar.tv.ui.catalog.CatalogViewModel
 import ru.seasonvar.tv.ui.search.SearchViewModel
 
 class MainActivity : ComponentActivity() {
+    private lateinit var updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel
     private lateinit var detailsModel: SeriesDetailsViewModel
     private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
@@ -43,6 +44,8 @@ class MainActivity : ComponentActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         val container = application as SeasonvarApplication
+        updateModel = ViewModelProvider(this, ru.seasonvar.tv.ui.update.UpdateViewModel.Factory(
+            container.updates, BuildConfig.VERSION_NAME))[ru.seasonvar.tv.ui.update.UpdateViewModel::class.java]
         val repository = container.repository
         models = PublicFeed.entries.associateWith { feed ->
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed))
@@ -89,6 +92,7 @@ class MainActivity : ComponentActivity() {
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             SeasonvarApp(
+                updateModel = updateModel,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },

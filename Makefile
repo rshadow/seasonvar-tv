@@ -34,10 +34,11 @@ SITE_TRANSLATION ?= 0
 SITE_EPISODE ?= 1
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
+UPDATE_PREVIEW_SCENARIO ?= new
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
+.PHONY: update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -62,6 +63,10 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
+		'make update-test            Run offline update tests' \
+		'make update-probe           Check live GitHub metadata and APK integrity in emulator' \
+		'make update-restore         Restore normal test build after an update preview (emulator only)' \
+		'make update-preview         Preview update flow with a newer test APK in emulator' \
 		'make account-test           Check account, personal lists, cookies and private cache' \
 		'make mark-probe             Inspect account marks (catalog-badges reads list icons; roundtrip/delete-roundtrip verify and restore changes)' \
 		'make check                  Build, run unit tests and Android Lint' \
@@ -314,3 +319,35 @@ check-resolved-dependencies: dependency-report
 	python3 scripts/check-resolved-dependencies.py
 
 check-build-crypto: check-resolved-dependencies
+
+update-test:
+	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.update.*' --tests 'ru.seasonvar.tv.ui.update.*'
+
+update-fixture:
+	python3 scripts/update-fixture.py
+
+update-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for update probes.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) update-restore BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am instrument -w -e mode update-inspect "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"
+
+update-preview:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for update previews.' >&2; exit 1;; esac
+	@case "$(UPDATE_PREVIEW_SCENARIO)" in new|current|network|signature) ;; *) echo 'Unknown update scenario.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) update-fixture
+	$(MAKE) update-restore BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) push build/update-probe/fixture.apk /data/local/tmp/seasonvar-update-fixture.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ADB) shell am instrument -e mode update-preview -e scenario "$(UPDATE_PREVIEW_SCENARIO)" "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"
+
+update-restore:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Test version rollback is allowed only in emulator.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) build
+	$(ADB) install -r -d "$(APK)"

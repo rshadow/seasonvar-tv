@@ -146,6 +146,7 @@ internal fun SeasonvarApp(
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
+    updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
     detailsModel: SeriesDetailsViewModel? = null,
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
@@ -185,6 +186,7 @@ internal fun SeasonvarApp(
             onDnsChange = onDnsChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             onExit = onExit,
+            updateModel = updateModel,
             detailsModel = detailsModel,
             onPlay = onPlay,
             removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
@@ -218,6 +220,7 @@ private fun SeasonvarContent(
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
+    updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
     detailsModel: SeriesDetailsViewModel? = null,
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
@@ -573,7 +576,7 @@ private fun SeasonvarContent(
                     onInteraction = backNavigation::reset,
                 )
             } else if (section == Section.ABOUT) {
-                AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset)
+                ru.seasonvar.tv.ui.about.AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset, updateModel)
             } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                 SeriesDetailsPane(
                     detailsSource!!, detailsModel,
@@ -1271,58 +1274,6 @@ private fun <T> SettingsChoiceDialog(
 private fun dnsLabel(provider: DnsProvider): Int = when (provider) {
     DnsProvider.SYSTEM -> R.string.dns_system
     DnsProvider.QUAD9_DOH -> R.string.dns_quad9
-}
-
-@Composable
-private fun AboutPane(
-    contentFocus: FocusRequester,
-    menuFocus: FocusRequester,
-    onInteraction: () -> Unit,
-) {
-    val d = SeasonvarTheme.dimensions
-    val c = MaterialTheme.colorScheme
-    val context = LocalContext.current
-    val githubUrl = stringResource(R.string.about_github_url)
-    var linkUnavailable by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        Text(stringResource(R.string.about_title), style = MaterialTheme.typography.headlineLarge,
-            color = c.onBackground)
-        Spacer(Modifier.height(d.spacingLarge))
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
-        Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
-            style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-        Spacer(Modifier.height(d.spacingMedium))
-        Text(stringResource(R.string.about_description), color = c.onBackground)
-        Text(stringResource(R.string.about_source), color = c.onSurfaceVariant)
-        Spacer(Modifier.height(d.spacingLarge))
-        ThemeButton(
-            stringResource(R.string.about_github),
-            onClick = {
-                onInteraction()
-                linkUnavailable = false
-                try {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
-                        .addCategory(Intent.CATEGORY_BROWSABLE))
-                } catch (_: ActivityNotFoundException) {
-                    linkUnavailable = true
-                } catch (_: SecurityException) {
-                    linkUnavailable = true
-                }
-            },
-            modifier = Modifier.focusRequester(contentFocus).focusProperties {
-                left = menuFocus
-                right = FocusRequester.Cancel
-                up = FocusRequester.Cancel
-                down = FocusRequester.Cancel
-            },
-        )
-        Spacer(Modifier.height(d.spacingSmall))
-        Text(githubUrl, style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-        if (linkUnavailable) {
-            Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.about_github_unavailable), color = c.onSurfaceVariant)
-        }
-    }
 }
 
 @Preview(device = "spec:width=960dp,height=540dp,dpi=320", showBackground = true)

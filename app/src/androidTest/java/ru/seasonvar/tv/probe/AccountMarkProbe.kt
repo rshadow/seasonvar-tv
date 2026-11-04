@@ -16,13 +16,19 @@ import ru.seasonvar.tv.data.account.PlaybackMarkParser
 /** Explicit live probe; no personal fields or session values are returned to adb. */
 class AccountMarkProbe : Instrumentation() {
     private var mode = "inspect"
+    private var probeArguments = Bundle()
     override fun onCreate(arguments: Bundle?) {
         super.onCreate(arguments)
+        probeArguments = arguments ?: Bundle()
         mode = arguments?.getString("mode") ?: "inspect"
         start()
     }
 
     override fun onStart() {
+        if (mode in setOf("update-preview", "update-inspect")) {
+            UpdateProbe.run(this, probeArguments)
+            return
+        }
         val result = Bundle()
         var phase = "restore_session"
         try {

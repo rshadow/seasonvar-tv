@@ -170,4 +170,21 @@
     <string name="mark_removing">Удаление…</string>
     <string name="mark_remove_error">Не удалось подтвердить удаление. Проверьте подключение и повторите попытку.</string>
     <string name="mark_long_press_hint">Удерживайте OK, чтобы открыть действия с сериалом</string>
+    <string name="update_checking">Проверяем обновления…</string>
+    <string name="update_latest">Последний выпуск: %1$s</string>
+    <string name="update_current">Обновлений нет</string>
+    <string name="update_none">Опубликованных версий пока нет</string>
+    <string name="update_available">Доступна новая версия</string>
+    <string name="update_asset_missing">Файл обновления пока недоступен</string>
+    <string name="update_download">Скачать и установить</string>
+    <string name="update_downloading">Скачивание: %1$d%%</string>
+    <string name="update_install">Установить обновление</string>
+    <string name="update_network_error">Не удалось связаться с GitHub. Проверьте интернет и зайдите в раздел ещё раз.</string>
+    <string name="update_http_error">GitHub временно не отвечает. Попробуйте позже.</string>
+    <string name="update_format_error">Не удалось прочитать сведения об обновлении. Попробуйте позже.</string>
+    <string name="update_integrity_error">Файл скачался с ошибкой. Скачайте обновление ещё раз.</string>
+    <string name="update_signature_error">Подпись обновления отличается от установленного приложения. Обновить его с сохранением данных нельзя.</string>
+    <string name="update_package_error">Этот файл не подходит для обновления установленного приложения.</string>
+    <string name="update_permission_error">Для установки разрешите Seasonvar TV устанавливать приложения в настройках Android.</string>
+    <string name="update_installer_error">Не удалось открыть установщик Android. Попробуйте ещё раз.</string>
 </resources>
