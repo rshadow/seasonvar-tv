@@ -23,6 +23,8 @@
 - Сохранить текущую сборку/тесты/подпись по ADR-0050. Новые actions закрепляются полными SHA в workflow и toolchain.lock.json. Для Gradle action выбран внешний кэш Actions; коммерческий провайдер кэша не подключается. Используются стандартные Ubuntu runners публичного репозитория.
 - Штатные команды установки инструментов, экспорта путей SDK/JDK для Actions и сборки CodeQL находятся в Makefile: ci-tools, ci-export-env, codeql-build. CI не требует глобальной установки SDK или навыков на компьютере разработчика.
 
+Запросы GitHub API при ожидании снимков повторять до трёх раз средствами `actions/github-script` с увеличением задержки. Это обрабатывает временные HTTP 5xx; обычные ошибки 400/401/403/404/422 не повторяются. Ошибка публикации снимка, истечение 25 минут или найденная уязвимость по-прежнему завершают проверку ошибкой; повтор запроса не заменяет успешный снимок.
+
 ## Альтернативы
 
 - Только Android Lint и тесты не проверяют все известные уязвимости сторонних библиотек и весь поток данных приложения.
@@ -37,4 +39,4 @@
 
 Фактические серверные настройки отличаются от содержимого файлов: порядок ручного включения и импорт правил описаны в [docs/github-security.md](../github-security.md). Результаты первого запуска фиксируются после проверки GitHub Actions; заранее считать их успешными нельзя.
 
-Источники: [бесплатные функции GitHub](https://docs.github.com/en/code-security/getting-started/github-security-features), [CodeQL и сборка Kotlin](https://docs.github.com/en/code-security/reference/code-scanning/codeql/build-options-for-compiled-languages), [Gradle dependency submission и forks](https://github.com/gradle/actions/blob/main/docs/dependency-submission.md), [Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review), [импорт rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/managing-rulesets-for-a-repository).
+Источники: [повторы запросов github-script](https://github.com/actions/github-script#retries), [бесплатные функции GitHub](https://docs.github.com/en/code-security/getting-started/github-security-features), [CodeQL и сборка Kotlin](https://docs.github.com/en/code-security/reference/code-scanning/codeql/build-options-for-compiled-languages), [Gradle dependency submission и forks](https://github.com/gradle/actions/blob/main/docs/dependency-submission.md), [Dependency review](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-review), [импорт rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/managing-rulesets-for-a-repository).
