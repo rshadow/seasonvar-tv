@@ -8,11 +8,12 @@ dependencies = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dependencies)
 MINIMUMS = dependencies.minimum_versions(
     "buildCryptoVersion=1.86\nguavaVersion=33.7.2\nbuildJdomVersion=2.0.6.1\n"
-    "buildJose4jVersion=0.9.6\nbuildHttpClientVersion=4.5.14\n")
+    "buildJose4jVersion=0.9.6\nbuildHttpClientVersion=4.5.14\nbuildCommonsLangVersion=3.18.0\n")
 
 
 def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-android",
-          jdom_version="2.0.6.1", jose4j_version="0.9.6", httpclient_version="4.5.14"):
+          jdom_version="2.0.6.1", jose4j_version="0.9.6", httpclient_version="4.5.14",
+          commons_root="3.18.0", commons_lint="3.18.0"):
     entries = [
         {"dependency": "org.bouncycastle:" + module + ":" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
@@ -27,6 +28,11 @@ def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-and
     ]
     entries.append({"dependency": "org.apache.httpcomponents:httpclient:" + httpclient_version,
                     "resolvedBy": [{"path": ":", "configuration": "classpath"}]})
+    entries.extend(
+        {"dependency": "org.apache.commons:commons-lang3:" + version,
+         "resolvedBy": [{"path": path, "configuration": configuration}]}
+        for path, configuration, version in [
+            (":", "classpath", commons_root), (":app", "androidLintTool", commons_lint)])
     return entries + [
         {"dependency": "com.google.guava:guava:" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
@@ -41,10 +47,10 @@ class ResolvedDependenciesTests(unittest.TestCase):
             dependencies.check_report(graph("1.80.2"), MINIMUMS)
 
     def test_all_build_lint_and_runtime_resolutions_are_accepted_after_fix(self):
-        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 11)
+        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 13)
 
     def test_newer_patched_versions_are_accepted(self):
-        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 11)
+        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 13)
 
     def test_missing_or_wrong_graph_is_not_a_success(self):
         for report in ([], {}, ["invalid"]):
@@ -112,4 +118,12 @@ class ResolvedDependenciesTests(unittest.TestCase):
                 ("androidLintTool", graph() + [old_lint])):
             with self.subTest(configuration=configuration), self.assertRaisesRegex(
                     ValueError, r"org\.apache\.httpcomponents:httpclient:4\.5\.6 .*" + configuration):
+                dependencies.check_report(report, MINIMUMS)
+
+    def test_old_commons_lang_is_rejected_in_both_independent_classpaths(self):
+        for configuration, report in (
+                ("classpath", graph(commons_root="3.16.0")),
+                ("androidLintTool", graph(commons_lint="3.16.0"))):
+            with self.subTest(configuration=configuration), self.assertRaisesRegex(
+                    ValueError, r"org\.apache\.commons:commons-lang3:3\.16\.0 .*" + configuration):
                 dependencies.check_report(report, MINIMUMS)

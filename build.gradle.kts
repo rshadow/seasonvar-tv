@@ -4,6 +4,7 @@ buildscript {
     val buildJdomVersion = providers.gradleProperty("buildJdomVersion").get()
     val buildJose4jVersion = providers.gradleProperty("buildJose4jVersion").get()
     val buildHttpClientVersion = providers.gradleProperty("buildHttpClientVersion").get()
+    val buildCommonsLangVersion = providers.gradleProperty("buildCommonsLangVersion").get()
     repositories {
         google()
         mavenCentral()
@@ -11,6 +12,9 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
         constraints {
+            add("classpath", "org.apache.commons:commons-lang3:$buildCommonsLangVersion") {
+                because("Fix CVE-2025-48924 in AGP tooling")
+            }
             add("classpath", "org.apache.httpcomponents:httpclient:$buildHttpClientVersion") {
                 because("Fix CVE-2020-13956 in AGP tooling")
             }

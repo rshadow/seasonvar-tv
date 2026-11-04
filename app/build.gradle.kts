@@ -6,6 +6,7 @@ plugins {
 val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
 val guavaVersion = providers.gradleProperty("guavaVersion").get()
 val buildHttpClientVersion = providers.gradleProperty("buildHttpClientVersion").get()
+val buildCommonsLangVersion = providers.gradleProperty("buildCommonsLangVersion").get()
 
 android {
     namespace = "ru.seasonvar.tv"
@@ -89,6 +90,10 @@ dependencies {
 configurations.configureEach {
     if (name == "androidLintTool") {
         resolutionStrategy.eachDependency {
+            if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
+                useVersion(buildCommonsLangVersion)
+                because("Fix CVE-2025-48924 in Android Lint tooling")
+            }
             if (requested.group == "org.apache.httpcomponents" && requested.name == "httpclient") {
                 useVersion(buildHttpClientVersion)
                 because("Fix CVE-2020-13956 in Android Lint tooling")
