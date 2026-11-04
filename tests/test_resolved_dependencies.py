@@ -8,11 +8,11 @@ dependencies = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dependencies)
 MINIMUMS = dependencies.minimum_versions(
     "buildCryptoVersion=1.86\nguavaVersion=33.7.2\nbuildJdomVersion=2.0.6.1\n"
-    "buildJose4jVersion=0.9.6\n")
+    "buildJose4jVersion=0.9.6\nbuildHttpClientVersion=4.5.14\n")
 
 
 def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-android",
-          jdom_version="2.0.6.1", jose4j_version="0.9.6"):
+          jdom_version="2.0.6.1", jose4j_version="0.9.6", httpclient_version="4.5.14"):
     entries = [
         {"dependency": "org.bouncycastle:" + module + ":" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
@@ -25,6 +25,8 @@ def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-and
         {"dependency": "org.bitbucket.b_c:jose4j:" + jose4j_version,
          "resolvedBy": [{"path": ":", "configuration": "classpath", "scope": "Unknown"}]},
     ]
+    entries.append({"dependency": "org.apache.httpcomponents:httpclient:" + httpclient_version,
+                    "resolvedBy": [{"path": ":", "configuration": "classpath"}]})
     return entries + [
         {"dependency": "com.google.guava:guava:" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
@@ -39,10 +41,10 @@ class ResolvedDependenciesTests(unittest.TestCase):
             dependencies.check_report(graph("1.80.2"), MINIMUMS)
 
     def test_all_build_lint_and_runtime_resolutions_are_accepted_after_fix(self):
-        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 10)
+        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 11)
 
     def test_newer_patched_versions_are_accepted(self):
-        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 10)
+        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 11)
 
     def test_missing_or_wrong_graph_is_not_a_success(self):
         for report in ([], {}, ["invalid"]):
@@ -100,4 +102,14 @@ class ResolvedDependenciesTests(unittest.TestCase):
                 ("androidLintTool", graph() + [old_lint])):
             with self.subTest(configuration=configuration), self.assertRaisesRegex(
                     ValueError, r"org\.bitbucket\.b_c:jose4j:0\.9\.5 .*" + configuration):
+                dependencies.check_report(report, MINIMUMS)
+
+    def test_patched_agp_does_not_hide_vulnerable_httpclient_in_lint(self):
+        old_lint = {"dependency": "org.apache.httpcomponents:httpclient:4.5.6",
+                    "resolvedBy": [{"path": ":app", "configuration": "androidLintTool"}]}
+        for configuration, report in (
+                ("classpath", graph(httpclient_version="4.5.6")),
+                ("androidLintTool", graph() + [old_lint])):
+            with self.subTest(configuration=configuration), self.assertRaisesRegex(
+                    ValueError, r"org\.apache\.httpcomponents:httpclient:4\.5\.6 .*" + configuration):
                 dependencies.check_report(report, MINIMUMS)

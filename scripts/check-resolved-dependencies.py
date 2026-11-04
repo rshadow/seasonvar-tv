@@ -28,6 +28,7 @@ def minimum_versions(properties):
     result["com.google.guava:guava"] = required("guavaVersion")
     result["org.jdom:jdom2"] = required("buildJdomVersion")
     result["org.bitbucket.b_c:jose4j"] = required("buildJose4jVersion")
+    result["org.apache.httpcomponents:httpclient"] = required("buildHttpClientVersion")
     return result
 
 
