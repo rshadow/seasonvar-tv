@@ -37,7 +37,7 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
+.PHONY: check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build owner-automerge
 
 help:
 	@printf '%s\n' \
@@ -70,6 +70,7 @@ help:
 		'make emulator               Start the local emulator window' \
 		'make emulator-network-delay Set emulator latency (NETWORK_DELAY=1000 or none)' \
 		'make emulator-restart       Restart and apply emulator input settings' \
+		'make install-apk APK=... [DEVICE=serial] Install an existing APK' \
 		'make run [DEVICE=serial]     Build, install and launch' \
 		'make restart                Restart the installed app' \
 		'make logs [LOG_ARGS=-d]      Show app-only logs' \
@@ -190,6 +191,10 @@ emulator-restart: emulator-stop
 	$(MAKE) emulator
 
 install: build
+	$(MAKE) install-apk
+
+install-apk:
+	test -f "$(APK)"
 	$(ADB) wait-for-device
 	@until [[ "$$($(ADB) shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; do sleep 1; done
 	$(ADB) install -r "$(APK)"

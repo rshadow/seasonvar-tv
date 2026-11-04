@@ -86,6 +86,7 @@ jobs:
           path: |
             build/release/*.apk
             build/release/SHA256SUMS
+            build/release/NOTES.md
           if-no-files-found: error
           retention-days: 14
 
@@ -115,4 +116,4 @@ jobs:
           options=()
           if [[ "$RELEASE_TAG" == *-* ]]; then options+=(--prerelease); fi
           gh release create "$RELEASE_TAG" ./*.apk ./SHA256SUMS \
-            --verify-tag --generate-notes --title "Seasonvar TV $RELEASE_TAG" "${options[@]}"
+            --verify-tag --notes-file NOTES.md --title "Seasonvar TV $RELEASE_TAG" "${options[@]}"

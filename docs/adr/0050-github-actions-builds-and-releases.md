@@ -2,7 +2,7 @@
 
 Дата: 2026-11-03
 
-Статус: Формат имени APK уточнён [ADR-0051](0051-universal-apk-filename.md), создание релизных тегов — [ADR-0053](0053-explicit-release-tag-command.md); остальные решения действуют.
+Статус: Формат имени APK уточнён [ADR-0051](0051-universal-apk-filename.md), создание релизных тегов — [ADR-0053](0053-explicit-release-tag-command.md), описание релиза — [ADR-0069](0069-short-release-notes.md); остальные решения действуют.
 
 ## Контекст
 
