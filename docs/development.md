@@ -4,6 +4,10 @@
 
 Все команды запускаются из корня проекта через [Makefile](../Makefile).
 
+Совместимость библиотек описана в [ADR-0060](adr/0060-compatible-dependency-updates.md), переход на AGP 9.5.0, встроенный Kotlin, SDK 37.0 и Build Tools 36.0.0 — в [ADR-0061](adr/0061-agp9-built-in-kotlin-and-sdk37.md). Wrapper пересоздаётся командой `make wrapper` для закреплённой в `gradle-wrapper.properties` версии Gradle. Classpath сборки показывает `make build-environment`; полный граф всех конфигураций создаёт `make dependency-report`, а `make check-resolved-dependencies` проверяет в нём исправленные версии Bouncy Castle и обеих разновидностей Guava и входит в `make check`; ограничения исправленных криптобиблиотек описаны в [ADR-0062](adr/0062-patched-build-crypto-dependencies.md), Guava — в [ADR-0063](adr/0063-patched-guava-dependencies.md). В каждом PR Android CI также выполняет `make build-profile` и сохраняет оптимизированный APK как артефакт `seasonvar-tv-profile` для установки в эмулятор.
+
+После обновления зависимостей выполнять `make check`, `make ci-lint`, `make codeql-build` и `make build BUILD_TYPE=release`; обновлять версии и контрольные суммы соответствующих артефактов в `toolchain.lock.json`.
+
 ## Подготовка другого компьютера
 
 Требуются Python 3.12+, make и curl. Для локального эмулятора также нужна доступная аппаратная виртуализация.
@@ -290,6 +294,8 @@ make profile-navigation DEVICE=<serial> PROFILE_OUT=build/performance/cpu PROFIL
 Проверка 2026-11-02: при задержке сети эмулятора 1000 мс вращение подтверждено последовательными снимками; координаты заголовка выбранного сериала и карточек совпали до и во время обновления, фокус остался на кнопке, видимой строки «Обновляем список…» нет. После завершения запроса последовательные снимки стали идентичны — анимация остановилась. Задержка возвращена к исходным 0 мс.
 
 ## Проверка воспроизведения
+
+Сетевой клиент HTTP/DoH — OkHttp 5.5.1 с Android-вариантом основного клиента и Okio 3.18.1; переход описан в [ADR-0064](adr/0064-okhttp5-network-client.md).
 
 Media3 ExoPlayer/UI/OkHttp/HLS закреплены на версии 1.11.1 в Gradle и `toolchain.lock.json`. `make deps` загружает артефакты с проверкой контрольных сумм и собирает проект.
 

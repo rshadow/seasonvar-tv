@@ -871,7 +871,11 @@ private fun CatalogPane(
                     key = { _, item -> catalogKey + "|" + item.key },
                     contentType = { _, _ -> "series" },
                 ) { index, item ->
-                    val requester = cards.getOrPut(catalogKey + "|" + item.key) { FocusRequester() }
+                    val cardKey = catalogKey + "|" + item.key
+                    val cachedRequester = cards[cardKey]
+                    val requester = remember(cardKey, cachedRequester) {
+                        cachedRequester ?: FocusRequester().also { cards[cardKey] = it }
+                    }
                     val contentReady = remember(cardFrames, firstCard, index) {
                         derivedStateOf {
                             val count = cardFrames.intValue
