@@ -30,6 +30,8 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import ru.seasonvar.tv.ui.catalog.CatalogGrid
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
+import ru.seasonvar.tv.ui.catalog.CatalogCardMetrics
+import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -629,10 +631,11 @@ private fun SeasonvarContent(
                 }
             }
         }
-        Box(
+        BoxWithConstraints(
             Modifier.weight(1f).fillMaxHeight()
                 .onFocusChanged { if (it.hasFocus) menuOwnsInput = false }.focusGroup()
         ) {
+            val cardMetrics = rememberCatalogCardMetrics(maxWidth)
             if (section == Section.ACCOUNT) {
                 AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
             } else if (section == Section.SETTINGS) {
@@ -685,7 +688,7 @@ private fun SeasonvarContent(
                         PublicFeed.BEST -> bestFocus
                         PublicFeed.ANNOUNCEMENTS -> announcementsFocus
                     }, refreshFocus, retryFocus,
-                    layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
+                    cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
                     onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
                     onEnterContent = ::enterContent,
                     query = if (searching) searchState.query else null,
@@ -881,6 +884,7 @@ private fun CatalogPane(
     catalogKey: String = feed?.name ?: "SEARCH",
     onLoadMore: () -> Unit = {},
     onActions: (SeriesEntry) -> Unit = {},
+    cardMetrics: CatalogCardMetrics,
     allowAccountActions: Boolean = false,
     layout: CatalogLayout = CatalogLayout.STRIP,
     gridState: LazyGridState = rememberLazyGridState(),
@@ -1010,13 +1014,12 @@ private fun CatalogPane(
                 }
             }
         } else if (layout == CatalogLayout.GRID) {
-            CatalogGrid(state.entries, gridState, catalogKey, cards, layoutFocus, menuFocus,
+            CatalogGrid(state.entries, gridState, catalogKey, cards, layoutFocus, menuFocus, cardMetrics,
                 Modifier.fillMaxWidth().weight(1f), onFocused, onOpen, if (allowAccountActions) onActions else null)
         } else {
-            SelectedPanel(selected, description, Modifier.weight(1f))
-            Spacer(Modifier.height(d.spacingMedium))
+            SelectedPanel(selected, description, Modifier.weight(1f).padding(bottom = d.spacingMedium))
             LazyRow(
-                modifier = Modifier.fillMaxWidth().height(d.cardRowHeight),
+                modifier = Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
                 state = listState,
                 horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
                 contentPadding = PaddingValues(d.cardPadding),
@@ -1038,7 +1041,7 @@ private fun CatalogPane(
                         }
                     }
                     SeriesThumbnail(
-                        item, requester, layoutFocus,
+                        item, requester, layoutFocus, cardMetrics,
                         if (index == 0) menuFocus else null,
                         right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
                         contentReady = { contentReady.value },
@@ -1086,6 +1089,7 @@ internal fun SeriesThumbnail(
     entry: SeriesEntry,
     requester: FocusRequester,
     up: FocusRequester,
+    metrics: CatalogCardMetrics,
     left: FocusRequester?,
     right: FocusRequester,
     contentReady: () -> Boolean,
@@ -1093,7 +1097,6 @@ internal fun SeriesThumbnail(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
-    grid: Boolean = false,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -1106,7 +1109,7 @@ internal fun SeriesThumbnail(
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(d.cardCornerRadius)
     Column(
-        modifier.then(if (grid) Modifier.fillMaxWidth() else Modifier.width(d.cardWidth).height(d.cardHeight))
+        modifier.size(metrics.width, metrics.height)
             .focusRequester(requester)
             .focusProperties {
                 this.up = up
@@ -1142,10 +1145,10 @@ internal fun SeriesThumbnail(
             .padding(d.cardPadding),
     ) {
         if (contentReady()) {
-            Poster(entry, Modifier.fillMaxWidth().then(if (grid) Modifier.aspectRatio(d.posterWidth / d.posterHeight)
-                else Modifier.height(d.thumbnailHeight)))
+            Poster(entry, Modifier.fillMaxWidth().height(metrics.posterHeight))
             Spacer(Modifier.height(d.spacingSmall))
-            Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
+            Text(entry.title, modifier = Modifier.height(metrics.titleHeight),
+                style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
             val subtitle = if (entry.expectedReleaseDate != null)
                 stringResource(R.string.announcements_expected, entry.expectedReleaseDate)
@@ -1155,13 +1158,9 @@ internal fun SeriesThumbnail(
             ).joinToString(" · ") else entry.subtitle.ifBlank {
                 entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty()
             }
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
+            Text(subtitle, modifier = Modifier.height(metrics.subtitleHeight),
+                style = MaterialTheme.typography.labelSmall, color = c.onSurface,
                 minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        } else if (grid) {
-            Spacer(Modifier.fillMaxWidth().aspectRatio(d.posterWidth / d.posterHeight))
-            Spacer(Modifier.height(d.spacingSmall))
-            Text("", minLines = 2, maxLines = 2, style = MaterialTheme.typography.labelMedium)
-            Text("", minLines = 1, maxLines = 1, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

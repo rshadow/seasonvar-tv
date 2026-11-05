@@ -19,6 +19,7 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 internal fun CatalogGrid(
     entries: List<SeriesEntry>, state: LazyGridState, catalogKey: String,
     cards: MutableMap<String, FocusRequester>, headerFocus: FocusRequester, menuFocus: FocusRequester,
+    metrics: CatalogCardMetrics,
     modifier: Modifier, onFocused: (SeriesEntry) -> Unit, onOpen: (SeriesEntry) -> Unit,
     onActions: ((SeriesEntry) -> Unit)?,
 ) {
@@ -29,7 +30,7 @@ internal fun CatalogGrid(
         repeat(CARD_WARMUP_FRAMES) { withFrameNanos { }; frames.intValue++ }
     }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(d.gridMinCardWidth), state = state, modifier = modifier,
+        columns = GridCells.FixedSize(metrics.width), state = state, modifier = modifier,
         contentPadding = PaddingValues(d.cardPadding),
         horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
         verticalArrangement = Arrangement.spacedBy(d.spacingSmall),
@@ -40,9 +41,9 @@ internal fun CatalogGrid(
             val ready = remember(frames, first, index) {
                 derivedStateOf { frames.intValue >= CARD_WARMUP_FRAMES || index in first until first + frames.intValue }
             }
-            SeriesThumbnail(entry, requester, FocusRequester.Default, null, FocusRequester.Default,
+            SeriesThumbnail(entry, requester, FocusRequester.Default, metrics, null, FocusRequester.Default,
                 contentReady = { ready.value }, onFocused = { onFocused(entry) }, onClick = { onOpen(entry) },
-                onLongClick = onActions?.let { { it(entry) } }, grid = true,
+                onLongClick = onActions?.let { { it(entry) } },
                 modifier = Modifier.focusProperties {
                     val edges = catalogGridEdges(index, entries.size, state.layoutInfo.maxSpan.coerceAtLeast(1))
                     up = if (edges.top) headerFocus else FocusRequester.Default
