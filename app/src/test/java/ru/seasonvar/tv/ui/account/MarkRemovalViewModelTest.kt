@@ -83,8 +83,11 @@ class MarkRemovalViewModelTest {
     @Test fun unmarked_public_entries_can_open_status_actions_but_not_deletion() = runTest(dispatcher) {
         val model = model { _, _ -> fail() }; runCurrent()
         model.show(entry.copy(accountListMark = null)); assertTrue(model.state.value.visible)
-        model.editStatus(); runCurrent(); assertEquals(RemovalStage.STATUS, model.state.value.stage)
+        runCurrent(); assertEquals(RemovalStage.ACTIONS, model.state.value.stage)
         assertNull(model.state.value.status)
+        assertNull(model.state.value.entry?.accountListMark)
+        model.ask(); model.confirm(); runCurrent()
+        assertEquals(RemovalStage.ACTIONS, model.state.value.stage)
     }
     @Test fun status_is_loaded_and_only_verified_change_notifies_once() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>(); var calls = 0
@@ -115,6 +118,44 @@ class MarkRemovalViewModelTest {
         store.put("status", model); runCurrent(); model.show(entry, RemovalStage.STATUS); runCurrent()
         session.value = AccountSession(version = 2); runCurrent(); model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
         assertEquals(0, calls); assertFalse(model.state.value.visible)
+    }
+
+    @Test fun long_press_loads_current_status_and_allows_selection_without_an_intermediate_menu() = runTest(dispatcher) {
+        val gate = CompletableDeferred<AccountListStatus?>()
+        var writes = 0
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = { gate.await() },
+            changeStatus = { _, _, _ -> writes++; PlaybackMarkSnapshot(status = -1) })
+        store.put("flat", model); runCurrent()
+        model.show(entry.copy(accountListMark = null)); runCurrent()
+        assertEquals(RemovalStage.ACTIONS, model.state.value.stage)
+        assertTrue(model.state.value.loadingStatus)
+        model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent(); assertEquals(0, writes)
+        gate.complete(AccountListStatus.WATCHED); runCurrent()
+        assertEquals(AccountListStatus.WATCHED, model.state.value.status)
+        assertEquals(target, model.state.value.entry?.accountListMark)
+        model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
+        assertEquals(1, writes); assertFalse(model.state.value.visible)
+    }
+
+    @Test fun deletion_confirmation_cancels_pending_status_read_and_cancel_does_not_write() = runTest(dispatcher) {
+        val gate = CompletableDeferred<AccountListStatus?>()
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = { gate.await() })
+        store.put("confirm", model); runCurrent(); model.show(entry); runCurrent()
+        assertTrue(model.state.value.loadingStatus)
+        model.ask(); gate.complete(AccountListStatus.WATCHED); runCurrent()
+        assertEquals(RemovalStage.CONFIRM, model.state.value.stage)
+        assertFalse(model.state.value.loadingStatus)
+        assertNull(model.state.value.status)
+        model.dismiss(); runCurrent(); assertFalse(model.state.value.visible)
+    }
+
+    @Test fun switching_accounts_cancels_a_late_status_read_from_the_flat_menu() = runTest(dispatcher) {
+        val gate = CompletableDeferred<AccountListStatus?>()
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = { gate.await() })
+        store.put("late", model); runCurrent(); model.show(entry); runCurrent()
+        session.value = AccountSession(version = 2); runCurrent()
+        gate.complete(AccountListStatus.WATCHED); runCurrent()
+        assertEquals(MarkRemovalUiState(), model.state.value)
     }
 
 }

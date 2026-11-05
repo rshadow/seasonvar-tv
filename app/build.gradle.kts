@@ -28,6 +28,7 @@ android {
 
     buildTypes {
         getByName("release") {
+            versionNameSuffix = providers.gradleProperty("versionNameSuffix").orNull
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }

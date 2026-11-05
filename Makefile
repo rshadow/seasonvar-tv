@@ -5,13 +5,15 @@ SHELL := /bin/bash
 BOOTSTRAP_CACHE ?= $(HOME)/.cache/seasonvar/downloads
 ENV := ./scripts/android-env.sh
 GRADLE_ARGS ?=
+VERSION_NAME_SUFFIX ?=
+DEV_COMMIT ?=
 LOG_ARGS ?=
 INPUT_TEXT ?=
 SEARCH_QUERY ?= Игра престолов
 export INPUT_TEXT SEARCH_QUERY
 NETWORK_DELAY ?= none
 KEY_ARGS ?=
-GRADLE := $(ENV) ./gradlew --console=plain $(GRADLE_ARGS)
+GRADLE := $(ENV) ./gradlew --console=plain $(if $(strip $(VERSION_NAME_SUFFIX)),-PversionNameSuffix="$(VERSION_NAME_SUFFIX)") $(GRADLE_ARGS)
 AVD ?= Seasonvar_TV_API_34
 EMULATOR_ARGS := $(shell python3 -c 'import json; print(" ".join(json.load(open("toolchain.lock.json"))["avd"]["emulator_args"]))')
 DEVICE ?= emulator-5554
@@ -40,7 +42,7 @@ UPDATE_PREVIEW_SCENARIO ?= new
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
+.PHONY: status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-dev release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -54,6 +56,7 @@ help:
 		'make deps                   Download build dependencies' \
 		'make build                  Build the debug APK' \
 		'make release                Build and sign the release APK using project secrets.env' \
+		'make release-dev            Build a release-signed APK with dev + current commit suffix' \
 		'make release-package        Prepare versioned release APK and SHA256SUMS' \
 		'make ci-tools               Install the pinned build tools without compiling the app' \
 		'make ci-prepare             Install build tools, accept SDK licenses and fetch dependencies' \
@@ -124,6 +127,12 @@ build:
 release:
 	$(MAKE) build BUILD_TYPE=release
 	$(ENV) sh -c 'exec java --class-path "$$ANDROID_HOME/$(SIGNER_JAR)" scripts/SignRelease.java app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/app-release.apk'
+
+release-dev:
+	@commit="$(DEV_COMMIT)"; \
+		if [[ -z "$$commit" ]]; then commit="$$(git rev-parse --short=7 HEAD)"; fi; \
+		[[ "$$commit" =~ ^[0-9a-f]{7,40}$$ ]] || { echo 'Expected a Git commit hash.' >&2; exit 1; }; \
+		$(MAKE) release VERSION_NAME_SUFFIX="-dev$$commit"
 
 release-package: release
 	python3 scripts/package-release.py

@@ -28,10 +28,7 @@
     <dimen name="seasonvar_header_button_size">44dp</dimen>
     <dimen name="seasonvar_header_button_icon_size">24dp</dimen>
     <integer name="seasonvar_refresh_rotation_duration_ms">1000</integer>
-    <dimen name="seasonvar_card_width">120dp</dimen>
-    <dimen name="seasonvar_card_height">212dp</dimen>
-    <dimen name="seasonvar_thumbnail_height">144dp</dimen>
-    <dimen name="seasonvar_card_row_height">224dp</dimen>
+    <dimen name="seasonvar_catalog_min_card_width">128dp</dimen>
     <dimen name="seasonvar_poster_width">120dp</dimen>
     <dimen name="seasonvar_poster_height">180dp</dimen>
     <dimen name="seasonvar_card_padding">6dp</dimen>

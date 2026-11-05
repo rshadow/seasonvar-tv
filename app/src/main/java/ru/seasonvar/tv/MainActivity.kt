@@ -104,16 +104,18 @@ class MainActivity : ComponentActivity() {
             val states = models.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
             val descriptions = models.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
+            val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             SeasonvarApp(
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
+                catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
                 onRemovalRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.CONFIRM) },
-                onRemovalStatus = removalModel::editStatus, onRemovalSetStatus = removalModel::selectStatus,
+                onRemovalSetStatus = removalModel::selectStatus,
                 onRemovalStatusRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.STATUS) },
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
