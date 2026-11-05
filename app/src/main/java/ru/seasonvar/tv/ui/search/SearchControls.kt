@@ -47,6 +47,10 @@ internal fun SearchControls(
     editRequest: Int,
     onSubmit: () -> Unit,
     onResults: () -> Unit,
+    showHistory: Boolean = false,
+    historyLoading: Boolean = false,
+    historyFailed: Boolean = false,
+    onCommit: () -> Unit = {},
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -55,6 +59,7 @@ internal fun SearchControls(
     val inputMode = LocalInputModeManager.current
     val scope = rememberCoroutineScope()
     val microphoneFocus = remember { FocusRequester() }
+    var handledEditRequest by remember { mutableIntStateOf(0) }
     var focused by remember { mutableStateOf(false) }
     var voiceMessage by remember { mutableStateOf<Int?>(null) }
     val title = stringResource(R.string.search_title)
@@ -63,7 +68,7 @@ internal fun SearchControls(
         val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
             ?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
         if (result.resultCode == Activity.RESULT_OK) {
-            if (text != null) { onQuery(text); voiceMessage = null }
+            if (text != null) { onQuery(text); onCommit(); voiceMessage = null }
             else voiceMessage = R.string.search_voice_failed
         }
         inputMode.requestInputMode(InputMode.Keyboard)
@@ -74,8 +79,11 @@ internal fun SearchControls(
         inputFocus.requestFocus()
         scope.launch { withFrameNanos { }; keyboard?.show() }
     }
-    LaunchedEffect(editRequest) {
-        if (editRequest > 0) { withFrameNanos { }; edit() }
+    LaunchedEffect(editRequest, historyLoading) {
+        if (editRequest > 0 && editRequest != handledEditRequest && !historyLoading) {
+            handledEditRequest = editRequest
+            if (!showHistory) { withFrameNanos { }; edit() }
+        }
     }
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -148,6 +156,8 @@ internal fun SearchControls(
                 },
             )
         }
+        if (historyFailed) Text(stringResource(R.string.search_history_error), color = c.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall)
         voiceMessage?.let { Text(stringResource(it), color = c.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall) }
     }

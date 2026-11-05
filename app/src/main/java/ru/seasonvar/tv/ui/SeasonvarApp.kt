@@ -137,6 +137,9 @@ internal fun SeasonvarApp(
     searchDescription: DescriptionState = DescriptionState(),
     onSearchQuery: (String) -> Unit = {},
     onSearchSubmit: () -> Unit = {},
+    onSearchRecall: (String) -> Unit = {},
+    onSearchClearHistory: () -> Unit = {},
+    onSearchRemember: () -> Unit = {},
     onSearchSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onSearchVisible: (Boolean) -> Unit = {},
     bypassEnabled: Boolean = true,
@@ -184,6 +187,7 @@ internal fun SeasonvarApp(
             searchDescription = searchDescription,
             onSearchQuery = onSearchQuery,
             onSearchSubmit = onSearchSubmit,
+            onSearchRecall = onSearchRecall, onSearchClearHistory = onSearchClearHistory, onSearchRemember = onSearchRemember,
             onSearchSelect = onSearchSelect,
             onSearchVisible = onSearchVisible,
             bypassEnabled = bypassEnabled,
@@ -219,6 +223,9 @@ private fun SeasonvarContent(
     searchDescription: DescriptionState = DescriptionState(),
     onSearchQuery: (String) -> Unit = {},
     onSearchSubmit: () -> Unit = {},
+    onSearchRecall: (String) -> Unit = {},
+    onSearchClearHistory: () -> Unit = {},
+    onSearchRemember: () -> Unit = {},
     onSearchSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onSearchVisible: (Boolean) -> Unit = {},
     bypassEnabled: Boolean = true,
@@ -293,6 +300,8 @@ private fun SeasonvarContent(
     val personalFocus = remember { PersonalFeed.entries.associateWith { FocusRequester() } }
     val menuBringIntoView = remember { Section.entries.associateWith { BringIntoViewRequester() } }
     val searchInputFocus = remember { FocusRequester() }
+    val searchHistoryFocus = remember { FocusRequester() }
+    var pendingHistoryQuery by remember { mutableStateOf<String?>(null) }
     val todayFocus = remember { FocusRequester() }
     val updatesFocus = remember { FocusRequester() }
     val topFocus = remember { FocusRequester() }
@@ -317,6 +326,7 @@ private fun SeasonvarContent(
     val latestCatalogKey by rememberUpdatedState(catalogKey)
     val latestSelected by rememberUpdatedState(selected)
     val latestState by rememberUpdatedState(state)
+    val latestSearchState by rememberUpdatedState(searchState)
     val latestListState by rememberUpdatedState(listState)
 
     fun selectEntry(key: String?) {
@@ -325,6 +335,7 @@ private fun SeasonvarContent(
     }
 
     fun selectSection(item: Section) {
+        pendingHistoryQuery = null
         detailsOpen = false
         section = item
         item.personalFeed?.let(onPersonalVisible)
@@ -364,7 +375,7 @@ private fun SeasonvarContent(
             selectEntry(if (origin != null) removalNeighbor(origin.keys, state.entries.map { it.key }, origin.selected) else selected?.key)
         }
     }
-    LaunchedEffect(catalogKey, selected?.key, description.key) {
+    LaunchedEffect(catalogKey, selected?.key, description.key, searchState.showHistory) {
         selected?.let { if (searching) onSearchSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
     }
     val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy)
@@ -414,7 +425,11 @@ private fun SeasonvarContent(
             val selected = latestSelected
             val state = latestState
             val listState = latestListState
-            if (section == Section.ACCOUNT) {
+            if (section == Section.SEARCH && latestSearchState.showHistory) {
+                if (!latestSearchState.historyLoading) {
+                    if (latestSearchState.recentQueries.isEmpty()) searchInputFocus.requestFocus() else searchHistoryFocus.requestFocus()
+                }
+            } else if (section == Section.ACCOUNT) {
                 accountFocus.requestFocus()
             } else if (section == Section.SETTINGS) {
                 settingsContentFocus.requestFocus()
@@ -434,6 +449,19 @@ private fun SeasonvarContent(
                 cards[catalogKey + "|" + selected.key]?.requestFocus()
             }
         }
+    }
+
+    LaunchedEffect(pendingHistoryQuery, searchState.showHistory, searchState.query, searchState.results.loading, searchState.results.loaded, searchState.results.failure) {
+        if (!searchState.showHistory && pendingHistoryQuery == searchState.query && !searchState.results.loading &&
+            (searchState.results.loaded || searchState.results.failure != null)) {
+            pendingHistoryQuery = null
+            keyboard?.hide()
+            if (searchState.results.entries.isNotEmpty()) enterContent() else refreshFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(searching, searchState.showHistory, searchState.focusHistoryOnShow) {
+        if (!searching) pendingHistoryQuery = null
+        else if (searchState.showHistory && searchState.focusHistoryOnShow) keyboard?.hide()
     }
 
     fun returnToMenu() {
@@ -465,6 +493,8 @@ private fun SeasonvarContent(
     }
 
     fun openDetails(entry: SeriesEntry) {
+        pendingHistoryQuery = null
+        if (searching) onSearchRemember()
         backNavigation.reset()
         inputModeManager.requestInputMode(InputMode.Keyboard)
         selectEntry(entry.key)
@@ -484,6 +514,7 @@ private fun SeasonvarContent(
     }
 
     fun navigateBack() {
+        pendingHistoryQuery = null
         startupPending = false
         if ((searching || section == Section.ACCOUNT) && !detailsOpen && imeVisible) {
             keyboard?.hide()
@@ -517,7 +548,7 @@ private fun SeasonvarContent(
             .onFocusChanged { if (it.hasFocus) menuOwnsInput = true }.focusGroup()) {
             Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 ThemeButton(stringResource(R.string.search_title), onClick = {
-                    startupPending = false; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
+                    startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
                 }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = todayFocus; right = accountFocus },
                     icon = R.drawable.ic_search)
                 ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
@@ -630,14 +661,27 @@ private fun SeasonvarContent(
                     searchHeader = if (searching) { {
                         SearchControls(
                             query = searchState.query,
-                            onQuery = onSearchQuery,
+                            onQuery = { pendingHistoryQuery = null; onSearchQuery(it) },
+                            showHistory = searchState.showHistory,
+                            historyLoading = searchState.historyLoading,
+                            historyFailed = searchState.historyFailed,
+                            onCommit = onSearchRemember,
                             inputFocus = searchInputFocus,
                             menuFocus = searchFocus,
                             editRequest = searchEditRequest,
                             onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
-                            onResults = { keyboard?.hide(); if (state.entries.isNotEmpty()) enterContent() },
+                            onResults = { keyboard?.hide(); if (searchState.showHistory) {
+                                if (searchState.recentQueries.isNotEmpty()) searchHistoryFocus.requestFocus()
+                            } else if (state.entries.isNotEmpty()) enterContent() },
                         )
                     } } else null,
+                    historyContent = if (searching && searchState.showHistory) ({
+                        if (!searchState.historyLoading) ru.seasonvar.tv.ui.search.SearchHistoryPane(
+                            searchState.recentQueries, searchState.historyClearing, searchHistoryFocus, searchInputFocus, searchFocus,
+                            focusOnShow = searchState.focusHistoryOnShow,
+                            onRecall = { query -> pendingHistoryQuery = query; keyboard?.hide(); onSearchRecall(query) },
+                            onClear = onSearchClearHistory)
+                    }) else null,
                     onRefresh = { if (searching) onSearchSubmit() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                     personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
@@ -675,6 +719,7 @@ internal fun ThemeButton(
     avatarUrl: String? = null,
     avatarKey: Long = 0,
     enabled: Boolean = true,
+    centerVertically: Boolean = false,
 ) {
     var focused by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
@@ -740,7 +785,9 @@ internal fun ThemeButton(
     } else {
         Button(onClick = action, enabled = enabled, modifier = buttonModifier,
             shape = shape, scale = scale, colors = colors) {
-            Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (centerVertically) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+                Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -798,6 +845,7 @@ private fun CatalogPane(
     onOpen: (SeriesEntry) -> Unit,
     query: String? = null,
     searchHeader: (@Composable () -> Unit)? = null,
+    historyContent: (@Composable () -> Unit)? = null,
     personalFeed: PersonalFeed? = null,
     catalogKey: String = feed?.name ?: "SEARCH",
     onLoadMore: () -> Unit = {},
@@ -834,11 +882,11 @@ private fun CatalogPane(
     }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f).padding(end = d.spacingSmall)) {
+            Column(Modifier.weight(1f).then(if (historyContent == null) Modifier.padding(end = d.spacingSmall) else Modifier)) {
                 if (searchHeader != null) searchHeader()
                 else Text(stringResource(strings.title), style = MaterialTheme.typography.headlineSmall,
                     color = c.onBackground)
-                if (feed != null || state.loaded) {
+                if (historyContent == null && (feed != null || state.loaded)) {
                     Text(
                         when {
                             selected != null && state.moreFailure != null -> stringResource(R.string.history_more_error)
@@ -853,17 +901,18 @@ private fun CatalogPane(
                     )
                 }
             }
-            ThemeButton(
+            if (historyContent == null) ThemeButton(
                 stringResource(if (state.moreFailure != null) R.string.retry else R.string.refresh), onRefresh,
                 Modifier.focusRequester(refreshFocus),
                 icon = R.drawable.ic_reload,
                 loading = state.loading || state.loadingMore,
             )
         }
-        if (allowAccountActions) Text(stringResource(R.string.mark_long_press_hint),
+        if (allowAccountActions && historyContent == null) Text(stringResource(R.string.mark_long_press_hint),
             color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(d.spacingSmall))
-        if (selected == null) {
+        if (historyContent != null) Box(Modifier.weight(1f).fillMaxWidth()) { historyContent() }
+        else if (selected == null) {
             Column(
                 Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.Center,
