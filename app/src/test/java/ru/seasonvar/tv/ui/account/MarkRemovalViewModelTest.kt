@@ -158,4 +158,59 @@ class MarkRemovalViewModelTest {
         assertEquals(MarkRemovalUiState(), model.state.value)
     }
 
+    @Test fun refresh_is_single_flight_and_keeps_the_known_status_until_it_finishes() = runTest(dispatcher) {
+        val gate = CompletableDeferred<AccountListStatus?>(); var reads = 0; var writes = 0
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = {
+            if (++reads == 1) AccountListStatus.WATCHING else gate.await()
+        }, changeStatus = { _, _, _ -> writes++; PlaybackMarkSnapshot(status = -1) })
+        store.put("refresh", model); runCurrent(); model.show(entry); runCurrent()
+        model.refreshStatus(); model.refreshStatus(); runCurrent()
+        assertEquals(2, reads); assertTrue(model.state.value.loadingStatus)
+        assertEquals(AccountListStatus.WATCHING, model.state.value.status)
+        assertEquals(target, model.state.value.entry?.accountListMark)
+        model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent(); assertEquals(0, writes)
+        gate.complete(null); runCurrent()
+        assertFalse(model.state.value.loadingStatus); assertNull(model.state.value.status)
+        assertNull(model.state.value.entry?.accountListMark); assertTrue(model.state.value.visible)
+        model.ask(); assertEquals(RemovalStage.ACTIONS, model.state.value.stage)
+    }
+
+    @Test fun failed_refresh_keeps_the_previous_mark_and_can_be_retried_without_writing() = runTest(dispatcher) {
+        var reads = 0
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = {
+            when (++reads) { 1 -> AccountListStatus.WATCHED; 2 -> throw IOException(); else -> AccountListStatus.WATCHING }
+        }, changeStatus = { _, _, _ -> fail(); PlaybackMarkSnapshot(status = -1) })
+        store.put("retry-refresh", model); runCurrent(); model.show(entry); runCurrent()
+        model.refreshStatus(); runCurrent()
+        assertEquals(ru.seasonvar.tv.ui.catalog.LoadFailure.NETWORK, model.state.value.failure)
+        assertEquals(AccountListStatus.WATCHED, model.state.value.status)
+        assertEquals(target, model.state.value.entry?.accountListMark)
+        model.refreshStatus(); assertNull(model.state.value.failure); runCurrent()
+        assertEquals(AccountListStatus.WATCHING, model.state.value.status)
+        assertNull(model.state.value.failure); assertFalse(model.state.value.loadingStatus)
+    }
+
+    @Test fun refresh_cannot_cancel_a_status_write_or_run_in_confirmation_or_after_dismissal() = runTest(dispatcher) {
+        val gate = CompletableDeferred<PlaybackMarkSnapshot>(); var reads = 0
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = { reads++; AccountListStatus.WATCHING },
+            changeStatus = { _, _, _ -> gate.await() })
+        store.put("busy-refresh", model); runCurrent(); model.show(entry); runCurrent()
+        model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
+        model.refreshStatus(); runCurrent(); assertEquals(1, reads); assertTrue(model.state.value.busy)
+        gate.complete(PlaybackMarkSnapshot(status = -1)); runCurrent(); assertFalse(model.state.value.visible)
+        model.refreshStatus(); runCurrent(); assertEquals(1, reads)
+        model.show(entry, RemovalStage.CONFIRM); model.refreshStatus(); runCurrent(); assertEquals(1, reads)
+        model.dismiss(); model.refreshStatus(); runCurrent(); assertEquals(1, reads)
+    }
+
+    @Test fun closing_during_manual_refresh_does_not_reopen_the_dialog_on_a_late_response() = runTest(dispatcher) {
+        val gate = CompletableDeferred<AccountListStatus?>(); var reads = 0
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, loadStatus = {
+            if (++reads == 1) AccountListStatus.WATCHING else gate.await()
+        })
+        store.put("close-refresh", model); runCurrent(); model.show(entry); runCurrent()
+        model.refreshStatus(); runCurrent(); model.dismiss(); gate.complete(AccountListStatus.WATCHED); runCurrent()
+        assertEquals(MarkRemovalUiState(), model.state.value)
+    }
+
 }

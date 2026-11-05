@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
                 onRemovalRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.CONFIRM) },
-                onRemovalSetStatus = removalModel::selectStatus,
+                onRemovalRefresh = removalModel::refreshStatus, onRemovalSetStatus = removalModel::selectStatus,
                 onRemovalStatusRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.STATUS) },
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
