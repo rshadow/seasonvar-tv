@@ -143,6 +143,8 @@ internal fun SeasonvarApp(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    autoNextEnabled: Boolean = true,
+    onAutoNextChange: (Boolean) -> Unit = {},
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
@@ -186,6 +188,7 @@ internal fun SeasonvarApp(
             dnsProvider = dnsProvider,
             onDnsChange = onDnsChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
+            autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
             onExit = onExit,
             updateModel = updateModel, translationSettingsModel = translationSettingsModel,
             detailsModel = detailsModel,
@@ -218,6 +221,8 @@ private fun SeasonvarContent(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    autoNextEnabled: Boolean = true,
+    onAutoNextChange: (Boolean) -> Unit = {},
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
@@ -573,6 +578,7 @@ private fun SeasonvarContent(
                     dnsProvider = dnsProvider,
                     onDnsChange = onDnsChange,
                     startPage = startPage, onStartPageChange = onStartPageChange,
+                    autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
                     signedIn = accountSession.user != null,
                     onBack = ::navigateBack,
                     onCloseDialog = { backNavigation.reset(); returnToMenu() },
@@ -1082,6 +1088,8 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
 
 @Composable
 private fun SettingsPane(
+    autoNextEnabled: Boolean,
+    onAutoNextChange: (Boolean) -> Unit,
     translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel?,
     bypassEnabled: Boolean,
     settingsContentFocus: FocusRequester,
@@ -1102,6 +1110,8 @@ private fun SettingsPane(
     var startFocused by remember { mutableStateOf(false) }
     val bypassFocus = remember { FocusRequester() }
     val translationFocus = remember { FocusRequester() }
+    val autoNextFocus = remember { FocusRequester() }
+    var autoNextFocused by remember { mutableStateOf(false) }
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     var dnsFocused by remember { mutableStateOf(false) }
@@ -1137,7 +1147,24 @@ private fun SettingsPane(
         }
         Spacer(Modifier.height(d.spacingMedium))
         ru.seasonvar.tv.ui.settings.PreferredTranslationsSetting(translationSettingsModel, translationFocus,
-            menuFocus, settingsContentFocus, bypassFocus, onBack, onCloseDialog, onInteraction)
+            menuFocus, settingsContentFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
+        Spacer(Modifier.height(d.spacingMedium))
+        Row(Modifier.fillMaxWidth().focusRequester(autoNextFocus)
+            .focusProperties { left = menuFocus; up = translationFocus; down = bypassFocus }
+            .onFocusChanged { autoNextFocused = it.isFocused }
+            .border(d.focusBorderWidth, if (autoNextFocused) c.primary else Color.Transparent,
+                RoundedCornerShape(d.cardCornerRadius))
+            .toggleable(autoNextEnabled, role = Role.Checkbox, onValueChange = { onInteraction(); onAutoNextChange(it) })
+            .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.auto_next_setting_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.auto_next_setting_description),
+                    style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(d.spacingMedium))
+            Checkbox(checked = autoNextEnabled, onCheckedChange = null)
+        }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
@@ -1146,7 +1173,7 @@ private fun SettingsPane(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = translationFocus
+                    up = autoNextFocus
                     down = dnsFocus
                 }
                 .onFocusChanged { focused = it.isFocused }

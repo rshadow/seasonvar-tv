@@ -20,6 +20,14 @@ internal class InterfaceSettings(context: Context) {
         mutablePreferredTranslations.value = selected
     }
 
+    private val mutableAutoNextEnabled = MutableStateFlow(preferences.getBoolean("auto_next_episode", true))
+    val autoNextEnabled = mutableAutoNextEnabled.asStateFlow()
+
+    fun setAutoNextEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean("auto_next_episode", enabled).apply()
+        mutableAutoNextEnabled.value = enabled
+    }
+
     fun setStartPage(section: Section) {
         require(section in Section.startPages(true))
         preferences.edit().putString("start_page", section.storageId).apply()
