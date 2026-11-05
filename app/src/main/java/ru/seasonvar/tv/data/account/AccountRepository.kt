@@ -14,6 +14,7 @@ interface AccountTransport {
     suspend fun get(url: String, jar: SessionCookies): String
     suspend fun login(login: String, password: String, jar: SessionCookies): String
     suspend fun removeMark(mark: AccountListMark, jar: SessionCookies): String = throw UnsupportedOperationException()
+    suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String
 }
 
@@ -34,6 +35,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         }
         override suspend fun login(login: String, password: String, jar: SessionCookies) = client.accountLogin(login, password, jar)
         override suspend fun removeMark(mark: AccountListMark, jar: SessionCookies) = client.accountRemoveMark(mark, jar)
+        override suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies) = client.accountStatus(change, jar)
         override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = client.accountMark(mark, jar)
     })
     private val mutableSession = MutableStateFlow(AccountSession())
@@ -104,6 +106,42 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         if (confirmed != mark) throw MarkVerificationException()
         mutableMarksRevision.value++
         mark
+    } }
+
+    suspend fun listStatus(target: AccountListMark): AccountListStatus? = withContext(Dispatchers.IO) {
+        AccountListStatus.from(PlaybackMarkParser.snapshot(authenticatedHtml(target.pageUrl), target.seasonId, target.pageUrl))
+    }
+
+    suspend fun setListStatus(entry: ru.seasonvar.tv.data.SeriesEntry, status: AccountListStatus,
+        ownerVersion: Long): PlaybackMarkSnapshot = withContext(Dispatchers.IO) { mutex.withLock {
+        val target = AccountListMark(entry.id, entry.url)
+        val expected = session.value
+        if (expected.user == null) throw SessionExpiredException()
+        if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
+        val jar = sessions.current()
+        suspend fun read(): String {
+            val html = transport.get(target.pageUrl, jar)
+            currentCoroutineContext().ensureActive()
+            if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+            if (AccountParser.user(html)?.id != expected.user.id) {
+                clear(expired = true); throw SessionExpiredException()
+            }
+            return html
+        }
+        val beforeHtml = read()
+        val before = PlaybackMarkParser.snapshot(beforeHtml, target.seasonId, target.pageUrl)
+        if (AccountListStatus.from(before) == status) return@withLock before
+        val watching = if (status == AccountListStatus.WATCHING) AccountStatusChange.watchingMark(
+            ru.seasonvar.tv.data.SeriesDetailsParser.parse(beforeHtml, entry), entry.initialSelection) else null
+        val response = transport.saveStatus(AccountStatusChange(target, status, watching), jar)
+        currentCoroutineContext().ensureActive()
+        if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+        try { PlaybackMarkParser.requireSuccess(response) }
+        catch (error: MarkSaveRejectedException) { read(); throw error }
+        val after = PlaybackMarkParser.snapshot(read(), target.seasonId, target.pageUrl)
+        if (AccountListStatus.from(after) != status || watching != null && after.mark != watching) throw MarkVerificationException()
+        mutableMarksRevision.value++
+        after
     } }
 
     suspend fun listMark(target: AccountListMark): AccountListMark? = withContext(Dispatchers.IO) {

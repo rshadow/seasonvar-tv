@@ -36,8 +36,8 @@ class PlaybackMarkRepositoryTest {
             val href = if (status != null) page + "#rewind=" + status + "_seriya" else mark?.let { page + "#rewind=" + it.episode + "_seriya_na_" +
                 (it.positionSeconds / 60) + "_minute_" + (it.positionSeconds % 60) + "_sekunde" }.orEmpty()
             val json = JSONObject().put("href", href).put("trans", mark?.translationId ?: "0")
-            return """<div class="headblock-menu"><a href="/profile/12">Профиль</a></div>
-                <div class="pgs-sinfo" data-id-season="123"></div><script>var mark=$json;</script>"""
+            return """<div class="headblock-menu"><a href="/profile/12">Профиль</a></div>""" +
+                javaClass.getResource("/series-details.html")!!.readText().replace("2219", "123") + "<script>var mark=$json;</script>"
         }
         override suspend fun login(login: String, password: String, jar: SessionCookies): String {
             jar.saveFromResponse(site, listOf(Cookie.Builder().name("svid1").value("dummy-session")
@@ -47,6 +47,12 @@ class PlaybackMarkRepositoryTest {
         override suspend fun removeMark(mark: AccountListMark, jar: SessionCookies): String {
             calls += "POST remove"
             if (persist) { saved = null; status = null }
+            if (expireAfterWrite) expired = true
+            return response
+        }
+        override suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies): String {
+            calls += "POST status"
+            if (persist) { saved = change.watchingMark; status = change.status.code }
             if (expireAfterWrite) expired = true
             return response
         }
@@ -214,4 +220,49 @@ class PlaybackMarkRepositoryTest {
             try { AccountListMark("123", url); fail() } catch (_: IllegalArgumentException) { }
         }
     }
+    private val entry get() = ru.seasonvar.tv.data.SeriesEntry("123", page, "Тест", 1, "", "")
+    @Test fun each_status_is_verified_after_post_and_same_status_is_idempotent() = runBlocking {
+        val transport = Transport(); val repository = loggedIn(transport)
+        for (status in AccountListStatus.entries) {
+            transport.calls.clear()
+            val saved = repository.setListStatus(entry, status, repository.session.value.version)
+            assertEquals(status, AccountListStatus.from(saved))
+            assertEquals(listOf("GET $page", "POST status", "GET $page"), transport.calls)
+            transport.calls.clear(); repository.setListStatus(entry, status, repository.session.value.version)
+            assertEquals(listOf("GET $page"), transport.calls)
+        }
+        assertEquals(4, repository.marksRevision.value.toInt())
+    }
+    @Test fun watching_keeps_an_existing_episode_translation_and_time() = runBlocking {
+        val transport = Transport().apply { saved = point }; val repository = loggedIn(transport)
+        val result = repository.setListStatus(entry, AccountListStatus.WATCHING, repository.session.value.version)
+        assertEquals(point, result.mark); assertEquals(listOf("GET $page"), transport.calls)
+    }
+    @Test fun watching_a_new_entry_uses_known_selection_and_standard_fallback() = runBlocking {
+        val transport = Transport().apply { status = -1 }; val repository = loggedIn(transport)
+        val selected = entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(episodeLabel = "3", translationId = "1"))
+        val result = repository.setListStatus(selected, AccountListStatus.WATCHING, repository.session.value.version)
+        assertEquals("3", result.mark!!.episode); assertEquals("1", result.mark.translationId)
+        transport.status = -1; transport.saved = null
+        val fallback = repository.setListStatus(entry.copy(initialSelection = selected.initialSelection.copy(translationId = "999")),
+            AccountListStatus.WATCHING, repository.session.value.version)
+        assertEquals("0", fallback.mark!!.translationId); assertEquals("3", fallback.mark.episode)
+    }
+    @Test fun status_write_requires_persisted_state_and_a_matching_owner() = runBlocking {
+        val transport = Transport().apply { persist = false }; val repository = loggedIn(transport)
+        try { repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version); fail() }
+        catch (_: MarkVerificationException) { }
+        assertEquals(0L, repository.marksRevision.value)
+        transport.calls.clear()
+        try { repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version + 1); fail() }
+        catch (_: CancellationException) { }
+        assertTrue(transport.calls.isEmpty())
+    }
+    @Test fun expired_status_write_cannot_claim_success_or_change_revision() = runBlocking {
+        val transport = Transport().apply { expireAfterWrite = true }; val repository = loggedIn(transport)
+        try { repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version); fail() }
+        catch (_: SessionExpiredException) { }
+        assertTrue(repository.session.value.expired); assertEquals(0L, repository.marksRevision.value)
+    }
+
 }

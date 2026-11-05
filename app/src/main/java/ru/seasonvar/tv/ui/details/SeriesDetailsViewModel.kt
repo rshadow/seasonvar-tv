@@ -135,6 +135,15 @@ class SeriesDetailsViewModel(
         }
     }
 
+    fun markChanged(target: ru.seasonvar.tv.data.account.AccountListMark) {
+        val current = state.value
+        if (current.entry?.id != target.seasonId || current.details == null) return
+        val entry = current.entry.copy(accountListMark = target, accountMark = null, accountProgress = null)
+        mutableState.value = current.copy(entry = entry, details = current.details.copy(entry = entry))
+        refreshAccountMark(entry)
+        refreshAccountProgress(current.details)
+    }
+
     fun markRemoved(target: ru.seasonvar.tv.data.account.AccountListMark) {
         val current = state.value
         if (current.entry?.id != target.seasonId || current.details == null) return

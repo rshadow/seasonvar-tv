@@ -33,6 +33,7 @@ class AccountMarkWriter internal constructor(
     private val save: suspend (PlaybackMark, Long) -> Unit,
     private val retryMillis: Long = 15_000,
     private val log: (String) -> Unit = {},
+    private val changeStatus: suspend (ru.seasonvar.tv.data.SeriesEntry, ru.seasonvar.tv.data.account.AccountListStatus, Long) -> ru.seasonvar.tv.data.account.PlaybackMarkSnapshot = { _, _, _ -> throw UnsupportedOperationException() },
     private val remove: suspend (AccountListMark, Long) -> Unit = { _, _ -> throw UnsupportedOperationException() },
 ) {
     constructor(scope: CoroutineScope, account: AccountRepository, outbox: MarkOutbox) :
@@ -41,7 +42,7 @@ class AccountMarkWriter internal constructor(
             if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark",
                 if (saved != null) "write_verified" else "already_current")
         }, log = { phase -> if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark", phase) },
-            remove = account::removeListMark)
+            remove = account::removeListMark, changeStatus = account::setListStatus)
     private val mutex = Mutex()
     private val mutations = Mutex()
     private val generations = ConcurrentHashMap<Pair<String, String>, Long>()
@@ -136,6 +137,19 @@ class AccountMarkWriter internal constructor(
             outbox.all().filter { it.owner == owner && it.mark.seasonId == target.seasonId }.forEach(outbox::remove)
         }
         try { remove(target, ownerVersion) }
+        finally { retry() }
+    }
+
+    suspend fun setListStatus(entry: ru.seasonvar.tv.data.SeriesEntry, status: ru.seasonvar.tv.data.account.AccountListStatus,
+        ownerVersion: Long): ru.seasonvar.tv.data.account.PlaybackMarkSnapshot = mutations.withLock {
+        val owner = markOwner(session.value.user) ?: throw SessionExpiredException()
+        mutex.withLock {
+            if (session.value.version != ownerVersion) throw CancellationException()
+            val key = owner to entry.id
+            generations[key] = (generations[key] ?: 0L) + 1
+            outbox.all().filter { it.owner == owner && it.mark.seasonId == entry.id }.forEach(outbox::remove)
+        }
+        try { changeStatus(entry, status, ownerVersion) }
         finally { retry() }
     }
 

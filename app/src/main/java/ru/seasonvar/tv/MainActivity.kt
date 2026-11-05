@@ -66,6 +66,17 @@ class MainActivity : ComponentActivity() {
             container.account, container.accountMarks, { target ->
                 personalModels.values.forEach { it.markRemoved(target) }
                 details.markRemoved(target)
+            }, onChanged = { target, status ->
+                personalModels.forEach { (feed, model) ->
+                    val keepsEntry = when (feed) {
+                        PersonalFeed.HISTORY -> true
+                        PersonalFeed.WANT -> status == ru.seasonvar.tv.data.account.AccountListStatus.WANT_TO_WATCH
+                        PersonalFeed.WATCHED -> status == ru.seasonvar.tv.data.account.AccountListStatus.WATCHED
+                        else -> status == ru.seasonvar.tv.data.account.AccountListStatus.WATCHING
+                    }
+                    if (!keepsEntry) model.markRemoved(target)
+                }
+                details.markChanged(target)
             }))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
@@ -102,6 +113,8 @@ class MainActivity : ComponentActivity() {
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
                 onRemovalRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.CONFIRM) },
+                onRemovalStatus = removalModel::editStatus, onRemovalSetStatus = removalModel::selectStatus,
+                onRemovalStatusRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.STATUS) },
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,

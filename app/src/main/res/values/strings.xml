@@ -213,4 +213,13 @@
     <string name="auto_next_setting_description">После окончания серии сразу запускаем следующую в этом сезоне.</string>
     <string name="player_auto_next_none">Следующей серии нет</string>
     <string name="player_auto_next_close">К сериалу</string>
+    <string name="mark_list_action">Личный список</string>
+    <string name="mark_list_status_title">Добавить в список или сменить статус</string>
+    <string name="mark_list_loading">Проверяем текущий статус…</string>
+    <string name="mark_list_saving">Сохраняем статус…</string>
+    <string name="mark_list_error">Не удалось получить или сохранить статус. Попробуйте ещё раз.</string>
+    <string name="mark_list_want">Хочу посмотреть</string>
+    <string name="mark_list_watching">Смотрю</string>
+    <string name="mark_list_watched">Посмотрел</string>
+    <string name="mark_list_not_watching">Не буду смотреть</string>
 </resources>
