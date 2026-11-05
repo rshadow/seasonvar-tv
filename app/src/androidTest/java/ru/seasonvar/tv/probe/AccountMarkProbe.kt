@@ -36,7 +36,7 @@ class AccountMarkProbe : Instrumentation() {
         val result = Bundle()
         var phase = "restore_session"
         try {
-            check(mode in setOf("inspect", "roundtrip", "delete-roundtrip", "catalog-badges"))
+            check(mode in setOf("inspect", "roundtrip", "delete-roundtrip", "status-roundtrip", "catalog-badges"))
             runBlocking { withContext(Dispatchers.IO) {
                 val app = targetContext.applicationContext as SeasonvarApplication
                 app.account.restore()
@@ -104,6 +104,35 @@ class AccountMarkProbe : Instrumentation() {
                 val before = PlaybackMarkParser.snapshot(originalHtml, entry.id, entry.url)
                 result.putBoolean("mark_parsed", true)
                 result.putBoolean("existing_playback_mark", before.mark != null)
+                if (mode == "status-roundtrip") {
+                    val original = checkNotNull(before.mark) { "An existing playback mark is required for restoration" }
+                    val version = app.account.session.value.version
+                    val selected = entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
+                        episodeLabel = original.episode, translationId = original.translationId))
+                    try {
+                        phase = "status_roundtrip"
+                        for (status in ru.seasonvar.tv.data.account.AccountListStatus.entries) {
+                            val saved = app.accountMarks.setListStatus(selected, status, version)
+                            check(ru.seasonvar.tv.data.account.AccountListStatus.from(saved) == status)
+                            val reread = PlaybackMarkParser.snapshot(html(), entry.id, entry.url)
+                            check(ru.seasonvar.tv.data.account.AccountListStatus.from(reread) == status)
+                            if (status == ru.seasonvar.tv.data.account.AccountListStatus.WANT_TO_WATCH ||
+                                status == ru.seasonvar.tv.data.account.AccountListStatus.WATCHED) {
+                                val feed = if (status == ru.seasonvar.tv.data.account.AccountListStatus.WANT_TO_WATCH)
+                                    ru.seasonvar.tv.data.account.PersonalFeed.WANT else ru.seasonvar.tv.data.account.PersonalFeed.WATCHED
+                                check(app.account.personalList(feed).entries.any { it.id == entry.id })
+                            }
+                        }
+                        result.putBoolean("post_verified", true)
+                        result.putBoolean("statuses_verified", true)
+                    } finally {
+                        phase = "restore_original"
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                            app.account.savePlaybackMark(original, version)
+                            result.putBoolean("original_restored", PlaybackMarkParser.parse(html(), entry.id, entry.url) == original)
+                        }
+                    }
+                }
                 if (mode == "delete-roundtrip") {
                     val original = checkNotNull(before.mark) { "An existing playback mark is required" }
                     val target = checkNotNull(entry.accountListMark)

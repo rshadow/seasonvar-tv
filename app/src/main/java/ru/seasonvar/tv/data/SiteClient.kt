@@ -51,6 +51,9 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     suspend fun accountMark(mark: ru.seasonvar.tv.data.account.PlaybackMark, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
         execute(markRequest(mark), jar)
 
+    suspend fun accountStatus(change: ru.seasonvar.tv.data.account.AccountStatusChange, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
+        execute(statusRequest(change), jar)
+
     suspend fun accountRemoveMark(mark: ru.seasonvar.tv.data.account.AccountListMark, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
         execute(removeMarkRequest(mark), jar)
 
@@ -96,6 +99,14 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
             .header("X-Requested-With", "XMLHttpRequest")
             .header("Accept", "application/json")
             .post(FormBody.Builder().apply { mark.form().forEach { (name, value) -> add(name, value) } }.build())
+            .build()
+
+        internal fun statusRequest(change: ru.seasonvar.tv.data.account.AccountStatusChange): Request = Request.Builder()
+            .url("https://seasonvar.ru/jsonMark.php")
+            .header("Referer", change.target.pageUrl)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Accept", "application/json")
+            .post(FormBody.Builder().apply { change.form().forEach { (name, value) -> add(name, value) } }.build())
             .build()
 
         internal fun sidebarRequest(feed: PublicFeed): Request {

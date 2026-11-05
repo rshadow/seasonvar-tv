@@ -66,7 +66,7 @@ class MarkRemovalViewModelTest {
         runCurrent(); model.confirm(); runCurrent()
         assertEquals(0, calls)
         assertFalse(model.state.value.visible)
-        model.show(entry.copy(accountListMark = null))
+        model.show(entry.copy(accountListMark = null), RemovalStage.CONFIRM)
         assertFalse(model.state.value.visible)
     }
 
@@ -80,4 +80,41 @@ class MarkRemovalViewModelTest {
         assertEquals(listOf(target), removed)
         assertFalse(model.state.value.busy)
     }
+    @Test fun unmarked_public_entries_can_open_status_actions_but_not_deletion() = runTest(dispatcher) {
+        val model = model { _, _ -> fail() }; runCurrent()
+        model.show(entry.copy(accountListMark = null)); assertTrue(model.state.value.visible)
+        model.editStatus(); runCurrent(); assertEquals(RemovalStage.STATUS, model.state.value.stage)
+        assertNull(model.state.value.status)
+    }
+    @Test fun status_is_loaded_and_only_verified_change_notifies_once() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>(); var calls = 0
+        val changed = mutableListOf<AccountListMark>()
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, { AccountListStatus.WATCHED },
+            { _, status, version -> calls++; assertEquals(1L, version); gate.await(); PlaybackMarkSnapshot(status = status.code) }, { target, _ -> changed.add(target) })
+        store.put("status", model); runCurrent()
+        model.show(entry, RemovalStage.STATUS); runCurrent()
+        assertEquals(AccountListStatus.WATCHED, model.state.value.status)
+        model.selectStatus(AccountListStatus.WANT_TO_WATCH); model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
+        assertTrue(model.state.value.busy); assertTrue(changed.isEmpty()); assertEquals(1, calls)
+        model.dismiss(); gate.complete(Unit); runCurrent()
+        assertEquals(listOf(target), changed); assertFalse(model.state.value.visible)
+    }
+    @Test fun failed_status_change_stays_open_and_can_be_retried() = runTest(dispatcher) {
+        var fails = true
+        val model = MarkRemovalViewModel(session, { _, _ -> }, {}, changeStatus = { _, _, _ ->
+            if (fails) throw IOException(); PlaybackMarkSnapshot(status = -1)
+        })
+        store.put("status", model); runCurrent(); model.show(entry, RemovalStage.STATUS); runCurrent()
+        model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
+        assertNotNull(model.state.value.failure); assertTrue(model.state.value.visible); assertFalse(model.state.value.busy)
+        fails = false; model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent(); assertFalse(model.state.value.visible)
+    }
+    @Test fun account_change_invalidates_a_status_selection() = runTest(dispatcher) {
+        var calls = 0
+        val model = MarkRemovalViewModel(session, { _, _ -> }, {}, changeStatus = { _, _, _ -> calls++; PlaybackMarkSnapshot(status = -1) })
+        store.put("status", model); runCurrent(); model.show(entry, RemovalStage.STATUS); runCurrent()
+        session.value = AccountSession(version = 2); runCurrent(); model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
+        assertEquals(0, calls); assertFalse(model.state.value.visible)
+    }
+
 }

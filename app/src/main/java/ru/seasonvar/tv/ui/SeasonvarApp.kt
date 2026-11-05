@@ -166,6 +166,9 @@ internal fun SeasonvarApp(
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRequest: (SeriesEntry) -> Unit = {},
+    onRemovalStatus: () -> Unit = {},
+    onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
+    onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
@@ -194,6 +197,7 @@ internal fun SeasonvarApp(
             detailsModel = detailsModel,
             onPlay = onPlay,
             removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
+            onRemovalStatus = onRemovalStatus, onRemovalSetStatus = onRemovalSetStatus, onRemovalStatusRequest = onRemovalStatusRequest,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState,
             personalStates = personalStates, personalDescriptions = personalDescriptions,
@@ -244,6 +248,9 @@ private fun SeasonvarContent(
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRequest: (SeriesEntry) -> Unit = {},
+    onRemovalStatus: () -> Unit = {},
+    onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
+    onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
@@ -589,7 +596,11 @@ private fun SeasonvarContent(
             } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                 SeriesDetailsPane(
                     detailsSource!!, detailsModel,
-                    onRemove = { entry ->
+                    onManageStatus = if (accountSession.user == null) null else ({ entry ->
+                        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, selectedKey ?: entry.key)
+                        onRemovalStatusRequest(entry)
+                    }),
+                    onRemove = if (accountSession.user == null) null else { entry ->
                         removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, selectedKey ?: entry.key)
                         onRemovalRequest(entry)
                     }, removalDialogOpen = removalState.visible,
@@ -628,7 +639,7 @@ private fun SeasonvarContent(
                         )
                     } } else null,
                     onRefresh = { if (searching) onSearchSubmit() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
-                    personalFeed = personalFeed, catalogKey = catalogKey,
+                    personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = ::openDetails,
@@ -644,6 +655,8 @@ private fun SeasonvarContent(
     }
     MarkRemovalDialog(removalState,
         onDismiss = { backNavigation.reset(); onRemovalDismiss() },
+        onStatus = { backNavigation.reset(); onRemovalStatus() },
+        onSelectStatus = { backNavigation.reset(); onRemovalSetStatus(it) },
         onAsk = { backNavigation.reset(); onRemovalAsk() },
         onConfirm = { backNavigation.reset(); onRemovalConfirm() },
         onOpen = { removalState.entry?.let { entry -> onRemovalDismiss(); openDetails(entry) } },
@@ -789,6 +802,7 @@ private fun CatalogPane(
     catalogKey: String = feed?.name ?: "SEARCH",
     onLoadMore: () -> Unit = {},
     onActions: (SeriesEntry) -> Unit = {},
+    allowAccountActions: Boolean = false,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -846,7 +860,7 @@ private fun CatalogPane(
                 loading = state.loading || state.loadingMore,
             )
         }
-        if (personalFeed != null && personalFeed != PersonalFeed.HISTORY) Text(stringResource(R.string.mark_long_press_hint),
+        if (allowAccountActions) Text(stringResource(R.string.mark_long_press_hint),
             color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(d.spacingSmall))
         if (selected == null) {
@@ -916,7 +930,7 @@ private fun CatalogPane(
                         right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
                         contentReady = { contentReady.value },
                         onFocused = { onFocused(item) }, onClick = { onOpen(item) },
-                        onLongClick = if (personal && item.accountListMark != null) ({ onActions(item) }) else null,
+                        onLongClick = if (allowAccountActions) ({ onActions(item) }) else null,
                     )
                 }
             }

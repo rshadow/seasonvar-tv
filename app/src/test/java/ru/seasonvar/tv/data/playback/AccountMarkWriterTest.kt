@@ -233,4 +233,26 @@ class AccountMarkWriterTest {
         assertTrue(writes.isEmpty())
         assertTrue(outbox.all().isEmpty())
     }
+    @Test fun status_change_waits_for_a_running_save_and_discards_older_pending_events() = runTest {
+        val session = MutableStateFlow(account()); val outbox = MemoryOutbox(); val release = CompletableDeferred<Unit>()
+        val calls = mutableListOf<String>()
+        val writer = AccountMarkWriter(backgroundScope, session, outbox, { _, _ -> calls += "save"; release.await() },
+            changeStatus = { _, _, _ -> calls += "status"; ru.seasonvar.tv.data.account.PlaybackMarkSnapshot(status = -1) })
+        runCurrent(); writer.enqueue(mark, 1); runCurrent()
+        val change = launch { writer.setListStatus(ru.seasonvar.tv.data.SeriesEntry(mark.seasonId, mark.pageUrl, "Тест", 1, "", ""),
+            ru.seasonvar.tv.data.account.AccountListStatus.WANT_TO_WATCH, 1) }
+        runCurrent(); writer.enqueue(mark.copy(positionSeconds = 80), 1); runCurrent()
+        assertEquals(listOf("save"), calls); release.complete(Unit); runCurrent(); change.join()
+        assertEquals(listOf("save", "status"), calls); assertTrue(outbox.all().isEmpty())
+    }
+    @Test fun a_scheduled_playback_event_cannot_override_an_explicit_list_status() = runTest {
+        val session = MutableStateFlow(account()); val outbox = MemoryOutbox(); var writes = 0
+        val writer = AccountMarkWriter(backgroundScope, session, outbox, { _, _ -> writes++ },
+            changeStatus = { _, _, _ -> ru.seasonvar.tv.data.account.PlaybackMarkSnapshot(status = -2) })
+        runCurrent(); writer.enqueue(mark, 1)
+        writer.setListStatus(ru.seasonvar.tv.data.SeriesEntry(mark.seasonId, mark.pageUrl, "Тест", 1, "", ""),
+            ru.seasonvar.tv.data.account.AccountListStatus.WATCHED, 1)
+        runCurrent(); assertEquals(0, writes); assertTrue(outbox.all().isEmpty())
+    }
+
 }

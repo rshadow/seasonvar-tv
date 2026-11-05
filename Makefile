@@ -40,7 +40,7 @@ UPDATE_PREVIEW_SCENARIO ?= new
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
+.PHONY: status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -65,6 +65,7 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
+		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify real video, autoplay and controls in emulator; inspect captured frames' \
 		'make update-test            Run offline update tests' \
 		'make update-probe           Check live GitHub metadata and APK integrity in emulator' \
@@ -293,6 +294,12 @@ site-scripts:
 	mkdir -p build/site
 	curl --fail --silent --show-error --location --max-time 20 \
 		'https://cdn.svstat.net/asset/js/main.min.js?$(SITE_SCRIPT_VERSION)' -o build/site/main.js
+	curl --fail --silent --show-error --location --max-time 20 \
+		'https://cdn.svstat.net/asset/js/pg.marks.min.js?$(SITE_SCRIPT_VERSION)' -o build/site/pg.marks.js
+
+status-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for status verification.' >&2; exit 1;; esac
+	$(MAKE) mark-probe MARK_PROBE_MODE=status-roundtrip
 
 site-video-probe:
 	python3 scripts/probe-video.py --url "$(SITE_URL)" --translation "$(SITE_TRANSLATION)" \
