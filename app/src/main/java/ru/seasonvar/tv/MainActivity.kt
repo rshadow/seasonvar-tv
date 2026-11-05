@@ -94,9 +94,11 @@ class MainActivity : ComponentActivity() {
             val descriptions = models.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
+            val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             SeasonvarApp(
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
+                autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
                 onRemovalRequest = { removalModel.show(it, ru.seasonvar.tv.ui.account.RemovalStage.CONFIRM) },

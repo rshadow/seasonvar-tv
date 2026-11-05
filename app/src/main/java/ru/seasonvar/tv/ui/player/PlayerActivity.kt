@@ -14,18 +14,21 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
@@ -46,6 +49,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import ru.seasonvar.tv.diagnostics.failureSummary
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
@@ -77,6 +81,8 @@ class PlayerActivity : ComponentActivity() {
     private var resolveJob: Job? = null
     private var progressJob: Job? = null
     private var ready = false
+    private var autoNextJob: Job? = null
+    private var completionVisible by mutableStateOf(false)
     private var markPolicy: AccountMarkPolicy? = null
     private var markOwnerVersion: Long? = null
     private val container get() = application as SeasonvarApplication
@@ -96,6 +102,9 @@ class PlayerActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { finish() }
         })
+        lifecycleScope.launch {
+            container.interfaceSettings.autoNextEnabled.collect { enabled -> if (!enabled) cancelAutoNext() }
+        }
         setContent {
             SeasonvarTheme {
                 val d = SeasonvarTheme.dimensions
@@ -103,6 +112,7 @@ class PlayerActivity : ComponentActivity() {
                 val accountSession by container.account.session.collectAsStateWithLifecycle()
                 val retry = remember { FocusRequester() }
                 val surface = remember { FocusRequester() }
+                val cancelNext = remember { FocusRequester() }
                 Box(Modifier.fillMaxSize().background(colorResource(R.color.seasonvar_player_background))
                     .focusRequester(surface).onPreviewKeyEvent { handlePlaybackKey(it.nativeKeyEvent) }.focusable()) {
                     AndroidView(factory = { context ->
@@ -121,11 +131,14 @@ class PlayerActivity : ComponentActivity() {
                             findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.contentDescription = getString(R.string.player_previous_episode)
                             findViewById<View>(androidx.media3.ui.R.id.exo_next)?.contentDescription = getString(R.string.player_next_episode)
                             setControllerVisibilityListener(PlayerView.ControllerVisibilityListener {
-                                controlsVisible = it == View.VISIBLE
-                                if (!controlsVisible && navigatingControls) {
-                                    navigatingControls = false
-                                    descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-                                    requestFocus()
+                                if (it == View.VISIBLE && completionVisible) hideController()
+                                else {
+                                    controlsVisible = it == View.VISIBLE
+                                    if (!controlsVisible && navigatingControls) {
+                                        navigatingControls = false
+                                        descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                                        requestFocus()
+                                    }
                                 }
                             })
                             view = this
@@ -135,8 +148,8 @@ class PlayerActivity : ComponentActivity() {
                             native.player = controlsPlayer
                             if (controlsPlayer != null) native.requestFocus()
                         }
-                        native.useController = failure == null
-                        native.isFocusable = failure == null
+                        native.useController = failure == null && !completionVisible
+                        native.isFocusable = failure == null && !completionVisible
                     }, modifier = Modifier.fillMaxSize())
                     if (controlsVisible || loading || failure != null) Column(
                         Modifier.align(Alignment.TopStart).padding(d.spacingLarge),
@@ -155,6 +168,19 @@ class PlayerActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall)
                     }
+                    if (completionVisible) {
+                        Column(Modifier.align(Alignment.BottomEnd).padding(d.spacingLarge).width(d.playerAutoNextWidth)
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(d.cardCornerRadius))
+                            .padding(d.spacingMedium), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                            Text(stringResource(R.string.player_auto_next_none),
+                                color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
+                            ThemeButton(stringResource(R.string.player_auto_next_close), { finish() },
+                                Modifier.focusRequester(cancelNext).focusProperties {
+                                    left = FocusRequester.Cancel; right = FocusRequester.Cancel
+                                    up = FocusRequester.Cancel; down = FocusRequester.Cancel
+                                })
+                        }
+                    }
                     if (loading || failure != null) Column(Modifier.align(Alignment.Center).padding(d.spacingLarge),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
@@ -170,8 +196,12 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }
                 }
-                LaunchedEffect(playback, failure) {
-                    if (failure == null) { withFrameNanos { }; surface.requestFocus() }
+                LaunchedEffect(playback, failure, completionVisible) {
+                    if (completionVisible) {
+                        repeat(2) { withFrameNanos { } }
+                        cancelNext.requestFocus()
+                    }
+                    else if (failure == null) { withFrameNanos { }; surface.requestFocus() }
                 }
                 LaunchedEffect(failure) {
                     if (failure != null) { repeat(2) { withFrameNanos { } }; retry.requestFocus() }
@@ -220,8 +250,13 @@ class PlayerActivity : ComponentActivity() {
                         if (playback !== player) return
                         loading = state == Player.STATE_BUFFERING
                         if (state == Player.STATE_READY) ready = true
-                        if (state == Player.STATE_ENDED) savePosition(MarkEvent.ENDED)
-                        else sampleAccountMark()
+                        if (state == Player.STATE_ENDED) {
+                            savePosition(MarkEvent.ENDED)
+                            startAutoNext(player)
+                        } else {
+                            cancelAutoNext()
+                            sampleAccountMark()
+                        }
                         trace("state=" + state + " positionMs=" + player.currentPosition)
                     }
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -237,6 +272,7 @@ class PlayerActivity : ComponentActivity() {
                     override fun onPlayerError(error: PlaybackException) {
                         if (playback !== player) return
                         loading = false
+                        cancelAutoNext()
                         failure = R.string.player_playback_error
                         trace("error=" + error.errorCodeName + " " + failureSummary(error))
                     }
@@ -288,7 +324,32 @@ class PlayerActivity : ComponentActivity() {
         container.accountMarks.enqueue(mark, version)
     }
 
+    private fun startAutoNext(player: ExoPlayer) {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (request?.adjacent(1) == null) {
+            completionVisible = true
+            navigatingControls = false
+            view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            view?.hideController()
+            return
+        }
+        if (!container.interfaceSettings.autoNextEnabled.value || autoNextJob?.isActive == true) return
+        autoNextJob = lifecycleScope.launch {
+            yield()
+            if (playback === player && player.playbackState == Player.STATE_ENDED && failure == null &&
+                container.interfaceSettings.autoNextEnabled.value && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                switchEpisode(1)
+            }
+        }
+    }
+
+    private fun cancelAutoNext() {
+        autoNextJob?.cancel(); autoNextJob = null
+        completionVisible = false
+    }
+
     private fun releasePlayback() {
+        cancelAutoNext()
         progressJob?.cancel()
         savePosition(MarkEvent.STOP)
         navigatingControls = false
@@ -304,6 +365,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        cancelAutoNext()
         savePosition(MarkEvent.STOP)
         playback?.pause()
         super.onPause()
@@ -316,6 +378,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun finish() {
+        cancelAutoNext()
         savePosition(MarkEvent.STOP)
         request?.let { selected ->
             setResult(RESULT_OK, Intent().putExtra("season", selected.seasonId)
@@ -340,6 +403,8 @@ class PlayerActivity : ComponentActivity() {
             }
             return true
         }
+        if (completionVisible && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)) return false
         val player = playback
         if (player != null && failure == null) {
             if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {

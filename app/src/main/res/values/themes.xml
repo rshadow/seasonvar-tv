@@ -60,4 +60,5 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <dimen name="seasonvar_player_auto_next_width">320dp</dimen>
 </resources>

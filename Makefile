@@ -34,11 +34,13 @@ SITE_TRANSLATION ?= 0
 SITE_EPISODE ?= 1
 SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
+PLAYER_PROBE_PAGE ?= https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html
+PLAYER_PROBE_OUT ?= build/player-probe
 UPDATE_PREVIEW_SCENARIO ?= new
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
+.PHONY: player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -63,6 +65,7 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
+		'make player-probe           Verify real video, autoplay and controls in emulator; inspect captured frames' \
 		'make update-test            Run offline update tests' \
 		'make update-probe           Check live GitHub metadata and APK integrity in emulator' \
 		'make update-restore         Restore normal test build after an update preview (emulator only)' \
@@ -351,3 +354,12 @@ update-restore:
 	$(MAKE) devices
 	$(MAKE) build
 	$(ADB) install -r -d "$(APK)"
+
+player-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for the player probe.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --output "$(PLAYER_PROBE_OUT)"

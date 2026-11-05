@@ -25,6 +25,10 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "player-auto-next") {
+            PlayerAutoNextProbe.run(this, probeArguments)
+            return
+        }
         if (mode in setOf("update-preview", "update-inspect")) {
             UpdateProbe.run(this, probeArguments)
             return
