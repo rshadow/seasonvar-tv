@@ -228,4 +228,6 @@
     <string name="search_history_error">Не удалось прочитать или сохранить историю поиска</string>
     <string name="catalog_show_grid">Показать сеткой</string>
     <string name="catalog_show_strip">Показать лентой с описанием</string>
+    <string name="catalog_layout_grid">Сетка</string>
+    <string name="catalog_layout_strip">Лента с описанием</string>
 </resources>

@@ -959,11 +959,13 @@ private fun CatalogPane(
                         onEnterContent(); true
                     } else false
                 }
+                val layoutLabel = stringResource(if (layout == CatalogLayout.GRID) R.string.catalog_layout_grid else R.string.catalog_layout_strip)
                 ThemeButton(
                     stringResource(if (layout == CatalogLayout.STRIP) R.string.catalog_show_grid else R.string.catalog_show_strip),
                     onLayoutChange,
-                    Modifier.focusRequester(layoutFocus).focusProperties { left = menuFocus; right = refreshFocus }.then(enterCards),
-                    icon = if (layout == CatalogLayout.STRIP) R.drawable.ic_catalog_grid else R.drawable.ic_catalog_strip,
+                    Modifier.focusRequester(layoutFocus).focusProperties { left = menuFocus; right = refreshFocus }
+                        .semantics { stateDescription = layoutLabel }.then(enterCards),
+                    icon = if (layout == CatalogLayout.GRID) R.drawable.ic_catalog_grid else R.drawable.ic_catalog_strip,
                 )
                 ThemeButton(
                     stringResource(if (state.moreFailure != null) R.string.retry else R.string.refresh), onRefresh,
