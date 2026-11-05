@@ -52,20 +52,23 @@ class MarkRemovalViewModel internal constructor(
         job?.cancel()
         ownerVersion = session.value.version
         mutableState.value = MarkRemovalUiState(entry, stage, visible = true)
-        if (stage == RemovalStage.STATUS) editStatus()
+        if (stage != RemovalStage.CONFIRM) loadCurrentStatus()
     }
-    fun editStatus() {
+    private fun loadCurrentStatus() {
         val current = state.value
         val entry = current.entry ?: return
         if (current.busy || session.value.version != ownerVersion) return
         job?.cancel()
-        mutableState.value = current.copy(stage = RemovalStage.STATUS, loadingStatus = true, failure = null)
+        mutableState.value = current.copy(loadingStatus = true, failure = null)
         val version = ownerVersion
         job = viewModelScope.launch {
             try {
                 val status = loadStatus(AccountListMark(entry.id, entry.url))
                 ensureActive()
-                if (session.value.version == version) mutableState.value = state.value.copy(status = status, loadingStatus = false)
+                if (session.value.version == version) mutableState.value = state.value.copy(
+                    status = status, loadingStatus = false,
+                    entry = entry.copy(accountListMark = if (status != null) AccountListMark(entry.id, entry.url) else null),
+                )
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) {
                 ensureActive()
@@ -76,7 +79,7 @@ class MarkRemovalViewModel internal constructor(
     fun selectStatus(status: AccountListStatus) {
         val current = state.value
         val entry = current.entry ?: return
-        if (current.busy || current.loadingStatus || current.stage != RemovalStage.STATUS || session.value.version != ownerVersion) return
+        if (current.busy || current.loadingStatus || current.stage == RemovalStage.CONFIRM || session.value.version != ownerVersion) return
         mutableState.value = current.copy(busy = true, failure = null)
         val version = ownerVersion
         job = viewModelScope.launch {
@@ -98,7 +101,12 @@ class MarkRemovalViewModel internal constructor(
         is SiteHttpException -> LoadFailure.HTTP
         else -> LoadFailure.MARKUP
     }
-    fun ask() { if (!state.value.busy) mutableState.value = state.value.copy(stage = RemovalStage.CONFIRM, failure = null) }
+    fun ask() {
+        val current = state.value
+        if (current.busy || current.entry?.accountListMark == null || session.value.version != ownerVersion) return
+        job?.cancel()
+        mutableState.value = current.copy(stage = RemovalStage.CONFIRM, loadingStatus = false, failure = null)
+    }
     fun dismiss() {
         if (!state.value.busy) job?.cancel()
         mutableState.value = if (state.value.busy) state.value.copy(visible = false) else MarkRemovalUiState()

@@ -177,7 +177,6 @@ internal fun SeasonvarApp(
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRequest: (SeriesEntry) -> Unit = {},
-    onRemovalStatus: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
     onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
@@ -210,7 +209,7 @@ internal fun SeasonvarApp(
             detailsModel = detailsModel,
             onPlay = onPlay,
             removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
-            onRemovalStatus = onRemovalStatus, onRemovalSetStatus = onRemovalSetStatus, onRemovalStatusRequest = onRemovalStatusRequest,
+            onRemovalSetStatus = onRemovalSetStatus, onRemovalStatusRequest = onRemovalStatusRequest,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState,
             personalStates = personalStates, personalDescriptions = personalDescriptions,
@@ -266,7 +265,6 @@ private fun SeasonvarContent(
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRequest: (SeriesEntry) -> Unit = {},
-    onRemovalStatus: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
     onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
@@ -733,11 +731,9 @@ private fun SeasonvarContent(
     }
     MarkRemovalDialog(removalState,
         onDismiss = { backNavigation.reset(); onRemovalDismiss() },
-        onStatus = { backNavigation.reset(); onRemovalStatus() },
         onSelectStatus = { backNavigation.reset(); onRemovalSetStatus(it) },
         onAsk = { backNavigation.reset(); onRemovalAsk() },
         onConfirm = { backNavigation.reset(); onRemovalConfirm() },
-        onOpen = { removalState.entry?.let { entry -> onRemovalDismiss(); openDetails(entry) } },
         onInteraction = backNavigation::reset)
 }
 
@@ -975,8 +971,6 @@ private fun CatalogPane(
                 )
             }
         }
-        if (allowAccountActions && historyContent == null) Text(stringResource(R.string.mark_long_press_hint),
-            color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(d.spacingSmall))
         if (historyContent != null) Box(Modifier.weight(1f).fillMaxWidth()) { historyContent() }
         else if (selected == null) {

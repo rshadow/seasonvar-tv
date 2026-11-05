@@ -162,7 +162,6 @@
     <string name="resume_empty_hint">Здесь отображаются списки «Есть обновления» и «Нет новых серий» из вашего аккаунта.</string>
     <string name="resume_error">Не удалось прочитать личный список.</string>
     <string name="mark_actions_title">Действия с сериалом</string>
-    <string name="mark_open_series">Открыть сериал</string>
     <string name="mark_remove_from_list">Удалить из списка</string>
     <string name="mark_remove_question">Удалить из списка?</string>
     <string name="mark_remove_explanation">Отметка этого сезона будет удалена из аккаунта Seasonvar. Сезон исчезнет из связанных личных списков. История просмотров сохранится.</string>
@@ -170,7 +169,6 @@
     <string name="mark_remove_action">Удалить</string>
     <string name="mark_removing">Удаление…</string>
     <string name="mark_remove_error">Не удалось подтвердить удаление. Проверьте подключение и повторите попытку.</string>
-    <string name="mark_long_press_hint">Удерживайте OK, чтобы открыть действия с сериалом</string>
     <string name="update_checking">Проверяем обновления…</string>
     <string name="update_latest">Последний выпуск: %1$s</string>
     <string name="update_current">Обновлений нет</string>
