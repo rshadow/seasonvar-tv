@@ -4,9 +4,19 @@ import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.ui.catalog.CatalogLayout
+import ru.seasonvar.tv.ui.catalog.CatalogLayoutPreferences
 
 internal class InterfaceSettings(context: Context) {
     private val preferences = context.getSharedPreferences("interface", Context.MODE_PRIVATE)
+    private val layoutPreferences = CatalogLayoutPreferences(
+        read = { preferences.getString(it, null) },
+        write = { key, value -> preferences.edit().putString(key, value).apply() },
+    )
+    val catalogLayouts = layoutPreferences.layouts
+
+    fun setCatalogLayout(section: Section, layout: CatalogLayout) = layoutPreferences.set(section, layout)
+
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 

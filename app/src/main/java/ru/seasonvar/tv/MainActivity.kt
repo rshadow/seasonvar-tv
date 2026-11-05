@@ -104,10 +104,12 @@ class MainActivity : ComponentActivity() {
             val states = models.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
             val descriptions = models.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
+            val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             SeasonvarApp(
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
+                catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 detailsModel = detailsModel,

@@ -226,4 +226,6 @@
     <string name="search_history_clear">Очистить историю поиска</string>
     <string name="search_history_empty">Недавних запросов пока нет</string>
     <string name="search_history_error">Не удалось прочитать или сохранить историю поиска</string>
+    <string name="catalog_show_grid">Показать сеткой</string>
+    <string name="catalog_show_strip">Показать лентой с описанием</string>
 </resources>

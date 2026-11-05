@@ -26,6 +26,10 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import ru.seasonvar.tv.ui.catalog.CatalogGrid
+import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -98,7 +102,7 @@ import ru.seasonvar.tv.ui.search.SearchUiState
 import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
-private const val CARD_WARMUP_FRAMES = 8
+internal const val CARD_WARMUP_FRAMES = 8
 private data class RemovalFocusOrigin(val catalogKey: String, val keys: List<String>, val selected: String)
 
 private fun personalTitle(feed: PersonalFeed) = when (feed) {
@@ -148,6 +152,8 @@ internal fun SeasonvarApp(
     onDnsChange: (DnsProvider) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
+    catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
+    onCatalogLayoutChange: (Section, CatalogLayout) -> Unit = { _, _ -> },
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
@@ -194,6 +200,7 @@ internal fun SeasonvarApp(
             onBypassChange = onBypassChange,
             dnsProvider = dnsProvider,
             onDnsChange = onDnsChange,
+            catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
             onExit = onExit,
@@ -234,6 +241,8 @@ private fun SeasonvarContent(
     onDnsChange: (DnsProvider) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
+    catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
+    onCatalogLayoutChange: (Section, CatalogLayout) -> Unit = { _, _ -> },
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     onExit: () -> Unit = {},
@@ -266,6 +275,7 @@ private fun SeasonvarContent(
     var startupPending by rememberSaveable { mutableStateOf(true) }
     var menuOwnsInput by remember { mutableStateOf(true) }
     var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null)) }
+    val catalogLayout = catalogLayouts[section] ?: CatalogLayout.STRIP
     var activeFeed by rememberSaveable { mutableStateOf(section.publicFeed ?: PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
     val searching = section == Section.SEARCH
@@ -295,6 +305,12 @@ private fun SeasonvarContent(
         PublicFeed.BEST -> bestListState
         PublicFeed.ANNOUNCEMENTS -> announcementsListState
     }
+    val publicGridStates = PublicFeed.entries.associateWith { rememberLazyGridState() }
+    val personalGridStates = PersonalFeed.entries.associateWith { rememberLazyGridState() }
+    val searchGridState = rememberLazyGridState()
+    val gridState = if (searching) searchGridState else if (personalFeed != null) personalGridStates.getValue(personalFeed)
+        else publicGridStates.getValue(activeFeed)
+    val layoutFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
     val accountFocus = remember { FocusRequester() }
     val personalFocus = remember { PersonalFeed.entries.associateWith { FocusRequester() } }
@@ -328,6 +344,8 @@ private fun SeasonvarContent(
     val latestState by rememberUpdatedState(state)
     val latestSearchState by rememberUpdatedState(searchState)
     val latestListState by rememberUpdatedState(listState)
+    val latestGridState by rememberUpdatedState(gridState)
+    val latestCatalogLayout by rememberUpdatedState(catalogLayout)
 
     fun selectEntry(key: String?) {
         selectedKeys = if (key == null) selectedKeys - catalogKey
@@ -368,6 +386,7 @@ private fun SeasonvarContent(
     LaunchedEffect(searchState.query) {
         selectedKeys = selectedKeys - "SEARCH"
         searchListState.scrollToItem(0)
+        searchGridState.scrollToItem(0)
     }
     LaunchedEffect(catalogKey, state.entries) {
         if (state.entries.none { it.key == selectedKey }) {
@@ -375,8 +394,8 @@ private fun SeasonvarContent(
             selectEntry(if (origin != null) removalNeighbor(origin.keys, state.entries.map { it.key }, origin.selected) else selected?.key)
         }
     }
-    LaunchedEffect(catalogKey, selected?.key, description.key, searchState.showHistory) {
-        selected?.let { if (searching) onSearchSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
+    LaunchedEffect(catalogKey, selected?.key, description.key, searchState.showHistory, catalogLayout) {
+        if (catalogLayout == CatalogLayout.STRIP) selected?.let { if (searching) onSearchSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
     }
     val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy)
     LaunchedEffect(startupTarget) {
@@ -402,6 +421,7 @@ private fun SeasonvarContent(
         removalOrigin = null
         cards.keys.removeAll { it.substringBefore('|') in personalKeys }
         personalListStates.values.forEach { it.requestScrollToItem(0) }
+        personalGridStates.values.forEach { it.requestScrollToItem(0) }
         detailsOpen = false
         if (section.personalFeed != null && accountSession.user == null) section = Section.ACCOUNT
         if (section == Section.ACCOUNT && accountSession.user != null) {
@@ -441,12 +461,20 @@ private fun SeasonvarContent(
             } else {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 val index = state.entries.indexOfFirst { it.key == selected.key }
-                if (listState.layoutInfo.visibleItemsInfo.none { it.key == catalogKey + "|" + selected.key }) {
+                val cardKey = catalogKey + "|" + selected.key
+                val targetLayout = latestCatalogLayout
+                if (targetLayout == CatalogLayout.GRID) {
+                    val grid = latestGridState
+                    if (grid.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
+                        grid.scrollToItem(index.coerceAtLeast(0))
+                    }
+                } else if (listState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
                     listState.scrollToItem(index.coerceAtLeast(0))
-                    repeat(2) { withFrameNanos { } }
-                    if (section != requestedSection) return@launch
                 }
-                cards[catalogKey + "|" + selected.key]?.requestFocus()
+                repeat(2) { withFrameNanos { } }
+                if (section == requestedSection && !detailsOpen && latestCatalogLayout == targetLayout && latestSelected?.key == selected.key) {
+                    cards[cardKey]?.requestFocus()
+                }
             }
         }
     }
@@ -657,6 +685,9 @@ private fun SeasonvarContent(
                         PublicFeed.BEST -> bestFocus
                         PublicFeed.ANNOUNCEMENTS -> announcementsFocus
                     }, refreshFocus, retryFocus,
+                    layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
+                    onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
+                    onEnterContent = ::enterContent,
                     query = if (searching) searchState.query else null,
                     searchHeader = if (searching) { {
                         SearchControls(
@@ -851,6 +882,11 @@ private fun CatalogPane(
     onLoadMore: () -> Unit = {},
     onActions: (SeriesEntry) -> Unit = {},
     allowAccountActions: Boolean = false,
+    layout: CatalogLayout = CatalogLayout.STRIP,
+    gridState: LazyGridState = rememberLazyGridState(),
+    layoutFocus: FocusRequester = remember { FocusRequester() },
+    onLayoutChange: () -> Unit = {},
+    onEnterContent: () -> Unit = {},
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -866,16 +902,28 @@ private fun CatalogPane(
         else catalogStrings(feed)
     }
     val latestLoadMore by rememberUpdatedState(onLoadMore)
-    LaunchedEffect(catalogKey, listState, state.entries.size, state.hasMore, state.moreFailure) {
+    LaunchedEffect(catalogKey, layout, listState, gridState, state.entries.size, state.hasMore, state.moreFailure) {
         if (state.hasMore && state.moreFailure == null) snapshotFlow {
-            (listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) >= state.entries.size - 5
+            val last = if (layout == CatalogLayout.GRID) gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+                else listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+            (last ?: -1) >= state.entries.size - 5
         }.collect { nearEnd -> if (nearEnd) latestLoadMore() }
+    }
+    LaunchedEffect(catalogKey, layout, historyContent != null) {
+        if (historyContent != null) return@LaunchedEffect
+        val index = state.entries.indexOfFirst { it.key == selected?.key }
+        if (index < 0) return@LaunchedEffect
+        repeat(2) { withFrameNanos { } }
+        val cardKey = catalogKey + "|" + selected?.key
+        if (layout == CatalogLayout.GRID) {
+            if (gridState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) gridState.scrollToItem(index)
+        } else if (listState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) listState.scrollToItem(index)
     }
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
     val cardFrames = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { mutableIntStateOf(0) }
     val firstCard = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { listState.firstVisibleItemIndex }
-    LaunchedEffect(cardFrames) {
-        if (state.entries.isNotEmpty()) repeat(CARD_WARMUP_FRAMES) {
+    LaunchedEffect(cardFrames, layout) {
+        if (layout == CatalogLayout.STRIP && state.entries.isNotEmpty()) repeat(CARD_WARMUP_FRAMES) {
             withFrameNanos { }
             cardFrames.intValue++
         }
@@ -901,12 +949,25 @@ private fun CatalogPane(
                     )
                 }
             }
-            if (historyContent == null) ThemeButton(
-                stringResource(if (state.moreFailure != null) R.string.retry else R.string.refresh), onRefresh,
-                Modifier.focusRequester(refreshFocus),
-                icon = R.drawable.ic_reload,
-                loading = state.loading || state.loadingMore,
-            )
+            if (historyContent == null) Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                val enterCards = Modifier.onPreviewKeyEvent {
+                    if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown && selected != null) {
+                        onEnterContent(); true
+                    } else false
+                }
+                ThemeButton(
+                    stringResource(if (layout == CatalogLayout.STRIP) R.string.catalog_show_grid else R.string.catalog_show_strip),
+                    onLayoutChange,
+                    Modifier.focusRequester(layoutFocus).focusProperties { left = menuFocus; right = refreshFocus }.then(enterCards),
+                    icon = if (layout == CatalogLayout.STRIP) R.drawable.ic_catalog_grid else R.drawable.ic_catalog_strip,
+                )
+                ThemeButton(
+                    stringResource(if (state.moreFailure != null) R.string.retry else R.string.refresh), onRefresh,
+                    Modifier.focusRequester(refreshFocus).focusProperties { left = layoutFocus; right = FocusRequester.Cancel }.then(enterCards),
+                    icon = R.drawable.ic_reload,
+                    loading = state.loading || state.loadingMore,
+                )
+            }
         }
         if (allowAccountActions && historyContent == null) Text(stringResource(R.string.mark_long_press_hint),
             color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -948,6 +1009,9 @@ private fun CatalogPane(
                     )
                 }
             }
+        } else if (layout == CatalogLayout.GRID) {
+            CatalogGrid(state.entries, gridState, catalogKey, cards, layoutFocus, menuFocus,
+                Modifier.fillMaxWidth().weight(1f), onFocused, onOpen, if (allowAccountActions) onActions else null)
         } else {
             SelectedPanel(selected, description, Modifier.weight(1f))
             Spacer(Modifier.height(d.spacingMedium))
@@ -974,7 +1038,7 @@ private fun CatalogPane(
                         }
                     }
                     SeriesThumbnail(
-                        item, requester, refreshFocus,
+                        item, requester, layoutFocus,
                         if (index == 0) menuFocus else null,
                         right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
                         contentReady = { contentReady.value },
@@ -1018,7 +1082,7 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
 }
 
 @Composable
-private fun SeriesThumbnail(
+internal fun SeriesThumbnail(
     entry: SeriesEntry,
     requester: FocusRequester,
     up: FocusRequester,
@@ -1028,6 +1092,8 @@ private fun SeriesThumbnail(
     onFocused: () -> Unit,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    grid: Boolean = false,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -1040,7 +1106,8 @@ private fun SeriesThumbnail(
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(d.cardCornerRadius)
     Column(
-        Modifier.width(d.cardWidth).height(d.cardHeight).focusRequester(requester)
+        modifier.then(if (grid) Modifier.fillMaxWidth() else Modifier.width(d.cardWidth).height(d.cardHeight))
+            .focusRequester(requester)
             .focusProperties {
                 this.up = up
                 this.right = right
@@ -1075,7 +1142,8 @@ private fun SeriesThumbnail(
             .padding(d.cardPadding),
     ) {
         if (contentReady()) {
-            Poster(entry, Modifier.fillMaxWidth().height(d.thumbnailHeight))
+            Poster(entry, Modifier.fillMaxWidth().then(if (grid) Modifier.aspectRatio(d.posterWidth / d.posterHeight)
+                else Modifier.height(d.thumbnailHeight)))
             Spacer(Modifier.height(d.spacingSmall))
             Text(entry.title, style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -1088,7 +1156,12 @@ private fun SeriesThumbnail(
                 entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty()
             }
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = c.onSurface,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else if (grid) {
+            Spacer(Modifier.fillMaxWidth().aspectRatio(d.posterWidth / d.posterHeight))
+            Spacer(Modifier.height(d.spacingSmall))
+            Text("", minLines = 2, maxLines = 2, style = MaterialTheme.typography.labelMedium)
+            Text("", minLines = 1, maxLines = 1, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
