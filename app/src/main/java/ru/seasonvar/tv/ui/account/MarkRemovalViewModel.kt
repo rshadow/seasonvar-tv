@@ -54,6 +54,13 @@ class MarkRemovalViewModel internal constructor(
         mutableState.value = MarkRemovalUiState(entry, stage, visible = true)
         if (stage != RemovalStage.CONFIRM) loadCurrentStatus()
     }
+    fun refreshStatus() {
+        val current = state.value
+        if (!current.visible || current.entry == null || current.loadingStatus || current.busy ||
+            current.stage == RemovalStage.CONFIRM || session.value.version != ownerVersion) return
+        loadCurrentStatus()
+    }
+
     private fun loadCurrentStatus() {
         val current = state.value
         val entry = current.entry ?: return

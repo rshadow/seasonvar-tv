@@ -21,6 +21,7 @@ APP_ID := ru.seasonvar.tv
 PROFILE_BUILD_TYPE := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["performance"]["build_type"])')
 PROFILE_OUT ?= build/profile-navigation
 PROFILE_ARGS ?=
+MARK_MENU_PROBE_OUT ?= build/mark-menu-probe
 BUILD_TYPE ?= debug
 BUILD_VARIANT := $(shell python3 -c 'import sys; print(sys.argv[1].capitalize())' "$(BUILD_TYPE)")
 APK := app/build/outputs/apk/$(BUILD_TYPE)/app-$(BUILD_TYPE).apk
@@ -42,7 +43,7 @@ UPDATE_PREVIEW_SCENARIO ?= new
 MARK_PROBE_MODE ?= inspect
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-dev release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
+.PHONY: mark-menu-probe status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-dev release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -68,6 +69,7 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
+		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify real video, autoplay and controls in emulator; inspect captured frames' \
 		'make update-test            Run offline update tests' \
@@ -379,3 +381,12 @@ player-probe:
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --output "$(PLAYER_PROBE_OUT)"
+
+mark-menu-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for menu verification.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ENV) python3 scripts/probe-mark-menu.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(MARK_MENU_PROBE_OUT)"

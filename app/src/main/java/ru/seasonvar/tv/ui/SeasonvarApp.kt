@@ -57,6 +57,8 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -177,6 +179,7 @@ internal fun SeasonvarApp(
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRequest: (SeriesEntry) -> Unit = {},
+    onRemovalRefresh: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
     onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
@@ -209,7 +212,7 @@ internal fun SeasonvarApp(
             detailsModel = detailsModel,
             onPlay = onPlay,
             removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
-            onRemovalSetStatus = onRemovalSetStatus, onRemovalStatusRequest = onRemovalStatusRequest,
+            onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus, onRemovalStatusRequest = onRemovalStatusRequest,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState,
             personalStates = personalStates, personalDescriptions = personalDescriptions,
@@ -265,6 +268,7 @@ private fun SeasonvarContent(
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRequest: (SeriesEntry) -> Unit = {},
+    onRemovalRefresh: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
     onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
@@ -731,6 +735,7 @@ private fun SeasonvarContent(
     }
     MarkRemovalDialog(removalState,
         onDismiss = { backNavigation.reset(); onRemovalDismiss() },
+        onRefresh = { backNavigation.reset(); onRemovalRefresh() },
         onSelectStatus = { backNavigation.reset(); onRemovalSetStatus(it) },
         onAsk = { backNavigation.reset(); onRemovalAsk() },
         onConfirm = { backNavigation.reset(); onRemovalConfirm() },
@@ -750,15 +755,31 @@ internal fun ThemeButton(
     avatarKey: Long = 0,
     enabled: Boolean = true,
     centerVertically: Boolean = false,
+    actionEnabled: Boolean = true,
+    checked: Boolean? = null,
+    reserveCheckSpace: Boolean = false,
 ) {
     var focused by remember { mutableStateOf(false) }
+    var blockedPress by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val c = MaterialTheme.colorScheme
     val d = SeasonvarTheme.dimensions
-    val action = { if (enabled && !loading) onClick() }
+    val action = { if (enabled && actionEnabled && !loading) onClick() }
     val loadingDescription = if (loading) loadingLabel ?: stringResource(R.string.today_updating) else null
     val buttonModifier = modifier.focusRequester(focus).focusProperties { canFocus = enabled }
-        .onFocusChanged { focused = it.isFocused }
+        .onFocusChanged { focused = it.isFocused; if (!it.isFocused) blockedPress = false }
+        .then(if (!actionEnabled || blockedPress) Modifier.onPreviewKeyEvent { event ->
+            if (event.key !in setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.Spacebar)) false
+            else if (event.type == KeyEventType.KeyDown && (!actionEnabled || blockedPress)) {
+                blockedPress = true
+                true
+            } else if (event.type == KeyEventType.KeyUp && blockedPress) {
+                blockedPress = false
+                true
+            } else false
+        } else Modifier)
+        .then(if (!actionEnabled) Modifier.semantics { disabled() } else Modifier)
+        .then(if (checked != null) Modifier.semantics { selected = checked } else Modifier)
         .pointerInput(action, enabled) { detectTapGestures { if (enabled) { focus.requestFocus(); action() } } }
         .then(if (loadingDescription != null) Modifier.semantics {
             stateDescription = loadingDescription
@@ -769,11 +790,12 @@ internal fun ThemeButton(
     val colors = ButtonDefaults.colors(
         containerColor = when {
             focused -> c.primary
+            !actionEnabled -> Color.Transparent
             icon != null -> Color.Transparent
             active -> c.surface
             else -> c.background
         },
-        contentColor = if (focused) c.onPrimary else c.onSurface,
+        contentColor = if (focused) c.onPrimary else if (!actionEnabled) c.onSurfaceVariant else c.onSurface,
         focusedContainerColor = c.primary,
         focusedContentColor = c.onPrimary,
         disabledContainerColor = Color.Transparent,
@@ -815,7 +837,14 @@ internal fun ThemeButton(
     } else {
         Button(onClick = action, enabled = enabled, modifier = buttonModifier,
             shape = shape, scale = scale, colors = colors) {
-            if (centerVertically) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+            if (checked != null || reserveCheckSpace) Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                Box(Modifier.size(d.headerButtonIconSize), contentAlignment = Alignment.Center) {
+                    if (checked == true) Icon(painterResource(R.drawable.ic_check), contentDescription = null,
+                        modifier = Modifier.size(d.headerButtonIconSize))
+                }
+                Text(text, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else if (centerVertically) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
                 Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }

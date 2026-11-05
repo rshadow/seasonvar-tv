@@ -25,6 +25,10 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "mark-menu-layout") {
+            MarkMenuLayoutProbe.run(this)
+            return
+        }
         if (mode == "player-auto-next") {
             PlayerAutoNextProbe.run(this, probeArguments)
             return
