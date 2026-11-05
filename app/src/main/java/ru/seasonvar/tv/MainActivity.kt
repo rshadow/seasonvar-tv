@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
             ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
-        searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository))[SearchViewModel::class.java]
+        searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
             preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
         val details = detailsModel
@@ -130,6 +130,8 @@ class MainActivity : ComponentActivity() {
                 searchDescription = searchDescription,
                 onSearchQuery = searchModel::queryChanged,
                 onSearchSubmit = searchModel::submit,
+                onSearchRecall = searchModel::recall, onSearchClearHistory = searchModel::clearHistory,
+                onSearchRemember = searchModel::rememberCurrentQuery,
                 onSearchSelect = searchModel::select,
                 onSearchVisible = { visible -> if (visible) searchModel.activate() else searchModel.deactivate() },
                 onRefresh = { feed -> models.getValue(feed).refresh() },
@@ -173,6 +175,11 @@ class MainActivity : ComponentActivity() {
             return true
         }
         return super.onKeyUp(keyCode, event)
+    }
+
+    override fun onPause() {
+        if (::searchModel.isInitialized) searchModel.rememberPendingQuery()
+        super.onPause()
     }
 
     override fun onResume() {
