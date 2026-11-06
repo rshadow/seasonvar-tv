@@ -32,6 +32,7 @@
     <dimen name="seasonvar_catalog_min_card_width">128dp</dimen>
     <dimen name="seasonvar_poster_width">120dp</dimen>
     <dimen name="seasonvar_poster_height">180dp</dimen>
+    <integer name="seasonvar_preview_poster_max_width_percent">50</integer>
     <dimen name="seasonvar_card_padding">6dp</dimen>
     <dimen name="seasonvar_card_corner_radius">8dp</dimen>
     <dimen name="seasonvar_focus_border_width">2dp</dimen>

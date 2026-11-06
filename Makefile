@@ -15,6 +15,8 @@ NETWORK_DELAY ?= none
 KEY_ARGS ?=
 GRADLE := $(ENV) ./gradlew --console=plain $(if $(strip $(VERSION_NAME_SUFFIX)),-PversionNameSuffix="$(VERSION_NAME_SUFFIX)") $(GRADLE_ARGS)
 AVD ?= Seasonvar_TV_API_34
+DISPLAY_SIZE ?= reset
+DISPLAY_DENSITY ?= reset
 EMULATOR_ARGS := $(shell python3 -c 'import json; print(" ".join(json.load(open("toolchain.lock.json"))["avd"]["emulator_args"]))')
 DEVICE ?= emulator-5554
 APP_ID := ru.seasonvar.tv
@@ -45,7 +47,7 @@ MARK_PROBE_MODE ?= inspect
 SMART_PROBE_SEASON ?=
 ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["verification"]["account_mark_runner"])')
 
-.PHONY: smart-continue-probe mark-menu-probe status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-dev release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
+.PHONY: emulator-display smart-continue-probe mark-menu-probe status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-dev release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
 help:
 	@printf '%s\n' \
@@ -84,6 +86,7 @@ help:
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \
+		'make emulator-display       Set test size/density (DISPLAY_SIZE=1920x1080 DISPLAY_DENSITY=240; reset by default)'
 		'make emulator-network-delay Set emulator latency (NETWORK_DELAY=1000 or none)' \
 		'make emulator-restart       Restart and apply emulator input settings' \
 		'make install-apk APK=... [DEVICE=serial] Install an existing APK' \
@@ -194,6 +197,13 @@ emulator: avd
 	@if $(ADB) emu avd name 2>/dev/null | tr -d '\r' | grep -Fxq "$(AVD)"; then \
 		echo "AVD $(AVD) is already running on $(DEVICE). Run make run."; \
 	else $(ENV) emulator -avd "$(AVD)" $(EMULATOR_ARGS); fi
+
+emulator-display:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for display verification.' >&2; exit 1;; esac
+	@[[ "$(DISPLAY_SIZE)" == reset || "$(DISPLAY_SIZE)" =~ ^[1-9][0-9]{2,4}x[1-9][0-9]{2,4}$$ ]] || { echo 'Expected DISPLAY_SIZE=WIDTHxHEIGHT or reset.' >&2; exit 1; }
+	@[[ "$(DISPLAY_DENSITY)" == reset || "$(DISPLAY_DENSITY)" =~ ^[1-9][0-9]{1,3}$$ ]] || { echo 'Expected DISPLAY_DENSITY=dpi or reset.' >&2; exit 1; }
+	$(ADB) shell wm size "$(DISPLAY_SIZE)"
+	$(ADB) shell wm density "$(DISPLAY_DENSITY)"
 
 emulator-network-delay:
 	$(ADB) emu network delay "$(NETWORK_DELAY)"

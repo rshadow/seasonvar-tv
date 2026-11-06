@@ -41,6 +41,7 @@ data class SeriesEntry(
     val expectedReleaseDate: String? = null,
     val isWatching: Boolean = false,
 ) {
+    val largePosterUrl: String? get() = PosterImages.largeUrl(posterUrl)
     val subtitle: String get() = update.ifBlank { seasonCountLabel.orEmpty() }
     val key: String get() = sourceKey ?: (url + "|" + update)
     val fullTitle: String get() = listOfNotNull(title, originalTitle).distinct().joinToString(" / ")
