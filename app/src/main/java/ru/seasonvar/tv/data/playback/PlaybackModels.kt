@@ -11,6 +11,7 @@ data class PlaybackRequest(
     val title: String,
     val episodes: List<Episode> = emptyList(),
     val resumePositionMillis: Long? = null,
+    val seasonNumber: Int? = null,
 ) {
     fun selectEpisode(id: String): PlaybackRequest? {
         if (id == episodeId) return this

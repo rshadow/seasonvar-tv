@@ -92,7 +92,7 @@ object PlayerAutoNextProbe {
             val translation = details.translations.firstOrNull { it.id == "0" && (it.episodes?.size ?: 0) >= 2 }
                 ?: details.translations.first { (it.episodes?.size ?: 0) >= 2 }
             val episodes = checkNotNull(translation.episodes).take(2)
-            val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes, resumePositionMillis = 10_000)
+            val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes, resumePositionMillis = 10_000, seasonNumber = details.entry.season)
             rememberProgress(id)
             preferences.edit().remove("season-$id").commit()
             result.putBoolean("default_enabled", originalEnabled)
@@ -149,7 +149,7 @@ object PlayerAutoNextProbe {
             val seasonEpisodes = checkNotNull(seasonVoice.episodes)
             val last = seasonEpisodes.last()
             val seasonRequest = PlaybackRequest(seasonId, seasonPage, seasonVoice.id, last.id, last.label,
-                seasonDetails.entry.title, seasonEpisodes, resumePositionMillis = 0)
+                seasonDetails.entry.title, seasonEpisodes, resumePositionMillis = 0, seasonNumber = seasonDetails.entry.season)
             val nextSeason = checkNotNull(runBlocking { app.nextSeasons.next(seasonRequest) })
             rememberProgress(seasonId); rememberProgress(nextSeason.seasonId)
             main { app.interfaceSettings.setAutoNextEnabled(false); app.interfaceSettings.setAutoNextSeasonEnabled(false) }
@@ -171,6 +171,11 @@ object PlayerAutoNextProbe {
             Thread.sleep(2500); capture("14-next-season-a"); Thread.sleep(2500); capture("15-next-season-b")
             result.putBoolean("automatic_season", true)
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor(5000) { main { !player().isPlaying } }
+            val seasonTitle = targetContext.getString(R.string.player_title_with_season,
+                nextSeason.title, checkNotNull(nextSeason.seasonNumber), nextSeason.episodeLabel)
+            check(visibleText(seasonTitle))
+            check(main { activity?.intent?.getIntExtra("season_number", -1) } == nextSeason.seasonNumber)
+            result.putBoolean("season_title_verified", true)
             capture("16-season-paused")
             key(KeyEvent.KEYCODE_DPAD_CENTER); playing(nextSeason.episodeId)
             val seasonPosition = main { player().currentPosition }

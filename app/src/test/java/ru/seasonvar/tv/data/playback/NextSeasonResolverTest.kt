@@ -19,7 +19,7 @@ class NextSeasonResolverTest {
         val reads = mutableListOf<String>()
         val next = NextSeasonResolver({ reads += it.id; pages.getValue(it.id) }).next(request)!!
         assertEquals(listOf("1", "2"), reads)
-        assertEquals("2", next.seasonId); assertEquals(entry("2").url, next.pageUrl)
+        assertEquals("2", next.seasonId); assertEquals(2, next.seasonNumber); assertEquals(entry("2").url, next.pageUrl)
         assertEquals("19", next.translationId); assertEquals("x", next.episodeId)
         assertEquals(0L, next.resumePositionMillis); assertEquals(2, next.episodes.size)
     }

@@ -313,6 +313,7 @@ class SeriesDetailsViewModelTest {
         val model = SeriesDetailsViewModel { details(it) }
         model.open(entry()); advanceUntilIdle()
         assertEquals(listOf("1_seriya", "2_seriya"), model.playbackRequest()!!.episodes.map { it.id })
+        assertEquals(1, model.playbackRequest()!!.seasonNumber)
         model.selectTranslation("1")
         assertEquals(listOf(Episode("sub_2", "2")), model.playbackRequest()!!.episodes)
     }

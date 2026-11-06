@@ -39,7 +39,7 @@ class PlaybackRequestTest {
     }
 
     @Test fun switching_keeps_season_page_translation_title_and_original_queue() {
-        val original = request()
+        val original = request().copy(seasonNumber = 4)
         assertEquals(original.copy(episodeId = "two", episodeLabel = "2"), original.adjacent(1))
         assertEquals("ten", original.episodeId)
     }
