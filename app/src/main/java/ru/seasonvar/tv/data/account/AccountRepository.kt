@@ -74,6 +74,8 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         AccountParser.personalList(authenticatedHtml(url), feed, url)
     }
 
+    internal suspend fun seasonPage(entry: ru.seasonvar.tv.data.SeriesEntry): String = authenticatedHtml(entry.url)
+
     suspend fun progressSnapshot(): AccountProgressSnapshot? = withContext(Dispatchers.IO) {
         if (session.value.user == null) return@withContext null
         AccountProgressParser.snapshot(authenticatedHtml("https://seasonvar.ru/resume"))

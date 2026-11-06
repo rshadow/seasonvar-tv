@@ -25,6 +25,7 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "smart-inspect") { SmartContinueLiveProbe.run(this, probeArguments); return }
         if (mode == "mark-menu-layout") {
             MarkMenuLayoutProbe.run(this)
             return

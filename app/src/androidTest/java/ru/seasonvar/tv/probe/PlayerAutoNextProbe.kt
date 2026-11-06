@@ -88,14 +88,17 @@ object PlayerAutoNextProbe {
             val translation = details.translations.firstOrNull { it.id == "0" && (it.episodes?.size ?: 0) >= 2 }
                 ?: details.translations.first { (it.episodes?.size ?: 0) >= 2 }
             val episodes = checkNotNull(translation.episodes).take(2)
-            val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes)
+            val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes, resumePositionMillis = 10_000)
             progressKey = "season-$id"
             originalProgress = preferences.getString(progressKey, null)
             preferences.edit().remove(progressKey).commit()
             result.putBoolean("default_enabled", originalEnabled)
             main { app.interfaceSettings.setAutoNextEnabled(true) }
             activity = startActivitySync(PlayerActivity.intent(targetContext, request).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) as PlayerActivity
-            stage("first_video"); playing(episodes[0].id); Thread.sleep(2500); capture("01-first-a"); Thread.sleep(2000); capture("02-first-b")
+            stage("first_video"); playing(episodes[0].id);
+            waitFor { main { player().currentPosition in 10_000..25_000 } }
+            result.putBoolean("explicit_resume_verified", true)
+            Thread.sleep(2500); capture("01-first-a"); Thread.sleep(2000); capture("02-first-b")
             stage("pause_seek")
             key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor(5000) { main { !player().isPlaying } }

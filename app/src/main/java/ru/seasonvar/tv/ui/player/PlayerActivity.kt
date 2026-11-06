@@ -229,9 +229,9 @@ class PlayerActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         resolveJob = lifecycleScope.launch {
             try {
-                val point = if (!resume) null else container.playbackProgress.read(selected.seasonId)?.takeIf {
+                val position = if (!resume) null else selected.resumePositionMillis ?: container.playbackProgress.read(selected.seasonId)?.takeIf {
                     it.translationId == selected.translationId && it.episodeId == selected.episodeId
-                }
+                }?.positionMillis
                 val source = container.videos.resolve(selected)
                 ensureActive()
                 val transport = OkHttpDataSource.Factory(container.siteClient.mediaCalls)
@@ -283,10 +283,14 @@ class PlayerActivity : ComponentActivity() {
                 markOwnerVersion = account.version
                 player.setMediaItem(MediaItem.fromUri(source.url))
                 controlsPlayer = EpisodeControlsPlayer(player, selected, ::switchEpisode)
-                if (point != null) player.seekTo(point.positionMillis)
+                if (position != null) player.seekTo(position.coerceAtLeast(0))
                 player.prepare()
                 player.playWhenReady = true
-                trace("prepared resumeMs=" + (point?.positionMillis ?: 0))
+                if (selected.resumePositionMillis != null) {
+                    request = selected.copy(resumePositionMillis = null)
+                    intent = intent(this@PlayerActivity, checkNotNull(request))
+                }
+                trace("prepared resumeMs=" + (position ?: 0))
                 progressJob = lifecycleScope.launch {
                     while (isActive) { delay(resources.getInteger(R.integer.seasonvar_player_progress_interval_ms).toLong()); savePosition() }
                 }
@@ -482,6 +486,7 @@ class PlayerActivity : ComponentActivity() {
             .putExtra("season", request.seasonId).putExtra("page", request.pageUrl)
             .putExtra("translation", request.translationId).putExtra("episode", request.episodeId)
             .putExtra("label", request.episodeLabel).putExtra("title", request.title)
+            .putExtra("resume_position", request.resumePositionMillis ?: -1L)
             .putStringArrayListExtra("episode_ids", ArrayList(request.episodes.map { it.id }))
             .putStringArrayListExtra("episode_labels", ArrayList(request.episodes.map { it.label }))
 
@@ -492,7 +497,8 @@ class PlayerActivity : ComponentActivity() {
             val episode = intent.getStringExtra("episode") ?: return null
             val label = intent.getStringExtra("label") ?: return null
             return PlaybackRequest(season, page, translation, episode, label, intent.getStringExtra("title").orEmpty(),
-                playbackEpisodes(intent.getStringArrayListExtra("episode_ids"), intent.getStringArrayListExtra("episode_labels")))
+                playbackEpisodes(intent.getStringArrayListExtra("episode_ids"), intent.getStringArrayListExtra("episode_labels")),
+                intent.getLongExtra("resume_position", -1L).takeIf { it >= 0 })
         }
     }
 }

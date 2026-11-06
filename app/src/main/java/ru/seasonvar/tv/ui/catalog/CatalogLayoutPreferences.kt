@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import ru.seasonvar.tv.ui.navigation.Section
 
 internal class CatalogLayoutPreferences(read: (String) -> String?, private val write: (String, String) -> Unit) {
-    private val sections = Section.entries.filter { it == Section.SEARCH || it.publicFeed != null || it.personalFeed != null }
+    private val sections = Section.entries.filter { it == Section.SEARCH || it == Section.SMART_CONTINUE || it.publicFeed != null || it.personalFeed != null }
     private fun key(section: Section) = "catalog_layout." + section.storageId
     private val mutableLayouts = MutableStateFlow(sections.associateWith { CatalogLayout.fromStorage(read(key(it))) })
     val layouts = mutableLayouts.asStateFlow()

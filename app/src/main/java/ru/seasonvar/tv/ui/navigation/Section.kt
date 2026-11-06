@@ -9,6 +9,7 @@ internal enum class Section(
     val personalFeed: PersonalFeed? = null,
 ) {
     SEARCH("search"), ACCOUNT("account"),
+    SMART_CONTINUE("smart_continue"),
     RESUME("resume", personalFeed = PersonalFeed.RESUME),
     PERSONAL_UPDATES("personal_updates", personalFeed = PersonalFeed.UPDATES),
     PERSONAL_NO_UPDATES("personal_no_updates", personalFeed = PersonalFeed.NO_UPDATES),
@@ -20,19 +21,22 @@ internal enum class Section(
     ANNOUNCEMENTS("announcements", PublicFeed.ANNOUNCEMENTS),
     SETTINGS("settings"), ABOUT("about");
 
+    val requiresAccount: Boolean get() = personalFeed != null || this == SMART_CONTINUE
+
     fun availableAtStart(signedIn: Boolean): Section =
         if (this in startPages(signedIn)) this else TODAY
 
     fun atStartup(signedIn: Boolean, restoringAccount: Boolean): Section? =
-        if (personalFeed != null && restoringAccount) null else availableAtStart(signedIn)
+        if (requiresAccount && restoringAccount) null else availableAtStart(signedIn)
 
     companion object {
         val catalogPages = listOf(TODAY, UPDATES, TOP, NEWEST, BEST, ANNOUNCEMENTS)
+        val smartPages = listOf(SMART_CONTINUE)
         val personalPages = entries.filter { it.personalFeed != null }
         val systemPages = listOf(SETTINGS, ABOUT)
 
         fun startPages(signedIn: Boolean): List<Section> =
-            catalogPages + (if (signedIn) personalPages else emptyList()) + systemPages
+            catalogPages + (if (signedIn) smartPages + personalPages else emptyList()) + systemPages
 
         fun fromStorage(value: String?): Section =
             startPages(true).firstOrNull { it.storageId == value } ?: TODAY

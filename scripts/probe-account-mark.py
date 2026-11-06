@@ -9,14 +9,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", required=True)
     parser.add_argument("--runner", required=True)
-    parser.add_argument("--mode", choices=("inspect", "roundtrip", "delete-roundtrip", "status-roundtrip", "catalog-badges"), default="inspect")
+    parser.add_argument("--mode", choices=("inspect", "roundtrip", "delete-roundtrip", "status-roundtrip", "catalog-badges", "smart-inspect"), default="inspect")
+    parser.add_argument("--target-season", default="")
     args = parser.parse_args()
+    if args.target_season and not re.fullmatch(r"[1-9][0-9]*", args.target_season):
+        parser.error("Expected a numeric season ID")
     result = subprocess.run(["adb", "-s", args.device, "shell", "am", "instrument", "-w", "-r",
-                             "-e", "mode", args.mode, args.runner], capture_output=True, text=True, timeout=120)
+                             "-e", "mode", args.mode, "-e", "target-season", args.target_season, args.runner], capture_output=True, text=True, timeout=300 if args.mode == "smart-inspect" else 120)
     fields = {}
     allowed = {"authenticated", "existing_playback_mark", "mark_declaration_present", "mark_parsed",
                "probe_success", "post_verified", "statuses_verified", "original_restored", "concurrent_change_left_intact",
                "removed_from_lists", "mark_field_names", "href_type", "translation_type", "phase", "failure_type"}
+    allowed.update({"smart_count", "smart_incomplete", "smart_failures", "history_count", "history_has_dates", "history_has_more", "smart_target_found",
+                    "smart_target_episode", "smart_target_seek_ms", "history_target_found"})
     allowed.update(prefix + suffix for prefix in ("today", "updates") for suffix in
                    ("_target_found", "_classes", "_child_classes", "_attributes", "_script_variables", "_marker_parents", "_target_index", "_watching_parsed"))
     for line in result.stdout.splitlines():

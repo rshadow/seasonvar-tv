@@ -332,4 +332,15 @@ class SeriesDetailsViewModelTest {
         model.selectSeason("2"); advanceUntilIdle()
         assertEquals("2", model.state.value.entry!!.accountListMark!!.seasonId)
     }
+    @Test fun smart_server_time_overrides_local_position_and_zero_starts_the_next_episode_from_beginning() = runTest(dispatcher) {
+        for (position in listOf(58_000L, 0L)) {
+            val target = entry().copy(initialSelection = EntrySelection(episodeId = "2_seriya", translationId = "0", positionMillis = position))
+            val model = SeriesDetailsViewModel(loadResume = { ResumePoint("1", "0", "2_seriya", 99_000) }, load = { details(it) })
+            model.open(target);advanceUntilIdle()
+            assertEquals("2_seriya", model.state.value.episodeId)
+            assertEquals(position, model.playbackRequest()!!.resumePositionMillis)
+            assertNull(model.playbackRequest("1_seriya")!!.resumePositionMillis)
+        }
+    }
+
 }

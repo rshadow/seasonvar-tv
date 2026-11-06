@@ -10,11 +10,12 @@ data class PlaybackRequest(
     val episodeLabel: String,
     val title: String,
     val episodes: List<Episode> = emptyList(),
+    val resumePositionMillis: Long? = null,
 ) {
     fun selectEpisode(id: String): PlaybackRequest? {
         if (id == episodeId) return this
         val episode = episodes.singleOrNull { it.id == id } ?: return null
-        return copy(episodeId = episode.id, episodeLabel = episode.label)
+        return copy(episodeId = episode.id, episodeLabel = episode.label, resumePositionMillis = null)
     }
 
     fun adjacent(direction: Int): PlaybackRequest? {

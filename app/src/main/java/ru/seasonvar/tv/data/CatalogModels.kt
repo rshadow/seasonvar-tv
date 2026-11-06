@@ -14,6 +14,7 @@ data class EntrySelection(
     val episodeLabel: String? = null,
     val translationId: String? = null,
     val translationLabel: String? = null,
+    val positionMillis: Long? = null,
 ) {
     val hasEpisode get() = !episodeId.isNullOrBlank() || !episodeLabel.isNullOrBlank()
     val hasTranslation get() = !translationId.isNullOrBlank() || !translationLabel.isNullOrBlank()

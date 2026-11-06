@@ -79,8 +79,11 @@ class SeriesDetailsViewModel(
                 ensureActive()
                 val point = loadResume(entry.id)
                 ensureActive()
-                savedResume = EntrySelectionResolver.validResume(point, details)
+                savedResume = if (selection.positionMillis == null) EntrySelectionResolver.validResume(point, details) else null
                 val selected = EntrySelectionResolver.resolve(details, selection, savedResume, preferredTranslations())
+                if (selection.positionMillis != null && selection.positionMillis >= 0 && selected.translationId != null && selected.episodeId != null) {
+                    savedResume = ResumePoint(details.entry.id, selected.translationId, selected.episodeId, selection.positionMillis)
+                }
                 mutableState.value = DetailsUiState(details.entry, details,
                     translationId = selected.translationId, episodeId = selected.episodeId,
                     resume = resumeFor(selected.translationId, selected.episodeId), selectionFailure = selected.failure)
@@ -195,7 +198,8 @@ class SeriesDetailsViewModel(
         if (details.playbackUnavailableReason != null || current.selectionFailure != null) return null
         val translation = current.translation ?: return null
         val episode = translation.episodes?.firstOrNull { it.id == episodeId } ?: return null
-        return PlaybackRequest(details.entry.id, details.entry.url, translation.id, episode.id, episode.label, details.entry.title, translation.episodes.toList())
+        return PlaybackRequest(details.entry.id, details.entry.url, translation.id, episode.id, episode.label, details.entry.title, translation.episodes.toList(),
+            current.resume?.takeIf { it.episodeId == episode.id && it.translationId == translation.id }?.positionMillis)
     }
 
     fun onPlaybackFinished(seasonId: String?, translationId: String?, episodeId: String?) {
