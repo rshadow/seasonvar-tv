@@ -25,7 +25,7 @@ watchdog.daemon = True
 watchdog.start()
 fields = {}
 allowed = {"phase", "default_enabled", "automatic_next", "disabled_stays", "last_stays", "last_closes",
-           "no_account_marks_written", "script_success", "position_restored", "failure_type", "activity_state", "offer_visible", "artifacts"}
+           "no_account_marks_written", "script_success", "explicit_resume_verified", "position_restored", "failure_type", "activity_state", "offer_visible", "artifacts"}
 for line in process.stdout:
     if line.startswith("INSTRUMENTATION_STATUS: phase="):
         phase = line.strip().split("=", 1)[1]
@@ -42,6 +42,6 @@ if isinstance(remote, str) and re.fullmatch(r"/storage/emulated/0/Android/data/r
     subprocess.run(adb + ["pull", remote + "/.", str(args.output)], check=True, stdout=subprocess.DEVNULL)
 (args.output / "result.json").write_text(json.dumps(fields, indent=2))
 print(json.dumps(fields, sort_keys=True))
-if code or fields.get("script_success") is not True or fields.get("position_restored") is not True:
+if code or fields.get("script_success") is not True or fields.get("position_restored") is not True or fields.get("explicit_resume_verified") is not True:
     raise SystemExit(1)
 print("Inspect the captured PNG frames; player states alone do not verify visible video.")

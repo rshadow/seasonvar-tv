@@ -41,4 +41,13 @@ class SectionTest {
         assertTrue(signedIn.containsAll(guest))
         assertEquals(signedIn.size, signedIn.map { it.storageId }.toSet().size)
     }
+    @Test fun smart_continue_is_separate_from_site_feeds_and_requires_account() {
+        assertEquals(Section.SMART_CONTINUE, Section.fromStorage("smart_continue"))
+        assertNull(Section.SMART_CONTINUE.atStartup(false, true))
+        assertEquals(Section.TODAY, Section.SMART_CONTINUE.availableAtStart(false))
+        assertTrue(Section.SMART_CONTINUE in Section.startPages(true))
+        assertFalse(Section.SMART_CONTINUE in Section.startPages(false))
+        assertNull(Section.SMART_CONTINUE.personalFeed)
+    }
+
 }

@@ -25,6 +25,7 @@ import ru.seasonvar.tv.ui.search.SearchViewModel
 
 class MainActivity : ComponentActivity() {
     private lateinit var updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel
+    private lateinit var smartModel: ru.seasonvar.tv.ui.smart.SmartContinueViewModel
     private lateinit var detailsModel: SeriesDetailsViewModel
     private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
@@ -58,6 +59,9 @@ class MainActivity : ComponentActivity() {
             ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
+        smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
+            container.account, repository, container.smartContinueCache,
+            { container.interfaceSettings.preferredTranslations.value }))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
             preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
@@ -82,9 +86,12 @@ class MainActivity : ComponentActivity() {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
             val removalState by removalModel.state.collectAsStateWithLifecycle()
+            val smartState by smartModel.state.collectAsStateWithLifecycle()
+            val smartDescription by smartModel.description.collectAsStateWithLifecycle()
             val marksRevision by container.account.marksRevision.collectAsStateWithLifecycle()
             LaunchedEffect(marksRevision) {
                 if (marksRevision > 0) {
+                    smartModel.invalidate()
                     personalModels.values.forEach { it.refreshIfActive() }
                     models.values.forEach { it.refreshIfStarted() }
                     searchModel.marksChanged()
@@ -118,6 +125,9 @@ class MainActivity : ComponentActivity() {
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,
+                smartState = smartState, smartDescription = smartDescription,
+                onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
+                onSmartSelect = smartModel::select,
                 onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,
                 onPersonalVisible = { personalModels.getValue(it).activate() },
                 onPersonalRefresh = { personalModels.getValue(it).retryOrRefresh() },
@@ -140,6 +150,7 @@ class MainActivity : ComponentActivity() {
                 bypassEnabled = network.bypassEnabled,
                 onBypassChange = { enabled ->
                     container.networkSettings.setBypassEnabled(enabled)
+                    smartModel.invalidate()
                     models.values.forEach { it.networkChanged() }
                     searchModel.networkChanged()
                     personalModels.values.forEach { it.refreshIfActive() }
@@ -151,6 +162,7 @@ class MainActivity : ComponentActivity() {
                 onDnsChange = { provider ->
                     if (provider != network.dnsProvider) {
                         container.networkSettings.setDnsProvider(provider)
+                        smartModel.invalidate()
                         models.values.forEach { it.networkChanged() }
                         searchModel.networkChanged()
                         personalModels.values.forEach { it.refreshIfActive() }
@@ -184,6 +196,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        smartModel.invalidate()
         models.values.forEach { it.refreshIfDateChanged() }
         detailsModel.refreshResume()
         (application as SeasonvarApplication).accountMarks.retry()

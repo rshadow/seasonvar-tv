@@ -228,4 +228,9 @@
     <string name="catalog_layout_strip">Лента с описанием</string>
     <string name="mark_list_refresh">Обновить статус</string>
     <string name="mark_list_request_error">Не удалось выполнить запрос. Повторите действие.</string>
+    <string name="menu_smart">Для меня</string>
+    <string name="smart_continue_title">Продолжить</string>
+    <string name="smart_continue_hint">Продолжение по отметкам аккаунта</string>
+    <string name="smart_continue_empty">Пока нечего продолжать</string>
+    <string name="smart_continue_empty_hint">Здесь появятся сериалы из истории просмотра, у которых остались непросмотренные серии.</string>
 </resources>

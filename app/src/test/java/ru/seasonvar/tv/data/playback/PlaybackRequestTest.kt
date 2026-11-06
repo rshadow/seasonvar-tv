@@ -56,4 +56,11 @@ class PlaybackRequestTest {
     @Test fun transport_preserves_ids_and_labels_without_treating_labels_as_ids() {
         assertEquals(episodes, playbackEpisodes(episodes.map { it.id }, episodes.map { it.label }))
     }
+    @Test fun explicit_resume_is_preserved_for_the_same_episode_and_cleared_on_navigation() {
+        val initial = request().copy(resumePositionMillis = 58_000)
+        assertEquals(58_000L, initial.selectEpisode(initial.episodeId)!!.resumePositionMillis)
+        assertNull(initial.adjacent(1)!!.resumePositionMillis)
+        assertNull(initial.adjacent(-1)!!.resumePositionMillis)
+    }
+
 }

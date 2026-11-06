@@ -1,6 +1,5 @@
-package ru.seasonvar.tv.ui.details
+package ru.seasonvar.tv.data
 
-import ru.seasonvar.tv.data.*
 import java.util.Locale
 
 data class SelectionFailure(val requested: String)

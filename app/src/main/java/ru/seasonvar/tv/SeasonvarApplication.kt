@@ -30,6 +30,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val updates by lazy { ru.seasonvar.tv.data.update.UpdateRepository(
         ru.seasonvar.tv.data.update.GitHubUpdateSource(), File(cacheDir, "updates"), updateInstaller::verify) }
     val playbackProgress by lazy { PlaybackProgress(this) }
+    val smartContinueCache by lazy { ru.seasonvar.tv.data.smart.PreferencesSmartContinueCache(this) }
     val accountMarks by lazy { ru.seasonvar.tv.data.playback.AccountMarkWriter(applicationScope, account,
         ru.seasonvar.tv.data.playback.PreferencesMarkOutbox(this)) }
 
