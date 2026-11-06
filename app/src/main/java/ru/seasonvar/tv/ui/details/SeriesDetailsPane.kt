@@ -391,7 +391,6 @@ private fun SeriesSynopsis(state: DetailsUiState) {
         else -> state.details.paragraphs
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-        Text(stringResource(R.string.details_description), color = c.onSurfaceVariant, style = MaterialTheme.typography.titleMedium)
         Text(paragraphs.joinToString("\n\n"), color = c.onBackground, style = MaterialTheme.typography.bodyLarge)
     }
 }
