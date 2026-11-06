@@ -31,6 +31,23 @@ class UpdateTransportTest {
         assertNull(source.latest())
     }
 
+    @Test fun release_history_is_anonymous_paginated_and_missing_repository_is_an_error() = runBlocking {
+        val source = source { request ->
+            assertEquals(ReleaseNotesParser.API_URL, request.url.newBuilder().query(null).build().toString())
+            assertEquals("2", request.url.queryParameter("page"))
+            assertEquals("100", request.url.queryParameter("per_page"))
+            assertNull(request.header("Cookie"))
+            assertNull(request.header("Authorization"))
+            assertNull(request.header("Referer"))
+            response(request, 200, "[]".toByteArray())
+        }
+        assertEquals("[]", source.releases(2))
+        try { source { response(it, 404) }.releases(1); fail("Missing repository accepted") }
+        catch (error: UpdateHttpException) { assertEquals(404, error.status) }
+        try { source { response(it, 200, ByteArray(4 * 1024 * 1024 + 1)) }.releases(1); fail("Unbounded page accepted") }
+        catch (_: UpdateFormatException) { }
+    }
+
     @Test fun rate_limit_is_an_error_not_no_updates() = runBlocking {
         val source = source { response(it, 403) }
         try { source.latest(); fail("Expected HTTP failure") }

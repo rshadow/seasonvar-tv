@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.ui.update
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -109,5 +110,58 @@ class UpdateViewModelTest {
         assertTrue(model.state.value.installRequested)
         assertNull(model.state.value.failure)
         assertEquals(1, downloads)
+    }
+
+    @Test fun cached_descriptions_appear_before_refresh_and_failed_history_does_not_block_installation() = runTest(dispatcher) {
+        val cached = listOf(ReleaseNotes("0.3.1", "2026-11-04T12:00:00Z", "Cached description"))
+        val refreshed = CompletableDeferred<List<ReleaseNotes>>()
+        val model = UpdateViewModel("0.3.1", { release }, { _, _ -> temporary.newFile() },
+            cachedNotes = { cached }, loadNotes = { refreshed.await() })
+        model.enter(); runCurrent()
+        assertEquals(cached, model.state.value.notes)
+        assertTrue(model.state.value.notesLoading)
+        assertTrue(model.state.value.available)
+        refreshed.completeExceptionally(IOException()); advanceUntilIdle()
+        assertEquals(cached, model.state.value.notes)
+        assertTrue(model.state.value.notesFailed)
+        assertNull(model.state.value.failure)
+        model.install(); advanceUntilIdle()
+        assertTrue(model.state.value.installRequested)
+        assertEquals(cached, model.state.value.notes)
+    }
+
+    @Test fun history_is_independent_of_slow_or_failed_latest_check_and_coalesces_on_reentry() = runTest(dispatcher) {
+        var histories = 0
+        val latest = CompletableDeferred<GitHubRelease?>()
+        val history = CompletableDeferred<List<ReleaseNotes>>()
+        val model = UpdateViewModel("0.3.1-devab12cd3", { latest.await() }, { _, _ -> error("No download") },
+            loadNotes = { histories++; history.await() })
+        model.enter(); model.enter(); runCurrent()
+        assertEquals(1, histories)
+        latest.completeExceptionally(IOException()); runCurrent()
+        model.enter(); runCurrent()
+        assertEquals(1, histories)
+        history.complete(listOf(ReleaseNotes("0.3.1", "2026-11-04T12:00:00Z", "Installed"),
+            ReleaseNotes("0.2.0", "2026-11-04T12:00:00Z", "Old")))
+        advanceUntilIdle()
+        assertEquals(listOf("0.3.1"), model.state.value.notes.map { it.version })
+        assertFalse(model.state.value.notesFailed)
+        assertEquals(UpdateFailure.NETWORK, model.state.value.failure)
+    }
+
+    @Test fun cached_history_refreshes_and_remains_visible_while_reentering() = runTest(dispatcher) {
+        val installed = ReleaseNotes("0.3.1", "2026-11-04T12:00:00Z", "Installed")
+        val newer = installed.copy(version = "0.4.0", body = "New changes")
+        var calls = 0
+        val model = UpdateViewModel("0.3.1", { release }, { _, _ -> error("No download") },
+            cachedNotes = { listOf(installed) }, loadNotes = { calls++; delay(1000); listOf(installed, newer) })
+        model.enter(); advanceUntilIdle()
+        assertEquals(listOf(newer, installed), model.state.value.notes)
+        model.enter(); runCurrent()
+        assertEquals(listOf(newer, installed), model.state.value.notes)
+        assertTrue(model.state.value.notesLoading)
+        advanceUntilIdle()
+        assertEquals(2, calls)
+        assertEquals(listOf(newer, installed), model.state.value.notes)
     }
 }

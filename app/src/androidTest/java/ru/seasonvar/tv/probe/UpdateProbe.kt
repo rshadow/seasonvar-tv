@@ -56,7 +56,18 @@ object UpdateProbe {
                             "current" -> release.copy(version = BuildConfig.VERSION_NAME)
                             else -> release
                         }
-                    }, repository::download)
+                    }, repository::download,
+                        cachedNotes = { if (scenario == "notes-network") listOf(
+                            ReleaseNotes(BuildConfig.VERSION_NAME, "2026-11-04T12:00:00Z", "- Сохранённое описание установленной версии")) else emptyList() },
+                        loadNotes = {
+                            delay(1500)
+                            if (scenario == "notes-network") throw IOException()
+                            listOf(ReleaseNotes(BuildConfig.VERSION_NAME, "2026-11-04T12:00:00Z",
+                                "- Удобнее выбирать сериал.\n- Улучшено управление с пульта.\n\nНастройки и вход сохраняются при обновлении.")) +
+                                if (scenario == "current") emptyList() else listOf(ReleaseNotes(version, "2026-11-07T12:00:00Z",
+                                    "- Добавлены описания обновлений.\n- Исправлена загрузка обложек.\n\n" +
+                                        (1..12).joinToString("\n") { "- Пункт $it: описание изменений остаётся доступно целиком." }))
+                        })
                     activity.setContent {
                         SeasonvarApp(states = PublicFeed.entries.associateWith { CatalogUiState() },
                             descriptions = PublicFeed.entries.associateWith { DescriptionState() },
