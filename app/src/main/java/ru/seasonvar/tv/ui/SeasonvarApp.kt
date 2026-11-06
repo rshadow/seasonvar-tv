@@ -28,6 +28,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import ru.seasonvar.tv.ui.catalog.CatalogHeading
+import ru.seasonvar.tv.ui.catalog.catalogHeaderMetadata
 import ru.seasonvar.tv.ui.catalog.CatalogGrid
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.CatalogCardMetrics
@@ -880,39 +882,17 @@ internal fun ThemeButton(
 
 private data class CatalogStrings(
     @get:StringRes val title: Int,
-    @get:StringRes val hint: Int,
-    @get:StringRes val count: Int,
     @get:StringRes val loading: Int,
     @get:StringRes val empty: Int,
-    @get:StringRes val cached: Int,
-    @get:StringRes val cachedError: Int,
 )
 
 private fun catalogStrings(feed: PublicFeed): CatalogStrings = when (feed) {
-    PublicFeed.TODAY -> CatalogStrings(
-        R.string.today_title, R.string.today_loading_hint, R.string.today_date_count,
-        R.string.today_loading, R.string.today_empty, R.string.today_cached, R.string.today_cached_error,
-    )
-    PublicFeed.UPDATES -> CatalogStrings(
-        R.string.updates_title, R.string.updates_hint, R.string.updates_count,
-        R.string.updates_loading, R.string.updates_empty, R.string.updates_cached, R.string.updates_cached_error,
-    )
-    PublicFeed.TOP -> CatalogStrings(
-        R.string.top_title, R.string.top_hint, R.string.top_count,
-        R.string.top_loading, R.string.top_empty, R.string.top_cached, R.string.top_cached_error,
-    )
-    PublicFeed.NEWEST -> CatalogStrings(
-        R.string.newest_title, R.string.newest_hint, R.string.newest_count,
-        R.string.newest_loading, R.string.newest_empty, R.string.newest_cached, R.string.newest_cached_error,
-    )
-    PublicFeed.ANNOUNCEMENTS -> CatalogStrings(
-        R.string.announcements_title, R.string.announcements_hint, R.string.announcements_count,
-        R.string.announcements_loading, R.string.announcements_empty, R.string.announcements_cached, R.string.announcements_cached_error,
-    )
-    PublicFeed.BEST -> CatalogStrings(
-        R.string.best_title, R.string.best_hint, R.string.best_count,
-        R.string.best_loading, R.string.best_empty, R.string.best_cached, R.string.best_cached_error,
-    )
+    PublicFeed.TODAY -> CatalogStrings(R.string.today_title, R.string.today_loading, R.string.today_empty)
+    PublicFeed.UPDATES -> CatalogStrings(R.string.updates_title, R.string.updates_loading, R.string.updates_empty)
+    PublicFeed.TOP -> CatalogStrings(R.string.top_title, R.string.top_loading, R.string.top_empty)
+    PublicFeed.NEWEST -> CatalogStrings(R.string.newest_title, R.string.newest_loading, R.string.newest_empty)
+    PublicFeed.ANNOUNCEMENTS -> CatalogStrings(R.string.announcements_title, R.string.announcements_loading, R.string.announcements_empty)
+    PublicFeed.BEST -> CatalogStrings(R.string.best_title, R.string.best_loading, R.string.best_empty)
 }
 
 @Composable
@@ -950,15 +930,9 @@ private fun CatalogPane(
     val isToday = feed == PublicFeed.TODAY
     val personal = personalFeed != null || smart
     val strings = remember(feed, personalFeed, smart) {
-        if (smart) CatalogStrings(R.string.smart_continue_title, R.string.smart_continue_hint,
-            R.string.resume_count, R.string.resume_loading, R.string.smart_continue_empty,
-            R.string.smart_continue_hint, R.string.resume_error)
-        else if (personalFeed != null) CatalogStrings(personalTitle(personalFeed), R.string.resume_hint,
-            R.string.resume_count, R.string.resume_loading, R.string.resume_empty,
-            R.string.resume_hint, R.string.resume_error)
-        else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_hint,
-            R.string.search_count, R.string.search_loading, R.string.search_empty,
-            R.string.search_hint, R.string.search_error)
+        if (smart) CatalogStrings(R.string.smart_continue_title, R.string.resume_loading, R.string.smart_continue_empty)
+        else if (personalFeed != null) CatalogStrings(personalTitle(personalFeed), R.string.resume_loading, R.string.resume_empty)
+        else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_loading, R.string.search_empty)
         else catalogStrings(feed)
     }
     val latestLoadMore by rememberUpdatedState(onLoadMore)
@@ -989,25 +963,23 @@ private fun CatalogPane(
         }
     }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f).then(if (historyContent == null) Modifier.padding(end = d.spacingSmall) else Modifier)) {
-                if (searchHeader != null) searchHeader()
-                else Text(stringResource(strings.title), style = MaterialTheme.typography.headlineSmall,
-                    color = c.onBackground)
-                if (historyContent == null && (feed != null || state.loaded)) {
-                    Text(
-                        when {
-                            selected != null && state.moreFailure != null -> stringResource(R.string.history_more_error)
-                            selected != null && state.failure != null -> stringResource(strings.cachedError)
-                            selected != null && state.cached && !state.loading -> stringResource(strings.cached)
-                            isToday -> if (state.loaded) stringResource(R.string.today_date_count, date, state.entries.size) else date
-                            state.loaded -> stringResource(if (personalFeed == PersonalFeed.HISTORY && state.hasMore) R.string.history_loaded_count else strings.count, state.entries.size)
-                            else -> stringResource(strings.hint)
-                        },
-                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
-                        minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                }
+        Row(Modifier.fillMaxWidth().heightIn(min = d.headerButtonSize),
+            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            val status = if (selected == null) null else when {
+                state.moreFailure != null -> stringResource(R.string.catalog_more_error)
+                state.failure != null -> stringResource(R.string.catalog_refresh_error)
+                state.cached && !state.loading -> stringResource(R.string.catalog_cached)
+                else -> null
+            }
+            val count = if (historyContent == null && state.loaded) state.entries.size else null
+            val metadata = catalogHeaderMetadata(count, state.hasMore, if (isToday) date else null, status)
+            Row(Modifier.weight(1f).padding(end = d.spacingSmall), verticalAlignment = Alignment.CenterVertically) {
+                if (searchHeader != null) {
+                    Box(Modifier.weight(1f)) { searchHeader() }
+                    if (metadata.isNotEmpty()) Text(metadata, style = MaterialTheme.typography.bodySmall,
+                        color = c.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = d.menuWidth))
+                } else CatalogHeading(stringResource(strings.title), metadata, Modifier.fillMaxWidth())
             }
             if (historyContent == null) Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 val enterCards = Modifier.onPreviewKeyEvent {
