@@ -39,6 +39,7 @@ SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 PLAYER_PROBE_PAGE ?= https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html
 PLAYER_PROBE_OUT ?= build/player-probe
+PLAYER_PROBE_SEASON_PAGE ?= https://seasonvar.ru/serial-32752-Lyubov__smert__i_roboty_psxknda-3-season.html
 UPDATE_PREVIEW_SCENARIO ?= new
 MARK_PROBE_MODE ?= inspect
 SMART_PROBE_SEASON ?=
@@ -382,7 +383,7 @@ player-probe:
 	$(GRADLE) :app:assembleDebugAndroidTest
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
-	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --output "$(PLAYER_PROBE_OUT)"
+	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)"
 
 mark-menu-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for menu verification.' >&2; exit 1;; esac

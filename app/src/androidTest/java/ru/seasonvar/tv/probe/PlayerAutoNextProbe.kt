@@ -27,10 +27,14 @@ object PlayerAutoNextProbe {
         val result = Bundle()
         val app = targetContext.applicationContext as SeasonvarApplication
         val preferences = targetContext.getSharedPreferences("playback-progress", Context.MODE_PRIVATE)
-        var progressKey: String? = null
-        var originalProgress: String? = null
+        val originalProgress = linkedMapOf<String, String?>()
+        fun rememberProgress(id: String) {
+            val key = "season-$id"
+            if (key !in originalProgress) originalProgress[key] = preferences.getString(key, null)
+        }
         var activity: PlayerActivity? = null
         val originalEnabled = app.interfaceSettings.autoNextEnabled.value
+        val originalSeasonEnabled = app.interfaceSettings.autoNextSeasonEnabled.value
         var phase = "metadata"
         fun <T> main(block: () -> T): T {
             var value: Any? = null
@@ -89,11 +93,11 @@ object PlayerAutoNextProbe {
                 ?: details.translations.first { (it.episodes?.size ?: 0) >= 2 }
             val episodes = checkNotNull(translation.episodes).take(2)
             val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes, resumePositionMillis = 10_000)
-            progressKey = "season-$id"
-            originalProgress = preferences.getString(progressKey, null)
-            preferences.edit().remove(progressKey).commit()
+            rememberProgress(id)
+            preferences.edit().remove("season-$id").commit()
             result.putBoolean("default_enabled", originalEnabled)
-            main { app.interfaceSettings.setAutoNextEnabled(true) }
+            result.putBoolean("default_season_enabled", originalSeasonEnabled)
+            main { app.interfaceSettings.setAutoNextEnabled(true); app.interfaceSettings.setAutoNextSeasonEnabled(false) }
             activity = startActivitySync(PlayerActivity.intent(targetContext, request).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) as PlayerActivity
             stage("first_video"); playing(episodes[0].id);
             waitFor { main { player().currentPosition in 10_000..25_000 } }
@@ -136,6 +140,45 @@ object PlayerAutoNextProbe {
             activity = startActivitySync(PlayerActivity.intent(targetContext, request).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) as PlayerActivity
             playing(episodes[0].id); key(KeyEvent.KEYCODE_BACK)
             waitFor(5000) { main { activity?.isDestroyed == true } }
+            stage("season_disabled")
+            val seasonPage = checkNotNull(arguments.getString("season-page"))
+            check(seasonPage.matches(Regex("https://seasonvar\\.ru/serial-[0-9]+[^/?#]*\\.html")))
+            val seasonId = checkNotNull(Regex("/serial-([0-9]+)").find(seasonPage)).groupValues[1]
+            val seasonDetails = runBlocking { app.repository.details(SeriesEntry(seasonId, seasonPage, "Проверка перехода сезонов", null, "", ""), force = true) }
+            val seasonVoice = seasonDetails.translations.first { it.id == "0" && !it.episodes.isNullOrEmpty() }
+            val seasonEpisodes = checkNotNull(seasonVoice.episodes)
+            val last = seasonEpisodes.last()
+            val seasonRequest = PlaybackRequest(seasonId, seasonPage, seasonVoice.id, last.id, last.label,
+                seasonDetails.entry.title, seasonEpisodes, resumePositionMillis = 0)
+            val nextSeason = checkNotNull(runBlocking { app.nextSeasons.next(seasonRequest) })
+            rememberProgress(seasonId); rememberProgress(nextSeason.seasonId)
+            main { app.interfaceSettings.setAutoNextEnabled(false); app.interfaceSettings.setAutoNextSeasonEnabled(false) }
+            activity = startActivitySync(PlayerActivity.intent(targetContext, seasonRequest).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) as PlayerActivity
+            playing(last.id); endEpisode(); waitFor(5000) { offer() }
+            check(main { activity?.intent?.getStringExtra("season") } == seasonId)
+            result.putBoolean("season_disabled_stays", true)
+            key(KeyEvent.KEYCODE_BACK); waitFor(5000) { main { activity?.isDestroyed == true } }
+            stage("automatic_season")
+            main { app.interfaceSettings.setAutoNextSeasonEnabled(true) }
+            activity = startActivitySync(PlayerActivity.intent(targetContext, seasonRequest).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) as PlayerActivity
+            playing(last.id)
+            main { player().seekTo(60_000L.coerceAtMost(player().duration / 3)) }
+            playing(last.id); Thread.sleep(2000); capture("18-previous-season-a"); Thread.sleep(2000); capture("19-previous-season-b")
+            main { val media = player(); media.seekTo(media.duration - 250); media.play() }
+            waitFor(120_000) { main { activity?.intent?.getStringExtra("season") == nextSeason.seasonId } }
+            playing(nextSeason.episodeId); check(!offer())
+            check(main { player().currentPosition } < 20_000)
+            Thread.sleep(2500); capture("14-next-season-a"); Thread.sleep(2500); capture("15-next-season-b")
+            result.putBoolean("automatic_season", true)
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor(5000) { main { !player().isPlaying } }
+            capture("16-season-paused")
+            key(KeyEvent.KEYCODE_DPAD_CENTER); playing(nextSeason.episodeId)
+            val seasonPosition = main { player().currentPosition }
+            repeat(6) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; playing(nextSeason.episodeId)
+            check(main { player().currentPosition } > seasonPosition + 50_000)
+            Thread.sleep(2000); capture("17-season-seek"); Thread.sleep(2000); capture("20-season-after-seek")
+            result.putBoolean("season_pause_seek", true)
+            key(KeyEvent.KEYCODE_BACK); waitFor(5000) { main { activity?.isDestroyed == true } }
             check(app.account.session.value.user == null && app.account.marksRevision.value == 0L)
             result.putBoolean("no_account_marks_written", true)
             result.putBoolean("script_success", true)
@@ -149,11 +192,19 @@ object PlayerAutoNextProbe {
         } finally {
             main { activity?.finish() }
             activity?.let { runCatching { waitFor(5000) { main { it.isDestroyed } } } }
-            progressKey?.let { name ->
-                preferences.edit().apply { if (originalProgress == null) remove(name) else putString(name, originalProgress) }.commit()
-                result.putBoolean("position_restored", preferences.getString(name, null) == originalProgress)
+            originalProgress.forEach { (name, value) ->
+                preferences.edit().apply { if (value == null) remove(name) else putString(name, value) }.commit()
             }
-            main { app.interfaceSettings.setAutoNextEnabled(originalEnabled) }
+            result.putBoolean("position_restored", originalProgress.all { (name, value) -> preferences.getString(name, null) == value })
+            main {
+                app.interfaceSettings.setAutoNextEnabled(originalEnabled)
+                app.interfaceSettings.setAutoNextSeasonEnabled(originalSeasonEnabled)
+            }
+            val settings = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
+            val saved = settings.edit().putBoolean("auto_next_episode", originalEnabled)
+                .putBoolean("auto_next_season", originalSeasonEnabled).commit()
+            result.putBoolean("settings_restored", saved && settings.getBoolean("auto_next_episode", !originalEnabled) == originalEnabled &&
+                settings.getBoolean("auto_next_season", !originalSeasonEnabled) == originalSeasonEnabled)
             result.putString("artifacts", artifacts.absolutePath)
         }
         finish(if (result.getBoolean("script_success")) Activity.RESULT_OK else Activity.RESULT_CANCELED, result)

@@ -155,6 +155,8 @@ internal fun SeasonvarApp(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    autoNextSeasonEnabled: Boolean = true,
+    onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
     catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
@@ -211,6 +213,7 @@ internal fun SeasonvarApp(
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
+            autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
             onExit = onExit,
             updateModel = updateModel, translationSettingsModel = translationSettingsModel,
             detailsModel = detailsModel,
@@ -249,6 +252,8 @@ private fun SeasonvarContent(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    autoNextSeasonEnabled: Boolean = true,
+    onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
     catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
@@ -677,6 +682,7 @@ private fun SeasonvarContent(
                     onDnsChange = onDnsChange,
                     startPage = startPage, onStartPageChange = onStartPageChange,
                     autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
+                    autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
                     signedIn = accountSession.user != null,
                     onBack = ::navigateBack,
                     onCloseDialog = { backNavigation.reset(); returnToMenu() },
@@ -1272,6 +1278,8 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier) {
 
 @Composable
 private fun SettingsPane(
+    autoNextSeasonEnabled: Boolean,
+    onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
     onAutoNextChange: (Boolean) -> Unit,
     translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel?,
@@ -1296,6 +1304,8 @@ private fun SettingsPane(
     val translationFocus = remember { FocusRequester() }
     val autoNextFocus = remember { FocusRequester() }
     var autoNextFocused by remember { mutableStateOf(false) }
+    val autoSeasonFocus = remember { FocusRequester() }
+    var autoSeasonFocused by remember { mutableStateOf(false) }
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     var dnsFocused by remember { mutableStateOf(false) }
@@ -1334,7 +1344,7 @@ private fun SettingsPane(
             menuFocus, settingsContentFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(autoNextFocus)
-            .focusProperties { left = menuFocus; up = translationFocus; down = bypassFocus }
+            .focusProperties { left = menuFocus; up = translationFocus; down = autoSeasonFocus }
             .onFocusChanged { autoNextFocused = it.isFocused }
             .border(d.focusBorderWidth, if (autoNextFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))
@@ -1349,6 +1359,23 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = autoNextEnabled, onCheckedChange = null)
         }
+        Spacer(Modifier.height(d.spacingMedium))
+        Row(Modifier.fillMaxWidth().focusRequester(autoSeasonFocus)
+            .focusProperties { left = menuFocus; up = autoNextFocus; down = bypassFocus }
+            .onFocusChanged { autoSeasonFocused = it.isFocused }
+            .border(d.focusBorderWidth, if (autoSeasonFocused) c.primary else Color.Transparent,
+                RoundedCornerShape(d.cardCornerRadius))
+            .toggleable(autoNextSeasonEnabled, role = Role.Checkbox, onValueChange = { onInteraction(); onAutoNextSeasonChange(it) })
+            .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.auto_next_season_setting_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.auto_next_season_setting_description),
+                    style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(d.spacingMedium))
+            Checkbox(checked = autoNextSeasonEnabled, onCheckedChange = null)
+        }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
@@ -1357,7 +1384,7 @@ private fun SettingsPane(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = autoNextFocus
+                    up = autoSeasonFocus
                     down = dnsFocus
                 }
                 .onFocusChanged { focused = it.isFocused }

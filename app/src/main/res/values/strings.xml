@@ -208,6 +208,8 @@
     <string name="preferred_translations_add_hint">Добавленная озвучка появится в конце списка.</string>
     <string name="auto_next_setting_title">Следующая серия автоматически</string>
     <string name="auto_next_setting_description">После окончания серии сразу запускаем следующую в этом сезоне.</string>
+    <string name="auto_next_season_setting_title">Следующий сезон автоматически</string>
+    <string name="auto_next_season_setting_description">После последней серии запускаем следующий сезон, если он доступен.</string>
     <string name="player_auto_next_none">Следующей серии нет</string>
     <string name="player_auto_next_close">К сериалу</string>
     <string name="series_actions_menu">Меню сериала</string>

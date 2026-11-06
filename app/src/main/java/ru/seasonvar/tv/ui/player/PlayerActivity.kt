@@ -82,6 +82,7 @@ class PlayerActivity : ComponentActivity() {
     private var progressJob: Job? = null
     private var ready = false
     private var autoNextJob: Job? = null
+    private var seasonTransitionPending by mutableStateOf(false)
     private var completionVisible by mutableStateOf(false)
     private var markPolicy: AccountMarkPolicy? = null
     private var markOwnerVersion: Long? = null
@@ -103,7 +104,17 @@ class PlayerActivity : ComponentActivity() {
             override fun handleOnBackPressed() { finish() }
         })
         lifecycleScope.launch {
-            container.interfaceSettings.autoNextEnabled.collect { enabled -> if (!enabled) cancelAutoNext() }
+            container.interfaceSettings.autoNextEnabled.collect { enabled ->
+                if (!enabled && request?.adjacent(1) != null) cancelAutoNext()
+            }
+        }
+        lifecycleScope.launch {
+            container.interfaceSettings.autoNextSeasonEnabled.collect { enabled ->
+                if (!enabled && seasonTransitionPending) {
+                    cancelAutoNext()
+                    if (playback?.playbackState == Player.STATE_ENDED) showCompletion()
+                }
+            }
         }
         setContent {
             SeasonvarTheme {
@@ -148,8 +159,8 @@ class PlayerActivity : ComponentActivity() {
                             native.player = controlsPlayer
                             if (controlsPlayer != null) native.requestFocus()
                         }
-                        native.useController = failure == null && !completionVisible
-                        native.isFocusable = failure == null && !completionVisible
+                        native.useController = failure == null && !completionVisible && !seasonTransitionPending
+                        native.isFocusable = failure == null && !completionVisible && !seasonTransitionPending
                     }, modifier = Modifier.fillMaxSize())
                     if (controlsVisible || loading || failure != null) Column(
                         Modifier.align(Alignment.TopStart).padding(d.spacingLarge),
@@ -189,7 +200,7 @@ class PlayerActivity : ComponentActivity() {
                         if (failure != null) Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                             if (request?.adjacent(-1) != null) ThemeButton(stringResource(R.string.player_previous_episode),
                                 { switchEpisode(-1) }, Modifier.height(d.headerButtonSize))
-                            ThemeButton(stringResource(R.string.retry), { preparePlayback() },
+                            ThemeButton(stringResource(R.string.retry), { retryPlayback() },
                                 Modifier.focusRequester(retry).height(d.headerButtonSize))
                             if (request?.adjacent(1) != null) ThemeButton(stringResource(R.string.player_next_episode),
                                 { switchEpisode(1) }, Modifier.height(d.headerButtonSize))
@@ -298,12 +309,7 @@ class PlayerActivity : ComponentActivity() {
             } catch (e: Exception) {
                 ensureActive()
                 loading = false
-                failure = when (e) {
-                    is IOException -> R.string.player_network_error
-                    is SiteHttpException -> R.string.player_http_error
-                    is VideoUnavailableException -> R.string.player_unavailable
-                    else -> R.string.player_source_error
-                }
+                failure = resolveFailure(e)
                 trace("resolve-error=" + failureSummary(e))
             }
         }
@@ -330,11 +336,10 @@ class PlayerActivity : ComponentActivity() {
 
     private fun startAutoNext(player: ExoPlayer) {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
-        if (request?.adjacent(1) == null) {
-            completionVisible = true
-            navigatingControls = false
-            view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-            view?.hideController()
+        val current = request ?: return
+        if (current.adjacent(1) == null) {
+            if (container.interfaceSettings.autoNextSeasonEnabled.value) startNextSeason(player, current)
+            else showCompletion()
             return
         }
         if (!container.interfaceSettings.autoNextEnabled.value || autoNextJob?.isActive == true) return
@@ -347,8 +352,61 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    private fun startNextSeason(player: ExoPlayer, source: PlaybackRequest) {
+        if (autoNextJob?.isActive == true) return
+        seasonTransitionPending = true
+        loading = true
+        failure = null
+        completionVisible = false
+        autoNextJob = lifecycleScope.launch {
+            try {
+                val next = container.nextSeasons.next(source)
+                ensureActive()
+                if (playback !== player || !container.interfaceSettings.autoNextSeasonEnabled.value ||
+                    !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
+                seasonTransitionPending = false
+                if (next == null) showCompletion()
+                else {
+                    autoNextJob = null
+                    preparePlayback(next, resume = false)
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                ensureActive()
+                loading = false
+                failure = resolveFailure(e)
+                trace("season-error=" + failureSummary(e))
+            }
+        }
+    }
+
+    private fun retryPlayback() {
+        val player = playback
+        val source = request
+        if (seasonTransitionPending && player != null && source != null) startNextSeason(player, source)
+        else preparePlayback()
+    }
+
+    private fun showCompletion() {
+        failure = null
+        loading = false
+        completionVisible = true
+        navigatingControls = false
+        view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        view?.hideController()
+    }
+
+    private fun resolveFailure(error: Exception): Int = when (error) {
+        is IOException -> R.string.player_network_error
+        is SiteHttpException -> R.string.player_http_error
+        is VideoUnavailableException -> R.string.player_unavailable
+        else -> R.string.player_source_error
+    }
+
     private fun cancelAutoNext() {
         autoNextJob?.cancel(); autoNextJob = null
+        if (seasonTransitionPending) loading = false
+        seasonTransitionPending = false
         completionVisible = false
     }
 
@@ -409,6 +467,7 @@ class PlayerActivity : ComponentActivity() {
         }
         if (completionVisible && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)) return false
+        if (seasonTransitionPending && failure == null) return true
         val player = playback
         if (player != null && failure == null) {
             if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {

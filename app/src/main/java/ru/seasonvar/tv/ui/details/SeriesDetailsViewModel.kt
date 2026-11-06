@@ -204,8 +204,16 @@ class SeriesDetailsViewModel(
 
     fun onPlaybackFinished(seasonId: String?, translationId: String?, episodeId: String?) {
         val current = state.value
-        if (current.entry?.id != seasonId || current.translationId != translationId || episodeId == null) return
-        selectEpisode(episodeId)
+        if (seasonId == null || translationId == null || episodeId == null) return
+        if (current.entry?.id != seasonId) {
+            val season = current.details?.seasons?.singleOrNull { it.id == seasonId } ?: return
+            val entry = current.entry ?: return
+            fetch(entry.copy(id = season.id, url = season.url, season = season.number, update = "",
+                accountMark = null, accountProgress = null, accountListMark = null, historyVisitedAt = null,
+                initialSelection = EntrySelection(episodeId = episodeId, translationId = translationId)))
+            return
+        }
+        if (current.translationId == translationId) selectEpisode(episodeId)
     }
 
     fun refreshResume() {

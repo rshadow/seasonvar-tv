@@ -38,6 +38,14 @@ internal class InterfaceSettings(context: Context) {
         mutableAutoNextEnabled.value = enabled
     }
 
+    private val mutableAutoNextSeasonEnabled = MutableStateFlow(preferences.getBoolean("auto_next_season", true))
+    val autoNextSeasonEnabled = mutableAutoNextSeasonEnabled.asStateFlow()
+
+    fun setAutoNextSeasonEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean("auto_next_season", enabled).apply()
+        mutableAutoNextSeasonEnabled.value = enabled
+    }
+
     fun setStartPage(section: Section) {
         require(section in Section.startPages(true))
         preferences.edit().putString("start_page", section.storageId).apply()

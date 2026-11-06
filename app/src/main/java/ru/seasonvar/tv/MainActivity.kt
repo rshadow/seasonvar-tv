@@ -114,11 +114,13 @@ class MainActivity : ComponentActivity() {
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
+            val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
             SeasonvarApp(
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
+                autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
                 onRemovalRefresh = removalModel::refreshStatus, onRemovalSetStatus = removalModel::selectStatus,
