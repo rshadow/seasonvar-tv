@@ -1,13 +1,17 @@
 package ru.seasonvar.tv.data.smart
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import ru.seasonvar.tv.data.*
+import ru.seasonvar.tv.data.account.AccountPage
 import ru.seasonvar.tv.data.account.AccountListMark
 import ru.seasonvar.tv.data.account.PlaybackMarkSnapshot
 
@@ -18,7 +22,7 @@ class SmartContinueRepository(
     private val loadMarks: suspend () -> List<SeriesEntry>,
     private val loadSeason: suspend (SeriesEntry) -> MarkedSeason,
     private val preferences: () -> List<String> = { emptyList() },
-    private val historyOrder: suspend (Map<String, Set<String>>) -> List<String> = { emptyList() },
+    private val loadHistoryPage: suspend (String?) -> AccountPage? = { null },
 ) {
     constructor(account: ru.seasonvar.tv.data.account.AccountRepository, preferences: () -> List<String>) : this(
         { account.resume().entries },
@@ -27,51 +31,105 @@ class SmartContinueRepository(
             MarkedSeason(SeriesDetailsParser.parse(html, entry),
                 ru.seasonvar.tv.data.account.PlaybackMarkParser.snapshot(html, entry.id, entry.url))
         }, preferences,
-        { groups -> smartHistoryOrder(groups) { next -> account.personalList(ru.seasonvar.tv.data.account.PersonalFeed.HISTORY, next) } },
+        { next -> account.personalList(ru.seasonvar.tv.data.account.PersonalFeed.HISTORY, next) },
     )
 
     suspend fun load(): SmartContinuePage = withContext(Dispatchers.Default) {
-        val entries = loadMarks().distinctBy { it.id }
         val permits = Semaphore(4)
-        val loaded = entries.map { entry -> async {
-            permits.withPermit {
-                try { entry.id to Result.success(loadSeason(entry)) }
-                catch (e: CancellationException) { throw e }
-                catch (e: Exception) { entry.id to Result.failure<MarkedSeason>(e) }
-            }
-        } }.awaitAll()
-        val failures = loaded.filter { it.second.isFailure }.map { it.first to ("load_" + it.second.exceptionOrNull()!!.javaClass.simpleName) }.toMutableList()
-        val failedIds = loaded.filter { it.second.isFailure }.map { it.first }.toSet()
-        val groups = loaded.mapNotNull { it.second.getOrNull() }.groupBy { it.details.serialId }
-        val result = mutableListOf<SeriesEntry>()
-        val resolved = mutableSetOf<String>()
-        val visibleGroups = mutableMapOf<String, Set<String>>()
-        var incomplete = failedIds.isNotEmpty()
-        var failure = loaded.firstNotNullOfOrNull { it.second.exceptionOrNull() as? Exception }
-        for ((serialId, seasons) in groups) {
-            val key = "smart:$serialId"
-            if (seasons.any { season -> season.details.seasons.any { it.id in failedIds } }) continue
-            try {
-                val eligible = seasons.filter { it.snapshot.mark != null || it.snapshot.status == -2 }
-                if (eligible.isEmpty()) { resolved += key; continue }
-                val latest = eligible.maxBy { season -> season.details.seasons.firstOrNull { it.id == season.details.entry.id }?.number
-                    ?: season.details.entry.season ?: season.details.seasons.indexOfFirst { it.id == season.details.entry.id } }
-                resolve(latest)?.let {
-                    result += it
-                    visibleGroups[key] = latest.details.seasons.map { season -> season.id }.toSet() + latest.details.entry.id
-                }
-                resolved += key
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { incomplete = true; if (failure == null) failure = e; failures += seasons.first().details.entry.id to ("resolve_" + e.javaClass.simpleName) }
+        val marksJob = async { permits.withPermit { loadMarks().distinctBy { it.id } } }
+        var historyJob = async { permits.withPermit { loadHistoryPage(null) } }
+        val marks = marksJob.await()
+        if (marks.isEmpty()) {
+            historyJob.cancel()
+            return@withContext SmartContinuePage(emptyList(), emptySet(), false)
         }
-        val order = if (visibleGroups.isEmpty()) emptyList() else historyOrder(visibleGroups)
+
+        val pagesMutex = Mutex()
+        val pages = mutableMapOf<String, Deferred<Result<MarkedSeason>>>()
+        suspend fun page(entry: SeriesEntry): MarkedSeason {
+            val job = pagesMutex.withLock {
+                pages.getOrPut(entry.id) { async { attempt { permits.withPermit { loadSeason(entry) } } } }
+            }
+            return job.await().getOrThrow()
+        }
+        val groupsMutex = Mutex()
+        val groups = mutableMapOf<String, Deferred<Result<SeriesEntry?>>>()
+        data class Discovery(val id: String, val metadata: SeriesDetails?, val result: Result<SeriesEntry?>)
+        val history = mutableListOf<SeriesEntry>()
+        val queued = mutableSetOf<String>()
+        val visitedPages = mutableSetOf<String>()
+        val jobs = mutableListOf<Deferred<Discovery>>()
+        while (true) {
+            val historyPage = historyJob.await()
+            if (historyPage == null) {
+                if (visitedPages.isNotEmpty()) throw MarkupChangedException()
+                break
+            }
+            history += historyPage.entries
+            val next = historyPage.nextPage
+            if (next != null) {
+                if (!visitedPages.add(next)) throw MarkupChangedException()
+                historyJob = async { permits.withPermit { loadHistoryPage(next) } }
+            }
+            for (seed in historyPage.entries) if (queued.add(seed.id)) jobs += async {
+                var metadata: SeriesDetails? = null
+                val result = attempt {
+                    val discovered = page(seed)
+                    metadata = discovered.details
+                    val job = groupsMutex.withLock {
+                        groups.getOrPut(discovered.details.serialId) {
+                            async { attempt { resolveGroup(discovered, marks, ::page) } }
+                        }
+                    }
+                    job.await().getOrThrow()
+                }
+                Discovery(seed.id, metadata, result)
+            }
+            if (next == null) break
+        }
+        val discoveries = jobs.awaitAll()
+
+        val owners = mutableMapOf<String, String>()
+        for (discovery in discoveries) discovery.metadata?.let { details ->
+            for (id in details.seasons.map { it.id } + details.entry.id) {
+                val key = "smart:" + details.serialId
+                val previous = owners.put(id, key)
+                if (previous != null && previous != key) throw MarkupChangedException()
+            }
+        }
+        val order = history.mapNotNull { owners[it.id] }.distinct()
         val ranks = order.withIndex().associate { it.value to it.index }
-        SmartContinuePage(result.filter { it.key in ranks }.sortedBy { ranks.getValue(it.key) }, resolved, incomplete, failure, failures)
+        val resolved = discoveries.filter { it.result.isSuccess }.mapNotNull {
+            it.metadata?.serialId?.let { id -> "smart:$id" }
+        }.toSet()
+        val failures = discoveries.filter { it.result.isFailure }
+        val entries = discoveries.mapNotNull { it.result.getOrNull() }.distinctBy { it.key }
+            .sortedBy { ranks.getValue(it.key) }
+        SmartContinuePage(entries, resolved, failures.isNotEmpty(),
+            failures.firstOrNull()?.result?.exceptionOrNull() as? Exception,
+            failures.map { it.id to it.result.exceptionOrNull()!!.javaClass.simpleName })
     }
 
-    internal suspend fun resolve(marked: MarkedSeason): SeriesEntry? = resolve(marked, emptySet())
+    private suspend fun resolveGroup(seed: MarkedSeason, marks: List<SeriesEntry>,
+        readSeason: suspend (SeriesEntry) -> MarkedSeason): SeriesEntry? {
+        val details = seed.details
+        val options = details.seasons.associateBy { it.id }
+        val candidates = marks.filter { it.id in options || it.id == details.entry.id }.sortedByDescending {
+            options[it.id]?.number ?: it.season ?: details.seasons.indexOfFirst { option -> option.id == it.id }
+        }
+        for (candidate in candidates) {
+            val marked = readSeason(candidate)
+            if (marked.details.serialId != details.serialId) throw MarkupChangedException()
+            if (marked.snapshot.mark != null || marked.snapshot.status == -2) {
+                return resolve(marked, emptySet(), readSeason)
+            }
+        }
+        return null
+    }
 
-    private suspend fun resolve(marked: MarkedSeason, visited: Set<String>): SeriesEntry? {
+    internal suspend fun resolve(marked: MarkedSeason): SeriesEntry? = resolve(marked, emptySet(), loadSeason)
+
+    private suspend fun resolve(marked: MarkedSeason, visited: Set<String>, readSeason: suspend (SeriesEntry) -> MarkedSeason): SeriesEntry? {
         val details = marked.details
         if (details.entry.id in visited) throw MarkupChangedException()
         val snapshot = marked.snapshot
@@ -96,12 +154,12 @@ class SmartContinueRepository(
         for (next in ordered.drop(index + 1)) {
             val target = details.entry.copy(id = next.id, url = next.url, season = next.number,
                 accountMark = null, accountProgress = null, accountListMark = null, initialSelection = EntrySelection())
-            val nextMarked = loadSeason(target)
+            val nextMarked = readSeason(target)
             val nextDetails = nextMarked.details
             if (nextDetails.serialId != details.serialId) throw MarkupChangedException()
             if (nextMarked.snapshot.status == -3) return null
             if (nextMarked.snapshot.status == -2) continue
-            if (nextMarked.snapshot.mark != null) return resolve(nextMarked, visited + details.entry.id)
+            if (nextMarked.snapshot.mark != null) return resolve(nextMarked, visited + details.entry.id, readSeason)
             if (nextDetails.playbackUnavailableReason != null) continue
             val selected = EntrySelectionResolver.resolve(nextDetails, EntrySelection(), null, listOfNotNull(voiceName) + preferences())
             val voice = nextDetails.translations.firstOrNull { it.id == selected.translationId && it.id != "68" } ?: continue
@@ -121,26 +179,6 @@ class SmartContinueRepository(
     }
 }
 
-internal suspend fun smartHistoryOrder(
-    groups: Map<String, Set<String>>,
-    loadPage: suspend (String?) -> ru.seasonvar.tv.data.account.AccountPage,
-): List<String> {
-    if (groups.isEmpty()) return emptyList()
-    val owners = mutableMapOf<String, String>()
-    for ((key, seasons) in groups) for (id in seasons) {
-        val previous = owners.put(id, key)
-        if (previous != null && previous != key) throw MarkupChangedException()
-    }
-    val order = linkedSetOf<String>()
-    val seen = mutableSetOf<String>()
-    var url: String? = null
-    while (true) {
-        val page = loadPage(url)
-        for (entry in page.entries) owners[entry.id]?.let(order::add)
-        if (order.size == groups.size) break
-        val next = page.nextPage ?: break
-        if (!seen.add(next)) throw MarkupChangedException()
-        url = next
-    }
-    return order.toList()
-}
+private suspend fun <T> attempt(block: suspend () -> T): Result<T> = try { Result.success(block()) }
+catch (error: CancellationException) { throw error }
+catch (error: Exception) { Result.failure(error) }

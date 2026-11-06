@@ -44,6 +44,12 @@ class SmartContinueViewModelTest {
         runCurrent();model.setVisible(true);runCurrent()
         assertEquals(listOf(other), model.state.value.entries)
     }
+    @Test fun complete_history_refresh_removes_cached_series_that_are_no_longer_eligible() = runTest(dispatcher) {
+        val stale = entry.copy(id = "50", sourceKey = "smart:200")
+        val model = model(Cache(listOf(entry, stale))) { SmartContinuePage(listOf(entry), setOf(entry.key), false) }
+        runCurrent(); model.setVisible(true); runCurrent()
+        assertEquals(listOf(entry), model.state.value.entries)
+    }
     @Test fun account_change_cancels_late_results_and_clears_previous_owner_cache() = runTest(dispatcher) {
         val gate = CompletableDeferred<SmartContinuePage>();val cache = Cache(listOf(entry))
         val model = model(cache) { gate.await() };runCurrent();model.setVisible(true);runCurrent()

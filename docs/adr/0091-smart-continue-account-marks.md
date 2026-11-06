@@ -2,7 +2,7 @@
 
 Дата: 2026-11-06
 
-Статус: Принято; название группы и включение записей без истории пересмотрены в [ADR-0092](0092-personal-continue-history-only.md).
+Статус: Принято; название группы и включение записей без истории пересмотрены в [ADR-0092](0092-personal-continue-history-only.md), порядок загрузки — в [ADR-0095](0095-history-first-continue-loading.md).
 
 Дополняет [ADR-0036](0036-personal-lists.md) и [ADR-0040](0040-details-entry-context.md). Уточняет источник позиции продолжения из [ADR-0031](0031-native-playback.md) только для нового списка.
 
