@@ -92,6 +92,8 @@
     <string name="episode_number">Серия %1$s</string>
     <string name="season_number">Сезон %1$d</string>
     <string name="today_loading_hint">Связываемся с seasonvar.ru…</string>
+    <string name="image_prefetch_title">Загружать обложки заранее</string>
+    <string name="image_prefetch_description">Подготавливать миниатюры и большие обложки на два экрана вперёд от выбранного сериала. Листать быстрее, но расходуется больше интернета. Если выключить — загружаются только картинки на экране.</string>
     <string name="settings_title">Настройки</string>
     <string name="network_title">Сеть</string>
     <string name="bypass_title">Обход блокировок</string>

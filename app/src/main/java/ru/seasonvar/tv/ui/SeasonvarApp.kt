@@ -157,6 +157,8 @@ internal fun SeasonvarApp(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    imagePrefetchEnabled: Boolean = true,
+    onImagePrefetchChange: (Boolean) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -212,6 +214,7 @@ internal fun SeasonvarApp(
             onBypassChange = onBypassChange,
             dnsProvider = dnsProvider,
             onDnsChange = onDnsChange,
+            imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
@@ -254,6 +257,8 @@ private fun SeasonvarContent(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    imagePrefetchEnabled: Boolean = true,
+    onImagePrefetchChange: (Boolean) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -677,6 +682,7 @@ private fun SeasonvarContent(
                 AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
             } else if (section == Section.SETTINGS) {
                 SettingsPane(
+                    imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
                     bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
                     translationSettingsModel = translationSettingsModel,
                     menuFocus = settingsFocus,
@@ -720,6 +726,7 @@ private fun SeasonvarContent(
                         PublicFeed.BEST -> bestFocus
                         PublicFeed.ANNOUNCEMENTS -> announcementsFocus
                     }, refreshFocus, retryFocus,
+                    imagePrefetchEnabled = imagePrefetchEnabled,
                     cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
                     onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
                     onEnterContent = ::enterContent,
@@ -918,6 +925,7 @@ private fun CatalogPane(
     onLoadMore: () -> Unit = {},
     onActions: (SeriesEntry) -> Unit = {},
     cardMetrics: CatalogCardMetrics,
+    imagePrefetchEnabled: Boolean = true,
     allowAccountActions: Boolean = false,
     layout: CatalogLayout = CatalogLayout.STRIP,
     gridState: LazyGridState = rememberLazyGridState(),
@@ -934,6 +942,14 @@ private fun CatalogPane(
         else if (personalFeed != null) CatalogStrings(personalTitle(personalFeed), R.string.resume_loading, R.string.resume_empty)
         else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_loading, R.string.search_empty)
         else catalogStrings(feed)
+    }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    if (imagePrefetchEnabled && historyContent == null && state.entries.isNotEmpty()) {
+        ru.seasonvar.tv.ui.catalog.CatalogImagePrefetch(catalogKey, state.entries, selected?.key, layout,
+            listState, gridState, cardMetrics.columns,
+            thumbnailWidth = with(density) { (cardMetrics.width - d.cardPadding * 2).roundToPx().coerceAtLeast(1) },
+            thumbnailHeight = with(density) { cardMetrics.posterHeight.roundToPx().coerceAtLeast(1) },
+            gridRowHeight = with(density) { (cardMetrics.height + d.spacingSmall).roundToPx().coerceAtLeast(1) })
     }
     val latestLoadMore by rememberUpdatedState(onLoadMore)
     LaunchedEffect(catalogKey, layout, listState, gridState, state.entries.size, state.hasMore, state.moreFailure) {
@@ -1283,6 +1299,8 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier, large: Boolean = fals
 
 @Composable
 private fun SettingsPane(
+    imagePrefetchEnabled: Boolean,
+    onImagePrefetchChange: (Boolean) -> Unit,
     autoNextSeasonEnabled: Boolean,
     onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
@@ -1309,6 +1327,8 @@ private fun SettingsPane(
     val translationFocus = remember { FocusRequester() }
     val autoNextFocus = remember { FocusRequester() }
     var autoNextFocused by remember { mutableStateOf(false) }
+    val prefetchFocus = remember { FocusRequester() }
+    var prefetchFocused by remember { mutableStateOf(false) }
     val autoSeasonFocus = remember { FocusRequester() }
     var autoSeasonFocused by remember { mutableStateOf(false) }
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
@@ -1366,7 +1386,7 @@ private fun SettingsPane(
         }
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(autoSeasonFocus)
-            .focusProperties { left = menuFocus; up = autoNextFocus; down = bypassFocus }
+            .focusProperties { left = menuFocus; up = autoNextFocus; down = prefetchFocus }
             .onFocusChanged { autoSeasonFocused = it.isFocused }
             .border(d.focusBorderWidth, if (autoSeasonFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))
@@ -1381,6 +1401,22 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = autoNextSeasonEnabled, onCheckedChange = null)
         }
+        Spacer(Modifier.height(d.spacingMedium))
+        Row(Modifier.fillMaxWidth().focusRequester(prefetchFocus)
+            .focusProperties { left = menuFocus; up = autoSeasonFocus; down = bypassFocus }
+            .onFocusChanged { prefetchFocused = it.isFocused }
+            .border(d.focusBorderWidth, if (prefetchFocused) c.primary else Color.Transparent,
+                RoundedCornerShape(d.cardCornerRadius))
+            .toggleable(imagePrefetchEnabled, role = Role.Checkbox, onValueChange = { onInteraction(); onImagePrefetchChange(it) })
+            .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.image_prefetch_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.image_prefetch_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(d.spacingMedium))
+            Checkbox(checked = imagePrefetchEnabled, onCheckedChange = null)
+        }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
@@ -1389,7 +1425,7 @@ private fun SettingsPane(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = autoSeasonFocus
+                    up = prefetchFocus
                     down = dnsFocus
                 }
                 .onFocusChanged { focused = it.isFocused }

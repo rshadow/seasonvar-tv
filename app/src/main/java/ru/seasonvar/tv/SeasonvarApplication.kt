@@ -15,6 +15,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     internal val interfaceSettings by lazy { ru.seasonvar.tv.ui.settings.InterfaceSettings(this) }
     val networkSettings by lazy { NetworkSettings(this) }
     val sessions by lazy { ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) }
+    internal val imagePrefetchPermits = kotlinx.coroutines.sync.Semaphore(ru.seasonvar.tv.data.images.IMAGE_PREFETCH_CONCURRENCY)
     val siteClient by lazy { SiteClient(networkSettings, sessions) }
     val account by lazy { ru.seasonvar.tv.data.account.AccountRepository(sessions, siteClient) }
     val translationCatalog by lazy { ru.seasonvar.tv.data.TranslationCatalogRepository(siteClient) }
