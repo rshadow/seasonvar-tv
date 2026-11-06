@@ -659,6 +659,7 @@ private fun SeasonvarContent(
                                         } else false
                                     },
                                 active = section == item,
+                                contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
                             )
                         }
                     }
@@ -783,6 +784,7 @@ internal fun ThemeButton(
     actionEnabled: Boolean = true,
     checked: Boolean? = null,
     reserveCheckSpace: Boolean = false,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
 ) {
     var focused by remember { mutableStateOf(false) }
     var blockedPress by remember { mutableStateOf(false) }
@@ -861,7 +863,7 @@ internal fun ThemeButton(
         }
     } else {
         Button(onClick = action, enabled = enabled, modifier = buttonModifier,
-            shape = shape, scale = scale, colors = colors) {
+            shape = shape, scale = scale, colors = colors, contentPadding = contentPadding) {
             if (checked != null || reserveCheckSpace) Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 Box(Modifier.size(d.headerButtonIconSize), contentAlignment = Alignment.Center) {
