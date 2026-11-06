@@ -1087,29 +1087,38 @@ private fun CatalogPane(
 private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, modifier: Modifier) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-        Column(Modifier.weight(1f)) {
-            Text(entry.fullTitle, style = MaterialTheme.typography.headlineSmall, color = c.onBackground,
-                maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(d.spacingSmall))
-            if (entry.subtitle.isNotBlank()) Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium,
-                color = c.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            AccountEntryDetails(entry)
-            entry.season?.let {
-                Text(stringResource(R.string.season_number, it), color = c.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall)
+    var posterRatio by remember(entry.posterUrl, d.posterWidth, d.posterHeight) {
+        mutableFloatStateOf(d.posterWidth / d.posterHeight)
+    }
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val posterWidth = (maxHeight * posterRatio).coerceAtMost(maxWidth * d.previewPosterMaxWidthFraction)
+        val posterHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { maxHeight.roundToPx().coerceAtLeast(1) }
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+            Column(Modifier.weight(1f)) {
+                Text(entry.fullTitle, style = MaterialTheme.typography.headlineSmall, color = c.onBackground,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(d.spacingSmall))
+                if (entry.subtitle.isNotBlank()) Text(entry.subtitle, style = MaterialTheme.typography.bodyMedium,
+                    color = c.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                AccountEntryDetails(entry)
+                entry.season?.let {
+                    Text(stringResource(R.string.season_number, it), color = c.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(d.spacingSmall))
+                val text = when {
+                    description.key != entry.key || description.loading -> entry.previewDescription ?: stringResource(R.string.description_loading)
+                    description.failed -> entry.previewDescription ?: stringResource(R.string.description_error)
+                    description.description?.paragraphs.isNullOrEmpty() -> entry.previewDescription ?: stringResource(R.string.description_empty)
+                    else -> description.description.paragraphs.joinToString("\n\n")
+                }
+                Text(text, style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
+                    maxLines = 4, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.height(d.spacingSmall))
-            val text = when {
-                description.key != entry.key || description.loading -> entry.previewDescription ?: stringResource(R.string.description_loading)
-                description.failed -> entry.previewDescription ?: stringResource(R.string.description_error)
-                description.description?.paragraphs.isNullOrEmpty() -> entry.previewDescription ?: stringResource(R.string.description_empty)
-                else -> description.description.paragraphs.joinToString("\n\n")
-            }
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
-                maxLines = 4, overflow = TextOverflow.Ellipsis)
+            Poster(entry, Modifier.width(posterWidth).fillMaxHeight(), large = true,
+                targetHeightPx = posterHeightPx,
+                onAspectRatio = { posterRatio = it })
         }
-        Poster(entry, Modifier.width(d.posterWidth).height(d.posterHeight))
     }
 }
 
@@ -1195,18 +1204,40 @@ internal fun SeriesThumbnail(
 }
 
 @Composable
-private fun Poster(entry: SeriesEntry, modifier: Modifier) {
+private fun Poster(entry: SeriesEntry, modifier: Modifier, large: Boolean = false,
+    targetHeightPx: Int? = null, onAspectRatio: ((Float) -> Unit)? = null) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val largeUrl = if (large) entry.largePosterUrl else null
+    var fallback by remember(entry.posterUrl, largeUrl) { mutableStateOf(false) }
+    val source = if (!fallback && largeUrl != null) largeUrl else entry.posterUrl
+    val request = remember(context, source, targetHeightPx) {
+        coil.request.ImageRequest.Builder(context).data(source)
+            .apply { if (targetHeightPx != null) size(coil.size.Size(
+                coil.size.Dimension.Undefined, coil.size.Dimension.Pixels(targetHeightPx))) }
+            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+            .networkCachePolicy(coil.request.CachePolicy.ENABLED)
+            .build()
+    }
     val placeholder = painterResource(R.drawable.poster_placeholder)
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     Box(modifier.clip(RoundedCornerShape(
         topStart = d.cardCornerRadius, topEnd = d.cardCornerRadius))) {
         AsyncImage(
-            model = entry.posterUrl,
+            model = request,
             contentDescription = null,
             modifier = Modifier.matchParentSize(),
-            contentScale = ContentScale.Crop,
+            contentScale = if (large) ContentScale.Fit else ContentScale.Crop,
             placeholder = placeholder, error = placeholder,
+            onSuccess = { state ->
+                val width = state.result.drawable.intrinsicWidth
+                val height = state.result.drawable.intrinsicHeight
+                if (width > 0 && height > 0) onAspectRatio?.invoke(width.toFloat() / height)
+                if (BuildConfig.DEBUG && large) android.util.Log.d("SeasonvarPoster",
+                    "source=" + state.result.dataSource + " decoded=" + width + "x" + height)
+            },
+            onError = { if (largeUrl != null && source == largeUrl && largeUrl != entry.posterUrl) fallback = true },
         )
         if (entry.isNew) {
             Box(
