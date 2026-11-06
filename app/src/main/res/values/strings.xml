@@ -67,6 +67,11 @@
     <string name="updates_cached">Сохранённый список обновлений</string>
     <string name="updates_cached_error">Не удалось обновить. Показан сохранённый список обновлений.</string>
     <string name="today_date_count">%1$s · обновлений: %2$d</string>
+    <string name="catalog_header_count">" · %1$d%2$s"</string>
+    <string name="catalog_header_detail">" · %1$s"</string>
+    <string name="catalog_refresh_error">Не удалось обновить</string>
+    <string name="catalog_more_error">Не удалось загрузить ещё</string>
+    <string name="catalog_cached">Сохранённые данные</string>
     <string name="refresh">Обновить</string>
     <string name="retry">Повторить</string>
     <string name="today_loading">Загружаем сегодняшние серии…</string>
