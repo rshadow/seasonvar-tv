@@ -26,6 +26,6 @@ class NextSeasonResolver(
         val episodes = voice.episodes ?: throw MarkupChangedException()
         val first = episodes.firstOrNull() ?: return null
         return PlaybackRequest(season.id, season.url, voice.id, first.id, first.label, next.entry.title,
-            episodes.toList(), resumePositionMillis = 0)
+            episodes.toList(), resumePositionMillis = 0, seasonNumber = season.number ?: next.entry.season)
     }
 }

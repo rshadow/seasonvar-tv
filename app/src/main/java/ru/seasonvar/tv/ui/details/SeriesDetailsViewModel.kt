@@ -199,7 +199,8 @@ class SeriesDetailsViewModel(
         val translation = current.translation ?: return null
         val episode = translation.episodes?.firstOrNull { it.id == episodeId } ?: return null
         return PlaybackRequest(details.entry.id, details.entry.url, translation.id, episode.id, episode.label, details.entry.title, translation.episodes.toList(),
-            current.resume?.takeIf { it.episodeId == episode.id && it.translationId == translation.id }?.positionMillis)
+            current.resume?.takeIf { it.episodeId == episode.id && it.translationId == translation.id }?.positionMillis,
+            seasonNumber = details.seasons.firstOrNull { it.id == details.entry.id }?.number ?: details.entry.season)
     }
 
     fun onPlaybackFinished(seasonId: String?, translationId: String?, episodeId: String?) {

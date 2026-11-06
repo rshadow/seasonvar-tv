@@ -165,7 +165,11 @@ class PlayerActivity : ComponentActivity() {
                     if (controlsVisible || loading || failure != null) Column(
                         Modifier.align(Alignment.TopStart).padding(d.spacingLarge),
                     ) {
-                        Text(stringResource(R.string.player_title, request!!.title, request!!.episodeLabel),
+                        val selected = checkNotNull(request)
+                        val title = selected.seasonNumber?.let { season ->
+                            stringResource(R.string.player_title_with_season, selected.title, season, selected.episodeLabel)
+                        } ?: stringResource(R.string.player_title, selected.title, selected.episodeLabel)
+                        Text(title,
                             color = MaterialTheme.colorScheme.onBackground,
                             style = MaterialTheme.typography.titleMedium)
                         val syncMessage = when {
@@ -546,6 +550,7 @@ class PlayerActivity : ComponentActivity() {
             .putExtra("translation", request.translationId).putExtra("episode", request.episodeId)
             .putExtra("label", request.episodeLabel).putExtra("title", request.title)
             .putExtra("resume_position", request.resumePositionMillis ?: -1L)
+            .putExtra("season_number", request.seasonNumber ?: -1)
             .putStringArrayListExtra("episode_ids", ArrayList(request.episodes.map { it.id }))
             .putStringArrayListExtra("episode_labels", ArrayList(request.episodes.map { it.label }))
 
@@ -557,7 +562,8 @@ class PlayerActivity : ComponentActivity() {
             val label = intent.getStringExtra("label") ?: return null
             return PlaybackRequest(season, page, translation, episode, label, intent.getStringExtra("title").orEmpty(),
                 playbackEpisodes(intent.getStringArrayListExtra("episode_ids"), intent.getStringArrayListExtra("episode_labels")),
-                intent.getLongExtra("resume_position", -1L).takeIf { it >= 0 })
+                intent.getLongExtra("resume_position", -1L).takeIf { it >= 0 },
+                intent.getIntExtra("season_number", -1).takeIf { it >= 0 })
         }
     }
 }
