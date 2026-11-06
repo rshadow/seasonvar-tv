@@ -113,7 +113,6 @@
     <string name="details_episodes_unavailable">Список серий недоступен</string>
     <string name="details_cast">В ролях: %1$s</string>
     <string name="details_markup_error">Не удалось прочитать карточку сериала</string>
-    <string name="details_description">Описание</string>
     <string name="player_title">%1$s · Серия %2$s</string>
     <string name="player_loading">Подготовка видео…</string>
     <string name="player_progress_sync_retry">Прогресс пока сохранён только на устройстве. Повторим сохранение на сайте.</string>
