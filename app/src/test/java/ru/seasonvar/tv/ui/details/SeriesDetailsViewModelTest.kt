@@ -26,6 +26,17 @@ class SeriesDetailsViewModelTest {
             Translation("1", "Субтитры", listOf(Episode("sub_2", "2"))),
             Translation("68", "Трейлеры", listOf(Episode("main", "Основной")))), "0")
 
+    @Test fun return_from_player_opens_the_actual_season_and_episode_after_transition() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel { details(it) }
+        model.open(entry("1")); advanceUntilIdle()
+        model.onPlaybackFinished("2", "1", "sub_2"); advanceUntilIdle()
+        assertEquals("2", model.state.value.entry!!.id)
+        assertEquals("1", model.state.value.translationId)
+        assertEquals("sub_2", model.state.value.episodeId)
+        model.onPlaybackFinished("999", "0", "1_seriya"); advanceUntilIdle()
+        assertEquals("2", model.state.value.entry!!.id)
+    }
+
     @Test fun opens_exact_season_and_selects_first_episode_without_faking_resume() = runTest(dispatcher) {
         val model = SeriesDetailsViewModel { details(it) }
         model.open(entry("2")); advanceUntilIdle()
@@ -306,11 +317,11 @@ class SeriesDetailsViewModelTest {
         assertEquals(listOf(Episode("sub_2", "2")), model.playbackRequest()!!.episodes)
     }
 
-    @Test fun player_return_selects_last_episode_only_in_matching_season_and_translation() = runTest(dispatcher) {
+    @Test fun player_return_ignores_unknown_season_and_mismatched_translation() = runTest(dispatcher) {
         val original = entry().copy(initialSelection = EntrySelection(episodeLabel = "1"))
         val model = SeriesDetailsViewModel { details(it) }
         model.open(original); advanceUntilIdle()
-        model.onPlaybackFinished("2", "0", "2_seriya")
+        model.onPlaybackFinished("999", "0", "2_seriya")
         model.onPlaybackFinished("1", "1", "2_seriya")
         model.onPlaybackFinished("1", "0", "missing")
         assertEquals("1_seriya", model.state.value.episodeId)

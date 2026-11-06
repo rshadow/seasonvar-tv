@@ -21,6 +21,10 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val searchHistory by lazy { ru.seasonvar.tv.data.SearchHistory(ru.seasonvar.tv.data.PreferencesSearchHistoryStore(this)) }
     val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient, cacheToken = sessions::cacheToken) }
 
+    val nextSeasons by lazy { ru.seasonvar.tv.data.playback.NextSeasonResolver(
+        load = { repository.details(it, force = true) },
+        preferences = { interfaceSettings.preferredTranslations.value }) }
+
     val videos by lazy { VideoRepository { url, referer ->
         if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarPlayback", "request=" +
             if (java.net.URI(url).path.startsWith("/serial-")) "page" else "playlist")
