@@ -14,6 +14,9 @@ data class ReleaseVersion(val major: Long, val minor: Long, val patch: Long) : C
         compareValuesBy(this, other, { it.major }, { it.minor }, { it.patch })
 
     companion object {
+        fun installed(value: String): ReleaseVersion? =
+            parse(value.replace(Regex("-dev[0-9a-fA-F]+$"), ""))
+
         fun parse(value: String): ReleaseVersion? {
             val match = Regex("v?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)").matchEntire(value) ?: return null
             val parts = match.groupValues.drop(1).map { it.toLongOrNull() ?: return null }
@@ -26,7 +29,7 @@ data class ReleaseAsset(val name: String, val url: String, val size: Long, val s
 data class GitHubRelease(val version: String, val asset: ReleaseAsset?) {
     fun newerThan(installed: String): Boolean =
         (ReleaseVersion.parse(version) ?: throw UpdateFormatException()) >
-            (ReleaseVersion.parse(installed) ?: throw UpdateFormatException())
+            (ReleaseVersion.installed(installed) ?: throw UpdateFormatException())
 }
 
 object GitHubReleaseParser {

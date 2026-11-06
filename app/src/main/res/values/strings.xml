@@ -176,9 +176,15 @@
     <string name="mark_remove_action">Удалить отметку</string>
     <string name="mark_removing">Удаление…</string>
     <string name="mark_remove_error">Не удалось подтвердить удаление. Проверьте подключение и повторите попытку.</string>
+    <string name="release_notes_title">Что нового</string>
+    <string name="release_notes_installed">Установлена</string>
+    <string name="release_notes_missing">Описание изменений не указано</string>
+    <string name="release_notes_empty">Описание этой версии пока недоступно</string>
+    <string name="release_notes_error">Не удалось загрузить описания изменений. Зайдите в раздел ещё раз.</string>
+    <string name="release_notes_cached">Показаны сохранённые описания. Не удалось проверить их обновления.</string>
     <string name="update_checking">Проверяем обновления…</string>
     <string name="update_latest">Последний выпуск: %1$s</string>
-    <string name="update_current">Обновлений нет</string>
+    <string name="update_current">Установлена последняя версия</string>
     <string name="update_none">Опубликованных версий пока нет</string>
     <string name="update_available">Доступна новая версия</string>
     <string name="update_asset_missing">Файл обновления пока недоступен</string>

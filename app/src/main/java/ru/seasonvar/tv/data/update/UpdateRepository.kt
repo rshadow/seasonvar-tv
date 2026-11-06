@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.update
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -15,6 +16,46 @@ class UpdateRepository(
 ) {
     suspend fun latest(): GitHubRelease? = withContext(Dispatchers.IO) {
         source.latest()?.let(GitHubReleaseParser::parse)
+    }
+
+    suspend fun cachedNotes(): List<ReleaseNotes> = withContext(Dispatchers.IO) {
+        val file = File(directory, "release-notes.json")
+        try {
+            if (!file.isFile || file.length() > ReleaseNotesParser.MAX_BYTES) emptyList()
+            else ReleaseNotesParser.decode(file.readText())
+        } catch (error: CancellationException) { throw error }
+        catch (_: Exception) { emptyList() }
+    }
+
+    suspend fun notes(): List<ReleaseNotes> = withContext(Dispatchers.IO) {
+        val notes = mutableListOf<ReleaseNotes>()
+        var received = 0
+        for (page in 1..100) {
+            currentCoroutineContext().ensureActive()
+            val json = source.releases(page)
+            received += json.toByteArray(Charsets.UTF_8).size
+            if (received > ReleaseNotesParser.MAX_BYTES) throw UpdateFormatException()
+            val (items, more) = ReleaseNotesParser.parsePage(json)
+            notes += items
+            if (!more) {
+                currentCoroutineContext().ensureActive()
+                saveNotes(notes)
+                return@withContext notes
+            }
+        }
+        throw UpdateFormatException()
+    }
+
+    private fun saveNotes(notes: List<ReleaseNotes>) {
+        val partial = File(directory, "release-notes.part")
+        try {
+            if (!directory.isDirectory && !directory.mkdirs()) return
+            val json = ReleaseNotesParser.encode(notes)
+            if (json.toByteArray(Charsets.UTF_8).size > ReleaseNotesParser.MAX_BYTES) return
+            partial.writeText(json)
+            partial.renameTo(File(directory, "release-notes.json"))
+        } catch (_: IOException) { /* A cache write failure must not hide downloaded descriptions. */ }
+        finally { partial.delete() }
     }
 
     suspend fun download(release: GitHubRelease, progress: (Int) -> Unit): File = withContext(Dispatchers.IO) {

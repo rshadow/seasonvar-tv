@@ -370,7 +370,7 @@ update-probe:
 
 update-preview:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for update previews.' >&2; exit 1;; esac
-	@case "$(UPDATE_PREVIEW_SCENARIO)" in new|current|network|signature) ;; *) echo 'Unknown update scenario.' >&2; exit 1;; esac
+	@case "$(UPDATE_PREVIEW_SCENARIO)" in new|current|network|signature|notes-network) ;; *) echo 'Unknown update scenario.' >&2; exit 1;; esac
 	$(MAKE) devices
 	$(MAKE) update-fixture
 	$(MAKE) update-restore BUILD_TYPE=debug

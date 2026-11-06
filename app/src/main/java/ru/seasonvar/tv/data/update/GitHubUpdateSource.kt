@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resumeWithException
 
 interface UpdateSource {
+    suspend fun releases(page: Int): String = throw UpdateFormatException()
     suspend fun latest(): String?
     suspend fun download(asset: ReleaseAsset, destination: File, progress: (Int) -> Unit)
 }
@@ -26,27 +27,36 @@ class GitHubUpdateSource internal constructor(
         .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(3, TimeUnit.MINUTES).build(),
 ) : UpdateSource {
-    override suspend fun latest(): String? = withContext(Dispatchers.IO) {
-        client.newCall(Request.Builder().url(GitHubReleaseParser.API_URL)
-            .header("Accept", "application/vnd.github+json").header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", "Seasonvar-TV").build()).awaitResponse().use { response ->
-            if (response.code == 404) return@withContext null
-            if (!response.isSuccessful) throw UpdateHttpException(response.code)
-            if (response.body.contentLength() > 1024 * 1024) throw UpdateFormatException()
-            val bytes = java.io.ByteArrayOutputStream()
-            response.body.byteStream().use { input ->
-                val buffer = ByteArray(8192)
-                while (true) {
-                    currentCoroutineContext().ensureActive()
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    if (bytes.size() + count > 1024 * 1024) throw UpdateFormatException()
-                    bytes.write(buffer, 0, count)
-                }
-            }
-            bytes.toString("UTF-8")
-        }
+    override suspend fun latest(): String? = metadata(GitHubReleaseParser.API_URL, missingAllowed = true)
+
+    override suspend fun releases(page: Int): String {
+        require(page > 0)
+        return metadata("${ReleaseNotesParser.API_URL}?per_page=${ReleaseNotesParser.PAGE_SIZE}&page=$page",
+            limit = 4 * 1024 * 1024) ?: throw UpdateFormatException()
     }
+
+    private suspend fun metadata(url: String, missingAllowed: Boolean = false, limit: Int = 1024 * 1024): String? =
+        withContext(Dispatchers.IO) {
+            client.newCall(Request.Builder().url(url)
+                .header("Accept", "application/vnd.github+json").header("X-GitHub-Api-Version", "2022-11-28")
+                .header("User-Agent", "Seasonvar-TV").build()).awaitResponse().use { response ->
+                if (missingAllowed && response.code == 404) return@withContext null
+                if (!response.isSuccessful) throw UpdateHttpException(response.code)
+                if (response.body.contentLength() > limit) throw UpdateFormatException()
+                val bytes = java.io.ByteArrayOutputStream()
+                response.body.byteStream().use { input ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        if (bytes.size() + count > limit) throw UpdateFormatException()
+                        bytes.write(buffer, 0, count)
+                    }
+                }
+                bytes.toString("UTF-8")
+            }
+        }
 
     override suspend fun download(asset: ReleaseAsset, destination: File, progress: (Int) -> Unit) =
         withContext(Dispatchers.IO) {

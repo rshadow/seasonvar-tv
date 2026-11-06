@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +15,9 @@ import java.io.IOException
 
 enum class UpdateFailure { NETWORK, HTTP, FORMAT, INTEGRITY, SIGNATURE, PACKAGE, PERMISSION, INSTALLER }
 data class UpdateUiState(
+    val notes: List<ReleaseNotes> = emptyList(),
+    val notesLoading: Boolean = false,
+    val notesFailed: Boolean = false,
     val checked: Boolean = false,
     val checking: Boolean = false,
     val release: GitHubRelease? = null,
@@ -30,22 +34,47 @@ class UpdateViewModel internal constructor(
     private val installedVersion: String,
     private val latest: suspend () -> GitHubRelease?,
     private val download: suspend (GitHubRelease, (Int) -> Unit) -> File,
+    private val cachedNotes: suspend () -> List<ReleaseNotes> = { emptyList() },
+    private val loadNotes: suspend () -> List<ReleaseNotes> = { emptyList() },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(UpdateUiState())
     val state = mutableState.asStateFlow()
+    private var notesJob: Job? = null
 
     fun enter() {
         if (state.value.checking || state.value.downloading || state.value.installRequested || state.value.installing) return
-        mutableState.value = UpdateUiState(checking = true)
+        refreshNotes()
+        mutableState.value = state.value.copy(checking = true, failure = null, ready = null)
         viewModelScope.launch {
             try {
                 val release = latest()
                 ensureActive()
-                mutableState.value = UpdateUiState(checked = true, release = release,
+                mutableState.value = state.value.copy(checking = false, checked = true, release = release,
                     available = release?.newerThan(installedVersion) == true)
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) {
-                mutableState.value = UpdateUiState(checked = true, failure = failure(error))
+                mutableState.value = state.value.copy(checking = false, checked = true, failure = failure(error))
+            }
+        }
+    }
+
+    private fun refreshNotes() {
+        if (notesJob?.isActive == true) return
+        mutableState.value = state.value.copy(notesLoading = true, notesFailed = false)
+        notesJob = viewModelScope.launch {
+            try {
+                if (state.value.notes.isEmpty()) {
+                    val cached = cachedNotes()
+                    ensureActive()
+                    mutableState.value = state.value.copy(notes = ReleaseNotesParser.relevant(cached, installedVersion))
+                }
+                val notes = loadNotes()
+                ensureActive()
+                mutableState.value = state.value.copy(notes = ReleaseNotesParser.relevant(notes, installedVersion),
+                    notesLoading = false)
+            } catch (error: CancellationException) { throw error }
+            catch (_: Exception) {
+                mutableState.value = state.value.copy(notesLoading = false, notesFailed = true)
             }
         }
     }
@@ -90,7 +119,7 @@ class UpdateViewModel internal constructor(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(UpdateViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return UpdateViewModel(version, repository::latest, repository::download) as T
+            return UpdateViewModel(version, repository::latest, repository::download, repository::cachedNotes, repository::notes) as T
         }
     }
 }
