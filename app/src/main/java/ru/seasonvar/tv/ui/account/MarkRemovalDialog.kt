@@ -52,7 +52,6 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
     var initialFocusPlaced by remember(entry.key) { mutableStateOf(false) }
     val openedAt = remember { android.os.SystemClock.uptimeMillis() }
     val confirm = state.stage == RemovalStage.CONFIRM
-    val showDelete = state.stage == RemovalStage.ACTIONS
     val pending = state.loadingStatus || state.busy
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         BackHandler(onBack = onDismiss)
@@ -79,7 +78,7 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
             verticalArrangement = Arrangement.spacedBy(if (confirm) d.spacingMedium else d.spacingSmall)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                Text(stringResource(when { confirm -> R.string.mark_remove_question; state.stage == RemovalStage.STATUS -> R.string.mark_list_status_title; else -> R.string.mark_actions_title }),
+                Text(stringResource(if (confirm) R.string.mark_remove_question else R.string.mark_actions_title),
                     modifier = Modifier.weight(1f), color = c.onBackground, style = MaterialTheme.typography.headlineSmall)
                 if (!confirm) ThemeButton(stringResource(R.string.mark_list_refresh), onRefresh,
                     Modifier.focusRequester(refresh).focusProperties {
@@ -114,11 +113,11 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
                                 .onFocusChanged { if (it.isFocused) { lastChoice = choices[index] } }
                                 .focusProperties {
                                     up = choices.getOrNull(index - 1) ?: refresh
-                                    down = choices.getOrNull(index + 1) ?: if (showDelete) delete else FocusRequester.Cancel
+                                    down = choices.getOrNull(index + 1) ?: delete
                                     left = FocusRequester.Cancel; right = refresh
                                 }, active = state.status == option, actionEnabled = !pending, checked = state.status == option)
                     }
-                    if (showDelete) ThemeButton(stringResource(R.string.mark_remove_from_list), onAsk,
+                    ThemeButton(stringResource(R.string.mark_remove_from_list), onAsk,
                         Modifier.fillMaxWidth().height(d.headerButtonSize).focusRequester(delete)
                             .onFocusChanged { if (it.isFocused) { lastChoice = delete } }
                             .focusProperties {

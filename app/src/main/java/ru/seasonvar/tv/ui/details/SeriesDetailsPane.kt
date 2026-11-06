@@ -71,8 +71,7 @@ internal fun SeriesDetailsPane(
     menuFocus: FocusRequester,
     onInteraction: () -> Unit,
     onPlay: (PlaybackRequest) -> Unit,
-    onRemove: ((SeriesEntry) -> Unit)? = null,
-    onManageStatus: ((SeriesEntry) -> Unit)? = null,
+    onActions: ((SeriesEntry) -> Unit)? = null,
     removalDialogOpen: Boolean = false,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -83,13 +82,10 @@ internal fun SeriesDetailsPane(
     val preparing = state.loading || state.entry == null
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
-    val remove = remember { FocusRequester() }
-    val listStatus = remember { FocusRequester() }
-    var restoreStatus by remember { mutableStateOf(false) }
+    val actionsMenu = remember { FocusRequester() }
+    var restoreActions by remember { mutableStateOf(false) }
     var actionHint by remember { mutableStateOf<String?>(null) }
-    val canManageStatus = !preparing && onManageStatus != null
-    var restoreRemoval by remember { mutableStateOf(false) }
-    val canRemove = !preparing && entry.accountListMark != null && onRemove != null
+    val canOpenActions = !preparing && onActions != null
     val season = remember { FocusRequester() }
     val translation = remember { FocusRequester() }
     val allEpisodes = remember { FocusRequester() }
@@ -128,15 +124,10 @@ internal fun SeriesDetailsPane(
         }
     }
     LaunchedEffect(removalDialogOpen) {
-        if (!removalDialogOpen && restoreStatus) {
+        if (!removalDialogOpen && restoreActions) {
             repeat(2) { withFrameNanos { } }
-            if (canManageStatus) listStatus.requestFocus() else play.requestFocus()
-            restoreStatus = false
-        }
-        if (!removalDialogOpen && restoreRemoval) {
-            repeat(2) { withFrameNanos { } }
-            if (canRemove) remove.requestFocus() else play.requestFocus()
-            restoreRemoval = false
+            if (canOpenActions) actionsMenu.requestFocus() else play.requestFocus()
+            restoreActions = false
         }
     }
     fun dismiss() { onInteraction(); dialog = null }
@@ -189,8 +180,7 @@ internal fun SeriesDetailsPane(
                             right = when {
                                 (details?.seasons?.size ?: 0) > 1 -> season
                                 (details?.translations?.size ?: 0) > 1 -> translation
-                                canManageStatus -> listStatus
-                                canRemove -> remove
+                                canOpenActions -> actionsMenu
                                 else -> FocusRequester.Cancel
                             }
                             down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
@@ -204,7 +194,7 @@ internal fun SeriesDetailsPane(
                             { show(DetailsDialog.SEASONS, season) }, Modifier.height(d.headerButtonSize).then(actionScrolling)
                                 .focusRequester(season).focusProperties {
                                     left = play; up = FocusRequester.Cancel
-                                    right = if (details.translations.size > 1) translation else if (canManageStatus) listStatus else if (canRemove) remove else FocusRequester.Cancel
+                                    right = if (details.translations.size > 1) translation else if (canOpenActions) actionsMenu else FocusRequester.Cancel
                                     down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                                 })
                         else if (currentSeason?.number != null || entry.season != null) Text(seasonLabel, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
@@ -217,44 +207,29 @@ internal fun SeriesDetailsPane(
                                     .focusRequester(translation).focusProperties {
                                         up = FocusRequester.Cancel
                                         left = if (details.seasons.size > 1) season else play
-                                        right = if (canManageStatus) listStatus else if (canRemove) remove else FocusRequester.Cancel
+                                        right = if (canOpenActions) actionsMenu else FocusRequester.Cancel
                                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                                     })
                             else Text(label, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
                                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
-                    val listHint = stringResource(R.string.mark_list_action)
-                    val removeHint = stringResource(R.string.mark_remove_from_list)
-                    if (canManageStatus) ThemeButton(listHint, {
-                        onInteraction(); restoreStatus = true
-                        onManageStatus?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
+                    val menuHint = stringResource(R.string.series_actions_menu)
+                    if (canOpenActions) ThemeButton(menuHint, {
+                        onInteraction(); restoreActions = true
+                        onActions?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
                             episodeId = state.episode?.id, episodeLabel = state.episode?.label,
                             translationId = state.translationId, translationLabel = state.translation?.label)))
-                    }, Modifier.then(actionScrolling).focusRequester(listStatus).onFocusChanged {
-                        if (it.isFocused) actionHint = listHint else if (actionHint == listHint) actionHint = null
-                    }.focusProperties {
-                        up = FocusRequester.Cancel; right = if (canRemove) remove else FocusRequester.Cancel
-                        left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
-                        down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
-                    }, icon = R.drawable.ic_list_status)
-                    if (canRemove) ThemeButton(stringResource(R.string.mark_remove_from_list), {
-                        onInteraction(); restoreRemoval = true; onRemove(entry)
-                    }, Modifier.then(actionScrolling).focusRequester(remove).onFocusChanged {
-                        if (it.isFocused) actionHint = removeHint else if (actionHint == removeHint) actionHint = null
+                    }, Modifier.then(actionScrolling).focusRequester(actionsMenu).onFocusChanged {
+                        if (it.isFocused) actionHint = menuHint else if (actionHint == menuHint) actionHint = null
                     }.focusProperties {
                         up = FocusRequester.Cancel; right = FocusRequester.Cancel
-                        left = when {
-                            canManageStatus -> listStatus
-                            (details?.translations?.size ?: 0) > 1 -> translation
-                            (details?.seasons?.size ?: 0) > 1 -> season
-                            else -> play
-                        }
+                        left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
-                    }, icon = R.drawable.ic_delete)
+                    }, icon = R.drawable.ic_more_vert)
                     AccountProgressLabel(entry, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight())
                 }
-                if (onManageStatus != null) Text(actionHint.orEmpty(), Modifier.heightIn(min = d.spacingMedium),
+                if (onActions != null) Text(actionHint.orEmpty(), Modifier.heightIn(min = d.spacingMedium),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)

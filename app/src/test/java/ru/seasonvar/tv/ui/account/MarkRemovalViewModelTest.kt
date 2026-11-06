@@ -95,7 +95,7 @@ class MarkRemovalViewModelTest {
         val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, { AccountListStatus.WATCHED },
             { _, status, version -> calls++; assertEquals(1L, version); gate.await(); PlaybackMarkSnapshot(status = status.code) }, { target, _ -> changed.add(target) })
         store.put("status", model); runCurrent()
-        model.show(entry, RemovalStage.STATUS); runCurrent()
+        model.show(entry); runCurrent()
         assertEquals(AccountListStatus.WATCHED, model.state.value.status)
         model.selectStatus(AccountListStatus.WANT_TO_WATCH); model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
         assertTrue(model.state.value.busy); assertTrue(changed.isEmpty()); assertEquals(1, calls)
@@ -107,7 +107,7 @@ class MarkRemovalViewModelTest {
         val model = MarkRemovalViewModel(session, { _, _ -> }, {}, changeStatus = { _, _, _ ->
             if (fails) throw IOException(); PlaybackMarkSnapshot(status = -1)
         })
-        store.put("status", model); runCurrent(); model.show(entry, RemovalStage.STATUS); runCurrent()
+        store.put("status", model); runCurrent(); model.show(entry); runCurrent()
         model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
         assertNotNull(model.state.value.failure); assertTrue(model.state.value.visible); assertFalse(model.state.value.busy)
         fails = false; model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent(); assertFalse(model.state.value.visible)
@@ -115,7 +115,7 @@ class MarkRemovalViewModelTest {
     @Test fun account_change_invalidates_a_status_selection() = runTest(dispatcher) {
         var calls = 0
         val model = MarkRemovalViewModel(session, { _, _ -> }, {}, changeStatus = { _, _, _ -> calls++; PlaybackMarkSnapshot(status = -1) })
-        store.put("status", model); runCurrent(); model.show(entry, RemovalStage.STATUS); runCurrent()
+        store.put("status", model); runCurrent(); model.show(entry); runCurrent()
         session.value = AccountSession(version = 2); runCurrent(); model.selectStatus(AccountListStatus.WANT_TO_WATCH); runCurrent()
         assertEquals(0, calls); assertFalse(model.state.value.visible)
     }
