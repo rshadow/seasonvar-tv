@@ -127,4 +127,26 @@ class AccountRepositoryTest {
         assertNull(repository.session.value.user)
     }
 
+    @Test fun storage_read_failure_preserves_the_session_and_retry_restores_without_login() = runBlocking {
+        val saved = listOf(Cookie.Builder().name("svid1").value("dummy-session").hostOnlyDomain("seasonvar.ru").secure().build())
+        var unreadable = true
+        var cleared = 0
+        var written = 0
+        val store = object : SessionStore {
+            override fun read(): List<Cookie> { if (unreadable) throw IOException("Temporary read failure"); return saved }
+            override fun save(cookies: List<Cookie>) { written++ }
+            override fun clear() { cleared++ }
+        }
+        val transport = Transport()
+        val repository = AccountRepository(SessionManager(store), transport)
+        try { repository.restore(); fail() } catch (_: SessionStorageException) { }
+        assertNull(repository.session.value.user); assertFalse(repository.session.value.expired)
+        assertTrue(transport.calls.isEmpty()); assertEquals(0, cleared); assertEquals(0, written)
+        unreadable = false
+        repository.restore()
+        assertEquals("12", repository.session.value.user!!.id)
+        assertEquals(listOf("https://seasonvar.ru/resume"), transport.calls)
+        assertEquals(0, cleared); assertEquals(0, written)
+    }
+
 }

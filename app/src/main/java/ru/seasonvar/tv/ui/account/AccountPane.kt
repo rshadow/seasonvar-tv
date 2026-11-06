@@ -87,7 +87,7 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
             else -> null
         }
         error?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant) }
-        if (state.failure in listOf(AccountFailure.NETWORK, AccountFailure.HTTP, AccountFailure.MARKUP)) {
+        if (state.failure in listOf(AccountFailure.NETWORK, AccountFailure.HTTP, AccountFailure.MARKUP, AccountFailure.STORAGE)) {
             ThemeButton(stringResource(R.string.account_check), onCheck,
                 Modifier.height(d.headerButtonSize).focusProperties { left = menuFocus }, loading = state.busy)
         }

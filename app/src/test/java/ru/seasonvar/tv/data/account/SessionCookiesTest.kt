@@ -69,4 +69,74 @@ class SessionCookiesTest {
         assertTrue(manager.hasSession())
         assertNull(manager.cacheToken())
     }
+    private class FailingReadStore(initial: List<Cookie>) : SessionStore {
+        var cookies = initial
+        var failure: Exception? = null
+        var reads = 0
+        var writes = 0
+        var clears = 0
+        override fun read(): List<Cookie> {
+            reads++
+            failure?.let { throw it }
+            return cookies
+        }
+        override fun save(cookies: List<Cookie>) { writes++; this.cookies = cookies }
+        override fun clear() { clears++; cookies = emptyList() }
+    }
+    @Test fun read_failure_preserves_saved_cookies_and_allows_retry_without_memoizing_a_guest() {
+        val original = listOf(cookie())
+        val error = java.io.IOException("Transient read failure")
+        val store = FailingReadStore(original).apply { failure = error }
+        val manager = SessionManager(store)
+        try { manager.current(); fail("Unreadable session must not become a guest session") }
+        catch (failure: SessionStorageException) { assertSame(error, failure.cause) }
+        assertEquals(original, store.cookies); assertEquals(0, store.clears); assertEquals(0, store.writes)
+        store.failure = null
+        assertTrue(manager.hasSession())
+        assertEquals(original, manager.current().loadForRequest(site))
+        assertEquals(2, store.reads)
+    }
+    @Test fun decryption_failure_is_reported_without_erasing_the_encrypted_session() {
+        val original = listOf(cookie())
+        val store = FailingReadStore(original).apply { failure = javax.crypto.AEADBadTagException("Fixture") }
+        val manager = SessionManager(store)
+        repeat(2) {
+            try { manager.hasSession(); fail() }
+            catch (failure: SessionStorageException) { assertTrue(failure.cause is javax.crypto.AEADBadTagException) }
+        }
+        assertEquals(original, store.cookies); assertEquals(0, store.clears); assertEquals(0, store.writes)
+    }
+    @Test fun cancellation_is_rethrown_unchanged_and_never_clears_or_caches_a_guest() {
+        val original = listOf(cookie())
+        val cancelled = kotlinx.coroutines.CancellationException("Cancelled")
+        val store = FailingReadStore(original).apply { failure = cancelled }
+        val manager = SessionManager(store)
+        for (read in listOf<() -> Any?>({ manager.current() }, { manager.hasSession() }, { manager.cacheToken() })) {
+            try { read(); fail() }
+            catch (error: kotlinx.coroutines.CancellationException) { assertSame(cancelled, error) }
+        }
+        assertEquals(original, store.cookies); assertEquals(0, store.clears); assertEquals(0, store.writes)
+        store.failure = null
+        assertTrue(manager.hasSession())
+    }
+    @Test fun unreadable_session_never_enables_public_cache_and_explicit_clear_still_works() {
+        val original = listOf(cookie())
+        val store = FailingReadStore(original).apply { failure = java.io.IOException("Read failed") }
+        val manager = SessionManager(store)
+        assertNull(manager.cacheToken())
+        assertEquals(original, store.cookies); assertEquals(0, store.clears)
+        store.failure = null
+        assertTrue(manager.hasSession()); assertNull(manager.cacheToken())
+        manager.clear()
+        assertEquals(1, store.clears); assertTrue(store.cookies.isEmpty()); assertFalse(manager.hasSession())
+        assertNotNull(manager.cacheToken())
+    }
+    @Test fun an_existing_storage_error_is_propagated_without_erasing_or_wrapping_it() {
+        val error = SessionStorageException()
+        val store = FailingReadStore(listOf(cookie())).apply { failure = error }
+        try { SessionManager(store).current(); fail() }
+        catch (failure: SessionStorageException) { assertSame(error, failure) }
+        assertEquals(0, store.clears); assertEquals(0, store.writes)
+    }
+
 }

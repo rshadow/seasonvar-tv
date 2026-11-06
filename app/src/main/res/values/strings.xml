@@ -144,7 +144,7 @@
     <string name="account_expired">Сессия закончилась. Войдите снова.</string>
     <string name="account_network_error">Не удалось связаться с Seasonvar. Проверьте подключение и настройки сети.</string>
     <string name="account_http_error">Seasonvar временно не принимает запрос. Попробуйте позже.</string>
-    <string name="account_storage_error">Не удалось сохранить сессию на устройстве. Попробуйте войти снова.</string>
+    <string name="account_storage_error">Не удалось восстановить или сохранить вход на устройстве. Повторите проверку аккаунта.</string>
     <string name="account_markup_error">Не удалось проверить аккаунт: ответ сайта изменился.</string>
     <string name="account_check">Проверить сессию</string>
     <string name="personal_updates_title">Есть обновления</string>

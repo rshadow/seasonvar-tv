@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.account
 
+import kotlinx.coroutines.CancellationException
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -44,14 +45,25 @@ class SessionManager(private val store: SessionStore) {
     }
     @Synchronized fun current(): SessionCookies {
         if (current == null) {
-            val saved = runCatching { store.read() }.getOrElse { store.clear(); emptyList() }
+            val saved = try {
+                store.read()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: SessionStorageException) {
+                throw error
+            } catch (error: Exception) {
+                throw SessionStorageException(error)
+            }
             privateSession = saved.isNotEmpty()
             current = create(saved)
         }
         return current!!
     }
     @Synchronized fun hasSession(): Boolean { current(); return privateSession }
-    @Synchronized fun cacheToken(): Long? { current(); return if (privateSession) null else generation }
+    @Synchronized fun cacheToken(): Long? {
+        try { current() } catch (_: SessionStorageException) { return null }
+        return if (privateSession) null else generation
+    }
     fun candidate() = create()
     @Synchronized fun commit(jar: SessionCookies) {
         store.save(jar.snapshot())
