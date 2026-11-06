@@ -178,10 +178,8 @@ internal fun SeasonvarApp(
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
-    onRemovalRequest: (SeriesEntry) -> Unit = {},
     onRemovalRefresh: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
-    onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
@@ -211,8 +209,8 @@ internal fun SeasonvarApp(
             updateModel = updateModel, translationSettingsModel = translationSettingsModel,
             detailsModel = detailsModel,
             onPlay = onPlay,
-            removalState = removalState, onRemovalActions = onRemovalActions, onRemovalRequest = onRemovalRequest,
-            onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus, onRemovalStatusRequest = onRemovalStatusRequest,
+            removalState = removalState, onRemovalActions = onRemovalActions,
+            onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState,
             personalStates = personalStates, personalDescriptions = personalDescriptions,
@@ -267,10 +265,8 @@ private fun SeasonvarContent(
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
-    onRemovalRequest: (SeriesEntry) -> Unit = {},
     onRemovalRefresh: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
-    onRemovalStatusRequest: (SeriesEntry) -> Unit = {},
     onRemovalAsk: () -> Unit = {},
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
@@ -524,6 +520,12 @@ private fun SeasonvarContent(
         enterContent()
     }
 
+    fun openSeriesActions(entry: SeriesEntry) {
+        backNavigation.reset()
+        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, if (detailsOpen) selectedKey ?: entry.key else entry.key)
+        onRemovalActions(entry)
+    }
+
     fun openDetails(entry: SeriesEntry) {
         pendingHistoryQuery = null
         if (searching) onSearchRemember()
@@ -660,14 +662,8 @@ private fun SeasonvarContent(
             } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                 SeriesDetailsPane(
                     detailsSource!!, detailsModel,
-                    onManageStatus = if (accountSession.user == null) null else ({ entry ->
-                        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, selectedKey ?: entry.key)
-                        onRemovalStatusRequest(entry)
-                    }),
-                    onRemove = if (accountSession.user == null) null else { entry ->
-                        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, selectedKey ?: entry.key)
-                        onRemovalRequest(entry)
-                    }, removalDialogOpen = removalState.visible,
+                    onActions = if (accountSession.user == null) null else ::openSeriesActions,
+                    removalDialogOpen = removalState.visible,
                     onPlay = onPlay,
                     menuFocus = if (searching) searchFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
                         PublicFeed.TODAY -> todayFocus
@@ -724,10 +720,8 @@ private fun SeasonvarContent(
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = ::openDetails,
                     onActions = { entry ->
-                        backNavigation.reset()
                         selectEntry(entry.key)
-                        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, entry.key)
-                        onRemovalActions(entry)
+                        openSeriesActions(entry)
                     },
                 )
             }

@@ -17,7 +17,7 @@ import ru.seasonvar.tv.data.playback.AccountMarkWriter
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import java.io.IOException
 
-enum class RemovalStage { ACTIONS, STATUS, CONFIRM }
+enum class RemovalStage { ACTIONS, CONFIRM }
 data class MarkRemovalUiState(
     val entry: SeriesEntry? = null,
     val stage: RemovalStage = RemovalStage.ACTIONS,
