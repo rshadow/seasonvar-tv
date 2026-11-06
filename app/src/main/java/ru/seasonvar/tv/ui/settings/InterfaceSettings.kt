@@ -46,6 +46,14 @@ internal class InterfaceSettings(context: Context) {
         mutableAutoNextSeasonEnabled.value = enabled
     }
 
+    private val mutableImagePrefetchEnabled = MutableStateFlow(preferences.getBoolean("image_prefetch", true))
+    val imagePrefetchEnabled = mutableImagePrefetchEnabled.asStateFlow()
+
+    fun setImagePrefetchEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean("image_prefetch", enabled).apply()
+        mutableImagePrefetchEnabled.value = enabled
+    }
+
     fun setStartPage(section: Section) {
         require(section in Section.startPages(true))
         preferences.edit().putString("start_page", section.storageId).apply()
