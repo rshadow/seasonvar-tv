@@ -1,6 +1,10 @@
 package ru.seasonvar.tv.data.smart
 
+import kotlinx.coroutines.*
 import kotlinx.coroutines.test.runTest
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.*
 import org.junit.Test
 import ru.seasonvar.tv.data.*
@@ -19,13 +23,22 @@ class SmartContinueRepositoryTest {
             listOf(Translation(voice, "Стандартный", episodes)), voice),
             PlaybackMarkSnapshot(episode?.let { PlaybackMark(id, e.url, it, voice, time) }, status))
     }
+    private fun history(vararg entries: SeriesEntry): suspend (String?) -> AccountPage = { page ->
+        assertNull(page)
+        AccountPage(AccountUser("1", "Тест", null), entries.toList())
+    }
     @Test fun latest_marked_season_wins_and_partial_last_episode_is_not_mistaken_for_completed() = runTest {
         val old = season("30", 3, "2")
         val current = season("40", 4, "2", 58)
         val loaded = mapOf("30" to old, "40" to current)
-        val repository = SmartContinueRepository({ listOf(old.details.entry, current.details.entry) }, { loaded.getValue(it.id) },
-            historyOrder = { listOf("smart:100") })
-        val result = repository.load().entries.single()
+        val reads = ConcurrentLinkedQueue<String>()
+        val unrelated = (1000..1199).map { entry(it.toString(), 1) }
+        val repository = SmartContinueRepository({ listOf(old.details.entry, current.details.entry) + unrelated },
+            { reads += it.id; loaded.getValue(it.id) }, loadHistoryPage = history(old.details.entry))
+        val page = repository.load()
+        assertFalse(page.incomplete)
+        assertEquals(setOf("30", "40"), reads.toSet()); assertEquals(2, reads.size)
+        val result = page.entries.single()
         assertEquals("40", result.id)
         assertEquals("b", result.initialSelection.episodeId)
         assertEquals(58_000L, result.initialSelection.positionMillis)
@@ -47,7 +60,7 @@ class SmartContinueRepositoryTest {
     }
     @Test fun finished_latest_season_is_hidden_but_resolved_for_removal_from_cache() = runTest {
         val last = season("50", 5, "2")
-        val result = SmartContinueRepository({ listOf(last.details.entry) }, { last }).load()
+        val result = SmartContinueRepository({ listOf(last.details.entry) }, { last }, loadHistoryPage = history(last.details.entry)).load()
         assertTrue(result.entries.isEmpty()); assertEquals(setOf("smart:100"), result.resolvedKeys)
         assertFalse(result.incomplete)
     }
@@ -57,22 +70,22 @@ class SmartContinueRepositoryTest {
         val c = season("50", 5, "1", 20, serial = "300", choices = listOf(option("50", 5)))
         val data = listOf(a, b, c).associateBy { it.details.entry.id }
         val result = SmartContinueRepository({ data.values.map { it.details.entry } }, { data.getValue(it.id) },
-            historyOrder = { listOf("smart:200", "smart:100") }).load()
+            loadHistoryPage = history(b.details.entry, a.details.entry)).load()
         assertEquals(listOf("smart:200", "smart:100"), result.entries.map { it.key })
-        assertTrue("Missing-history entries must also be removed from old cached results", "smart:300" in result.resolvedKeys)
+        assertEquals(setOf("smart:100", "smart:200"), result.resolvedKeys)
     }
     @Test fun account_marks_without_server_history_produce_an_empty_list() = runTest {
         val marked = season("40", 4, "1", 20)
-        val result = SmartContinueRepository({ listOf(marked.details.entry) }, { marked }).load()
+        val result = SmartContinueRepository({ listOf(marked.details.entry) }, { error("Do not load seasons without history") }).load()
         assertTrue(result.entries.isEmpty())
         assertFalse(result.incomplete)
-        assertEquals(setOf("smart:100"), result.resolvedKeys)
+        assertTrue(result.resolvedKeys.isEmpty())
     }
     @Test fun failed_latest_season_does_not_fall_back_to_the_finished_older_season() = runTest {
         val old = season("30", 3, "2")
         val result = SmartContinueRepository({ listOf(old.details.entry, entry("40", 4)) }, {
             if (it.id == "40") throw IOException() else old
-        }).load()
+        }, loadHistoryPage = history(old.details.entry)).load()
         assertTrue(result.incomplete); assertTrue(result.entries.isEmpty()); assertTrue(result.resolvedKeys.isEmpty())
         assertTrue(result.failure is IOException)
     }
@@ -84,23 +97,134 @@ class SmartContinueRepositoryTest {
         assertEquals("50", repository.resolve(current)!!.id)
         assertNull(SmartContinueRepository({ emptyList() }, { season("40", 4, null, status = -3) }).resolve(current))
     }
-    @Test fun history_is_paginated_until_each_series_is_found_and_duplicates_keep_the_newest_rank() = runTest {
-        val user = AccountUser("1", "Тест", null)
+    @Test fun history_pages_keep_server_order_until_the_end() = runTest {
+        val a = season("40", 4, "1", 20, serial = "200", choices = listOf(option("40", 4)))
+        val b = season("31", 3, "1", 20, serial = "100", choices = listOf(option("31", 3)))
         val requests = mutableListOf<String?>()
-        val order = smartHistoryOrder(mapOf("a" to setOf("30", "31"), "b" to setOf("40"))) { url ->
+        val result = SmartContinueRepository({ listOf(a.details.entry, b.details.entry) }, {
+            if (it.id == "40") a else b
+        }, loadHistoryPage = { url ->
             requests += url
-            if (url == null) AccountPage(user, listOf(entry("40", 4), entry("40", 4)), "next")
-            else AccountPage(user, listOf(entry("31", 3)), "unused")
-        }
-        assertEquals(listOf("b", "a"), order)
+            if (url == null) AccountPage(AccountUser("1", "Тест", null), listOf(a.details.entry, a.details.entry), "next")
+            else AccountPage(AccountUser("1", "Тест", null), listOf(b.details.entry))
+        }).load()
+        assertEquals(listOf("40", "31"), result.entries.map { it.id })
         assertEquals(listOf(null, "next"), requests)
     }
     @Test fun history_pagination_cycle_fails_instead_of_inventing_an_order() = runTest {
         try {
-            smartHistoryOrder(mapOf("a" to setOf("30"))) { AccountPage(AccountUser("1", "Тест", null), emptyList(), "same") }
+            SmartContinueRepository({ listOf(entry("30", 3)) }, { error("No seasons in empty pages") },
+                loadHistoryPage = { AccountPage(AccountUser("1", "Тест", null), emptyList(), "same") }).load()
             fail()
         } catch (_: MarkupChangedException) { }
     }
+    @Test fun missing_announced_history_page_fails_instead_of_returning_a_partial_order() = runTest {
+        try {
+            SmartContinueRepository({ listOf(entry("30", 3)) }, { error("No seasons in empty pages") },
+                loadHistoryPage = { next ->
+                    if (next == null) AccountPage(AccountUser("1", "Тест", null), emptyList(), "next") else null
+                }).load()
+            fail()
+        } catch (_: MarkupChangedException) { }
+    }
+    @Test fun failed_history_season_does_not_cancel_other_series() = runTest {
+        val healthy = season("40", 4, "1", 20)
+        val result = SmartContinueRepository({ listOf(healthy.details.entry) }, {
+            if (it.id == "999") throw IOException() else healthy
+        }, loadHistoryPage = history(entry("999", 1), healthy.details.entry)).load()
+        assertTrue(result.incomplete)
+        assertEquals(listOf("40"), result.entries.map { it.id })
+        assertEquals(setOf("smart:100"), result.resolvedKeys)
+        assertEquals(listOf("999" to "IOException"), result.failedSeasons)
+    }
+    @Test fun history_pagination_overlaps_processing_of_already_received_seasons() = runTest(timeout = 10.seconds) {
+        val current = season("30", 3, "1", 20)
+        val seasonStarted = CompletableDeferred<Unit>(); val nextPageStarted = CompletableDeferred<Unit>()
+        val result = SmartContinueRepository({ listOf(current.details.entry) }, {
+            seasonStarted.complete(Unit); nextPageStarted.await(); current
+        }, loadHistoryPage = { next ->
+            if (next == null) AccountPage(AccountUser("1", "Тест", null), listOf(current.details.entry), "next")
+            else {
+                nextPageStarted.complete(Unit); seasonStarted.await()
+                AccountPage(AccountUser("1", "Тест", null), emptyList())
+            }
+        }).load()
+        assertEquals("30", result.entries.single().id)
+    }
+    @Test fun history_and_marks_are_requested_concurrently() = runTest(timeout = 10.seconds) {
+        val marksStarted = CompletableDeferred<Unit>()
+        val historyStarted = CompletableDeferred<Unit>()
+        val repository = SmartContinueRepository({
+            marksStarted.complete(Unit); historyStarted.await(); emptyList()
+        }, { error("No seasons needed") }, loadHistoryPage = {
+            historyStarted.complete(Unit); marksStarted.await(); AccountPage(AccountUser("1", "Тест", null), emptyList())
+        })
+        assertTrue(repository.load().entries.isEmpty())
+    }
+
+    @Test fun discovery_and_latest_mark_resolution_run_in_parallel_with_one_global_limit() = runTest(timeout = 10.seconds) {
+        val seeds = (1..4).map { i -> season((100 + i).toString(), 1, null, serial = (1000 + i).toString(),
+            choices = listOf(option((100 + i).toString(), 1), option((200 + i).toString(), 2))) }
+        val targets = seeds.mapIndexed { i, old -> season((201 + i).toString(), 2, "1", 20,
+            serial = old.details.serialId, choices = old.details.seasons) }
+        val pages = (seeds + targets).associateBy { it.details.entry.id }
+        val active = AtomicInteger(); val peak = AtomicInteger()
+        val seedCount = AtomicInteger(); val targetCount = AtomicInteger()
+        val seedGate = CompletableDeferred<Unit>(); val targetGate = CompletableDeferred<Unit>()
+        val requests = ConcurrentLinkedQueue<String>()
+        val repository = SmartContinueRepository({ targets.map { it.details.entry } }, { entry ->
+            requests += entry.id
+            peak.accumulateAndGet(active.incrementAndGet(), ::maxOf)
+            try {
+                if (entry.id.toInt() < 200) {
+                    if (seedCount.incrementAndGet() == 4) seedGate.complete(Unit)
+                    seedGate.await()
+                } else {
+                    if (targetCount.incrementAndGet() == 4) targetGate.complete(Unit)
+                    targetGate.await()
+                }
+                pages.getValue(entry.id)
+            } finally { active.decrementAndGet() }
+        }, loadHistoryPage = history(*seeds.reversed().map { it.details.entry }.toTypedArray()))
+        val result = repository.load()
+        assertFalse(result.incomplete)
+        assertEquals(targets.reversed().map { it.details.entry.id }, result.entries.map { it.id })
+        assertEquals(4, peak.get()); assertEquals(0, active.get())
+        assertEquals(8, requests.size); assertEquals(8, requests.toSet().size)
+    }
+
+    @Test fun duplicate_history_and_next_season_share_the_same_in_flight_page_request() = runTest {
+        val old = season("30", 3, "2")
+        val next = season("40", 4, null)
+        val reads = ConcurrentLinkedQueue<String>()
+        val result = SmartContinueRepository({ listOf(old.details.entry) }, {
+            reads += it.id; if (it.id == "30") old else next
+        }, loadHistoryPage = history(old.details.entry, old.details.entry, next.details.entry)).load()
+        assertFalse(result.incomplete)
+        assertEquals("40", result.entries.single().id)
+        assertEquals(2, reads.size); assertEquals(setOf("30", "40"), reads.toSet())
+    }
+
+    @Test fun history_series_without_any_account_mark_is_hidden_without_loading_unrelated_marks() = runTest {
+        val old = season("30", 3, null)
+        val result = SmartContinueRepository({ listOf(entry("999", 1)) }, {
+            assertEquals("30", it.id); old
+        }, loadHistoryPage = history(old.details.entry)).load()
+        assertTrue(result.entries.isEmpty()); assertFalse(result.incomplete)
+        assertEquals(setOf("smart:100"), result.resolvedKeys)
+    }
+
+    @Test fun cancelling_refresh_cancels_all_shared_page_requests() = runTest(timeout = 10.seconds) {
+        val started = CompletableDeferred<Unit>(); val active = AtomicInteger()
+        val repository = SmartContinueRepository({ listOf(entry("30", 3)) }, {
+            active.incrementAndGet(); started.complete(Unit)
+            try { awaitCancellation() } finally { active.decrementAndGet() }
+        }, loadHistoryPage = history(entry("30", 3)))
+        val job = async { repository.load() }
+        started.await(); job.cancelAndJoin()
+        assertEquals(0, active.get())
+    }
+
     @Test fun cache_roundtrip_preserves_zero_seek_and_rejects_external_or_mismatched_pages() = runTest {
         val item = SmartContinueRepository({ emptyList() }, { error("Unexpected") }).resolve(season("40", 4))!!
         assertEquals(item.initialSelection, SmartContinueCodec.decode(SmartContinueCodec.encode(listOf(item)))!!.single().initialSelection)
@@ -124,7 +248,7 @@ class SmartContinueRepositoryTest {
 
     @Test fun removed_episode_is_hidden_without_replaying_the_first_or_an_older_season() = runTest {
         val missing = season("50", 5, "13", 30)
-        val result = SmartContinueRepository({ listOf(missing.details.entry) }, { missing }).load()
+        val result = SmartContinueRepository({ listOf(missing.details.entry) }, { missing }, loadHistoryPage = history(missing.details.entry)).load()
         assertTrue(result.entries.isEmpty());assertFalse(result.incomplete)
         assertEquals(setOf("smart:100"), result.resolvedKeys)
     }
