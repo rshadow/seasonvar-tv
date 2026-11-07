@@ -14,7 +14,7 @@
     <string name="home_unsupported">Домашний экран не поддерживает ленты Android TV.</string>
     <string name="home_refreshing">Обновляем ленты…</string>
     <string name="home_refresh_error">Не удалось обновить ленты. Прежние карточки сохранены.</string>
-    <string name="home_play_loading">Готовим продолжение просмотра…</string>
+    <string name="home_play_loading">Готовлю просмотр…</string>
     <string name="home_play_unavailable">Продолжение недоступно. Обновите ленту или откройте сериал в приложении.</string>
     <string name="home_play_error">Не удалось прочитать данные для продолжения просмотра.</string>
     <string name="player_previous_episode">Предыдущая серия</string>
