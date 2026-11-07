@@ -91,6 +91,7 @@ import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
+import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.network.DnsProvider
@@ -171,6 +172,8 @@ internal fun SeasonvarApp(
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
+    playerClockPosition: PlayerClockPosition = PlayerClockPosition.OFF,
+    onPlayerClockPositionChange: (PlayerClockPosition) -> Unit = {},
     catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
     onCatalogLayoutChange: (Section, CatalogLayout) -> Unit = { _, _ -> },
     startPage: Section = Section.TODAY,
@@ -230,6 +233,7 @@ internal fun SeasonvarApp(
             hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
             autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
+            playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
             onExit = onExit,
             updateModel = updateModel, translationSettingsModel = translationSettingsModel,
             detailsModel = detailsModel,
@@ -274,6 +278,8 @@ private fun SeasonvarContent(
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
+    playerClockPosition: PlayerClockPosition = PlayerClockPosition.OFF,
+    onPlayerClockPositionChange: (PlayerClockPosition) -> Unit = {},
     catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
     onCatalogLayoutChange: (Section, CatalogLayout) -> Unit = { _, _ -> },
     startPage: Section = Section.TODAY,
@@ -713,6 +719,7 @@ private fun SeasonvarContent(
                     hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
                     autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
                     autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
+                    playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
                     signedIn = accountSession.user != null,
                     onBack = ::navigateBack,
                     onCloseDialog = { backNavigation.reset(); returnToMenu() },
@@ -1326,6 +1333,8 @@ private fun SettingsPane(
     onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
     onAutoNextChange: (Boolean) -> Unit,
+    playerClockPosition: PlayerClockPosition,
+    onPlayerClockPositionChange: (PlayerClockPosition) -> Unit,
     translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel?,
     bypassEnabled: Boolean,
     settingsContentFocus: FocusRequester,
@@ -1355,6 +1364,9 @@ private fun SettingsPane(
     var prefetchFocused by remember { mutableStateOf(false) }
     val autoSeasonFocus = remember { FocusRequester() }
     var autoSeasonFocused by remember { mutableStateOf(false) }
+    val clockFocus = remember { FocusRequester() }
+    var clockFocused by remember { mutableStateOf(false) }
+    var clockDialogOpen by rememberSaveable { mutableStateOf(false) }
     var dnsDialogOpen by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     var dnsFocused by remember { mutableStateOf(false) }
@@ -1416,7 +1428,7 @@ private fun SettingsPane(
         }
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(autoSeasonFocus)
-            .focusProperties { left = menuFocus; up = autoNextFocus; down = prefetchFocus }
+            .focusProperties { left = menuFocus; up = autoNextFocus; down = clockFocus }
             .onFocusChanged { autoSeasonFocused = it.isFocused }
             .border(d.focusBorderWidth, if (autoSeasonFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))
@@ -1431,12 +1443,28 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = autoNextSeasonEnabled, onCheckedChange = null)
         }
+        Spacer(Modifier.height(d.spacingMedium))
+        Row(Modifier.fillMaxWidth().focusRequester(clockFocus)
+            .focusProperties { left = menuFocus; up = autoSeasonFocus; down = prefetchFocus }
+            .onFocusChanged { clockFocused = it.isFocused }
+            .border(d.focusBorderWidth, if (clockFocused) c.primary else Color.Transparent,
+                RoundedCornerShape(d.cardCornerRadius))
+            .clickable(role = Role.Button, onClick = { onInteraction(); clockDialogOpen = true })
+            .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.player_clock_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Spacer(Modifier.height(d.spacingSmall))
+                Text(stringResource(R.string.player_clock_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(d.spacingMedium))
+            Text(stringResource(playerClockLabel(playerClockPosition)), style = MaterialTheme.typography.bodyLarge, color = c.primary)
+        }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(prefetchFocus)
-            .focusProperties { left = menuFocus; up = autoSeasonFocus; down = bypassFocus }
+            .focusProperties { left = menuFocus; up = clockFocus; down = bypassFocus }
             .onFocusChanged { prefetchFocused = it.isFocused }
             .border(d.focusBorderWidth, if (prefetchFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))
@@ -1536,6 +1564,20 @@ private fun SettingsPane(
             onInteraction = onInteraction,
         )
     }
+    if (clockDialogOpen) {
+        SettingsChoiceDialog(
+            title = R.string.player_clock_title, options = PlayerClockPosition.entries,
+            selected = playerClockPosition, label = ::playerClockLabel,
+            onSelect = { position ->
+                onPlayerClockPositionChange(position)
+                clockDialogOpen = false
+                scope.launch { repeat(2) { withFrameNanos { } }; clockFocus.requestFocus() }
+            },
+            onClose = { clockDialogOpen = false; onCloseDialog() },
+            onBack = { clockDialogOpen = false; onBack() },
+            onInteraction = onInteraction,
+        )
+    }
 }
 
 @Composable
@@ -1598,6 +1640,13 @@ private fun <T> SettingsChoiceDialog(
 private fun dnsLabel(provider: DnsProvider): Int = when (provider) {
     DnsProvider.SYSTEM -> R.string.dns_system
     DnsProvider.QUAD9_DOH -> R.string.dns_quad9
+}
+
+private fun playerClockLabel(position: PlayerClockPosition): Int = when (position) {
+    PlayerClockPosition.OFF -> R.string.player_clock_off
+    PlayerClockPosition.LEFT -> R.string.player_clock_left
+    PlayerClockPosition.CENTER -> R.string.player_clock_center
+    PlayerClockPosition.RIGHT -> R.string.player_clock_right
 }
 
 @Preview(device = "spec:width=960dp,height=540dp,dpi=320", showBackground = true)

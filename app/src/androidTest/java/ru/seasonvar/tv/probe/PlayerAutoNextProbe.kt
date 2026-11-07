@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -19,7 +20,10 @@ import ru.seasonvar.tv.data.SeriesDetailsParser
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.ui.player.PlayerActivity
+import ru.seasonvar.tv.ui.player.PlayerClockPosition
+import ru.seasonvar.tv.ui.player.formatPlayerClock
 import java.io.File
+import java.time.ZoneId
 
 @androidx.annotation.OptIn(UnstableApi::class)
 object PlayerAutoNextProbe {
@@ -35,6 +39,10 @@ object PlayerAutoNextProbe {
         var activity: PlayerActivity? = null
         val originalEnabled = app.interfaceSettings.autoNextEnabled.value
         val originalSeasonEnabled = app.interfaceSettings.autoNextSeasonEnabled.value
+        val originalClockPosition = app.interfaceSettings.playerClockPosition.value
+        val originalClockValue = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
+            .getString("player_clock_position", null)
+        var expectedClock: PlayerClockPosition? = null
         var phase = "metadata"
         fun <T> main(block: () -> T): T {
             var value: Any? = null
@@ -75,7 +83,33 @@ object PlayerAutoNextProbe {
             else waitFor(2000) { currentEpisode() == next }
         }
         val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("player-probe")), "run-" + System.currentTimeMillis())
+        fun clockMatches(position: PlayerClockPosition): Boolean {
+            val root = uiAutomation.rootInActiveWindow ?: return false
+            val clocks = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+            val prefix = targetContext.getString(R.string.player_clock_accessibility, "")
+            fun collect(node: android.view.accessibility.AccessibilityNodeInfo) {
+                if (node.contentDescription?.startsWith(prefix) == true) clocks += node
+                for (index in 0 until node.childCount) node.getChild(index)?.let(::collect)
+            }
+            collect(root)
+            if (position == PlayerClockPosition.OFF) return clocks.isEmpty()
+            val clock = clocks.singleOrNull() ?: return false
+            if (clock.isFocusable || clock.isFocused) return false
+            val current = targetContext.getString(R.string.player_clock_accessibility,
+                formatPlayerClock(System.currentTimeMillis(), ZoneId.systemDefault()))
+            if (clock.contentDescription?.toString() != current) return false
+            val screen = Rect().also(root::getBoundsInScreen)
+            val bounds = Rect().also(clock::getBoundsInScreen)
+            if (bounds.top < screen.top || bounds.bottom > screen.top + screen.height() / 4) return false
+            return when (position) {
+                PlayerClockPosition.LEFT -> bounds.right < screen.left + screen.width() / 3
+                PlayerClockPosition.CENTER -> kotlin.math.abs(bounds.centerX() - screen.centerX()) < screen.width() / 20
+                PlayerClockPosition.RIGHT -> bounds.left > screen.left + screen.width() * 2 / 3
+                PlayerClockPosition.OFF -> false
+            }
+        }
         fun capture(name: String) {
+            if (name != "failure") expectedClock?.let { position -> waitFor(5000) { clockMatches(position) } }
             check(artifacts.isDirectory || artifacts.mkdirs())
             val bitmap = checkNotNull(uiAutomation.takeScreenshot())
             File(artifacts, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -102,6 +136,19 @@ object PlayerAutoNextProbe {
             stage("first_video"); playing(episodes[0].id);
             waitFor { main { player().currentPosition in 10_000..25_000 } }
             result.putBoolean("explicit_resume_verified", true)
+            stage("clock_positions")
+            PlayerClockPosition.entries.forEach { position ->
+                main { app.interfaceSettings.setPlayerClockPosition(position) }
+                expectedClock = position
+                waitFor(5000) { clockMatches(position) }
+                capture("clock-" + position.storageId)
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                waitFor(5000) { main { !player().isPlaying } }
+                capture("clock-" + position.storageId + "-title")
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                playing(episodes[0].id)
+            }
+            result.putBoolean("clock_positions_verified", true)
             Thread.sleep(2500); capture("01-first-a"); Thread.sleep(2000); capture("02-first-b")
             stage("pause_seek")
             key(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -204,10 +251,16 @@ object PlayerAutoNextProbe {
             main {
                 app.interfaceSettings.setAutoNextEnabled(originalEnabled)
                 app.interfaceSettings.setAutoNextSeasonEnabled(originalSeasonEnabled)
+                app.interfaceSettings.setPlayerClockPosition(originalClockPosition)
             }
             val settings = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
             val saved = settings.edit().putBoolean("auto_next_episode", originalEnabled)
-                .putBoolean("auto_next_season", originalSeasonEnabled).commit()
+                .putBoolean("auto_next_season", originalSeasonEnabled).apply {
+                    if (originalClockValue == null) remove("player_clock_position")
+                    else putString("player_clock_position", originalClockValue)
+                }.commit()
+            result.putBoolean("clock_setting_restored", saved && settings.getString("player_clock_position", null) == originalClockValue &&
+                app.interfaceSettings.playerClockPosition.value == originalClockPosition)
             result.putBoolean("settings_restored", saved && settings.getBoolean("auto_next_episode", !originalEnabled) == originalEnabled &&
                 settings.getBoolean("auto_next_season", !originalSeasonEnabled) == originalSeasonEnabled)
             result.putString("artifacts", artifacts.absolutePath)
