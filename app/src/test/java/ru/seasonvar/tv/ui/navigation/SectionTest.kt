@@ -50,4 +50,49 @@ class SectionTest {
         assertNull(Section.SMART_CONTINUE.personalFeed)
     }
 
+    @Test fun hiding_a_whole_group_removes_it_and_reenabling_one_section_restores_it() {
+        val hidden = Section.catalogPages.toSet()
+        assertFalse(Section.menuGroups(true, hidden).any { it.first == MenuGroup.CATALOG })
+        val groups = Section.menuGroups(true, hidden - Section.TOP)
+        assertEquals(MenuGroup.CATALOG to listOf(Section.TOP), groups.first())
+    }
+
+    @Test fun personal_groups_follow_login_and_visibility_independently() {
+        val hidden = (Section.smartPages + Section.personalPages).toSet()
+        assertEquals(listOf(MenuGroup.CATALOG, MenuGroup.SYSTEM), Section.menuGroups(true, hidden).map { it.first })
+        assertEquals(listOf(MenuGroup.CATALOG, MenuGroup.PERSONAL, MenuGroup.SYSTEM),
+            Section.menuGroups(true, hidden - Section.HISTORY).map { it.first })
+        assertEquals(listOf(MenuGroup.CATALOG, MenuGroup.SYSTEM),
+            Section.menuGroups(false, hidden - Section.HISTORY).map { it.first })
+    }
+
+    @Test fun hidden_start_page_falls_back_to_the_first_visible_section() {
+        val hidden = setOf(Section.TODAY, Section.TOP)
+        assertEquals(Section.UPDATES, Section.TOP.availableAtStart(false, hidden))
+        assertEquals(Section.BEST, Section.BEST.availableAtStart(false, hidden))
+        assertEquals(Section.TOP, Section.TOP.availableAtStart(false, emptySet()))
+        assertFalse(Section.TOP in Section.startPages(true, hidden))
+    }
+
+    @Test fun hidden_personal_start_does_not_wait_for_account_restoration() {
+        val hidden = setOf(Section.HISTORY, Section.TODAY)
+        assertEquals(Section.UPDATES, Section.HISTORY.atStartup(false, true, hidden))
+        assertNull(Section.HISTORY.atStartup(false, true, setOf(Section.TODAY)))
+        assertEquals(Section.UPDATES, Section.HISTORY.atStartup(false, false, setOf(Section.TODAY)))
+    }
+
+    @Test fun all_hidden_pages_fall_back_to_settings_even_during_login() {
+        val hidden = Section.startPages(true).toSet()
+        assertEquals(listOf(MenuGroup.SYSTEM to listOf(Section.SETTINGS)), Section.menuGroups(true, hidden))
+        assertEquals(Section.SETTINGS, Section.HISTORY.atStartup(false, true, hidden))
+        assertEquals(Section.SETTINGS, Section.TODAY.availableAtStart(true, hidden))
+    }
+
+    @Test fun hiding_the_first_item_preserves_the_order_of_remaining_menu_items() {
+        val hidden = setOf(Section.TODAY, Section.RESUME)
+        val expected = Section.startPages(true).filterNot { it in hidden }
+        assertEquals(expected, Section.startPages(true, hidden))
+        assertEquals(Section.UPDATES, Section.startPages(false, hidden).first())
+    }
+
 }

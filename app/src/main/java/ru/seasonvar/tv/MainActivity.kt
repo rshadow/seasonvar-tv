@@ -114,6 +114,7 @@ class MainActivity : ComponentActivity() {
             val imagePrefetchEnabled by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
+            val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
             SeasonvarApp(
@@ -121,6 +122,7 @@ class MainActivity : ComponentActivity() {
                 imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = container.interfaceSettings::setImagePrefetchEnabled,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
+                hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
                 detailsModel = detailsModel,
