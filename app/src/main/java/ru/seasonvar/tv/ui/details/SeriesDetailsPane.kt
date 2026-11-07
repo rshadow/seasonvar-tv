@@ -284,18 +284,24 @@ internal fun SeriesDetailsPane(
                     DetailsDialog.EPISODES -> {
                         val focus = remember { FocusRequester() }
                         val episodes = state.episodes.orEmpty()
+                        val focusId = state.episodeFocusId
                         val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
-                            initialFirstVisibleItemIndex = episodes.indexOfFirst { it.id == state.episodeId }.coerceAtLeast(0))
+                            initialFirstVisibleItemIndex = episodes.indexOfFirst { it.id == focusId }.coerceAtLeast(0))
+                        if (episodes.isEmpty()) Text(stringResource(if (state.episodes == null)
+                            R.string.details_episodes_unavailable else R.string.details_episodes_empty),
+                            color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         LazyVerticalGrid(GridCells.Adaptive(d.episodeWidth), state = grid,
                             horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
                             verticalArrangement = Arrangement.spacedBy(d.spacingSmall), contentPadding = PaddingValues(d.focusBorderWidth)) {
                             items(episodes, key = { it.id }) { episode ->
                                 ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
-                                    Modifier.height(d.headerButtonSize).then(if (episode.id == state.episodeId) Modifier.focusRequester(focus) else Modifier),
+                                    Modifier.height(d.headerButtonSize).then(if (episode.id == focusId) Modifier.focusRequester(focus) else Modifier),
                                     active = episode.id == state.episodeId, contentAlignment = Alignment.Center)
                             }
                         }
-                        LaunchedEffect(Unit) { repeat(2) { withFrameNanos { } }; focus.requestFocus() }
+                        LaunchedEffect(focusId) {
+                            if (focusId != null) { repeat(2) { withFrameNanos { } }; focus.requestFocus() }
+                        }
                     }
                 }
             }
@@ -394,9 +400,11 @@ private fun EpisodeList(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
         key(state.entry?.id, state.translationId) {
             val episodes = state.episodes
-            val list = androidx.compose.foundation.lazy.rememberLazyListState()
-            LaunchedEffect(state.episodeId) {
-                val index = episodes?.indexOfFirst { it.id == state.episodeId } ?: -1
+            val focusId = state.episodeFocusId
+            val list = androidx.compose.foundation.lazy.rememberLazyListState(
+                initialFirstVisibleItemIndex = episodes?.indexOfFirst { it.id == focusId }?.coerceAtLeast(0) ?: 0)
+            LaunchedEffect(focusId) {
+                val index = episodes?.indexOfFirst { it.id == focusId } ?: -1
                 if (index >= 0 && list.layoutInfo.visibleItemsInfo.none { it.index == index }) list.scrollToItem(index)
             }
             if (!episodes.isNullOrEmpty()) {
@@ -405,7 +413,7 @@ private fun EpisodeList(
                     itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
                         ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                             modifier = Modifier.widthIn(min = d.episodeWidth).width(IntrinsicSize.Max).height(d.headerButtonSize)
-                                .then(if (episode.id == state.episodeId) Modifier.focusRequester(selectedFocus) else Modifier)
+                                .then(if (episode.id == focusId) Modifier.focusRequester(selectedFocus) else Modifier)
                                 .onFocusChanged { if (it.isFocused) model.selectEpisode(episode.id) }
                                 .onPreviewKeyEvent {
                                     if (showAllEpisodes || it.type != KeyEventType.KeyDown) false

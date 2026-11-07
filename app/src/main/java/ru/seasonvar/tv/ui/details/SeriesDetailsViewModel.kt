@@ -33,6 +33,7 @@ data class DetailsUiState(
     val translation get() = details?.translations?.firstOrNull { it.id == translationId }
     val episodes get() = translation?.episodes.takeIf { details?.playbackUnavailableReason == null }
     val episode get() = episodes?.firstOrNull { it.id == episodeId }
+    val episodeFocusId get() = episode?.id ?: episodes?.firstOrNull()?.id
     val canPlay get() = details != null && details.playbackUnavailableReason == null && episode != null && selectionFailure == null
 }
 
