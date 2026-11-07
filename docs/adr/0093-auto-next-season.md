@@ -4,6 +4,8 @@
 
 Статус: Принято
 
+Расположение настроек автоперехода уточнено [ADR-0103](0103-player-settings-group.md).
+
 Дополняет [ADR-0080](0080-direct-episode-autoplay.md), изменяя ограничение очереди одним сезоном, и [ADR-0046](0046-player-episode-navigation.md).
 
 ## Контекст

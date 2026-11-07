@@ -1394,6 +1394,9 @@ private fun SettingsPane(
         Spacer(Modifier.height(d.spacingMedium))
         ru.seasonvar.tv.ui.settings.PreferredTranslationsSetting(translationSettingsModel, translationFocus,
             menuFocus, menuVisibilityFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
+        Spacer(Modifier.height(d.spacingLarge))
+        Text(stringResource(R.string.player_settings_title),
+            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(autoNextFocus)
             .focusProperties { left = menuFocus; up = translationFocus; down = autoSeasonFocus }
