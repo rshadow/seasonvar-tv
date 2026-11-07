@@ -4,6 +4,8 @@
 
 Статус: Принято; ограничение автоперехода одним сезоном дополнено [ADR-0093](0093-auto-next-season.md).
 
+Расположение настроек автоперехода уточнено [ADR-0103](0103-player-settings-group.md).
+
 Заменяет [ADR-0078](0078-auto-next-episode.md) и [ADR-0079](0079-player-completion-dialog.md). Сохраняет ручные переходы [ADR-0046](0046-player-episode-navigation.md).
 
 ## Контекст
