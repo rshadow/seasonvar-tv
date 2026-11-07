@@ -84,7 +84,6 @@ internal fun SeriesDetailsPane(
     val play = remember { FocusRequester() }
     val actionsMenu = remember { FocusRequester() }
     var restoreActions by remember { mutableStateOf(false) }
-    var actionHint by remember { mutableStateOf<String?>(null) }
     val canOpenActions = !preparing && onActions != null
     val season = remember { FocusRequester() }
     val translation = remember { FocusRequester() }
@@ -214,24 +213,18 @@ internal fun SeriesDetailsPane(
                                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
-                    val menuHint = stringResource(R.string.series_actions_menu)
-                    if (canOpenActions) ThemeButton(menuHint, {
+                    if (canOpenActions) ThemeButton(stringResource(R.string.series_actions_menu), {
                         onInteraction(); restoreActions = true
                         onActions?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
                             episodeId = state.episode?.id, episodeLabel = state.episode?.label,
                             translationId = state.translationId, translationLabel = state.translation?.label)))
-                    }, Modifier.then(actionScrolling).focusRequester(actionsMenu).onFocusChanged {
-                        if (it.isFocused) actionHint = menuHint else if (actionHint == menuHint) actionHint = null
-                    }.focusProperties {
+                    }, Modifier.then(actionScrolling).focusRequester(actionsMenu).focusProperties {
                         up = FocusRequester.Cancel; right = FocusRequester.Cancel
                         left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                     }, icon = R.drawable.ic_more_vert)
                 }
                 SeasonProgress(state)
-                actionHint?.let {
-                    Text(it, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                }
                 if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 state.selectionFailure?.let { failure ->
