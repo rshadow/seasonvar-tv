@@ -24,6 +24,8 @@ PROFILE_BUILD_TYPE := $(shell python3 -c 'import json; print(json.load(open("too
 PROFILE_OUT ?= build/profile-navigation
 PROFILE_ARGS ?=
 MARK_MENU_PROBE_OUT ?= build/mark-menu-probe
+LAYOUT_PROBE_MODE ?= mark-menu-layout
+DETAILS_PROGRESS_PROBE_OUT ?= build/details-progress-probe
 BUILD_TYPE ?= debug
 BUILD_VARIANT := $(shell python3 -c 'import sys; print(sys.argv[1].capitalize())' "$(BUILD_TYPE)")
 APK := app/build/outputs/apk/$(BUILD_TYPE)/app-$(BUILD_TYPE).apk
@@ -78,6 +80,7 @@ help:
 		'make lint                   Run Android Lint' \
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
 		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
+		'make details-progress-probe Verify stable progress layout across loading states offline' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
 		'make home-probe             Verify home channels, links and video in emulator; inspect frames' \
@@ -414,6 +417,10 @@ player-probe:
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)"
 
+.PHONY: details-progress-probe
+details-progress-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=details-progress-layout MARK_MENU_PROBE_OUT="$(DETAILS_PROGRESS_PROBE_OUT)"
+
 mark-menu-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for menu verification.' >&2; exit 1;; esac
 	$(MAKE) devices
@@ -421,7 +428,7 @@ mark-menu-probe:
 	$(GRADLE) :app:assembleDebugAndroidTest
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
-	$(ENV) python3 scripts/probe-mark-menu.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(MARK_MENU_PROBE_OUT)"
+	$(ENV) python3 scripts/probe-mark-menu.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --mode "$(LAYOUT_PROBE_MODE)" --output "$(MARK_MENU_PROBE_OUT)"
 
 smart-continue-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for smart-list verification.' >&2; exit 1;; esac

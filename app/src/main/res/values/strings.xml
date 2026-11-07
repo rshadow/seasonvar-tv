@@ -140,6 +140,8 @@
     <string name="details_stopped_at">Остановились: серия %1$s · %2$s</string>
     <string name="details_progress_season">сезон %1$d/%2$d</string>
     <string name="details_progress_episode">серия %1$d/%2$d</string>
+    <string name="details_progress_loading">загружается…</string>
+    <string name="details_progress_unknown">нет данных</string>
     <string name="details_translation">Перевод: %1$s</string>
     <string name="details_season">Сезон</string>
     <string name="details_choose_translation">Выбрать озвучку</string>

@@ -226,7 +226,7 @@ internal fun SeriesDetailsPane(
                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                     }, icon = R.drawable.ic_more_vert)
                 }
-                SeasonProgress(state)
+                SeasonProgress(state, entry)
                 EpisodeList(state, model, selectedEpisodeFocus, allEpisodes, menuFocus,
                     up = when {
                         (details?.translations?.size ?: 0) > 1 -> translation
@@ -306,18 +306,19 @@ internal fun SeriesDetailsPane(
 }
 
 @Composable
-private fun SeasonProgress(state: DetailsUiState) {
-    val entry = state.entry ?: return
-    val progress = accountProgressValue(entry, compact = true)
+internal fun SeasonProgress(state: DetailsUiState, entry: SeriesEntry) {
+    val progress = accountProgressValue(entry, compact = true) ?: stringResource(when {
+        state.entry == null || state.loading || state.progressLoading -> R.string.details_progress_loading
+        else -> R.string.details_progress_unknown
+    })
     val resume = state.seasonResume?.takeIf { it.seasonId == entry.id && it.positionMillis > 0 }
     val translation = state.details?.translations?.firstOrNull { it.id == resume?.translationId }
     val episode = translation?.episodes?.firstOrNull { it.id == resume?.episodeId }
-    if (progress == null && episode == null) return
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium),
         verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-        if (progress != null) Text(stringResource(R.string.account_mark_progress, progress),
+        Text(stringResource(R.string.account_mark_progress, progress),
             style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
         if (resume != null && episode != null) {
             val stopped = stringResource(R.string.details_stopped_at, episode.label,

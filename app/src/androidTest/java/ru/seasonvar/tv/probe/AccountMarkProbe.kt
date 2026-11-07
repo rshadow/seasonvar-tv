@@ -25,6 +25,7 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "details-progress-layout") { DetailsProgressLayoutProbe.run(this); return }
         if (mode == "home-channels") { HomeChannelProbe.run(this); return }
         if (mode == "smart-inspect") { SmartContinueLiveProbe.run(this, probeArguments); return }
         if (mode == "mark-menu-layout") {
