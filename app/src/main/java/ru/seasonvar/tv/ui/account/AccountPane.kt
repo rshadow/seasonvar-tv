@@ -16,6 +16,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -26,6 +27,8 @@ import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
+import ru.seasonvar.tv.ui.showShortMessage
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
 @Composable
@@ -40,17 +43,17 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
     val submitFocus = remember { FocusRequester() }
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var missing by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     fun submit() {
         if (state.busy) return
-        if (login.isBlank() || password.isEmpty()) { missing = true; return }
+        if (login.isBlank() || password.isEmpty()) { showShortMessage(context, R.string.account_required); return }
         val submitted = password
         password = ""
         keyboard?.hide()
         submitFocus.requestFocus()
         onLogin(login, submitted)
     }
-    LaunchedEffect(session.version) { login = ""; password = ""; missing = false }
+    LaunchedEffect(session.version) { login = ""; password = "" }
     LaunchedEffect(session.user?.id, state.busy) {
         if (!state.busy) { repeat(2) { withFrameNanos { } }; if (session.user == null) loginFocus.requestFocus() else submitFocus.requestFocus() }
     }
@@ -60,11 +63,11 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
         val user = session.user
         if (user == null) {
             Text(stringResource(R.string.account_login_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-            AccountField(login, { login = it; missing = false }, R.string.account_login, false,
+            AccountField(login, { login = it }, R.string.account_login, false,
                 loginFocus, passwordFocus, menuFocus, state.busy, onNext = {
                     passwordFocus.requestFocus(); scope.launch { withFrameNanos { }; keyboard?.show() }
                 })
-            AccountField(password, { password = it; missing = false }, R.string.account_password, true,
+            AccountField(password, { password = it }, R.string.account_password, true,
                 passwordFocus, submitFocus, menuFocus, state.busy, previous = loginFocus, onNext = ::submit)
             ThemeButton(stringResource(if (state.busy) R.string.account_wait else R.string.account_sign_in), ::submit,
                 Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus; up = passwordFocus },
@@ -77,7 +80,6 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
                 loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
         }
         val error = when {
-            missing -> R.string.account_required
             state.failure == AccountFailure.CREDENTIALS -> R.string.account_bad_credentials
             state.failure == AccountFailure.EXPIRED || session.expired -> R.string.account_expired
             state.failure == AccountFailure.NETWORK -> R.string.account_network_error
@@ -86,7 +88,7 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
             state.failure != null -> R.string.account_markup_error
             else -> null
         }
-        error?.let { Text(stringResource(it), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant) }
+        ShortMessageEffect(error?.let { stringResource(it) })
         if (state.failure in listOf(AccountFailure.NETWORK, AccountFailure.HTTP, AccountFailure.MARKUP, AccountFailure.STORAGE)) {
             ThemeButton(stringResource(R.string.account_check), onCheck,
                 Modifier.height(d.headerButtonSize).focusProperties { left = menuFocus }, loading = state.busy)

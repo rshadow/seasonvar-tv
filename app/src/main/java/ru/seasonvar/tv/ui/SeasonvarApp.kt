@@ -998,6 +998,11 @@ private fun CatalogPane(
         } else if (listState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) listState.scrollToItem(index)
     }
     val date = remember(state.date) { state.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) }
+    ShortMessageEffect(if (selected == null) null else when {
+        state.moreFailure != null -> stringResource(R.string.catalog_more_error)
+        state.failure != null -> stringResource(R.string.catalog_refresh_error)
+        else -> null
+    })
     val cardFrames = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { mutableIntStateOf(0) }
     val firstCard = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { listState.firstVisibleItemIndex }
     LaunchedEffect(cardFrames, layout) {
@@ -1010,8 +1015,6 @@ private fun CatalogPane(
         Row(Modifier.fillMaxWidth().heightIn(min = d.headerButtonSize),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             val status = if (selected == null) null else when {
-                state.moreFailure != null -> stringResource(R.string.catalog_more_error)
-                state.failure != null -> stringResource(R.string.catalog_refresh_error)
                 state.cached && !state.loading -> stringResource(R.string.catalog_cached)
                 else -> null
             }

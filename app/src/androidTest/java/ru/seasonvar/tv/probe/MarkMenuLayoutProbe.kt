@@ -146,6 +146,8 @@ object MarkMenuLayoutProbe {
             waitFor { focus(text(R.string.mark_list_not_watching)) }; checkGeometry(); capture("04-saving")
             update { it.copy(busy = false, failure = LoadFailure.NETWORK) }
             waitFor { focus(text(R.string.mark_list_not_watching)) }; checkGeometry(); capture("05-save-error")
+            Thread.sleep(4000)
+            checkGeometry(); capture("06-error-expired")
 
             stage("confirmation")
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER)

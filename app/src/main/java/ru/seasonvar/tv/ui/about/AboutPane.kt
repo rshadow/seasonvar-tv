@@ -40,6 +40,8 @@ import java.time.format.DateTimeFormatter
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
+import ru.seasonvar.tv.ui.showShortMessage
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.update.*
 
@@ -62,7 +64,8 @@ internal fun AboutPane(
     val c = MaterialTheme.colorScheme
     val context = LocalContext.current
     val githubUrl = stringResource(R.string.about_github_url)
-    var linkUnavailable by remember { mutableStateOf(false) }
+    ShortMessageEffect(update.failure?.let { stringResource(failureText(it)) })
+    ShortMessageEffect(if (update.notesFailed && update.notes.isNotEmpty()) stringResource(R.string.release_notes_cached) else null)
     val updateFocus = remember { FocusRequester() }
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -101,11 +104,10 @@ internal fun AboutPane(
                 Spacer(Modifier.height(d.spacingLarge))
                 ThemeButton(stringResource(R.string.about_github), onClick = {
                     onInteraction()
-                    linkUnavailable = false
                     try {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)).addCategory(Intent.CATEGORY_BROWSABLE))
-                    } catch (_: ActivityNotFoundException) { linkUnavailable = true }
-                    catch (_: SecurityException) { linkUnavailable = true }
+                    } catch (_: ActivityNotFoundException) { showShortMessage(context, R.string.about_github_unavailable) }
+                    catch (_: SecurityException) { showShortMessage(context, R.string.about_github_unavailable) }
                 }, modifier = Modifier.focusRequester(contentFocus).onFocusChanged {
                     if (it.isFocused) { installFocused = false; readingAnchor = null }
                 }.focusProperties {
@@ -116,7 +118,6 @@ internal fun AboutPane(
                 })
                 Spacer(Modifier.height(d.spacingSmall))
                 Text(githubUrl, style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-                if (linkUnavailable) Text(stringResource(R.string.about_github_unavailable), color = c.onSurfaceVariant)
                 Spacer(Modifier.height(d.spacingLarge))
                 if (update.checking) {
                     UpdateSpinner()
@@ -150,18 +151,14 @@ internal fun AboutPane(
                             down = FocusRequester.Cancel
                         })
                 }
-                update.failure?.let {
-                    Spacer(Modifier.height(d.spacingSmall))
-                    Text(stringResource(failureText(it)), color = c.onSurfaceVariant)
-                }
                 Spacer(Modifier.height(d.spacingSection))
                 Text(stringResource(R.string.release_notes_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
                 if (update.notesLoading && update.notes.isEmpty()) {
                     Spacer(Modifier.height(d.spacingSmall))
                     UpdateSpinner()
                 }
-                if (update.notesFailed) {
-                    Text(stringResource(if (update.notes.isEmpty()) R.string.release_notes_error else R.string.release_notes_cached),
+                if (update.notesFailed && update.notes.isEmpty()) {
+                    Text(stringResource(R.string.release_notes_error),
                         color = c.onSurfaceVariant)
                 } else if (!update.notesLoading && update.notes.isEmpty()) {
                     Text(stringResource(R.string.release_notes_empty), color = c.onSurfaceVariant)

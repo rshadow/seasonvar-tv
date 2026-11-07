@@ -144,7 +144,6 @@
     <string name="details_season">Сезон</string>
     <string name="details_choose_translation">Выбрать озвучку</string>
     <string name="details_choose_episode">Выбрать серию</string>
-    <string name="details_requested_episode_unavailable">Не удалось выбрать серию «%1$s» в этой озвучке. Выберите серию или другую озвучку.</string>
     <string name="details_translation_title">Перевод</string>
     <string name="details_all_episodes">Все серии</string>
     <string name="details_episodes_empty">Серии пока не добавлены</string>
@@ -274,7 +273,6 @@
     <string name="catalog_layout_grid">Сетка</string>
     <string name="catalog_layout_strip">Лента с описанием</string>
     <string name="mark_list_refresh">Обновить статус</string>
-    <string name="mark_list_request_error">Не удалось выполнить запрос. Повторите действие.</string>
     <string name="menu_smart">Для меня</string>
     <string name="smart_continue_title">Продолжить</string>
     <string name="smart_continue_hint">Продолжение по отметкам аккаунта</string>

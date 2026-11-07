@@ -50,6 +50,7 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.ui.account.accountProgressValue
 import ru.seasonvar.tv.ui.catalog.LoadFailure
@@ -80,6 +81,7 @@ internal fun SeriesDetailsPane(
     val entry = state.entry ?: sourceEntry
     val details = state.details
     val preparing = state.loading || state.entry == null
+    ShortMessageEffect(if (state.progressFailure != null) stringResource(R.string.account_progress_error) else null)
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
     val actionsMenu = remember { FocusRequester() }
@@ -225,12 +227,6 @@ internal fun SeriesDetailsPane(
                     }, icon = R.drawable.ic_more_vert)
                 }
                 SeasonProgress(state)
-                if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                state.selectionFailure?.let { failure ->
-                    Text(stringResource(R.string.details_requested_episode_unavailable, failure.requested),
-                        color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                }
                 EpisodeList(state, model, selectedEpisodeFocus, allEpisodes, menuFocus,
                     up = when {
                         (details?.translations?.size ?: 0) > 1 -> translation

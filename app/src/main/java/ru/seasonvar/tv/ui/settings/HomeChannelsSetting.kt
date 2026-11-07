@@ -38,6 +38,8 @@ import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.home.HomeChannel
 import ru.seasonvar.tv.data.home.homeChannelTitle
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
+import ru.seasonvar.tv.ui.showShortMessage
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
@@ -56,7 +58,7 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
     var open by rememberSaveable { mutableStateOf(false) }
     var pending by rememberSaveable { mutableStateOf<HomeChannel?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    ShortMessageEffect(if (open && refreshFailure) stringResource(R.string.home_refresh_error) else null)
     var pendingFocus by remember { mutableStateOf<FocusRequester?>(null) }
     val scope = rememberCoroutineScope()
     val approvals = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -93,9 +95,8 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                 .background(c.background, RoundedCornerShape(d.cardCornerRadius)).padding(d.spacingLarge),
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                 Text(stringResource(R.string.home_settings_title), style = MaterialTheme.typography.headlineMedium, color = c.onBackground)
-                if (!launcherSettings || failed || refreshFailure || refreshing) Text(stringResource(when {
+                if (!launcherSettings) Text(stringResource(when {
                     !supported -> R.string.home_unsupported
-                    failed || refreshFailure -> R.string.home_refresh_error
                     refreshing -> R.string.home_refreshing
                     else -> R.string.home_settings_hint
                 }), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
@@ -114,7 +115,7 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                             onInteraction()
                             if (!checked) home.disable(channel) else scope.launch {
                                 pendingFocus = choices.getValue(channel)
-                                busy = true; failed = false
+                                busy = true
                                 try {
                                     val id = home.enable(channel)
                                     if (!withContext(Dispatchers.IO) { home.publisher.browsable(id) }) {
@@ -122,7 +123,10 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                                         approvals.launch(Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE).putExtra(TvContract.EXTRA_CHANNEL_ID, id))
                                     }
                                 } catch (cancelled: CancellationException) { throw cancelled }
-                                catch (_: Exception) { home.disable(channel); pending = null; failed = true }
+                                catch (_: Exception) {
+                                    home.disable(channel); pending = null
+                                    showShortMessage(app, R.string.home_refresh_error)
+                                }
                                 finally {
                                     busy = false
                                     if (pending == null && open) {

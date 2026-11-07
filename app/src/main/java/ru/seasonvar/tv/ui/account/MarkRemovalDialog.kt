@@ -1,6 +1,5 @@
 package ru.seasonvar.tv.ui.account
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,9 +16,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.MaterialTheme
@@ -27,6 +24,7 @@ import androidx.tv.material3.Text
 import ru.seasonvar.tv.data.account.AccountListStatus
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
@@ -34,11 +32,8 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit, onAsk: () -> Unit,
     onConfirm: () -> Unit, onInteraction: () -> Unit, onRefresh: () -> Unit = {},
     onSelectStatus: (AccountListStatus) -> Unit = {}) {
-    val context = LocalContext.current
     val error = stringResource(if (state.stage != RemovalStage.CONFIRM) R.string.mark_list_error else R.string.mark_remove_error)
-    LaunchedEffect(state.failure, state.visible) {
-        if (!state.visible && state.failure != null) Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-    }
+    ShortMessageEffect(if (state.failure != null) error else null)
     val entry = state.entry ?: return
     if (!state.visible) return
     val d = SeasonvarTheme.dimensions
@@ -92,8 +87,6 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
             if (confirm) {
                 Text(stringResource(R.string.mark_remove_explanation), color = c.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium)
-                Text(if (state.failure != null) error else "", minLines = 2, maxLines = 2,
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                     ThemeButton(stringResource(R.string.mark_remove_cancel), onDismiss,
                         Modifier.height(d.headerButtonSize).focusRequester(first).focusProperties { left = FocusRequester.Cancel; right = second })
@@ -102,9 +95,6 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
                         loading = state.busy, actionEnabled = !state.busy, loadingLabel = stringResource(R.string.mark_removing))
                 }
             } else {
-                Text(if (state.failure != null) stringResource(R.string.mark_list_request_error) else "",
-                    Modifier.fillMaxWidth(), minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                     AccountListStatus.entries.forEachIndexed { index, option ->
