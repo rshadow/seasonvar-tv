@@ -51,7 +51,7 @@ import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.account.AccountEntryDetails
-import ru.seasonvar.tv.ui.account.AccountProgressLabel
+import ru.seasonvar.tv.ui.account.accountProgressValue
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
@@ -84,7 +84,6 @@ internal fun SeriesDetailsPane(
     val play = remember { FocusRequester() }
     val actionsMenu = remember { FocusRequester() }
     var restoreActions by remember { mutableStateOf(false) }
-    var actionHint by remember { mutableStateOf<String?>(null) }
     val canOpenActions = !preparing && onActions != null
     val season = remember { FocusRequester() }
     val translation = remember { FocusRequester() }
@@ -214,36 +213,23 @@ internal fun SeriesDetailsPane(
                                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
-                    val menuHint = stringResource(R.string.series_actions_menu)
-                    if (canOpenActions) ThemeButton(menuHint, {
+                    if (canOpenActions) ThemeButton(stringResource(R.string.series_actions_menu), {
                         onInteraction(); restoreActions = true
                         onActions?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
                             episodeId = state.episode?.id, episodeLabel = state.episode?.label,
                             translationId = state.translationId, translationLabel = state.translation?.label)))
-                    }, Modifier.then(actionScrolling).focusRequester(actionsMenu).onFocusChanged {
-                        if (it.isFocused) actionHint = menuHint else if (actionHint == menuHint) actionHint = null
-                    }.focusProperties {
+                    }, Modifier.then(actionScrolling).focusRequester(actionsMenu).focusProperties {
                         up = FocusRequester.Cancel; right = FocusRequester.Cancel
                         left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                     }, icon = R.drawable.ic_more_vert)
-                    AccountProgressLabel(entry, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight())
                 }
-                if (onActions != null) Text(actionHint.orEmpty(), Modifier.heightIn(min = d.spacingMedium),
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                SeasonProgress(state)
                 if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 state.selectionFailure?.let { failure ->
                     Text(stringResource(R.string.details_requested_episode_unavailable, failure.requested),
                         color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                }
-                state.resume?.let { resume ->
-                    val label = details?.takeIf { it.entry.id == resume.seasonId }?.translations
-                        ?.firstOrNull { it.id == resume.translationId }?.episodes
-                        ?.firstOrNull { it.id == resume.episodeId }?.label
-                    if (label != null) Text(stringResource(R.string.details_resume, label,
-                        "%d:%02d".format(resume.positionMillis / 60000, resume.positionMillis / 1000 % 60)),
-                        color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
                 EpisodeList(state, model, selectedEpisodeFocus, allEpisodes, menuFocus,
                     up = when {
@@ -306,13 +292,37 @@ internal fun SeriesDetailsPane(
                             items(episodes, key = { it.id }) { episode ->
                                 ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                                     Modifier.height(d.headerButtonSize).then(if (episode.id == state.episodeId) Modifier.focusRequester(focus) else Modifier),
-                                    active = episode.id == state.episodeId)
+                                    active = episode.id == state.episodeId, contentAlignment = Alignment.Center)
                             }
                         }
                         LaunchedEffect(Unit) { repeat(2) { withFrameNanos { } }; focus.requestFocus() }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SeasonProgress(state: DetailsUiState) {
+    val entry = state.entry ?: return
+    val progress = accountProgressValue(entry, compact = true)
+    val resume = state.seasonResume?.takeIf { it.seasonId == entry.id && it.positionMillis > 0 }
+    val translation = state.details?.translations?.firstOrNull { it.id == resume?.translationId }
+    val episode = translation?.episodes?.firstOrNull { it.id == resume?.episodeId }
+    if (progress == null && episode == null) return
+    val d = SeasonvarTheme.dimensions
+    val c = MaterialTheme.colorScheme
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium),
+        verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+        if (progress != null) Text(stringResource(R.string.account_mark_progress, progress),
+            style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
+        if (resume != null && episode != null) {
+            val stopped = stringResource(R.string.details_stopped_at, episode.label,
+                "%02d:%02d".format(resume.positionMillis / 60000, resume.positionMillis / 1000 % 60))
+            val voice = translation.takeIf { it.id != state.translationId }?.label
+            Text(listOfNotNull(stopped, voice).joinToString(" · "),
+                style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
         }
     }
 }
@@ -382,7 +392,6 @@ private fun EpisodeList(
     val c = MaterialTheme.colorScheme
     val showAllEpisodes = (state.episodes?.size ?: 0) > SeasonvarTheme.allEpisodesThreshold
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-        Text(stringResource(R.string.details_episodes), color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         key(state.entry?.id, state.translationId) {
             val episodes = state.episodes
             val list = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -395,8 +404,7 @@ private fun EpisodeList(
                     horizontalArrangement = Arrangement.spacedBy(d.spacingSmall), contentPadding = PaddingValues(d.focusBorderWidth)) {
                     itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
                         ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
-                            modifier = Modifier.widthIn(min = d.episodeWidth).height(d.headerButtonSize)
-
+                            modifier = Modifier.widthIn(min = d.episodeWidth).width(IntrinsicSize.Max).height(d.headerButtonSize)
                                 .then(if (episode.id == state.episodeId) Modifier.focusRequester(selectedFocus) else Modifier)
                                 .onFocusChanged { if (it.isFocused) model.selectEpisode(episode.id) }
                                 .onPreviewKeyEvent {
@@ -412,7 +420,7 @@ private fun EpisodeList(
                                     if (index == episodes.lastIndex) right = FocusRequester.Cancel
                                     this.up = up
                                     down = if (showAllEpisodes) allFocus else FocusRequester.Cancel
-                                }, active = state.episodeId == episode.id)
+                                }, active = state.episodeId == episode.id, contentAlignment = Alignment.Center)
                     }
                 }
             } else Text(if (preparing) stringResource(R.string.description_loading)
@@ -421,7 +429,7 @@ private fun EpisodeList(
                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }
         if (showAllEpisodes) ThemeButton(stringResource(R.string.details_all_episodes), onAllEpisodes,
-            Modifier.height(d.headerButtonSize).then(allModifier).focusRequester(allFocus)
+            Modifier.width(IntrinsicSize.Max).height(d.headerButtonSize).then(allModifier).focusRequester(allFocus)
                 .onPreviewKeyEvent {
                     if (it.type != KeyEventType.KeyDown) false else when (it.key) {
                         Key.DirectionDown -> onReadDescription(true)
@@ -432,7 +440,7 @@ private fun EpisodeList(
                 .focusProperties {
                     left = menuFocus; right = FocusRequester.Cancel
                     this.up = selectedFocus; down = FocusRequester.Cancel
-                })
+                }, contentAlignment = Alignment.Center)
     }
 }
 

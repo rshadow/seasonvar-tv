@@ -2,7 +2,7 @@
 
 Дата: 2026-11-06
 
-Статус: Принято
+Статус: видимая подпись в карточке пересмотрена в [ADR-0111](0111-season-progress-below-controls.md); остальные решения приняты.
 
 Уточняет [ADR-0081](0081-account-list-status-actions.md), [ADR-0087](0087-flat-long-press-actions.md) и [ADR-0088](0088-stable-mark-menu-loading.md).
 
