@@ -344,7 +344,8 @@ class PlayerActivity : ComponentActivity() {
         val selected = request ?: return
         if (!ready) return
         val position = if (player.playbackState == Player.STATE_ENDED) 0L else player.currentPosition.coerceAtLeast(0)
-        container.playbackProgress.save(ResumePoint(selected.seasonId, selected.translationId, selected.episodeId, position))
+        container.playbackProgress.save(ResumePoint(selected.seasonId, selected.translationId, selected.episodeId, position),
+            completed = player.playbackState == Player.STATE_ENDED)
         trace("saved positionMs=" + position)
         sampleAccountMark(event)
     }
@@ -460,6 +461,7 @@ class PlayerActivity : ComponentActivity() {
         resolveJob?.cancel()
         releasePlayback()
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        container.homeChannels.requestRefresh()
         super.onStop()
     }
 

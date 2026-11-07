@@ -38,6 +38,9 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val smartContinueCache by lazy { ru.seasonvar.tv.data.smart.PreferencesSmartContinueCache(this) }
     val accountMarks by lazy { ru.seasonvar.tv.data.playback.AccountMarkWriter(applicationScope, account,
         ru.seasonvar.tv.data.playback.PreferencesMarkOutbox(this)) }
+    val homeChannels by lazy { ru.seasonvar.tv.data.home.HomeChannels(this, applicationScope) }
+
+    override fun onCreate() { super.onCreate(); homeChannels.start() }
 
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this).callFactory(siteClient).build()

@@ -32,9 +32,15 @@ object PlayerAutoNextProbe {
         val app = targetContext.applicationContext as SeasonvarApplication
         val preferences = targetContext.getSharedPreferences("playback-progress", Context.MODE_PRIVATE)
         val originalProgress = linkedMapOf<String, String?>()
+        val originalTimes = linkedMapOf<String, Long?>()
+        val originalCompleted = linkedMapOf<String, Boolean?>()
         fun rememberProgress(id: String) {
             val key = "season-$id"
             if (key !in originalProgress) originalProgress[key] = preferences.getString(key, null)
+            if (id !in originalTimes) {
+                originalTimes[id] = if (preferences.contains("updated-$id")) preferences.getLong("updated-$id", 0) else null
+                originalCompleted[id] = if (preferences.contains("completed-$id")) preferences.getBoolean("completed-$id", false) else null
+            }
         }
         var activity: PlayerActivity? = null
         val originalEnabled = app.interfaceSettings.autoNextEnabled.value
@@ -247,6 +253,10 @@ object PlayerAutoNextProbe {
             originalProgress.forEach { (name, value) ->
                 preferences.edit().apply { if (value == null) remove(name) else putString(name, value) }.commit()
             }
+            preferences.edit().apply {
+                originalTimes.forEach { (id, value) -> if (value == null) remove("updated-$id") else putLong("updated-$id", value) }
+                originalCompleted.forEach { (id, value) -> if (value == null) remove("completed-$id") else putBoolean("completed-$id", value) }
+            }.commit()
             result.putBoolean("position_restored", originalProgress.all { (name, value) -> preferences.getString(name, null) == value })
             main {
                 app.interfaceSettings.setAutoNextEnabled(originalEnabled)
