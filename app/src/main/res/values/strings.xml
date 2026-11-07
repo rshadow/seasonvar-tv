@@ -4,6 +4,8 @@
     <string name="home_settings_description">Подборки Seasonvar на домашнем экране Android TV.</string>
     <string name="home_settings_count">%1$d из 3</string>
     <string name="home_settings_hint">Выберите ленты. Android может запросить подтверждение добавления. Порядок и видимость меняются на домашнем экране.</string>
+    <string name="home_settings_external_value">В настройках устройства</string>
+    <string name="home_settings_external_help">Включайте и скрывайте ленты в настройках каналов домашнего экрана устройства.</string>
     <string name="home_continue">Продолжить</string>
     <string name="home_want">Хочу посмотреть</string>
     <string name="home_newest">Новинки</string>

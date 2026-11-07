@@ -3,6 +3,7 @@ package ru.seasonvar.tv.data.home
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.ComponentName
+import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
@@ -18,6 +19,8 @@ import java.time.LocalDate
 class HomeChannels(private val app: SeasonvarApplication, private val scope: CoroutineScope) {
     val store = HomeStore(app)
     val publisher = HomePublisher(app, store)
+    val usesLauncherSettings get() = publisher.supported && !publisher.canRequestBrowsing
+    private fun selectedChannels() = if (usesLauncherSettings) HomeChannel.entries.toSet() else store.enabled.value
     private val mutex = Mutex()
     private val restoreMutex = Mutex()
     private val requests = MutableStateFlow(0L)
@@ -33,14 +36,17 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
                 .collectLatest {
                     try { schedule(); refresh() }
                     catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { mutableFailure.value = true }
+                    catch (error: Exception) {
+                        mutableFailure.value = true
+                        Log.w("SeasonvarHome", "refresh_failed reason=" + error.javaClass.simpleName)
+                    }
                 }
         }
     }
     fun requestRefresh() { requests.value += 1 }
     private fun schedule() {
         val scheduler = app.getSystemService(JobScheduler::class.java)
-        if (store.enabled.value.isEmpty()) scheduler.cancel(JOB_ID)
+        if (selectedChannels().isEmpty()) scheduler.cancel(JOB_ID)
         else if (scheduler.getPendingJob(JOB_ID) == null) scheduler.schedule(JobInfo.Builder(JOB_ID,
             ComponentName(app, HomeRefreshJob::class.java)).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
             .setPeriodic(6 * 60 * 60 * 1000L).setPersisted(true).build())
@@ -55,7 +61,8 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
 
     suspend fun refresh() = withContext(Dispatchers.IO) { mutex.withLock {
         if (!publisher.supported) return@withLock
-        val enabled = store.enabled.value
+        if (usesLauncherSettings) publisher.registerForLauncher()
+        val enabled = selectedChannels()
         HomeChannel.entries.filter { it !in enabled }.forEach(publisher::clear)
         val needsAccount = enabled.any { it.personal }
         if (needsAccount) restoreAccountIfNeeded()
@@ -81,11 +88,14 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
                         HomeChannel.NEWEST -> app.repository.load(LocalDate.now(), PublicFeed.NEWEST).entries
                     }
                     ensureActive()
-                    fun valid() = store.enabled.value == enabled && app.account.session.value == session
+                    fun valid() = selectedChannels() == enabled && app.account.session.value == session
                     if (!valid()) throw CancellationException()
                     publisher.publish(channel, entries, owner, ::valid)
                 } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { mutableFailure.value = true }
+                catch (error: Exception) {
+                    mutableFailure.value = true
+                    Log.w("SeasonvarHome", "refresh_failed channel=" + channel.storageId + " reason=" + error.javaClass.simpleName)
+                }
             }
             publisher.prunePosters()
         } finally { mutableRefreshing.value = false }
@@ -94,13 +104,13 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
 
     suspend fun open(token: String): ru.seasonvar.tv.data.playback.PlaybackRequest = withContext(Dispatchers.IO) {
         val card = store.read(token) ?: throw HomePlaybackUnavailable()
-        if (card.channel !in store.enabled.value || token !in publisher.programs(card.channel)) throw HomePlaybackUnavailable()
+        if (card.channel !in selectedChannels() || token !in publisher.programs(card.channel)) throw HomePlaybackUnavailable()
         restoreAccountIfNeeded()
         val session = app.account.session.value
         if (card.channel.personal && (card.owner == null || card.owner != session.user?.id)) throw HomePlaybackUnavailable()
         val request = resolver().resolve(card.entry)
         ensureActive()
-        if (app.account.session.value != session || card.channel !in store.enabled.value || store.read(token) != card)
+        if (app.account.session.value != session || card.channel !in selectedChannels() || store.read(token) != card)
             throw HomePlaybackUnavailable()
         request
     }

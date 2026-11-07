@@ -50,7 +50,7 @@ ACCOUNT_MARK_RUNNER := $(shell python3 -c 'import json; print(json.load(open("to
 
 .PHONY: emulator-display smart-continue-probe mark-menu-probe status-probe player-probe update-restore update-test update-fixture update-probe update-preview check-resolved-dependencies check-build-crypto dependency-report build-environment wrapper help bootstrap licenses doctor deps build release release-dev release-package ci-prepare ci-lint test lint check clean devices avd emulator emulator-stop emulator-restart install install-apk run restart logs debug attach key key-double tap screenshot layout site-fetch site-test site-styles site-scripts site-updates site-top site-newest site-best site-announcements site-search text build-profile run-profile profile-navigation emulator-network-delay site-video-probe account-test mark-probe ci-tools ci-export-env codeql-build
 
-.PHONY: home-probe
+.PHONY: home-probe home-platform
 
 help:
 	@printf '%s\n' \
@@ -81,6 +81,7 @@ help:
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
 		'make home-probe             Verify home channels, links and video in emulator; inspect frames' \
+		'make home-platform          Inspect launcher and channel approval support on DEVICE' \
 		'make update-test            Run offline update tests' \
 		'make update-probe           Check live GitHub metadata and APK integrity in emulator' \
 		'make update-restore         Restore normal test build after an update preview (emulator only)' \
@@ -389,6 +390,11 @@ update-restore:
 	$(MAKE) devices
 	$(MAKE) build
 	$(ADB) install -r -d "$(APK)"
+
+home-platform:
+	$(MAKE) devices
+	$(ADB) shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+	$(ADB) shell cmd package resolve-activity --brief -a android.media.tv.action.REQUEST_CHANNEL_BROWSABLE
 
 home-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for home channel verification.' >&2; exit 1;; esac

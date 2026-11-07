@@ -9,6 +9,9 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <queries>
         <provider android:authorities="android.media.tv" />
+        <intent>
+            <action android:name="android.media.tv.action.REQUEST_CHANNEL_BROWSABLE" />
+        </intent>
     </queries>
 
     <application

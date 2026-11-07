@@ -29,6 +29,19 @@ fun homeChannelTitle(channel: HomeChannel): Int = when (channel) {
 class HomePublisher(private val context: Context, private val store: HomeStore) {
     private val resolver get() = context.contentResolver
     val supported get() = context.packageManager.resolveContentProvider(TvContract.AUTHORITY, 0) != null
+    val canRequestBrowsing get() = context.packageManager.resolveActivity(Intent(TvContract.ACTION_REQUEST_CHANNEL_BROWSABLE), 0) != null
+
+    fun registerForLauncher() {
+        val flags = context.getSharedPreferences("home-channel-platform", Context.MODE_PRIVATE)
+        val existing = channels()
+        for (channel in HomeChannel.entries) {
+            val key = "registered-native-" + channel.storageId
+            if (!flags.getBoolean(key, false)) {
+                if (channel !in existing) prepare(channel, requestDefault = false)
+                flags.edit().putBoolean(key, true).commit()
+            }
+        }
+    }
 
     fun channels(): Map<HomeChannel, Long> {
         val result = mutableMapOf<HomeChannel, Long>()
@@ -42,7 +55,9 @@ class HomePublisher(private val context: Context, private val store: HomeStore) 
         return result
     }
 
-    fun prepare(channel: HomeChannel): Long {
+    fun prepare(channel: HomeChannel): Long = prepare(channel, requestDefault = true)
+
+    private fun prepare(channel: HomeChannel, requestDefault: Boolean): Long {
         check(supported)
         channels()[channel]?.let {
             resolver.update(TvContract.buildChannelUri(it), ContentValues().apply {
@@ -65,7 +80,7 @@ class HomePublisher(private val context: Context, private val store: HomeStore) 
         resolver.openOutputStream(TvContract.buildChannelLogoUri(id))?.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
         val flags = context.getSharedPreferences("home-channel-platform", Context.MODE_PRIVATE)
-        if (existing.isEmpty() && !flags.getBoolean("created", false)) TvContract.requestChannelBrowsable(context, id)
+        if (requestDefault && existing.isEmpty() && !flags.getBoolean("created", false)) TvContract.requestChannelBrowsable(context, id)
         flags.edit().putBoolean("created", true).apply()
         return id
     }

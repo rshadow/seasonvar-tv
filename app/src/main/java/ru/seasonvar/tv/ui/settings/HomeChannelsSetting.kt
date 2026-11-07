@@ -65,6 +65,7 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
         scope.launch { repeat(2) { withFrameNanos { } }; if (open) pendingFocus?.requestFocus() }
     }
     val supported = remember { home.publisher.supported }
+    val launcherSettings = remember { home.usesLauncherSettings }
     Row(Modifier.fillMaxWidth().focusRequester(focus)
         .focusProperties { left = menuFocus; up = previousFocus; down = nextFocus }
         .onFocusChanged { focused = it.isFocused }
@@ -77,12 +78,13 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
             Text(stringResource(R.string.home_settings_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
         }
         Spacer(Modifier.width(d.spacingMedium))
-        Text(stringResource(R.string.home_settings_count, enabled.size), style = MaterialTheme.typography.bodyLarge, color = c.primary)
+        Text(if (launcherSettings) stringResource(R.string.home_settings_external_value)
+            else stringResource(R.string.home_settings_count, enabled.size), style = MaterialTheme.typography.bodyLarge, color = c.primary)
     }
     if (open) {
         val choices = remember { HomeChannel.entries.associateWith { FocusRequester() } }
         val done = remember { FocusRequester() }
-        val available = HomeChannel.entries.filter { supported && (!it.personal || account.user != null || it in enabled) }
+        val available = HomeChannel.entries.filter { supported && !launcherSettings && (!it.personal || account.user != null || it in enabled) }
         fun close() { open = false; scope.launch { repeat(2) { withFrameNanos { } }; focus.requestFocus() } }
         Dialog(onDismissRequest = { open = false; onClose() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             BackHandler { open = false; onBack() }
@@ -91,7 +93,7 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                 .background(c.background, RoundedCornerShape(d.cardCornerRadius)).padding(d.spacingLarge),
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                 Text(stringResource(R.string.home_settings_title), style = MaterialTheme.typography.headlineMedium, color = c.onBackground)
-                Text(stringResource(when {
+                if (!launcherSettings || failed || refreshFailure || refreshing) Text(stringResource(when {
                     !supported -> R.string.home_unsupported
                     failed || refreshFailure -> R.string.home_refresh_error
                     refreshing -> R.string.home_refreshing
@@ -108,7 +110,7 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                             down = available.getOrNull(index + 1)?.let(choices::getValue) ?: done
                         }.onFocusChanged { rowFocused = it.isFocused }
                         .border(d.focusBorderWidth, if (rowFocused) c.primary else Color.Transparent, RoundedCornerShape(d.cardCornerRadius))
-                        .toggleable(channel in enabled, enabled = channel in available && !busy && pending == null, role = Role.Checkbox) { checked ->
+                        .toggleable(!launcherSettings && channel in enabled, enabled = channel in available && !busy && pending == null, role = Role.Checkbox) { checked ->
                             onInteraction()
                             if (!checked) home.disable(channel) else scope.launch {
                                 pendingFocus = choices.getValue(channel)
@@ -129,17 +131,20 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                                     }
                                 }
                             }
-                        }.padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
+                        }.padding(horizontal = d.spacingMedium, vertical = if (launcherSettings) d.spacingSmall else d.spacingMedium),
+                        verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(homeChannelTitle(channel)), style = MaterialTheme.typography.titleLarge,
                                 color = if (channel in available) c.onBackground else c.onSurfaceVariant)
                             if (channel.personal && account.user == null) Text(stringResource(R.string.home_login_required),
                                 style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
                         }
-                        Checkbox(channel in enabled, onCheckedChange = null, enabled = channel in available)
+                        Checkbox(!launcherSettings && channel in enabled, onCheckedChange = null, enabled = channel in available)
                     }
                 }
                 }
+                if (launcherSettings) Text(stringResource(R.string.home_settings_external_help),
+                    style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
                 ThemeButton(stringResource(R.string.menu_visibility_done), { onInteraction(); close() },
                     Modifier.fillMaxWidth().focusRequester(done).focusProperties {
                         up = available.lastOrNull()?.let(choices::getValue) ?: FocusRequester.Cancel; down = FocusRequester.Cancel
