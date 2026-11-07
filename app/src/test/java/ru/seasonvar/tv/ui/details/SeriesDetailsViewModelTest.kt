@@ -46,6 +46,39 @@ class SeriesDetailsViewModelTest {
         assertNull(model.state.value.resume)
     }
 
+    @Test fun unavailable_range_keeps_the_error_until_a_real_episode_receives_focus() = runTest(dispatcher) {
+        val model = SeriesDetailsViewModel {
+            details(it).copy(translations = listOf(Translation("0", "Стандартный",
+                (1..8).map { number -> Episode("${number}_seriya", number.toString()) })))
+        }
+        model.open(entry().copy(initialSelection = EntrySelection(episodeLabel = "5-8")))
+        advanceUntilIdle()
+        assertEquals("5-8", model.state.value.selectionFailure!!.requested)
+        assertNull(model.state.value.episodeId)
+        assertNull(model.playbackRequest())
+        assertEquals("1_seriya", model.state.value.episodeFocusId)
+        model.selectEpisode(model.state.value.episodeFocusId!!)
+        assertNull(model.state.value.selectionFailure)
+        assertEquals("1_seriya", model.playbackRequest()!!.episodeId)
+        assertNull(model.playbackRequest()!!.resumePositionMillis)
+    }
+
+    @Test fun focus_uses_the_selected_episode_but_does_not_invent_an_empty_or_blocked_target() = runTest(dispatcher) {
+        val point = ResumePoint("1", "0", "2_seriya", 45000)
+        val model = SeriesDetailsViewModel(loadResume = { point }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        assertEquals("2_seriya", model.state.value.episodeFocusId)
+        model.selectEpisode("1_seriya")
+        assertEquals("1_seriya", model.state.value.episodeFocusId)
+        for (page in listOf(details(entry()).copy(playbackUnavailableReason = "Недоступно"),
+            details(entry()).copy(translations = listOf(Translation("0", "Стандартный", emptyList()))))) {
+            val unavailable = SeriesDetailsViewModel { page }
+            unavailable.open(entry()); advanceUntilIdle()
+            assertNull(unavailable.state.value.episodeFocusId)
+            assertNull(unavailable.playbackRequest())
+        }
+    }
+
     @Test fun translation_preserves_episode_label_or_falls_back_to_first_available() = runTest(dispatcher) {
         val model = SeriesDetailsViewModel { details(it) }
         model.open(entry()); advanceUntilIdle()
@@ -308,10 +341,12 @@ class SeriesDetailsViewModelTest {
         val model = SeriesDetailsViewModel(loadAccountProgress = { pending.await() }) { details(it) }
         model.open(entry()); runCurrent()
         assertFalse(model.state.value.loading)
+        assertTrue(model.state.value.progressLoading)
         assertTrue(model.state.value.canPlay)
         model.selectEpisode("2_seriya")
         val progress = AccountProgress(ProgressCounter(2, 5), SeasonEpisodeProgress("1", ProgressCounter(3, 10)))
         pending.complete(progress); advanceUntilIdle()
+        assertFalse(model.state.value.progressLoading)
         assertEquals("2_seriya", model.state.value.episodeId)
         assertEquals(progress, model.state.value.entry!!.accountProgress)
         assertEquals(progress, model.state.value.details!!.entry.accountProgress)
@@ -321,6 +356,7 @@ class SeriesDetailsViewModelTest {
         model.open(entry()); advanceUntilIdle()
         assertTrue(model.state.value.canPlay)
         assertEquals(LoadFailure.NETWORK, model.state.value.progressFailure)
+        assertFalse(model.state.value.progressLoading)
         assertNull(model.state.value.entry!!.accountProgress)
     }
     @Test fun season_change_clears_the_previous_mark_until_new_progress_arrives() = runTest(dispatcher) {
@@ -330,10 +366,26 @@ class SeriesDetailsViewModelTest {
             else pending.await()
         }) { details(it) }
         model.open(entry()); advanceUntilIdle(); model.selectSeason("2"); runCurrent()
+        assertTrue(model.state.value.progressLoading)
         assertNull(model.state.value.entry!!.accountProgress)
         pending.complete(AccountProgress(ProgressCounter(2, 5), SeasonEpisodeProgress("2", ProgressCounter(1, 8))))
         advanceUntilIdle()
+        assertFalse(model.state.value.progressLoading)
         assertEquals("2", model.state.value.entry!!.accountProgress!!.episodes!!.seasonId)
+    }
+    @Test fun missing_account_progress_finishes_loading_without_inventing_a_counter() = runTest(dispatcher) {
+        val page = kotlinx.coroutines.CompletableDeferred<SeriesDetails>()
+        val progress = kotlinx.coroutines.CompletableDeferred<AccountProgress?>()
+        val model = SeriesDetailsViewModel(loadAccountProgress = { progress.await() }) { page.await() }
+        model.open(entry())
+        assertTrue(model.state.value.progressLoading)
+        page.complete(details(entry())); runCurrent()
+        assertFalse(model.state.value.loading)
+        assertTrue(model.state.value.progressLoading)
+        progress.complete(null); advanceUntilIdle()
+        assertFalse(model.state.value.progressLoading)
+        assertNull(model.state.value.progressFailure)
+        assertNull(model.state.value.entry!!.accountProgress)
     }
     @Test fun old_progress_cannot_overwrite_another_record_or_restore_a_closed_card() = runTest(dispatcher) {
         val model = SeriesDetailsViewModel(loadAccountProgress = { d ->

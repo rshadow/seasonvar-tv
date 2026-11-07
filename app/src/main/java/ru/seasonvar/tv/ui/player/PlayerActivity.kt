@@ -54,6 +54,7 @@ import kotlinx.coroutines.yield
 import ru.seasonvar.tv.diagnostics.failureSummary
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.ResumePoint
 import ru.seasonvar.tv.data.SiteHttpException
@@ -123,6 +124,14 @@ class PlayerActivity : ComponentActivity() {
                 val markSync by container.accountMarks.state.collectAsStateWithLifecycle()
                 val accountSession by container.account.session.collectAsStateWithLifecycle()
                 val clockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
+                val syncMessage = when {
+                    accountSession.expired -> R.string.account_expired
+                    markSync.owner != markOwner(accountSession.user) -> null
+                    markSync.phase == MarkSyncPhase.RETRYING -> R.string.player_progress_sync_retry
+                    markSync.phase == MarkSyncPhase.FAILED -> R.string.player_progress_sync_error
+                    else -> null
+                }
+                ShortMessageEffect(syncMessage?.let { stringResource(it) })
                 val retry = remember { FocusRequester() }
                 val surface = remember { FocusRequester() }
                 val cancelNext = remember { FocusRequester() }
@@ -189,18 +198,6 @@ class PlayerActivity : ComponentActivity() {
                                 PlayerClock(clockPosition, Modifier.alignByBaseline())
                             }
                             if (clockPosition == PlayerClockPosition.CENTER) Spacer(Modifier.weight(1f))
-                        }
-                        if (titleVisible) {
-                            val syncMessage = when {
-                                accountSession.expired -> R.string.account_expired
-                                markSync.owner != markOwner(accountSession.user) -> null
-                                markSync.phase == MarkSyncPhase.RETRYING -> R.string.player_progress_sync_retry
-                                markSync.phase == MarkSyncPhase.FAILED -> R.string.player_progress_sync_error
-                                else -> null
-                            }
-                            if (syncMessage != null) Text(stringResource(syncMessage),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     if (completionVisible) {

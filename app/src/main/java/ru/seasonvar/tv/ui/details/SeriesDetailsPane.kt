@@ -50,6 +50,7 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.ui.account.accountProgressValue
 import ru.seasonvar.tv.ui.catalog.LoadFailure
@@ -80,6 +81,7 @@ internal fun SeriesDetailsPane(
     val entry = state.entry ?: sourceEntry
     val details = state.details
     val preparing = state.loading || state.entry == null
+    ShortMessageEffect(if (state.progressFailure != null) stringResource(R.string.account_progress_error) else null)
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
     val actionsMenu = remember { FocusRequester() }
@@ -224,13 +226,7 @@ internal fun SeriesDetailsPane(
                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                     }, icon = R.drawable.ic_more_vert)
                 }
-                SeasonProgress(state)
-                if (state.progressFailure != null) Text(stringResource(R.string.account_progress_error),
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                state.selectionFailure?.let { failure ->
-                    Text(stringResource(R.string.details_requested_episode_unavailable, failure.requested),
-                        color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                }
+                SeasonProgress(state, entry)
                 EpisodeList(state, model, selectedEpisodeFocus, allEpisodes, menuFocus,
                     up = when {
                         (details?.translations?.size ?: 0) > 1 -> translation
@@ -284,18 +280,24 @@ internal fun SeriesDetailsPane(
                     DetailsDialog.EPISODES -> {
                         val focus = remember { FocusRequester() }
                         val episodes = state.episodes.orEmpty()
+                        val focusId = state.episodeFocusId
                         val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
-                            initialFirstVisibleItemIndex = episodes.indexOfFirst { it.id == state.episodeId }.coerceAtLeast(0))
+                            initialFirstVisibleItemIndex = episodes.indexOfFirst { it.id == focusId }.coerceAtLeast(0))
+                        if (episodes.isEmpty()) Text(stringResource(if (state.episodes == null)
+                            R.string.details_episodes_unavailable else R.string.details_episodes_empty),
+                            color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         LazyVerticalGrid(GridCells.Adaptive(d.episodeWidth), state = grid,
                             horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
                             verticalArrangement = Arrangement.spacedBy(d.spacingSmall), contentPadding = PaddingValues(d.focusBorderWidth)) {
                             items(episodes, key = { it.id }) { episode ->
                                 ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
-                                    Modifier.height(d.headerButtonSize).then(if (episode.id == state.episodeId) Modifier.focusRequester(focus) else Modifier),
+                                    Modifier.height(d.headerButtonSize).then(if (episode.id == focusId) Modifier.focusRequester(focus) else Modifier),
                                     active = episode.id == state.episodeId, contentAlignment = Alignment.Center)
                             }
                         }
-                        LaunchedEffect(Unit) { repeat(2) { withFrameNanos { } }; focus.requestFocus() }
+                        LaunchedEffect(focusId) {
+                            if (focusId != null) { repeat(2) { withFrameNanos { } }; focus.requestFocus() }
+                        }
                     }
                 }
             }
@@ -304,18 +306,19 @@ internal fun SeriesDetailsPane(
 }
 
 @Composable
-private fun SeasonProgress(state: DetailsUiState) {
-    val entry = state.entry ?: return
-    val progress = accountProgressValue(entry, compact = true)
+internal fun SeasonProgress(state: DetailsUiState, entry: SeriesEntry) {
+    val progress = accountProgressValue(entry, compact = true) ?: stringResource(when {
+        state.entry == null || state.loading || state.progressLoading -> R.string.details_progress_loading
+        else -> R.string.details_progress_unknown
+    })
     val resume = state.seasonResume?.takeIf { it.seasonId == entry.id && it.positionMillis > 0 }
     val translation = state.details?.translations?.firstOrNull { it.id == resume?.translationId }
     val episode = translation?.episodes?.firstOrNull { it.id == resume?.episodeId }
-    if (progress == null && episode == null) return
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium),
         verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-        if (progress != null) Text(stringResource(R.string.account_mark_progress, progress),
+        Text(stringResource(R.string.account_mark_progress, progress),
             style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
         if (resume != null && episode != null) {
             val stopped = stringResource(R.string.details_stopped_at, episode.label,
@@ -394,9 +397,11 @@ private fun EpisodeList(
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
         key(state.entry?.id, state.translationId) {
             val episodes = state.episodes
-            val list = androidx.compose.foundation.lazy.rememberLazyListState()
-            LaunchedEffect(state.episodeId) {
-                val index = episodes?.indexOfFirst { it.id == state.episodeId } ?: -1
+            val focusId = state.episodeFocusId
+            val list = androidx.compose.foundation.lazy.rememberLazyListState(
+                initialFirstVisibleItemIndex = episodes?.indexOfFirst { it.id == focusId }?.coerceAtLeast(0) ?: 0)
+            LaunchedEffect(focusId) {
+                val index = episodes?.indexOfFirst { it.id == focusId } ?: -1
                 if (index >= 0 && list.layoutInfo.visibleItemsInfo.none { it.index == index }) list.scrollToItem(index)
             }
             if (!episodes.isNullOrEmpty()) {
@@ -405,7 +410,7 @@ private fun EpisodeList(
                     itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
                         ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                             modifier = Modifier.widthIn(min = d.episodeWidth).width(IntrinsicSize.Max).height(d.headerButtonSize)
-                                .then(if (episode.id == state.episodeId) Modifier.focusRequester(selectedFocus) else Modifier)
+                                .then(if (episode.id == focusId) Modifier.focusRequester(selectedFocus) else Modifier)
                                 .onFocusChanged { if (it.isFocused) model.selectEpisode(episode.id) }
                                 .onPreviewKeyEvent {
                                     if (showAllEpisodes || it.type != KeyEventType.KeyDown) false

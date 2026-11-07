@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -34,6 +35,8 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.ShortMessageEffect
+import ru.seasonvar.tv.ui.showShortMessage
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import java.util.Locale
 
@@ -61,15 +64,16 @@ internal fun SearchControls(
     val microphoneFocus = remember { FocusRequester() }
     var handledEditRequest by remember { mutableIntStateOf(0) }
     var focused by remember { mutableStateOf(false) }
-    var voiceMessage by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
+    ShortMessageEffect(if (historyFailed) stringResource(R.string.search_history_error) else null)
     val title = stringResource(R.string.search_title)
     val prompt = stringResource(R.string.search_voice_prompt)
     val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
             ?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
         if (result.resultCode == Activity.RESULT_OK) {
-            if (text != null) { onQuery(text); onCommit(); voiceMessage = null }
-            else voiceMessage = R.string.search_voice_failed
+            if (text != null) { onQuery(text); onCommit() }
+            else showShortMessage(context, R.string.search_voice_failed)
         }
         inputMode.requestInputMode(InputMode.Keyboard)
         microphoneFocus.requestFocus()
@@ -92,7 +96,6 @@ internal fun SearchControls(
                 stringResource(R.string.search_voice),
                 onClick = {
                     keyboard?.hide()
-                    voiceMessage = null
                     try {
                         voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -101,9 +104,9 @@ internal fun SearchControls(
                             putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
                         })
                     } catch (_: ActivityNotFoundException) {
-                        voiceMessage = R.string.search_voice_unavailable
+                        showShortMessage(context, R.string.search_voice_unavailable)
                     } catch (_: SecurityException) {
-                        voiceMessage = R.string.search_voice_unavailable
+                        showShortMessage(context, R.string.search_voice_unavailable)
                     }
                 },
                 modifier = Modifier.focusRequester(microphoneFocus)
@@ -117,7 +120,7 @@ internal fun SearchControls(
             )
             BasicTextField(
                 value = query,
-                onValueChange = { voiceMessage = null; onQuery(it) },
+                onValueChange = onQuery,
                 modifier = Modifier.weight(1f).height(d.navigationButtonHeight)
                     .focusRequester(inputFocus)
                     .focusProperties { left = microphoneFocus }
@@ -156,9 +159,5 @@ internal fun SearchControls(
                 },
             )
         }
-        if (historyFailed) Text(stringResource(R.string.search_history_error), color = c.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall)
-        voiceMessage?.let { Text(stringResource(it), color = c.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall) }
     }
 }

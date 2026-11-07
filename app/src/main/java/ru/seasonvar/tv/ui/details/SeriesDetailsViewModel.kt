@@ -26,6 +26,7 @@ data class DetailsUiState(
     val seasonResume: ResumePoint? = null,
     val selectionFailure: SelectionFailure? = null,
     val progressFailure: LoadFailure? = null,
+    val progressLoading: Boolean = false,
 ) {
     val resume get() = seasonResume?.takeIf {
         it.seasonId == entry?.id && it.translationId == translationId && it.episodeId == episodeId
@@ -33,6 +34,7 @@ data class DetailsUiState(
     val translation get() = details?.translations?.firstOrNull { it.id == translationId }
     val episodes get() = translation?.episodes.takeIf { details?.playbackUnavailableReason == null }
     val episode get() = episodes?.firstOrNull { it.id == episodeId }
+    val episodeFocusId get() = episode?.id ?: episodes?.firstOrNull()?.id
     val canPlay get() = details != null && details.playbackUnavailableReason == null && episode != null && selectionFailure == null
 }
 
@@ -75,7 +77,7 @@ class SeriesDetailsViewModel(
         markJob?.cancel()
         savedResume = null
         selectionIntent = selection
-        mutableState.value = DetailsUiState(entry = entry, loading = true)
+        mutableState.value = DetailsUiState(entry = entry, loading = true, progressLoading = true)
         job = viewModelScope.launch {
             try {
                 val details = (if (force) reload ?: load else load)(entry)
@@ -89,7 +91,7 @@ class SeriesDetailsViewModel(
                 }
                 mutableState.value = DetailsUiState(details.entry, details,
                     translationId = selected.translationId, episodeId = selected.episodeId,
-                    seasonResume = savedResume, selectionFailure = selected.failure)
+                    seasonResume = savedResume, selectionFailure = selected.failure, progressLoading = true)
                 refreshAccountProgress(details)
                 refreshAccountMark(details.entry)
             } catch (e: CancellationException) { throw e
@@ -107,19 +109,20 @@ class SeriesDetailsViewModel(
 
     private fun refreshAccountProgress(details: SeriesDetails) {
         progressJob?.cancel()
+        mutableState.value = state.value.copy(progressLoading = true, progressFailure = null)
         progressJob = viewModelScope.launch {
             try {
-                val progress = loadAccountProgress(details) ?: return@launch
+                val progress = loadAccountProgress(details)
                 ensureActive()
                 val current = state.value
                 if (current.entry?.id != details.entry.id || current.details == null) return@launch
-                val entry = current.entry.copy(accountProgress = progress)
-                mutableState.value = current.copy(entry = entry, details = current.details.copy(entry = entry))
+                val entry = if (progress != null) current.entry.copy(accountProgress = progress) else current.entry
+                mutableState.value = current.copy(entry = entry, details = current.details.copy(entry = entry), progressLoading = false)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 ensureActive()
                 val current = state.value
-                if (current.entry?.id == details.entry.id) mutableState.value = current.copy(progressFailure = when (e) {
+                if (current.entry?.id == details.entry.id) mutableState.value = current.copy(progressLoading = false, progressFailure = when (e) {
                     is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP
                 })
             }
@@ -155,7 +158,7 @@ class SeriesDetailsViewModel(
         if (current.entry?.id != target.seasonId || current.details == null) return
         markJob?.cancel(); progressJob?.cancel()
         val updated = current.entry.copy(accountListMark = null, accountMark = null, accountProgress = null)
-        mutableState.value = current.copy(entry = updated, details = current.details.copy(entry = updated))
+        mutableState.value = current.copy(entry = updated, details = current.details.copy(entry = updated), progressLoading = false)
     }
 
     fun selectSeason(id: String) {
