@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.CatalogLayoutPreferences
+import ru.seasonvar.tv.ui.player.PlayerClockPosition
 
 internal class InterfaceSettings(context: Context) {
     private val preferences = context.getSharedPreferences("interface", Context.MODE_PRIVATE)
@@ -19,6 +20,15 @@ internal class InterfaceSettings(context: Context) {
 
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
+
+    private val mutablePlayerClockPosition = MutableStateFlow(PlayerClockPosition.fromStorage(
+        preferences.getString("player_clock_position", null)))
+    val playerClockPosition = mutablePlayerClockPosition.asStateFlow()
+
+    fun setPlayerClockPosition(position: PlayerClockPosition) {
+        preferences.edit().putString("player_clock_position", position.storageId).apply()
+        mutablePlayerClockPosition.value = position
+    }
 
     private val menuVisibility = MenuVisibilityPreferences(
         read = { preferences.getStringSet("hidden_sections", null) },

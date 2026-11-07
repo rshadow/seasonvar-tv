@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="seasonvar_player_background">#000000</color>
+    <color name="seasonvar_player_clock_background">#99000000</color>
+    <dimen name="seasonvar_player_clock_padding_vertical">4dp</dimen>
     <color name="seasonvar_accent">#F5B50C</color>
     <color name="seasonvar_on_accent">#2B2521</color>
     <color name="seasonvar_background">#2B2521</color>

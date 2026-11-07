@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -121,6 +122,7 @@ class PlayerActivity : ComponentActivity() {
                 val d = SeasonvarTheme.dimensions
                 val markSync by container.accountMarks.state.collectAsStateWithLifecycle()
                 val accountSession by container.account.session.collectAsStateWithLifecycle()
+                val clockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
                 val retry = remember { FocusRequester() }
                 val surface = remember { FocusRequester() }
                 val cancelNext = remember { FocusRequester() }
@@ -162,26 +164,44 @@ class PlayerActivity : ComponentActivity() {
                         native.useController = failure == null && !completionVisible && !seasonTransitionPending
                         native.isFocusable = failure == null && !completionVisible && !seasonTransitionPending
                     }, modifier = Modifier.fillMaxSize())
-                    if (controlsVisible || loading || failure != null) Column(
-                        Modifier.align(Alignment.TopStart).padding(d.spacingLarge),
+                    Column(
+                        Modifier.align(Alignment.TopStart).fillMaxWidth().padding(d.spacingLarge),
                     ) {
-                        val selected = checkNotNull(request)
-                        val title = selected.seasonNumber?.let { season ->
-                            stringResource(R.string.player_title_with_season, selected.title, season, selected.episodeLabel)
-                        } ?: stringResource(R.string.player_title, selected.title, selected.episodeLabel)
-                        Text(title,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.titleMedium)
-                        val syncMessage = when {
-                            accountSession.expired -> R.string.account_expired
-                            markSync.owner != markOwner(accountSession.user) -> null
-                            markSync.phase == MarkSyncPhase.RETRYING -> R.string.player_progress_sync_retry
-                            markSync.phase == MarkSyncPhase.FAILED -> R.string.player_progress_sync_error
-                            else -> null
+                        val titleVisible = controlsVisible || loading || failure != null
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                            if (clockPosition == PlayerClockPosition.LEFT) {
+                                PlayerClock(clockPosition, Modifier.alignByBaseline())
+                                if (titleVisible) Spacer(Modifier.width(d.spacingMedium))
+                            }
+                            if (titleVisible) {
+                                val selected = checkNotNull(request)
+                                val title = selected.seasonNumber?.let { season ->
+                                    stringResource(R.string.player_title_with_season, selected.title, season, selected.episodeLabel)
+                                } ?: stringResource(R.string.player_title, selected.title, selected.episodeLabel)
+                                Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).alignByBaseline().then(
+                                        if (clockPosition == PlayerClockPosition.CENTER || clockPosition == PlayerClockPosition.RIGHT)
+                                            Modifier.padding(end = d.spacingMedium) else Modifier),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    style = MaterialTheme.typography.titleMedium)
+                            } else Spacer(Modifier.weight(1f))
+                            if (clockPosition == PlayerClockPosition.CENTER || clockPosition == PlayerClockPosition.RIGHT) {
+                                PlayerClock(clockPosition, Modifier.alignByBaseline())
+                            }
+                            if (clockPosition == PlayerClockPosition.CENTER) Spacer(Modifier.weight(1f))
                         }
-                        if (syncMessage != null) Text(stringResource(syncMessage),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall)
+                        if (titleVisible) {
+                            val syncMessage = when {
+                                accountSession.expired -> R.string.account_expired
+                                markSync.owner != markOwner(accountSession.user) -> null
+                                markSync.phase == MarkSyncPhase.RETRYING -> R.string.player_progress_sync_retry
+                                markSync.phase == MarkSyncPhase.FAILED -> R.string.player_progress_sync_error
+                                else -> null
+                            }
+                            if (syncMessage != null) Text(stringResource(syncMessage),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                     if (completionVisible) {
                         Column(Modifier.align(Alignment.BottomEnd).padding(d.spacingLarge).width(d.playerAutoNextWidth)

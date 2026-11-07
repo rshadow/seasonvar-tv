@@ -76,7 +76,7 @@ help:
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
 		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
-		'make player-probe           Verify real video, autoplay and controls in emulator; inspect captured frames' \
+		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
 		'make update-test            Run offline update tests' \
 		'make update-probe           Check live GitHub metadata and APK integrity in emulator' \
 		'make update-restore         Restore normal test build after an update preview (emulator only)' \

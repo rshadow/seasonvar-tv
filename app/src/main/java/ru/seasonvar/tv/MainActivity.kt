@@ -117,6 +117,7 @@ class MainActivity : ComponentActivity() {
             val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
+            val playerClockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
             SeasonvarApp(
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = container.interfaceSettings::setImagePrefetchEnabled,
@@ -125,6 +126,7 @@ class MainActivity : ComponentActivity() {
                 hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
+                playerClockPosition = playerClockPosition, onPlayerClockPositionChange = container.interfaceSettings::setPlayerClockPosition,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
                 onRemovalRefresh = removalModel::refreshStatus, onRemovalSetStatus = removalModel::selectStatus,
