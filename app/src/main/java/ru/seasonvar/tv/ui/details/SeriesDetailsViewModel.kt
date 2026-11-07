@@ -23,10 +23,13 @@ data class DetailsUiState(
     val failure: LoadFailure? = null,
     val translationId: String? = null,
     val episodeId: String? = null,
-    val resume: ResumePoint? = null,
+    val seasonResume: ResumePoint? = null,
     val selectionFailure: SelectionFailure? = null,
     val progressFailure: LoadFailure? = null,
 ) {
+    val resume get() = seasonResume?.takeIf {
+        it.seasonId == entry?.id && it.translationId == translationId && it.episodeId == episodeId
+    }
     val translation get() = details?.translations?.firstOrNull { it.id == translationId }
     val episodes get() = translation?.episodes.takeIf { details?.playbackUnavailableReason == null }
     val episode get() = episodes?.firstOrNull { it.id == episodeId }
@@ -86,7 +89,7 @@ class SeriesDetailsViewModel(
                 }
                 mutableState.value = DetailsUiState(details.entry, details,
                     translationId = selected.translationId, episodeId = selected.episodeId,
-                    resume = resumeFor(selected.translationId, selected.episodeId), selectionFailure = selected.failure)
+                    seasonResume = savedResume, selectionFailure = selected.failure)
                 refreshAccountProgress(details)
                 refreshAccountMark(details.entry)
             } catch (e: CancellationException) { throw e
@@ -174,7 +177,7 @@ class SeriesDetailsViewModel(
             ResolvedSelection(id, episode?.id)
         }
         val next = current.copy(translationId = selected.translationId, episodeId = selected.episodeId,
-            selectionFailure = selected.failure, resume = resumeFor(selected.translationId, selected.episodeId))
+            selectionFailure = selected.failure)
         selectionIntent = if (selected.failure == null && next.episode != null) selectedHint(next)
             else selectionIntent.copy(translationId = id, translationLabel = null)
         mutableState.value = next
@@ -183,13 +186,9 @@ class SeriesDetailsViewModel(
     fun selectEpisode(id: String) {
         val current = state.value
         if (current.episodes?.any { it.id == id } != true) return
-        val next = current.copy(episodeId = id, resume = resumeFor(current.translationId, id), selectionFailure = null)
+        val next = current.copy(episodeId = id, selectionFailure = null)
         selectionIntent = selectedHint(next)
         mutableState.value = next
-    }
-
-    private fun resumeFor(translationId: String?, episodeId: String?): ResumePoint? = savedResume?.takeIf {
-        it.translationId == translationId && it.episodeId == episodeId
     }
 
     fun playbackRequest(episodeId: String? = state.value.episodeId): PlaybackRequest? {
@@ -230,7 +229,7 @@ class SeriesDetailsViewModel(
             val latest = state.value
             if (latest.entry?.id != id || latest.details == null) return@launch
             savedResume = EntrySelectionResolver.validResume(point, latest.details)
-            mutableState.value = latest.copy(resume = resumeFor(latest.translationId, latest.episodeId))
+            mutableState.value = latest.copy(seasonResume = savedResume)
         }
     }
 

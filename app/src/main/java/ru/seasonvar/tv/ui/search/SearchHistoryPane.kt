@@ -29,7 +29,7 @@ internal fun SearchHistoryPane(queries: List<String>, clearing: Boolean, firstFo
                 style = MaterialTheme.typography.titleLarge)
             if (queries.isNotEmpty()) ThemeButton(stringResource(R.string.search_history_clear), onClear,
                 Modifier.width(IntrinsicSize.Max).height(d.headerButtonSize).focusRequester(clear).focusProperties { left = lastFocused; down = lastFocused; up = inputFocus; right = FocusRequester.Cancel },
-                active = false, enabled = !clearing, centerVertically = true)
+                active = false, enabled = !clearing, contentAlignment = Alignment.CenterStart)
         }
         if (queries.isEmpty()) Text(stringResource(R.string.search_history_empty),
             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
@@ -42,7 +42,7 @@ internal fun SearchHistoryPane(queries: List<String>, clearing: Boolean, firstFo
                         left = menuFocus; right = clear
                         up = if (index == 0) inputFocus else FocusRequester.Default
                         down = if (index == queries.lastIndex) FocusRequester.Cancel else FocusRequester.Default
-                    }, centerVertically = true)
+                    }, contentAlignment = Alignment.CenterStart)
             }
         }
     }

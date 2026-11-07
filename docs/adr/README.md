@@ -124,3 +124,4 @@
 | [0105 — Название сериала в одной строке с часами](0105-player-title-beside-clock.md) | 2026-11-07 | Принято |
 | [0106 — Ленты Seasonvar на домашнем экране Android TV](0106-android-tv-home-channels.md) | 2026-11-07 | Принято |
 | [0107 — Управление лентами без системного окна Android TV](0107-launcher-managed-home-channels.md) | 2026-11-07 | Принято |
+| [0111 — Прогресс сезона и позиция остановки под кнопками](0111-season-progress-below-controls.md) | 2026-11-07 | Принято |

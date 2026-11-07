@@ -817,7 +817,7 @@ internal fun ThemeButton(
     avatarUrl: String? = null,
     avatarKey: Long = 0,
     enabled: Boolean = true,
-    centerVertically: Boolean = false,
+    contentAlignment: Alignment? = null,
     actionEnabled: Boolean = true,
     checked: Boolean? = null,
     reserveCheckSpace: Boolean = false,
@@ -908,7 +908,7 @@ internal fun ThemeButton(
                         modifier = Modifier.size(d.headerButtonIconSize))
                 }
                 Text(text, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            } else if (centerVertically) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
+            } else if (contentAlignment != null) Box(Modifier.fillMaxSize(), contentAlignment = contentAlignment) {
                 Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }

@@ -117,7 +117,45 @@ class SeriesDetailsViewModelTest {
         assertEquals("0", model.state.value.translationId)
         assertEquals("1_seriya", model.state.value.episodeId)
         assertNull(model.state.value.resume)
+        assertNull(model.state.value.seasonResume)
         assertNull(model.playbackRequest("missing"))
+    }
+
+    @Test fun season_position_stays_visible_without_seeking_another_episode_or_translation() = runTest(dispatcher) {
+        val point = ResumePoint("1", "0", "2_seriya", 45000)
+        val model = SeriesDetailsViewModel(loadResume = { point }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        model.selectEpisode("1_seriya")
+        assertEquals(point, model.state.value.seasonResume)
+        assertNull(model.state.value.resume)
+        assertNull(model.playbackRequest()!!.resumePositionMillis)
+        model.selectTranslation("1")
+        assertEquals(point, model.state.value.seasonResume)
+        assertNull(model.state.value.resume)
+        assertNull(model.playbackRequest()!!.resumePositionMillis)
+        model.selectTranslation("0")
+        assertEquals(point, model.state.value.resume)
+        assertEquals(point.positionMillis, model.playbackRequest()!!.resumePositionMillis)
+    }
+
+    @Test fun season_position_is_cleared_on_season_change_and_refreshed_without_overriding_selection() = runTest(dispatcher) {
+        var point = ResumePoint("1", "0", "2_seriya", 45000)
+        val model = SeriesDetailsViewModel(loadResume = { if (it == "1") point else null }) { details(it) }
+        model.open(entry()); advanceUntilIdle()
+        model.selectEpisode("1_seriya")
+        point = point.copy(positionMillis = 60000)
+        model.refreshResume(); advanceUntilIdle()
+        assertEquals(point, model.state.value.seasonResume)
+        assertEquals("1_seriya", model.state.value.episodeId)
+        assertNull(model.playbackRequest()!!.resumePositionMillis)
+        model.selectSeason("2")
+        assertNull(model.state.value.seasonResume)
+        advanceUntilIdle()
+        assertNull(model.state.value.seasonResume)
+        model.selectSeason("1"); advanceUntilIdle()
+        assertEquals(point, model.state.value.seasonResume)
+        model.close()
+        assertNull(model.state.value.seasonResume)
     }
 
     @Test fun return_from_player_refreshes_position_without_changing_current_selection() = runTest(dispatcher) {
