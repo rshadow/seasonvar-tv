@@ -208,5 +208,6 @@ class MainActivity : ComponentActivity() {
         models.values.forEach { it.refreshIfDateChanged() }
         detailsModel.refreshResume()
         (application as SeasonvarApplication).accountMarks.retry()
+        (application as SeasonvarApplication).homeChannels.requestRefresh()
     }
 }

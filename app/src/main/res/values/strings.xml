@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="home_settings_title">Ленты на главном экране</string>
+    <string name="home_settings_description">Подборки Seasonvar на домашнем экране Android TV.</string>
+    <string name="home_settings_count">%1$d из 3</string>
+    <string name="home_settings_hint">Выберите ленты. Android может запросить подтверждение добавления. Порядок и видимость меняются на домашнем экране.</string>
+    <string name="home_settings_external_value">В настройках устройства</string>
+    <string name="home_settings_external_help">Включайте и скрывайте ленты в настройках каналов домашнего экрана устройства.</string>
+    <string name="home_continue">Продолжить</string>
+    <string name="home_want">Хочу посмотреть</string>
+    <string name="home_newest">Новинки</string>
+    <string name="home_season">Сезон %1$d</string>
+    <string name="home_login_required">Доступно после входа в аккаунт.</string>
+    <string name="home_unsupported">Домашний экран не поддерживает ленты Android TV.</string>
+    <string name="home_refreshing">Обновляем ленты…</string>
+    <string name="home_refresh_error">Не удалось обновить ленты. Прежние карточки сохранены.</string>
+    <string name="home_play_loading">Готовим продолжение просмотра…</string>
+    <string name="home_play_unavailable">Продолжение недоступно. Обновите ленту или откройте сериал в приложении.</string>
+    <string name="home_play_error">Не удалось прочитать данные для продолжения просмотра.</string>
     <string name="player_previous_episode">Предыдущая серия</string>
     <string name="player_next_episode">Следующая серия</string>
     <string name="application_settings_title">Приложение</string>

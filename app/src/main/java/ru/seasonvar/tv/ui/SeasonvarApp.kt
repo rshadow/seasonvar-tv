@@ -1358,6 +1358,7 @@ private fun SettingsPane(
     val bypassFocus = remember { FocusRequester() }
     val translationFocus = remember { FocusRequester() }
     val menuVisibilityFocus = remember { FocusRequester() }
+    val homeChannelsFocus = remember { FocusRequester() }
     val autoNextFocus = remember { FocusRequester() }
     var autoNextFocused by remember { mutableStateOf(false) }
     val prefetchFocus = remember { FocusRequester() }
@@ -1402,10 +1403,13 @@ private fun SettingsPane(
         }
         Spacer(Modifier.height(d.spacingMedium))
         ru.seasonvar.tv.ui.settings.MenuVisibilitySetting(hiddenSections, onSectionVisibilityChange,
-            menuVisibilityFocus, menuFocus, settingsContentFocus, translationFocus, onBack, onCloseDialog, onInteraction)
+            menuVisibilityFocus, menuFocus, settingsContentFocus, homeChannelsFocus, onBack, onCloseDialog, onInteraction)
+        Spacer(Modifier.height(d.spacingMedium))
+        ru.seasonvar.tv.ui.settings.HomeChannelsSetting(homeChannelsFocus, menuFocus, menuVisibilityFocus,
+            translationFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingMedium))
         ru.seasonvar.tv.ui.settings.PreferredTranslationsSetting(translationSettingsModel, translationFocus,
-            menuFocus, menuVisibilityFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
+            menuFocus, homeChannelsFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.player_settings_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
