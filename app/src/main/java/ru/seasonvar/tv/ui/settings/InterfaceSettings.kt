@@ -20,6 +20,14 @@ internal class InterfaceSettings(context: Context) {
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 
+    private val menuVisibility = MenuVisibilityPreferences(
+        read = { preferences.getStringSet("hidden_sections", null) },
+        write = { preferences.edit().putStringSet("hidden_sections", it).apply() },
+    )
+    val hiddenSections = menuVisibility.hiddenSections
+
+    fun setSectionVisible(section: Section, visible: Boolean) = menuVisibility.setVisible(section, visible)
+
     private val mutablePreferredTranslations = MutableStateFlow(ru.seasonvar.tv.data.TranslationPriorities.decode(
         preferences.getString("preferred_translations", null)))
     val preferredTranslations = mutablePreferredTranslations.asStateFlow()

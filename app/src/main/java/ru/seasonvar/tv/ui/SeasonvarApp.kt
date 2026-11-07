@@ -98,6 +98,7 @@ import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.ui.navigation.MenuGroup
 import ru.seasonvar.tv.ui.navigation.BackNavigation
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.catalog.DescriptionState
@@ -120,7 +121,7 @@ private fun personalTitle(feed: PersonalFeed) = when (feed) {
     PersonalFeed.HISTORY -> R.string.history_title
 }
 
-private fun sectionTitle(item: Section): Int = when (item) {
+internal fun sectionTitle(item: Section): Int = when (item) {
     Section.SEARCH -> R.string.search_title
     Section.SMART_CONTINUE -> R.string.smart_continue_title
     Section.ACCOUNT -> R.string.account_title
@@ -134,6 +135,13 @@ private fun sectionTitle(item: Section): Int = when (item) {
     Section.ANNOUNCEMENTS -> R.string.announcements_title
     Section.SETTINGS -> R.string.settings_title
     Section.ABOUT -> R.string.about_title
+}
+
+internal fun menuGroupTitle(group: MenuGroup): Int = when (group) {
+    MenuGroup.CATALOG -> R.string.menu_catalog
+    MenuGroup.SMART -> R.string.menu_smart
+    MenuGroup.PERSONAL -> R.string.menu_personal
+    MenuGroup.SYSTEM -> R.string.menu_system
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -167,6 +175,8 @@ internal fun SeasonvarApp(
     onCatalogLayoutChange: (Section, CatalogLayout) -> Unit = { _, _ -> },
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
+    hiddenSections: Set<Section> = emptySet(),
+    onSectionVisibilityChange: (Section, Boolean) -> Unit = { _, _ -> },
     onExit: () -> Unit = {},
     updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
     translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel? = null,
@@ -217,6 +227,7 @@ internal fun SeasonvarApp(
             imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
+            hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
             autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
             onExit = onExit,
@@ -267,6 +278,8 @@ private fun SeasonvarContent(
     onCatalogLayoutChange: (Section, CatalogLayout) -> Unit = { _, _ -> },
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
+    hiddenSections: Set<Section> = emptySet(),
+    onSectionVisibilityChange: (Section, Boolean) -> Unit = { _, _ -> },
     onExit: () -> Unit = {},
     updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
     translationSettingsModel: ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel? = null,
@@ -297,9 +310,13 @@ private fun SeasonvarContent(
     onRemovalConfirm: () -> Unit = {},
 ) {
     val initialStartPage = remember { startPage }
+    val visibleMenuGroups = remember(accountSession.user != null, hiddenSections) {
+        Section.menuGroups(accountSession.user != null, hiddenSections)
+    }
+    val visibleMenuPages = remember(visibleMenuGroups) { visibleMenuGroups.flatMap { it.second } }
     var startupPending by rememberSaveable { mutableStateOf(true) }
     var menuOwnsInput by remember { mutableStateOf(true) }
-    var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null)) }
+    var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
     val catalogLayout = catalogLayouts[section] ?: CatalogLayout.STRIP
     var activeFeed by rememberSaveable { mutableStateOf(section.publicFeed ?: PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
@@ -431,10 +448,10 @@ private fun SeasonvarContent(
     LaunchedEffect(catalogKey, selected?.key, selected?.id, description.key, searchState.showHistory, catalogLayout) {
         if (catalogLayout == CatalogLayout.STRIP) selected?.let { if (searching) onSearchSelect(it, false) else if (smart) onSmartSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
     }
-    val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy)
+    val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy, hiddenSections)
     LaunchedEffect(startupTarget) {
         if (!startupPending) return@LaunchedEffect
-        val target = startupTarget ?: Section.TODAY
+        val target = startupTarget ?: Section.TODAY.availableAtStart(accountSession.user != null, hiddenSections)
         if (startupTarget != null) selectSection(target)
         repeat(2) { withFrameNanos { } }
         if (startupPending && section == target) {
@@ -443,6 +460,9 @@ private fun SeasonvarContent(
         }
     }
     LaunchedEffect(Unit) {
+        if (section.canHide && section in hiddenSections) {
+            selectSection(section.availableAtStart(accountSession.user != null, hiddenSections))
+        }
         if (!startupPending) {
             repeat(2) { withFrameNanos { } }
             sectionFocus(section).requestFocus()
@@ -461,14 +481,15 @@ private fun SeasonvarContent(
         detailsOpen = false
         if (section.requiresAccount && accountSession.user == null) section = Section.ACCOUNT
         if (section == Section.ACCOUNT && accountSession.user != null) {
-            selectSection(Section.RESUME)
-            repeat(2) { withFrameNanos { } }; personalFocus.getValue(PersonalFeed.RESUME).requestFocus()
+            val target = Section.RESUME.availableAtStart(true, hiddenSections)
+            selectSection(target)
+            repeat(2) { withFrameNanos { } }; sectionFocus(target).requestFocus()
         }
         if (menuTarget != null) {
             repeat(2) { withFrameNanos { } }
             if (menuOwnsInput && section == menuTarget) {
                 sectionFocus(menuTarget).requestFocus()
-                if (menuTarget in Section.startPages(true)) menuBringIntoView.getValue(menuTarget).bringIntoView()
+                if (menuTarget in visibleMenuPages) menuBringIntoView.getValue(menuTarget).bringIntoView()
             }
         }
     }
@@ -620,11 +641,11 @@ private fun SeasonvarContent(
             Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 ThemeButton(stringResource(R.string.search_title), onClick = {
                     startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
-                }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = todayFocus; right = accountFocus },
+                }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = sectionFocus(visibleMenuPages.first()); right = accountFocus },
                     icon = R.drawable.ic_search)
                 ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
                     onClick = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
-                    modifier = Modifier.focusRequester(accountFocus).focusProperties { left = searchFocus; right = FocusRequester.Cancel; down = todayFocus },
+                    modifier = Modifier.focusRequester(accountFocus).focusProperties { left = searchFocus; right = FocusRequester.Cancel; down = sectionFocus(visibleMenuPages.first()) },
                     icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
             }
             Spacer(Modifier.height(d.menuHeaderSpacing))
@@ -632,13 +653,10 @@ private fun SeasonvarContent(
                 Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
             ) {
-                val groups = listOf(R.string.menu_catalog to Section.catalogPages) +
-                    (if (accountSession.user != null) listOf(R.string.menu_smart to Section.smartPages, R.string.menu_personal to Section.personalPages) else emptyList()) +
-                    listOf(R.string.menu_system to Section.systemPages)
-                groups.forEachIndexed { index, (title, sections) ->
-                    key(title) {
+                visibleMenuGroups.forEachIndexed { index, (group, sections) ->
+                    key(group) {
                         Text(
-                            stringResource(title),
+                            stringResource(menuGroupTitle(group)),
                             modifier = Modifier.fillMaxWidth()
                                 .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
                                 .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
@@ -647,27 +665,29 @@ private fun SeasonvarContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         sections.forEach { item ->
-                            val focus = sectionFocus(item)
-                            val label = sectionTitle(item)
-                            ThemeButton(
-                                stringResource(label),
-                                onClick = { startupPending = false; backNavigation.reset(); selectSection(item); enterContent() },
-                                modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
-                                    .bringIntoViewRequester(menuBringIntoView.getValue(item))
-                                    .focusRequester(focus).focusProperties { if (item == Section.TODAY) up = searchFocus }
-                                    .onFocusChanged {
-                                        if (it.isFocused) selectSection(item)
-                                    }
-                                    .onPreviewKeyEvent {
-                                        if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                            selectSection(item)
-                                            enterContent()
-                                            true
-                                        } else false
-                                    },
-                                active = section == item,
-                                contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
-                            )
+                            key(item) {
+                                val focus = sectionFocus(item)
+                                val label = sectionTitle(item)
+                                ThemeButton(
+                                    stringResource(label),
+                                    onClick = { startupPending = false; backNavigation.reset(); selectSection(item); enterContent() },
+                                    modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
+                                        .bringIntoViewRequester(menuBringIntoView.getValue(item))
+                                        .focusRequester(focus).focusProperties { if (item == visibleMenuPages.first()) up = searchFocus }
+                                        .onFocusChanged {
+                                            if (it.isFocused) selectSection(item)
+                                        }
+                                        .onPreviewKeyEvent {
+                                            if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
+                                                selectSection(item)
+                                                enterContent()
+                                                true
+                                            } else false
+                                        },
+                                    active = section == item,
+                                    contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
+                                )
+                            }
                         }
                     }
                 }
@@ -690,6 +710,7 @@ private fun SeasonvarContent(
                     dnsProvider = dnsProvider,
                     onDnsChange = onDnsChange,
                     startPage = startPage, onStartPageChange = onStartPageChange,
+                    hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
                     autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
                     autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
                     signedIn = accountSession.user != null,
@@ -1314,6 +1335,8 @@ private fun SettingsPane(
     onDnsChange: (DnsProvider) -> Unit,
     startPage: Section,
     onStartPageChange: (Section) -> Unit,
+    hiddenSections: Set<Section>,
+    onSectionVisibilityChange: (Section, Boolean) -> Unit,
     signedIn: Boolean,
     onBack: () -> Unit,
     onCloseDialog: () -> Unit,
@@ -1325,6 +1348,7 @@ private fun SettingsPane(
     var startFocused by remember { mutableStateOf(false) }
     val bypassFocus = remember { FocusRequester() }
     val translationFocus = remember { FocusRequester() }
+    val menuVisibilityFocus = remember { FocusRequester() }
     val autoNextFocus = remember { FocusRequester() }
     var autoNextFocused by remember { mutableStateOf(false) }
     val prefetchFocus = remember { FocusRequester() }
@@ -1345,7 +1369,7 @@ private fun SettingsPane(
         Spacer(Modifier.height(d.spacingMedium))
         Row(
             Modifier.fillMaxWidth().focusRequester(settingsContentFocus)
-                .focusProperties { left = menuFocus; up = FocusRequester.Cancel; down = translationFocus }
+                .focusProperties { left = menuFocus; up = FocusRequester.Cancel; down = menuVisibilityFocus }
                 .onFocusChanged { startFocused = it.isFocused }
                 .border(d.focusBorderWidth, if (startFocused) c.primary else Color.Transparent,
                     RoundedCornerShape(d.cardCornerRadius))
@@ -1361,12 +1385,15 @@ private fun SettingsPane(
                     style = MaterialTheme.typography.bodyLarge)
             }
             Spacer(Modifier.width(d.spacingMedium))
-            Text(stringResource(sectionTitle(startPage)), color = c.primary,
+            Text(stringResource(sectionTitle(startPage.availableAtStart(signedIn, hiddenSections))), color = c.primary,
                 style = MaterialTheme.typography.bodyLarge)
         }
         Spacer(Modifier.height(d.spacingMedium))
+        ru.seasonvar.tv.ui.settings.MenuVisibilitySetting(hiddenSections, onSectionVisibilityChange,
+            menuVisibilityFocus, menuFocus, settingsContentFocus, translationFocus, onBack, onCloseDialog, onInteraction)
+        Spacer(Modifier.height(d.spacingMedium))
         ru.seasonvar.tv.ui.settings.PreferredTranslationsSetting(translationSettingsModel, translationFocus,
-            menuFocus, settingsContentFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
+            menuFocus, menuVisibilityFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(autoNextFocus)
             .focusProperties { left = menuFocus; up = translationFocus; down = autoSeasonFocus }
@@ -1401,6 +1428,9 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = autoNextSeasonEnabled, onCheckedChange = null)
         }
+        Spacer(Modifier.height(d.spacingLarge))
+        Text(stringResource(R.string.network_title),
+            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(prefetchFocus)
             .focusProperties { left = menuFocus; up = autoSeasonFocus; down = bypassFocus }
@@ -1417,9 +1447,6 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = imagePrefetchEnabled, onCheckedChange = null)
         }
-        Spacer(Modifier.height(d.spacingLarge))
-        Text(stringResource(R.string.network_title),
-            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
@@ -1482,7 +1509,7 @@ private fun SettingsPane(
     if (startDialogOpen) {
         SettingsChoiceDialog(
             title = R.string.start_page_dialog_title,
-            options = Section.startPages(signedIn), selected = startPage.availableAtStart(signedIn), label = ::sectionTitle,
+            options = Section.startPages(signedIn, hiddenSections), selected = startPage.availableAtStart(signedIn, hiddenSections), label = ::sectionTitle,
             onSelect = { selected ->
                 onStartPageChange(selected)
                 startDialogOpen = false

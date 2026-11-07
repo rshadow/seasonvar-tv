@@ -95,6 +95,11 @@
     <string name="image_prefetch_title">Загружать обложки заранее</string>
     <string name="image_prefetch_description">Подготавливать миниатюры и большие обложки на два экрана вперёд от выбранного сериала. Листать быстрее, но расходуется больше интернета. Если выключить — загружаются только картинки на экране.</string>
     <string name="settings_title">Настройки</string>
+    <string name="menu_visibility_title">Разделы меню</string>
+    <string name="menu_visibility_description">Выберите пункты бокового меню. Изменения сохраняются сразу. Личные списки появляются после входа в аккаунт.</string>
+    <string name="menu_visibility_count">%1$d из %2$d</string>
+    <string name="menu_visibility_settings_required">Всегда доступны, чтобы вернуть скрытые разделы.</string>
+    <string name="menu_visibility_done">Готово</string>
     <string name="network_title">Сеть</string>
     <string name="bypass_title">Обход блокировок</string>
     <string name="bypass_description">Помогает открыть сайт при сетевых ограничениях. Проверка HTTPS-сертификатов остаётся включённой.</string>
