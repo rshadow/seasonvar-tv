@@ -105,7 +105,7 @@ make run
 
 | Файл | Содержание |
 | --- | --- |
-| [TODO.md](TODO.md) | План пунктов меню и состояние реализации |
+| [TODO.md](TODO.md) | Чеклист задач и состояние реализации |
 | [docs/api/README.md](docs/api/README.md) | Обзор интерфейсов и степень их проверки |
 | [docs/api/access.md](docs/api/access.md) | Получение публичных HTML/JSON через `make site-fetch` |
 | [docs/api/legacy-api.md](docs/api/legacy-api.md) | Историческое API с ключом |
