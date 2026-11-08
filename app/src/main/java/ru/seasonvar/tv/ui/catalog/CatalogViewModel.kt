@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -16,6 +17,7 @@ import ru.seasonvar.tv.data.SiteHttpException
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.CatalogRepository
 import java.time.LocalDate
+import ru.seasonvar.tv.ui.filters.*
 
 enum class LoadFailure { NETWORK, HTTP, MARKUP }
 
@@ -38,7 +40,8 @@ data class DescriptionState(
     val failed: Boolean = false,
 )
 
-class CatalogViewModel(private val repository: CatalogRepository, private val feed: PublicFeed) : ViewModel() {
+class CatalogViewModel(private val repository: CatalogRepository, private val feed: PublicFeed,
+    preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState(loading = feed == PublicFeed.TODAY))
     val state = mutableState.asStateFlow()
     private val mutableDescription = MutableStateFlow(DescriptionState())
@@ -47,6 +50,17 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
     private var descriptionJob: Job? = null
 
     private var started = false
+    private var generation = 0L
+    private val filterSource = if (feed == PublicFeed.BEST) BestListFilterSource(repository, preferences) else null
+    private val filterController = filterSource?.let { source -> ListFilterController(viewModelScope, source, "public",
+        onApplying = {
+            generation++
+            refreshJob?.cancel()
+            mutableState.value = state.value.copy(loading = false, failure = null)
+        }, onApplied = { page ->
+            mutableState.value = CatalogUiState(date = page.date, entries = page.entries, loading = false, loaded = true)
+        }) }
+    val filters: ListFiltersController? get() = filterController
 
     init { if (feed == PublicFeed.TODAY) refresh() }
 
@@ -55,6 +69,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
     }
 
     fun refresh() {
+        if (filterSource != null) { refreshBest(); return }
         started = true
         refreshJob?.cancel()
         val day = LocalDate.now()
@@ -86,9 +101,46 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         }
     }
 
+    private fun refreshBest() {
+        val source = filterSource ?: return
+        val controller = filterController ?: return
+        if (controller.state.value.applying) return
+        started = true
+        refreshJob?.cancel()
+        val expected = ++generation
+        val day = LocalDate.now()
+        val previous = state.value.takeIf { it.date == day && it.loaded }
+        mutableState.value = previous?.copy(loading = true, failure = null) ?: CatalogUiState(date = day)
+        refreshJob = viewModelScope.launch {
+            try {
+                if (previous == null) source.cached(controller.state.value.values)?.let { cached ->
+                    ensureActive()
+                    if (generation != expected) return@launch
+                    mutableState.value = CatalogUiState(date = cached.page.date, entries = cached.page.entries, cached = true, loaded = true)
+                    controller.accept(cached)
+                }
+                val result = source.load(controller.state.value.values)
+                ensureActive()
+                if (generation != expected) return@launch
+                mutableState.value = CatalogUiState(date = result.page.date, entries = result.page.entries, loading = false, loaded = true)
+                controller.accept(result)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                ensureActive()
+                if (generation == expected) mutableState.value = state.value.copy(loading = false, failure = when (e) {
+                    is MarkupChangedException -> LoadFailure.MARKUP
+                    is SiteHttpException -> LoadFailure.HTTP
+                    else -> LoadFailure.NETWORK
+                })
+            }
+        }
+    }
+
     fun sessionChanged() {
         val reload = started
+        generation++
         refreshJob?.cancel(); descriptionJob?.cancel()
+        filterController?.contextChanged()
         mutableState.value = CatalogUiState(loading = false)
         mutableDescription.value = DescriptionState()
         started = false
@@ -127,11 +179,12 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         }
     }
 
-    class Factory(private val repository: CatalogRepository, private val feed: PublicFeed) : ViewModelProvider.Factory {
+    class Factory(private val repository: CatalogRepository, private val feed: PublicFeed,
+        private val preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(CatalogViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return CatalogViewModel(repository, feed) as T
+            return CatalogViewModel(repository, feed, preferences) as T
         }
     }
 }

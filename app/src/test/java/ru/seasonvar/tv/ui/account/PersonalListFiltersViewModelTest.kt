@@ -22,7 +22,7 @@ class PersonalListFiltersViewModelTest {
     private val session = MutableStateFlow(AccountSession(user, 1))
     private val entry = SeriesEntry("123", "https://seasonvar.ru/serial-123-test.html", "Тест", null, "", "")
     private val defaults = mapOf("genre" to "all", "country" to "all")
-    private inner class Source : ListFilterSource {
+    private inner class Source : ListFilterSource<AccountPage> {
         override val fields = listOf(ListFilterField("genre", R.string.filter_genre, listOf(FilterOption("all", "Любой"), FilterOption("17", "Комедия"))),
             ListFilterField("country", R.string.filter_country, listOf(FilterOption("all", "Любая"), FilterOption("Япония", "Япония"))))
         val calls = mutableListOf<Map<String, String>>()
@@ -31,7 +31,7 @@ class PersonalListFiltersViewModelTest {
         var failOptions = false
         var slow = false
         override suspend fun options(): List<ListFilterField> { delay(100); if (failOptions) throw IOException(); return fields }
-        override suspend fun load(values: Map<String, String>): FilteredListPage {
+        override suspend fun load(values: Map<String, String>): FilteredListPage<AccountPage> {
             calls += values
             if (slow) withContext(NonCancellable) { delay(1000) } else delay(100)
             if (fail) throw IOException()

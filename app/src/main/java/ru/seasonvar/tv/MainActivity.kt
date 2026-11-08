@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
             container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java]
         val repository = container.repository
         models = PublicFeed.entries.associateWith { feed ->
-            ViewModelProvider(this, CatalogViewModel.Factory(repository, feed))
+            ViewModelProvider(this, CatalogViewModel.Factory(repository, feed, container.listFilterPreferences))
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
@@ -148,6 +148,7 @@ class MainActivity : ComponentActivity() {
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,
                 personalFilters = personalModels.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
+                publicFilters = models.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 smartState = smartState, smartDescription = smartDescription,
                 onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
                 onSmartSelect = smartModel::select,

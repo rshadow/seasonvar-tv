@@ -4,6 +4,7 @@
     <string name="filters_active">Фильтры · %1$d</string>
     <string name="filters_title">Фильтры — %1$s</string>
     <string name="filter_genre">Жанр</string>
+    <string name="filter_period">Период</string>
     <string name="filter_country">Страна</string>
     <string name="filters_loading">Загружаю варианты…</string>
     <string name="filters_hint">Изменения вступят в силу после применения</string>
