@@ -3,12 +3,11 @@ package ru.seasonvar.tv.ui.filters
 import androidx.annotation.StringRes
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
-import ru.seasonvar.tv.data.account.AccountPage
 import ru.seasonvar.tv.data.account.FilterOption
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 
 data class ListFilterField(val id: String, @StringRes val title: Int, val options: List<FilterOption> = emptyList(), val defaultValue: String = "all")
-data class FilteredListPage(val page: AccountPage, val fields: List<ListFilterField>, val values: Map<String, String>)
+data class FilteredListPage<P>(val page: P, val fields: List<ListFilterField>, val values: Map<String, String>)
 data class ListFiltersState(
     val open: Boolean = false,
     val fields: List<ListFilterField> = emptyList(),
@@ -35,10 +34,10 @@ interface ListFiltersController {
     fun apply()
 }
 
-interface ListFilterSource {
+interface ListFilterSource<P> {
     val fields: List<ListFilterField>
     suspend fun options(): List<ListFilterField>
-    suspend fun load(values: Map<String, String>): FilteredListPage
+    suspend fun load(values: Map<String, String>): FilteredListPage<P>
     fun restore(owner: String): Map<String, String>
     fun save(owner: String, values: Map<String, String>)
 }

@@ -8,14 +8,14 @@ class PersonalListFilterSource(
     private val account: AccountRepository,
     private val feed: PersonalFeed,
     private val preferences: ListFilterPreferences,
-) : ListFilterSource {
+) : ListFilterSource<AccountPage> {
     init { require(feed != PersonalFeed.HISTORY) }
     override val fields = listOf(ListFilterField("genre", R.string.filter_genre), ListFilterField("country", R.string.filter_country))
     private fun fields(options: PersonalFilterOptions) = listOf(
         fields[0].copy(options = options.genres), fields[1].copy(options = options.countries),
     )
     override suspend fun options() = fields(account.personalFilterOptions())
-    override suspend fun load(values: Map<String, String>): FilteredListPage {
+    override suspend fun load(values: Map<String, String>): FilteredListPage<AccountPage> {
         val result = account.filteredPersonalList(feed, PersonalListFilters.from(values))
         return FilteredListPage(result.page, fields(result.options), result.filters.values())
     }

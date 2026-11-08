@@ -22,7 +22,7 @@ class PersonalListViewModel internal constructor(
     private val session: StateFlow<AccountSession>,
     private val load: suspend () -> AccountPage,
     private val loadNext: suspend (String) -> AccountPage = { throw MarkupChangedException() },
-    private val filterSource: ListFilterSource? = null,
+    private val filterSource: ListFilterSource<AccountPage>? = null,
     private val describe: suspend (SeriesEntry) -> SeriesDescription,
 ) : ViewModel() {
     constructor(account: AccountRepository, catalog: CatalogRepository, feed: PersonalFeed,
@@ -120,7 +120,7 @@ class PersonalListViewModel internal constructor(
             }
         }
     }
-    private fun acceptFilters(result: FilteredListPage, close: Boolean, owner: String?) {
+    private fun acceptFilters(result: FilteredListPage<AccountPage>, close: Boolean, owner: String?) {
         val current = mutableFilters.value
         mutableFilters.value = current.copy(open = current.open && !close, fields = result.fields,
             values = result.values, draft = if (current.open && !close) current.draft else result.values,

@@ -65,6 +65,32 @@ class CatalogRepository(
         SeasonvarParser.search(source.get(url.toString()), query)
     }
 
+    suspend fun bestFilterOptions(): BestFilterOptions = withContext(Dispatchers.IO) {
+        BestFilterParser.options(source.get("https://seasonvar.ru/?mode=top"))
+    }
+
+    suspend fun cachedBest(day: LocalDate, filters: BestListFilters): FilteredBestPage? = withContext(Dispatchers.IO) {
+        if (cacheToken() == null) return@withContext null
+        val selected = filters.safe()
+        val file = File(directory, selected.cacheName)
+        if (!file.isFile || nowMillis() - file.lastModified() !in 0 until 86_400_000L) return@withContext null
+        runCatching { BestFilterParser.parse(file.readText(), day, selected) }.getOrNull()
+    }
+
+    suspend fun best(day: LocalDate, filters: BestListFilters): FilteredBestPage = withContext(Dispatchers.IO) {
+        val token = cacheToken()
+        var selected = filters.safe()
+        var html = source.get(selected.url())
+        val normalized = BestFilterParser.options(html).normalize(selected)
+        if (selected != normalized) {
+            selected = normalized
+            html = source.get(selected.url())
+        }
+        val result = BestFilterParser.parse(html, day, selected)
+        if (token != null && cacheToken() == token) save(selected.cacheName, html)
+        result
+    }
+
     suspend fun description(entry: SeriesEntry): SeriesDescription {
         val token = withContext(Dispatchers.IO) { cacheToken() }
         val cached = withContext(Dispatchers.IO) {

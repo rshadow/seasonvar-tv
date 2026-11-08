@@ -200,6 +200,7 @@ internal fun SeasonvarApp(
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
     personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
+    publicFilters: Map<PublicFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
@@ -249,7 +250,7 @@ internal fun SeasonvarApp(
             smartState = smartState, smartDescription = smartDescription,
             onSmartVisible = onSmartVisible, onSmartRefresh = onSmartRefresh, onSmartSelect = onSmartSelect,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
-            personalFilters = personalFilters,
+            personalFilters = personalFilters, publicFilters = publicFilters,
             onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore, onPersonalSelect = onPersonalSelect,
         )
     }
@@ -308,6 +309,7 @@ private fun SeasonvarContent(
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
     personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
+    publicFilters: Map<PublicFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
@@ -793,7 +795,8 @@ private fun SeasonvarContent(
                     }) else null,
                     onRefresh = { if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                     smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
-                    filters = personalFeed?.let(personalFilters::get),
+                    filters = if (personalFeed != null) personalFilters[personalFeed]
+                        else if (!searching && !smart) publicFilters[activeFeed] else null,
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = ::openDetails,
