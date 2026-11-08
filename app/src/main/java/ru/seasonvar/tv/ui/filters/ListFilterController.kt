@@ -13,6 +13,7 @@ class ListFilterController<P>(
     private val owner: String,
     private val onApplying: () -> Unit,
     private val onApplied: (P) -> Unit,
+    private val context: () -> Any? = { owner },
 ) : ListFiltersController {
     private fun defaults() = source.fields.associate { it.id to it.defaultValue }
     private fun initial(): ListFiltersState {
@@ -28,17 +29,19 @@ class ListFilterController<P>(
     override fun open() {
         if (state.value.applying) return
         optionsJob?.cancel()
+        val expected = context()
         mutableState.value = state.value.copy(open = true, draft = state.value.values, loading = true, failure = null, applyFailure = null)
         optionsJob = scope.launch {
             try {
                 val fields = source.options()
                 ensureActive()
+                if (context() != expected) return@launch
                 val current = state.value
                 mutableState.value = current.copy(fields = fields, loading = false, draft = fields.associate { field ->
-                    field.id to (current.draft[field.id]?.takeIf { value -> field.options.any { it.value == value } } ?: field.defaultValue)
+                    field.id to (current.draft[field.id]?.takeIf(field::accepts) ?: field.defaultValue)
                 })
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { ensureActive(); mutableState.value = state.value.copy(loading = false, failure = failure(e)) }
+            catch (e: Exception) { ensureActive(); if (context() == expected) mutableState.value = state.value.copy(loading = false, failure = failure(e)) }
         }
     }
 
@@ -54,7 +57,7 @@ class ListFilterController<P>(
 
     override fun choose(field: String, value: String) {
         val current = state.value
-        if (current.open && !current.loading && !current.applying && current.fields.find { it.id == field }?.options?.any { it.value == value } == true)
+        if (current.open && !current.loading && !current.applying && current.fields.find { it.id == field }?.accepts(value) == true)
             mutableState.value = current.copy(draft = current.draft + (field to value), applyFailure = null)
     }
 
@@ -70,15 +73,17 @@ class ListFilterController<P>(
         if (!current.open || current.loading || current.applying || current.failure != null) return
         if (current.values == current.draft) { dismiss(); return }
         onApplying()
+        val expected = context()
         mutableState.value = current.copy(applying = true, applyFailure = null)
         applyJob = scope.launch {
             try {
                 val result = source.load(current.draft)
                 ensureActive()
+                if (context() != expected) return@launch
                 onApplied(result.page)
                 accept(result, close = true)
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { ensureActive(); mutableState.value = state.value.copy(applying = false, applyFailure = failure(e)) }
+            catch (e: Exception) { ensureActive(); if (context() == expected) mutableState.value = state.value.copy(applying = false, applyFailure = failure(e)) }
         }
     }
 

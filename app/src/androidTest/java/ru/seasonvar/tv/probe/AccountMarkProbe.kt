@@ -25,6 +25,7 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "best-filters-live") { BestFiltersLiveProbe.run(this); return }
         if (mode == "personal-filters-live") { PersonalFiltersLiveProbe.run(this); return }
         if (mode == "details-progress-layout") { DetailsProgressLayoutProbe.run(this); return }
         if (mode == "home-channels") { HomeChannelProbe.run(this); return }

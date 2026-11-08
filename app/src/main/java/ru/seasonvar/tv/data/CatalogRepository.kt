@@ -2,6 +2,9 @@ package ru.seasonvar.tv.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import org.json.JSONObject
 import java.io.File
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.time.LocalDate
@@ -74,20 +77,45 @@ class CatalogRepository(
         val selected = filters.safe()
         val file = File(directory, selected.cacheName)
         if (!file.isFile || nowMillis() - file.lastModified() !in 0 until 86_400_000L) return@withContext null
-        runCatching { BestFilterParser.parse(file.readText(), day, selected) }.getOrNull()
+        runCatching {
+            if (selected.switches.isEmpty()) BestFilterParser.parse(file.readText(), day, selected)
+            else {
+                val saved = JSONObject(file.readText())
+                require(saved.getInt("version") == 1)
+                val values = saved.getJSONObject("filters")
+                require(values.keys().asSequence().associateWith { values.getString(it) } == selected.values())
+                val metadata = BestFilterParser.parse(saved.getString("metadata"), day, selected.base())
+                require(metadata.options.normalize(selected) == selected)
+                metadata.copy(page = SeasonvarParser.bestFragment(saved.getString("fragment"), day), filters = selected)
+            }
+        }.getOrNull()
     }
 
-    suspend fun best(day: LocalDate, filters: BestListFilters): FilteredBestPage = withContext(Dispatchers.IO) {
+    suspend fun best(day: LocalDate, filters: BestListFilters,
+        authenticatedMetadata: (suspend (BestListFilters) -> String)? = null): FilteredBestPage = withContext(Dispatchers.IO) {
+        suspend fun metadata(selected: BestListFilters): String = if (selected.switches.any { it.personal })
+            (authenticatedMetadata ?: throw ru.seasonvar.tv.data.account.SessionExpiredException())(selected)
+            else source.get(selected.url())
         val token = cacheToken()
         var selected = filters.safe()
-        var html = source.get(selected.url())
+        var html = metadata(selected)
+        currentCoroutineContext().ensureActive()
         val normalized = BestFilterParser.options(html).normalize(selected)
-        if (selected != normalized) {
-            selected = normalized
-            html = source.get(selected.url())
+        if (selected.base() != normalized.base()) {
+            html = metadata(normalized)
+            currentCoroutineContext().ensureActive()
         }
-        val result = BestFilterParser.parse(html, day, selected)
-        if (token != null && cacheToken() == token) save(selected.cacheName, html)
+        selected = normalized
+        var result = BestFilterParser.parse(html, day, selected.base())
+        var cached = html
+        if (selected.switches.isNotEmpty()) {
+            val fragment = source.bestFilters(selected)
+            currentCoroutineContext().ensureActive()
+            result = result.copy(page = SeasonvarParser.bestFragment(fragment, day), filters = selected)
+            cached = JSONObject().put("version", 1).put("filters", JSONObject(selected.values()))
+                .put("metadata", html).put("fragment", fragment).toString()
+        }
+        if (token != null && cacheToken() == token) save(selected.cacheName, cached)
         result
     }
 

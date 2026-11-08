@@ -126,7 +126,19 @@ object SeasonvarParser {
         val content = doc.selectFirst(".content .content-wrap") ?: throw MarkupChangedException()
         if (content.selectFirst(".pgs-head")?.text() != "Топ сериалов") throw MarkupChangedException()
         val results = content.selectFirst(".pgs-search #search-res") ?: throw MarkupChangedException()
+        return CatalogPage(day, bestEntries(results))
+    }
+
+    fun bestFragment(html: String, day: LocalDate): CatalogPage {
+        val doc = Jsoup.parse(html, "https://seasonvar.ru/")
+        if (doc.head().children().isNotEmpty() || doc.body().children().isEmpty()) throw MarkupChangedException()
+        return CatalogPage(day, bestEntries(doc.body()))
+    }
+
+    private fun bestEntries(results: Element): List<SeriesEntry> {
         val rows = results.children()
+        if (results.ownText().isBlank() && rows.size == 1 && rows.single().hasClass("pgs-msg") &&
+            rows.single().text() == "Сожалеем, по вашему запросу ничего не найдено") return emptyList()
         if (results.ownText().isNotBlank() || rows.any { !it.hasClass("pgs-search-wrap") }) {
             throw MarkupChangedException()
         }
@@ -150,7 +162,7 @@ object SeasonvarParser {
                 previewDescription = info.selectFirst("p")?.text()?.takeIf { it.isNotBlank() },
             )
         }
-        return CatalogPage(day, entries.distinctBy { it.key })
+        return entries.distinctBy { it.key }
     }
 
     fun search(json: String, query: String): List<SeriesEntry> {

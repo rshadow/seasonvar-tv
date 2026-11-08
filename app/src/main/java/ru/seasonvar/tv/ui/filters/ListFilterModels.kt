@@ -6,7 +6,11 @@ import org.json.JSONObject
 import ru.seasonvar.tv.data.account.FilterOption
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 
-data class ListFilterField(val id: String, @StringRes val title: Int, val options: List<FilterOption> = emptyList(), val defaultValue: String = "all")
+enum class ListFilterKind { SINGLE, TOGGLE }
+data class ListFilterField(val id: String, @StringRes val title: Int, val options: List<FilterOption> = emptyList(),
+    val defaultValue: String = "all", val kind: ListFilterKind = ListFilterKind.SINGLE, @StringRes val activeTitle: Int? = null) {
+    fun accepts(value: String) = if (kind == ListFilterKind.TOGGLE) value in setOf("true", "false") else options.any { it.value == value }
+}
 data class FilteredListPage<P>(val page: P, val fields: List<ListFilterField>, val values: Map<String, String>)
 data class ListFiltersState(
     val open: Boolean = false,
@@ -19,8 +23,9 @@ data class ListFiltersState(
     val applyFailure: LoadFailure? = null,
 ) {
     val applyFailed get() = applyFailure != null
-    val activeCount get() = fields.count { (values[it.id] ?: it.defaultValue) != it.defaultValue }
-    val summary get() = fields.mapNotNull { field ->
+    val activeFields get() = fields.filter { (values[it.id] ?: it.defaultValue) != it.defaultValue }
+    val activeCount get() = activeFields.size
+    val summary get() = activeFields.filter { it.kind == ListFilterKind.SINGLE }.mapNotNull { field ->
         values[field.id]?.takeIf { it != field.defaultValue }?.let { selected -> field.options.find { it.value == selected }?.label }
     }.joinToString(" · ")
 }

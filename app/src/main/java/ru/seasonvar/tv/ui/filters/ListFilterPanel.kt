@@ -3,6 +3,9 @@ package ru.seasonvar.tv.ui.filters
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Checkbox
 import androidx.tv.material3.RadioButton
 import androidx.tv.material3.Text
 import ru.seasonvar.tv.R
@@ -41,6 +45,7 @@ fun ListFilterPanel(title: String, state: ListFiltersState, controller: ListFilt
     val backFocus = remember { FocusRequester() }
     val applyFocus = remember { FocusRequester() }
     val resetFocus = remember { FocusRequester() }
+    val fieldsScroll = rememberScrollState()
     val fieldFocus = remember(state.fields.map { it.id }) { state.fields.associate { it.id to FocusRequester() } }
     fun back() { if (choosing != null) { returnField = choosing; choosing = null } else controller.dismiss() }
     ShortMessageEffect(if (state.applyFailed) stringResource(R.string.filters_apply_error) else null)
@@ -65,15 +70,23 @@ fun ListFilterPanel(title: String, state: ListFiltersState, controller: ListFilt
                 }), Modifier.fillMaxWidth().height(d.navigationButtonHeight), maxLines = 2,
                     style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
                 if (selectedField == null) {
-                    LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                        itemsIndexed(state.fields, key = { _, field -> field.id }) { index, field ->
+                    Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(fieldsScroll).focusGroup(),
+                        verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                        state.fields.forEachIndexed { index, field ->
+                            val toggle = field.kind == ListFilterKind.TOGGLE
+                            val checked = (state.draft[field.id] ?: field.defaultValue).toBoolean()
                             val value = field.options.find { it.value == state.draft[field.id] }?.label
                                 ?: stringResource(if (state.loading) R.string.filters_loading else R.string.details_progress_unknown)
                             FilterRow(stringResource(field.title), value, Modifier.testTag("filter_field_" + field.id)
                                 .focusRequester(fieldFocus.getValue(field.id)).focusProperties {
                                     up = state.fields.getOrNull(index - 1)?.let { fieldFocus.getValue(it.id) } ?: backFocus
                                     down = state.fields.getOrNull(index + 1)?.let { fieldFocus.getValue(it.id) } ?: applyFocus
-                                }) { if (!state.loading && !state.applying && state.failure == null && field.options.isNotEmpty()) choosing = field.id }
+                                }, checkboxChecked = if (toggle) checked else null) {
+                                if (!state.loading && !state.applying && state.failure == null) {
+                                    if (toggle) controller.choose(field.id, (!checked).toString())
+                                    else if (field.options.isNotEmpty()) choosing = field.id
+                                }
+                            }
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
@@ -121,7 +134,8 @@ fun ListFilterPanel(title: String, state: ListFiltersState, controller: ListFilt
 }
 
 @Composable
-private fun FilterRow(title: String, value: String?, modifier: Modifier, selected: Boolean? = null, onClick: () -> Unit) {
+private fun FilterRow(title: String, value: String?, modifier: Modifier, selected: Boolean? = null,
+    checkboxChecked: Boolean? = null, onClick: () -> Unit) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     var focused by remember { mutableStateOf(false) }
@@ -129,12 +143,14 @@ private fun FilterRow(title: String, value: String?, modifier: Modifier, selecte
         .focusProperties { left = FocusRequester.Cancel; right = FocusRequester.Cancel }
         .onFocusChanged { focused = it.isFocused }
         .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, RoundedCornerShape(d.cardCornerRadius))
-        .selectable(selected == true, role = if (selected == null) Role.Button else Role.RadioButton, onClick = onClick)
+        .then(if (checkboxChecked != null) Modifier.toggleable(checkboxChecked, role = Role.Checkbox) { onClick() }
+            else Modifier.selectable(selected == true, role = if (selected == null) Role.Button else Role.RadioButton, onClick = onClick))
         .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = if (selected == null) 1 else 2,
             overflow = TextOverflow.Ellipsis, color = c.onBackground)
-        if (selected != null) RadioButton(selected, onClick = null)
+        if (checkboxChecked != null) Checkbox(checkboxChecked, onCheckedChange = null)
+        else if (selected != null) RadioButton(selected, onClick = null)
         else Text(value.orEmpty(), Modifier.widthIn(max = d.filterPanelWidth / 2), style = MaterialTheme.typography.bodyMedium,
             maxLines = 1, overflow = TextOverflow.Ellipsis, color = c.onSurfaceVariant)
     }

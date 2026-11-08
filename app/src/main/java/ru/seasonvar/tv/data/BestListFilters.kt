@@ -5,24 +5,40 @@ import ru.seasonvar.tv.data.account.FilterOption
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.time.LocalDate
 
-data class BestListFilters(val genre: String = "", val period: String = "1") {
-    fun values() = mapOf("genre" to genre, "period" to period)
+enum class BestSwitch(val id: String, val control: String, val personal: Boolean = false) {
+    FHD("fhd", "fhdTop"), HD("hd", "hdTop"), SUBTITLES("sub", "subTop"),
+    FOREIGN_ONLY("eng", "engTop"), AVAILABLE("block", "blockTop"),
+    HIDE_WATCHING("mark", "markTop", true), HIDE_HISTORY("history", "historyTop", true),
+    HIDE_BLACKLIST("nw", "notwatchedTop", true),
+}
+
+data class BestListFilters(val genre: String = "", val period: String = "1", val switches: Set<BestSwitch> = emptySet()) {
+    fun values() = mapOf("genre" to genre, "period" to period) + BestSwitch.entries.associate { flag ->
+        flag.id to (if (flag == BestSwitch.FOREIGN_ONLY) flag !in switches else flag in switches).toString()
+    }
+    fun form() = BestSwitch.entries.associate { "filterTop[${it.id}]" to if (it in switches) "yes" else "" }
+    fun base() = copy(switches = emptySet())
     fun safe() = BestListFilters(genre.takeIf { it.matches(Regex("[0-9]{1,6}")) }.orEmpty(),
-        period.takeIf { it in setOf("1", "7", "31") } ?: "1")
+        period.takeIf { it in setOf("1", "7", "31") } ?: "1", switches)
     fun url(): String = "https://seasonvar.ru/?mode=top".toHttpUrl().newBuilder().apply {
         if (genre.isNotEmpty()) addQueryParameter("genre", genre)
         addQueryParameter("period", period)
     }.build().toString()
-    val cacheName get() = if (this == BestListFilters()) "best.html" else "best-genre-${genre.ifEmpty { "all" }}-period-$period.html"
+    val cacheName get(): String {
+        if (this == BestListFilters()) return "best.html"
+        val prefix = "best-genre-${genre.ifEmpty { "all" }}-period-$period"
+        return if (switches.isEmpty()) "$prefix.html" else "$prefix-flags-${switches.sumOf { 1 shl it.ordinal }}.json"
+    }
     companion object {
-        fun from(values: Map<String, String>) = BestListFilters(values["genre"].orEmpty(), values["period"] ?: "1")
+        fun from(values: Map<String, String>) = BestListFilters(values["genre"].orEmpty(), values["period"] ?: "1",
+            BestSwitch.entries.filter { if (it == BestSwitch.FOREIGN_ONLY) values[it.id] == "false" else values[it.id] == "true" }.toSet())
     }
 }
 
-data class BestFilterOptions(val genres: List<FilterOption>, val periods: List<FilterOption>) {
+data class BestFilterOptions(val genres: List<FilterOption>, val periods: List<FilterOption>, val switches: Set<BestSwitch> = emptySet()) {
     fun normalize(value: BestListFilters) = BestListFilters(
         value.genre.takeIf { id -> genres.any { it.value == id } }.orEmpty(),
-        value.period.takeIf { id -> periods.any { it.value == id } } ?: "1")
+        value.period.takeIf { id -> periods.any { it.value == id } } ?: "1", value.switches.intersect(switches))
 }
 
 data class FilteredBestPage(val page: CatalogPage, val options: BestFilterOptions, val filters: BestListFilters)
@@ -40,7 +56,13 @@ object BestFilterParser {
             genres.map { it.value }.distinct().size != genres.size ||
             periods.map { it.value }.toSet() != setOf("1", "7", "31") || periods.size != 3 || periods.any { it.label.isBlank() })
             throw MarkupChangedException()
-        return BestFilterOptions(genres, periods)
+        val controls = doc.select("[data-chgroup=filterTop] input[data-filter]")
+        val switches = BestSwitch.entries.filter { flag ->
+            val found = controls.filter { it.attr("data-filter") == flag.control }
+            if (found.size > 1 || found.any { it.attr("type") != "checkbox" }) throw MarkupChangedException()
+            found.isNotEmpty()
+        }.toSet()
+        return BestFilterOptions(genres, periods, switches)
     }
 
     fun parse(html: String, day: LocalDate, expected: BestListFilters): FilteredBestPage {
