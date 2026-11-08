@@ -36,6 +36,11 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
         ru.seasonvar.tv.data.update.GitHubUpdateSource(), File(cacheDir, "updates"), updateInstaller::verify) }
     val playbackProgress by lazy { PlaybackProgress(this) }
     val smartContinueCache by lazy { ru.seasonvar.tv.data.smart.PreferencesSmartContinueCache(this) }
+    val listFilterPreferences by lazy {
+        val store = getSharedPreferences("list-filters", MODE_PRIVATE)
+        ru.seasonvar.tv.ui.filters.ListFilterPreferences(
+            { store.getString(it, null) }, { key, value -> store.edit().putString(key, value).apply() })
+    }
     val accountMarks by lazy { ru.seasonvar.tv.data.playback.AccountMarkWriter(applicationScope, account,
         ru.seasonvar.tv.data.playback.PreferencesMarkOutbox(this)) }
     val playbackHistory by lazy { ru.seasonvar.tv.data.playback.PlaybackHistoryWriter(applicationScope, account) }

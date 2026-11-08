@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="filters">Фильтры</string>
+    <string name="filters_active">Фильтры · %1$d</string>
+    <string name="filters_title">Фильтры — %1$s</string>
+    <string name="filter_genre">Жанр</string>
+    <string name="filter_country">Страна</string>
+    <string name="filters_loading">Загружаю варианты…</string>
+    <string name="filters_hint">Изменения вступят в силу после применения</string>
+    <string name="filters_load_error">Не удалось загрузить варианты фильтров</string>
+    <string name="filters_apply_error">Не удалось применить фильтры. Повторите попытку.</string>
+    <string name="filters_reset">Сбросить</string>
+    <string name="filters_apply">Применить</string>
+    <string name="filters_applying">Применяю…</string>
+    <string name="filters_back">Назад</string>
+    <string name="filters_empty">По выбранным фильтрам ничего не найдено</string>
+    <string name="filters_empty_hint">Измените условия или сбросьте фильтры</string>
     <string name="home_settings_title">Ленты на главном экране</string>
     <string name="home_settings_description">Подборки Seasonvar на домашнем экране Android TV.</string>
     <string name="home_settings_count">%1$d из 3</string>

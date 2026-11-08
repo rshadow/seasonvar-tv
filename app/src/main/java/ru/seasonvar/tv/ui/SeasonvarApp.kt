@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -60,6 +61,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -197,6 +199,7 @@ internal fun SeasonvarApp(
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
+    personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
@@ -246,6 +249,7 @@ internal fun SeasonvarApp(
             smartState = smartState, smartDescription = smartDescription,
             onSmartVisible = onSmartVisible, onSmartRefresh = onSmartRefresh, onSmartSelect = onSmartSelect,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
+            personalFilters = personalFilters,
             onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore, onPersonalSelect = onPersonalSelect,
         )
     }
@@ -303,6 +307,7 @@ private fun SeasonvarContent(
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
+    personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
@@ -788,6 +793,7 @@ private fun SeasonvarContent(
                     }) else null,
                     onRefresh = { if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                     smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
+                    filters = personalFeed?.let(personalFilters::get),
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = ::openDetails,
@@ -815,6 +821,7 @@ internal fun ThemeButton(
     modifier: Modifier = Modifier,
     active: Boolean = true,
     @DrawableRes icon: Int? = null,
+    badgeCount: Int = 0,
     loading: Boolean = false,
     loadingLabel: String? = null,
     avatarUrl: String? = null,
@@ -898,8 +905,20 @@ internal fun ThemeButton(
                 onError = { if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarAccount", "avatar=failed") },
                 placeholder = painterResource(icon), error = painterResource(icon),
                 modifier = Modifier.size(d.headerButtonIconSize).clip(RoundedCornerShape(d.buttonCornerRadius)))
-            else Icon(painterResource(icon), contentDescription = text,
-                modifier = Modifier.size(d.headerButtonIconSize).then(rotation))
+            else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Icon(painterResource(icon), contentDescription = text,
+                    modifier = Modifier.size(d.headerButtonIconSize).then(rotation))
+                if (badgeCount > 0) Box(
+                    Modifier.align(Alignment.TopEnd).padding(d.headerButtonBadgeInset)
+                        .size(d.headerButtonBadgeSize)
+                        .background(if (focused) c.onPrimary else c.primary, RoundedCornerShape(d.headerButtonBadgeSize))
+                        .clearAndSetSemantics { },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(badgeCount.toString(), style = MaterialTheme.typography.labelSmall,
+                        color = if (focused) c.primary else c.onPrimary, maxLines = 1)
+                }
+            }
         }
     } else {
         Button(onClick = action, enabled = enabled, modifier = buttonModifier,
@@ -963,9 +982,20 @@ private fun CatalogPane(
     layoutFocus: FocusRequester = remember { FocusRequester() },
     onLayoutChange: () -> Unit = {},
     onEnterContent: () -> Unit = {},
+    filters: ru.seasonvar.tv.ui.filters.ListFiltersController? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    val filterState = filters?.state?.collectAsStateWithLifecycle()?.value
+    val filterFocus = remember { FocusRequester() }
+    var filtersWereOpen by remember(filters) { mutableStateOf(false) }
+    LaunchedEffect(filterState?.open) {
+        if (filtersWereOpen && filterState?.open == false) {
+            repeat(2) { withFrameNanos { } }
+            filterFocus.requestFocus()
+        }
+        filtersWereOpen = filterState?.open == true
+    }
     val isToday = feed == PublicFeed.TODAY
     val personal = personalFeed != null || smart
     val strings = remember(feed, personalFeed, smart) {
@@ -1022,7 +1052,8 @@ private fun CatalogPane(
                 else -> null
             }
             val count = if (historyContent == null && state.loaded) state.entries.size else null
-            val metadata = catalogHeaderMetadata(count, state.hasMore, if (isToday) date else null, status)
+            val metadata = listOf(catalogHeaderMetadata(count, state.hasMore, if (isToday) date else null, status),
+                filterState?.summary.orEmpty()).filter { it.isNotEmpty() }.joinToString(" · ")
             Row(Modifier.weight(1f).padding(end = d.spacingSmall), verticalAlignment = Alignment.CenterVertically) {
                 if (searchHeader != null) {
                     Box(Modifier.weight(1f)) { searchHeader() }
@@ -1038,10 +1069,16 @@ private fun CatalogPane(
                     } else false
                 }
                 val layoutLabel = stringResource(if (layout == CatalogLayout.GRID) R.string.catalog_layout_grid else R.string.catalog_layout_strip)
+                if (filters != null && filterState != null) ThemeButton(
+                    stringResource(if (filterState.activeCount == 0) R.string.filters else R.string.filters_active, filterState.activeCount),
+                    filters::open, Modifier.focusRequester(filterFocus)
+                        .focusProperties { left = menuFocus; right = layoutFocus }.then(enterCards),
+                    icon = R.drawable.ic_filter, badgeCount = filterState.activeCount,
+                )
                 ThemeButton(
                     stringResource(if (layout == CatalogLayout.STRIP) R.string.catalog_show_grid else R.string.catalog_show_strip),
                     onLayoutChange,
-                    Modifier.focusRequester(layoutFocus).focusProperties { left = menuFocus; right = refreshFocus }
+                    Modifier.focusRequester(layoutFocus).focusProperties { left = if (filters != null) filterFocus else menuFocus; right = refreshFocus }
                         .semantics { stateDescription = layoutLabel }.then(enterCards),
                     icon = if (layout == CatalogLayout.GRID) R.drawable.ic_catalog_grid else R.drawable.ic_catalog_strip,
                 )
@@ -1066,7 +1103,7 @@ private fun CatalogPane(
                     state.failure == LoadFailure.MARKUP -> if (personal) R.string.resume_error else if (feed == null) R.string.search_error else R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
-                    else -> strings.empty
+                    else -> if ((filterState?.activeCount ?: 0) > 0) R.string.filters_empty else strings.empty
                 }
                 Text(stringResource(message), style = MaterialTheme.typography.titleLarge,
                     color = c.onBackground)
@@ -1074,6 +1111,7 @@ private fun CatalogPane(
                 Text(
                     stringResource(if (state.loading && !state.loaded) R.string.today_loading_hint
                         else if (state.failure != null) R.string.today_error_hint
+                        else if ((filterState?.activeCount ?: 0) > 0) R.string.filters_empty_hint
                         else if (smart) R.string.smart_continue_empty_hint
                         else if (personalFeed == PersonalFeed.HISTORY) R.string.history_empty_hint
                         else if (personalFeed == PersonalFeed.RESUME) R.string.resume_empty_hint
@@ -1131,6 +1169,7 @@ private fun CatalogPane(
             }
         }
     }
+    if (filters != null && filterState != null) ru.seasonvar.tv.ui.filters.ListFilterPanel(stringResource(strings.title), filterState, filters)
 }
 
 @Composable
