@@ -41,7 +41,8 @@ data class DescriptionState(
 )
 
 class CatalogViewModel(private val repository: CatalogRepository, private val feed: PublicFeed,
-    preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModel() {
+    preferences: ListFilterPreferences = ListFilterPreferences(), account: ru.seasonvar.tv.data.account.AccountRepository? = null,
+    private val accountOwner: () -> String? = { null }) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState(loading = feed == PublicFeed.TODAY))
     val state = mutableState.asStateFlow()
     private val mutableDescription = MutableStateFlow(DescriptionState())
@@ -51,7 +52,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
 
     private var started = false
     private var generation = 0L
-    private val filterSource = if (feed == PublicFeed.BEST) BestListFilterSource(repository, preferences) else null
+    private val filterSource = if (feed == PublicFeed.BEST) BestListFilterSource(repository, preferences, account, accountOwner) else null
     private val filterController = filterSource?.let { source -> ListFilterController(viewModelScope, source, "public",
         onApplying = {
             generation++
@@ -59,7 +60,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
             mutableState.value = state.value.copy(loading = false, failure = null)
         }, onApplied = { page ->
             mutableState.value = CatalogUiState(date = page.date, entries = page.entries, loading = false, loaded = true)
-        }) }
+        }, context = accountOwner) }
     val filters: ListFiltersController? get() = filterController
 
     init { if (feed == PublicFeed.TODAY) refresh() }
@@ -108,6 +109,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         started = true
         refreshJob?.cancel()
         val expected = ++generation
+        val expectedOwner = accountOwner()
         val day = LocalDate.now()
         val previous = state.value.takeIf { it.date == day && it.loaded }
         mutableState.value = previous?.copy(loading = true, failure = null) ?: CatalogUiState(date = day)
@@ -115,19 +117,19 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
             try {
                 if (previous == null) source.cached(controller.state.value.values)?.let { cached ->
                     ensureActive()
-                    if (generation != expected) return@launch
+                    if (generation != expected || accountOwner() != expectedOwner) return@launch
                     mutableState.value = CatalogUiState(date = cached.page.date, entries = cached.page.entries, cached = true, loaded = true)
                     controller.accept(cached)
                 }
                 val result = source.load(controller.state.value.values)
                 ensureActive()
-                if (generation != expected) return@launch
+                if (generation != expected || accountOwner() != expectedOwner) return@launch
                 mutableState.value = CatalogUiState(date = result.page.date, entries = result.page.entries, loading = false, loaded = true)
                 controller.accept(result)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 ensureActive()
-                if (generation == expected) mutableState.value = state.value.copy(loading = false, failure = when (e) {
+                if (generation == expected && accountOwner() == expectedOwner) mutableState.value = state.value.copy(loading = false, failure = when (e) {
                     is MarkupChangedException -> LoadFailure.MARKUP
                     is SiteHttpException -> LoadFailure.HTTP
                     else -> LoadFailure.NETWORK
@@ -180,11 +182,13 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
     }
 
     class Factory(private val repository: CatalogRepository, private val feed: PublicFeed,
-        private val preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModelProvider.Factory {
+        private val preferences: ListFilterPreferences = ListFilterPreferences(),
+        private val account: ru.seasonvar.tv.data.account.AccountRepository? = null,
+        private val accountOwner: () -> String? = { null }) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(CatalogViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return CatalogViewModel(repository, feed, preferences) as T
+            return CatalogViewModel(repository, feed, preferences, account, accountOwner) as T
         }
     }
 }

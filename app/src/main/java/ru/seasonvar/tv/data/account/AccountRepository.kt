@@ -82,6 +82,10 @@ class AccountRepository(private val sessions: SessionManager, private val transp
 
     suspend fun resume(): AccountPage = personalList(PersonalFeed.RESUME)
 
+    suspend fun bestFilterMetadata(filters: ru.seasonvar.tv.data.BestListFilters): String = withContext(Dispatchers.IO) {
+        authenticatedHtml(filters.safe().url())
+    }
+
     suspend fun personalFilterOptions(): PersonalFilterOptions = withContext(Dispatchers.IO) {
         PersonalFilterParser.options(authenticatedHtml("https://seasonvar.ru/resume"))
     }

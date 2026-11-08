@@ -58,7 +58,9 @@ class MainActivity : ComponentActivity() {
             container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java]
         val repository = container.repository
         models = PublicFeed.entries.associateWith { feed ->
-            ViewModelProvider(this, CatalogViewModel.Factory(repository, feed, container.listFilterPreferences))
+            ViewModelProvider(this, CatalogViewModel.Factory(repository, feed, container.listFilterPreferences, container.account) {
+                ru.seasonvar.tv.data.playback.markOwner(container.account.session.value.user)
+            })
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]

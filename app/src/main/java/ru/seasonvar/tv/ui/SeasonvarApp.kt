@@ -1056,7 +1056,10 @@ private fun CatalogPane(
             }
             val count = if (historyContent == null && state.loaded) state.entries.size else null
             val metadata = listOf(catalogHeaderMetadata(count, state.hasMore, if (isToday) date else null, status),
-                filterState?.summary.orEmpty()).filter { it.isNotEmpty() }.joinToString(" · ")
+                (listOf(filterState?.summary.orEmpty()) + filterState?.activeFields.orEmpty()
+                    .filter { it.kind == ru.seasonvar.tv.ui.filters.ListFilterKind.TOGGLE }
+                    .map { stringResource(it.activeTitle ?: it.title) }).filter { it.isNotEmpty() }.joinToString(" · "))
+                .filter { it.isNotEmpty() }.joinToString(" · ")
             Row(Modifier.weight(1f).padding(end = d.spacingSmall), verticalAlignment = Alignment.CenterVertically) {
                 if (searchHeader != null) {
                     Box(Modifier.weight(1f)) { searchHeader() }
