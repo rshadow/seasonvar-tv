@@ -16,6 +16,8 @@ interface SessionStore {
 class SessionCookies(initial: List<Cookie> = emptyList(), private val changed: (List<Cookie>) -> Unit = {}) : CookieJar {
     private val cookies = initial.filter { it.domain in setOf("seasonvar.ru", "www.seasonvar.ru") }.toMutableList()
     fun snapshot(): List<Cookie> = synchronized(this) { cookies.toList() }
+    fun scriptCookieNameIndex(url: HttpUrl, name: String): Int = loadForRequest(url)
+        .filterNot { it.httpOnly }.joinToString("; ") { it.name + "=" + it.value }.indexOf(name)
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (!siteOrigin(url)) return
         val snapshot = synchronized(this) {

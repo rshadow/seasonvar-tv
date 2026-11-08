@@ -11,7 +11,7 @@ import ru.seasonvar.tv.data.network.NetworkSettings
 import java.io.File
 
 class SeasonvarApplication : Application(), ImageLoaderFactory {
-    private val applicationScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
+    internal val applicationScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
     internal val interfaceSettings by lazy { ru.seasonvar.tv.ui.settings.InterfaceSettings(this) }
     val networkSettings by lazy { NetworkSettings(this) }
     val sessions by lazy { ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) }
@@ -38,6 +38,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val smartContinueCache by lazy { ru.seasonvar.tv.data.smart.PreferencesSmartContinueCache(this) }
     val accountMarks by lazy { ru.seasonvar.tv.data.playback.AccountMarkWriter(applicationScope, account,
         ru.seasonvar.tv.data.playback.PreferencesMarkOutbox(this)) }
+    val playbackHistory by lazy { ru.seasonvar.tv.data.playback.PlaybackHistoryWriter(applicationScope, account) }
     val homeChannels by lazy { ru.seasonvar.tv.data.home.HomeChannels(this, applicationScope) }
 
     override fun onCreate() { super.onCreate(); homeChannels.start() }

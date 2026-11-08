@@ -13,6 +13,15 @@ internal class MemorySessionStore : SessionStore {
 }
 
 class SessionCookiesTest {
+    @Test fun history_cookie_field_is_a_script_visible_name_offset_with_path_and_expiry_rules() {
+        fun visible(name: String, path: String = "/") = Cookie.Builder().name(name).value("dummy").domain("seasonvar.ru").path(path).secure().build()
+        val jar = SessionCookies(listOf(cookie("hidden"), visible("other"), visible("svid1", "/serial-123-test.html")))
+        assertEquals(-1, jar.scriptCookieNameIndex("https://seasonvar.ru/".toHttpUrl(), "svid1"))
+        assertEquals("other=dummy; ".length, jar.scriptCookieNameIndex("https://seasonvar.ru/serial-123-test.html".toHttpUrl(), "svid1"))
+        assertEquals(-1, SessionCookies(listOf(cookie("svid1"))).scriptCookieNameIndex("https://seasonvar.ru/".toHttpUrl(), "svid1"))
+        assertEquals(-1, jar.scriptCookieNameIndex("https://cdn.example.test/serial-123-test.html".toHttpUrl(), "svid1"))
+    }
+
     private val site = "https://seasonvar.ru/".toHttpUrl()
     private fun cookie(name: String = "example", path: String = "/", hostOnly: Boolean = false): Cookie = Cookie.Builder()
         .name(name).value("dummy-value").path(path).secure().httpOnly()

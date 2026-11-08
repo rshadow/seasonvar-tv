@@ -14,6 +14,10 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.ui.player.PlayerActivity
@@ -29,6 +33,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var detailsModel: SeriesDetailsViewModel
     private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
+    private lateinit var personalModels: Map<PersonalFeed, PersonalListViewModel>
+    private var visiblePersonalFeed: PersonalFeed? = null
+    private var historyRevision = 0L
 
     private val playbackLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) result.data?.let { data ->
@@ -55,13 +62,20 @@ class MainActivity : ComponentActivity() {
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
-        val personalModels = PersonalFeed.entries.associateWith { feed ->
+        personalModels = PersonalFeed.entries.associateWith { feed ->
             ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
             container.account, repository, container.smartContinueCache,
             { container.interfaceSettings.preferredTranslations.value }))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                container.account.historyRevision.collect { revision ->
+                    if (refreshHistoryIfChanged(revision)) smartModel.invalidate()
+                }
+            }
+        }
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
             preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
@@ -137,7 +151,10 @@ class MainActivity : ComponentActivity() {
                 onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
                 onSmartSelect = smartModel::select,
                 onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,
-                onPersonalVisible = { personalModels.getValue(it).activate() },
+                onPersonalVisible = { feed ->
+                    visiblePersonalFeed = feed
+                    feed?.let { personalModels.getValue(it).activate() }
+                },
                 onPersonalRefresh = { personalModels.getValue(it).retryOrRefresh() },
                 onPersonalMore = { personalModels.getValue(it).loadMore() },
                 onPersonalSelect = { feed, entry, retry -> personalModels.getValue(feed).select(entry, retry) },
@@ -204,10 +221,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshHistoryIfChanged((application as SeasonvarApplication).account.historyRevision.value)
         smartModel.invalidate()
         models.values.forEach { it.refreshIfDateChanged() }
         detailsModel.refreshResume()
         (application as SeasonvarApplication).accountMarks.retry()
         (application as SeasonvarApplication).homeChannels.requestRefresh()
+    }
+
+    private fun refreshHistoryIfChanged(revision: Long): Boolean {
+        if (revision == historyRevision) return false
+        historyRevision = revision
+        personalModels.getValue(PersonalFeed.HISTORY).invalidate()
+        if (visiblePersonalFeed == PersonalFeed.HISTORY) personalModels.getValue(PersonalFeed.HISTORY).activate()
+        return true
     }
 }

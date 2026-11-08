@@ -43,6 +43,7 @@ SITE_STYLE_VERSION ?= 25.4.1
 SITE_SCRIPT_VERSION ?= 25.4.1
 PLAYER_PROBE_PAGE ?= https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html
 PLAYER_PROBE_OUT ?= build/player-probe
+HISTORY_PROBE_OUT ?= build/history-probe
 HOME_PROBE_OUT ?= build/home-probe
 PLAYER_PROBE_SEASON_PAGE ?= https://seasonvar.ru/serial-32752-Lyubov__smert__i_roboty_psxknda-3-season.html
 UPDATE_PREVIEW_SCENARIO ?= new
@@ -83,6 +84,7 @@ help:
 		'make details-progress-probe Verify stable progress layout across loading states offline' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
+		'make history-probe          Record Naruto episode one through the emulator player; inspect frames' \
 		'make home-probe             Verify home channels, links and video in emulator; inspect frames' \
 		'make home-platform          Inspect launcher and channel approval support on DEVICE' \
 		'make update-test            Run offline update tests' \
@@ -407,6 +409,16 @@ home-probe:
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-home.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(HOME_PROBE_OUT)"
+
+.PHONY: history-probe
+history-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for history verification.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ENV) python3 scripts/probe-history.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(HISTORY_PROBE_OUT)"
 
 player-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for the player probe.' >&2; exit 1;; esac

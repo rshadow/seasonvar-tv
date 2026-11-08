@@ -35,9 +35,13 @@ class PersonalListViewModel internal constructor(
     private val visitedPages = mutableSetOf<String>()
     private var version = -1L
     private var active = false
+    private var dirty = false
+    private var generation = 0L
     init { viewModelScope.launch { session.collect { session ->
         if (version != session.version) {
             version = session.version
+            generation++
+            dirty = false
             refreshJob?.cancel(); descriptionJob?.cancel(); moreJob?.cancel()
             nextPage = null; visitedPages.clear()
             mutableState.value = CatalogUiState(loading = false)
@@ -45,12 +49,20 @@ class PersonalListViewModel internal constructor(
             if (active && session.user != null) refresh()
         }
     } } }
-    fun activate() { active = true; if (!state.value.loaded && !state.value.loading) refresh() }
+    fun activate() { active = true; if ((dirty || !state.value.loaded) && !state.value.loading) refresh() }
+    fun invalidate() {
+        dirty = true
+        generation++
+        refreshJob?.cancel(); moreJob?.cancel()
+        nextPage = null; visitedPages.clear()
+        mutableState.value = state.value.copy(loading = false, loadingMore = false, moreFailure = null, hasMore = false)
+    }
     fun refreshIfActive() { if (active) refresh() }
     fun retryOrRefresh() { if (state.value.moreFailure != null) loadMore(retry = true) else refresh() }
     fun refresh() {
         if (session.value.user == null) return
         refreshJob?.cancel(); moreJob?.cancel()
+        val expectedGeneration = ++generation
         nextPage = null; visitedPages.clear()
         mutableState.value = state.value.copy(loading = true, failure = null, loadingMore = false, moreFailure = null, hasMore = false)
         val expected = session.value.version
@@ -58,28 +70,31 @@ class PersonalListViewModel internal constructor(
             try {
                 val page = load()
                 ensureActive()
-                if (session.value.version == expected) {
+                if (session.value.version == expected && generation == expectedGeneration) {
+                    dirty = false
                     nextPage = page.nextPage
                     mutableState.value = CatalogUiState(entries = page.entries, loading = false, loaded = true, hasMore = page.nextPage != null)
                 }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 ensureActive()
-                if (session.value.version == expected) mutableState.value = state.value.copy(loading = false,
+                if (session.value.version == expected && generation == expectedGeneration) mutableState.value = state.value.copy(loading = false,
                     failure = when (e) { is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP })
             }
         }
     }
     fun loadMore(retry: Boolean = false) {
+        if (dirty) { activate(); return }
         val next = nextPage ?: return
         if (session.value.user == null || state.value.loading || state.value.loadingMore || (!retry && state.value.moreFailure != null)) return
         val expected = session.value.version
+        val expectedGeneration = generation
         mutableState.value = state.value.copy(loadingMore = true, moreFailure = null)
         moreJob = viewModelScope.launch {
             try {
                 val page = loadNext(next)
                 ensureActive()
-                if (session.value.version != expected) return@launch
+                if (session.value.version != expected || generation != expectedGeneration) return@launch
                 if (next in visitedPages || page.nextPage == next || page.nextPage in visitedPages ||
                     (page.entries.isEmpty() && page.nextPage != null)) throw MarkupChangedException()
                 val entries = state.value.entries + page.entries
@@ -90,7 +105,7 @@ class PersonalListViewModel internal constructor(
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 ensureActive()
-                if (session.value.version == expected) mutableState.value = state.value.copy(loadingMore = false,
+                if (session.value.version == expected && generation == expectedGeneration) mutableState.value = state.value.copy(loadingMore = false,
                     moreFailure = when (e) { is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP })
             }
         }

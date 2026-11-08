@@ -29,6 +29,41 @@ class PersonalListViewModelTest {
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
 
+    @Test fun history_invalidation_is_lazy_keeps_cards_and_refreshes_from_page_one_without_touching_other_lists() = runTest(dispatcher) {
+        var calls = 0; var wantCalls = 0; var nextCalls = 0
+        val history = PersonalListViewModel(session, {
+            calls++; delay(100); AccountPage(user, listOf(entry(if (calls == 1) "1" else "3")), "page2")
+        }, { nextCalls++; AccountPage(user, listOf(entry("2"))) }) { SeriesDescription(emptyList()) }.also { store.put("history", it) }
+        val want = model("want") { wantCalls++; AccountPage(user, listOf(entry("9"))) }
+        runCurrent(); history.activate(); want.activate(); advanceUntilIdle(); history.loadMore(); runCurrent()
+        assertEquals(listOf("1", "2"), history.state.value.entries.map { it.id })
+        history.invalidate(); runCurrent()
+        assertEquals(1, calls); assertEquals(1, wantCalls); assertFalse(history.state.value.hasMore)
+        assertEquals(listOf("1", "2"), history.state.value.entries.map { it.id })
+        history.loadMore(); runCurrent()
+        assertTrue(history.state.value.loading); assertEquals(listOf("1", "2"), history.state.value.entries.map { it.id })
+        advanceUntilIdle()
+        assertEquals(listOf("3"), history.state.value.entries.map { it.id })
+        history.activate(); runCurrent(); assertEquals(2, calls)
+        assertEquals(1, nextCalls); assertEquals(1, wantCalls)
+        assertEquals(listOf("9"), want.state.value.entries.map { it.id })
+    }
+
+    @Test fun invalidation_cancels_old_pagination_and_failed_refresh_remains_dirty_for_the_next_open() = runTest(dispatcher) {
+        var calls = 0; var failRefresh = false
+        val history = PersonalListViewModel(session, {
+            calls++; if (failRefresh) throw IOException(); AccountPage(user, listOf(entry("1")), "page2")
+        }, { withContext(NonCancellable) { delay(1000) }; AccountPage(user, listOf(entry("2"))) }) {
+            SeriesDescription(emptyList())
+        }.also { store.put("history", it) }
+        runCurrent(); history.activate(); runCurrent(); history.loadMore(); runCurrent()
+        history.invalidate(); failRefresh = true; history.activate(); advanceUntilIdle()
+        assertEquals(listOf("1"), history.state.value.entries.map { it.id })
+        assertEquals(LoadFailure.NETWORK, history.state.value.failure); assertFalse(history.state.value.hasMore)
+        failRefresh = false; history.activate(); advanceUntilIdle()
+        assertEquals(3, calls); assertNull(history.state.value.failure); assertTrue(history.state.value.hasMore)
+    }
+
     @Test fun lists_load_independently_and_returning_to_a_loaded_list_does_not_reload() = runTest(dispatcher) {
         var updatesCalls = 0
         var wantCalls = 0

@@ -30,6 +30,18 @@ class SmartContinueViewModelTest {
         { SeriesDescription(emptyList()) }).also { store.put("smart", it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
+    @Test fun hidden_continue_invalidation_keeps_cached_cards_and_waits_until_open_to_load_new_history_order() = runTest(dispatcher) {
+        var calls = 0
+        val other = entry.copy(id = "50", sourceKey = "smart:200")
+        val model = model(Cache(listOf(entry))) {
+            calls++; SmartContinuePage(if (calls == 1) listOf(entry, other) else listOf(other, entry), emptySet(), false)
+        }
+        runCurrent(); model.setVisible(true); runCurrent(); model.setVisible(false)
+        model.invalidate(); runCurrent()
+        assertEquals(1, calls); assertEquals(listOf(entry, other), model.state.value.entries)
+        model.setVisible(true); runCurrent()
+        assertEquals(2, calls); assertEquals(listOf(other, entry), model.state.value.entries)
+    }
     @Test fun cache_is_visible_while_network_loads_and_error_does_not_erase_it() = runTest(dispatcher) {
         val gate = CompletableDeferred<SmartContinuePage>();val cache = Cache(listOf(entry))
         val model = model(cache) { gate.await() };runCurrent();model.setVisible(true);runCurrent()

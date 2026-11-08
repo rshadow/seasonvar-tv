@@ -8,6 +8,14 @@ import ru.seasonvar.tv.data.MarkupChangedException
 import java.util.Base64
 
 class VideoParserTest {
+    @Test fun missing_or_invalid_history_metadata_does_not_prevent_video_playback_or_invent_ids() {
+        val request = PlaybackRequest("1", "https://seasonvar.ru/serial-1-test.html", "0", "1_seriya", "1", "Тест")
+        val video = """[{"id":"1","file":"https://media.example.test/one.mp4"}]"""
+        assertNull(VideoParser.source(video, request, "40").history)
+        assertNull(VideoParser.source(video.replace("\"id\":\"1\"", "\"id\":\"1\",\"vars\":900"), request).history)
+        assertNull(VideoParser.source(video.replace("\"id\":\"1\"", "\"id\":\"1\",\"vars\":\"wrong\""), request, "40").history)
+    }
+
     private val request = PlaybackRequest("1", "https://seasonvar.ru/serial-1-test.html", "0", "1_seriya", "1", "Тест")
     private fun row(id: String, file: String) = JSONObject().put("id", id).put("title", "$id серия").put("file", file)
     private fun json(vararg rows: JSONObject) = JSONArray(rows.toList()).toString()
