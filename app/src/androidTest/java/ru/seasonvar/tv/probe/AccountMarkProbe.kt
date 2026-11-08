@@ -32,6 +32,7 @@ class AccountMarkProbe : Instrumentation() {
             MarkMenuLayoutProbe.run(this)
             return
         }
+        if (mode == "history-playback") { HistoryPlaybackProbe.run(this); return }
         if (mode == "player-auto-next") {
             PlayerAutoNextProbe.run(this, probeArguments)
             return

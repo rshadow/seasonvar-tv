@@ -14,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.SeriesDetailsParser
@@ -30,6 +31,8 @@ object PlayerAutoNextProbe {
     fun run(probe: Instrumentation, arguments: Bundle) = with(probe) {
         val result = Bundle()
         val app = targetContext.applicationContext as SeasonvarApplication
+        // Home channels can restore the account after the initial guest check.
+        app.applicationScope.cancel()
         val preferences = targetContext.getSharedPreferences("playback-progress", Context.MODE_PRIVATE)
         val originalProgress = linkedMapOf<String, String?>()
         val originalTimes = linkedMapOf<String, Long?>()
@@ -237,7 +240,7 @@ object PlayerAutoNextProbe {
             Thread.sleep(2000); capture("17-season-seek"); Thread.sleep(2000); capture("20-season-after-seek")
             result.putBoolean("season_pause_seek", true)
             key(KeyEvent.KEYCODE_BACK); waitFor(5000) { main { activity?.isDestroyed == true } }
-            check(app.account.session.value.user == null && app.account.marksRevision.value == 0L)
+            check(app.account.session.value.user == null && app.account.marksRevision.value == 0L && app.account.historyRevision.value == 0L)
             result.putBoolean("no_account_marks_written", true)
             result.putBoolean("script_success", true)
         } catch (error: Throwable) {

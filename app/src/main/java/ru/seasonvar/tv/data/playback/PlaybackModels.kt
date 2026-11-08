@@ -33,5 +33,5 @@ internal fun playbackEpisodes(ids: List<String>?, labels: List<String>?): List<E
     return ids.zip(labels) { id, label -> Episode(id, label) }
 }
 
-data class VideoSource(val url: String)
+data class VideoSource(val url: String, val history: PlaybackHistoryEvent? = null)
 class VideoUnavailableException : Exception("Video source unavailable")

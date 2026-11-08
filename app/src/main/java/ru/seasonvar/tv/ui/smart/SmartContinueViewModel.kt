@@ -55,7 +55,11 @@ class SmartContinueViewModel internal constructor(
         visible = value
         if (value && (entering || dirty || !state.value.loaded) && !state.value.loading) refresh()
     }
-    fun invalidate() { dirty = true; if (visible) refresh() }
+    fun invalidate() {
+        dirty = true
+        refreshJob?.cancel()
+        if (visible) refresh() else mutableState.value = state.value.copy(loading = false)
+    }
     fun refresh() {
         if (session.value.user == null) return
         val expectedOwner = markOwner(session.value.user) ?: run {

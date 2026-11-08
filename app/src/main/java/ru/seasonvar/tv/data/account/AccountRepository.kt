@@ -16,6 +16,7 @@ interface AccountTransport {
     suspend fun removeMark(mark: AccountListMark, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String
+    suspend fun saveHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, jar: SessionCookies): Unit = throw UnsupportedOperationException()
 }
 
 data class AccountSession(val user: AccountUser? = null, val version: Long = 0, val expired: Boolean = false)
@@ -37,12 +38,25 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         override suspend fun removeMark(mark: AccountListMark, jar: SessionCookies) = client.accountRemoveMark(mark, jar)
         override suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies) = client.accountStatus(change, jar)
         override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = client.accountMark(mark, jar)
+        override suspend fun saveHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, jar: SessionCookies) = client.accountHistory(event, jar)
     })
     private val mutableSession = MutableStateFlow(AccountSession())
     val session = mutableSession.asStateFlow()
     private val mutex = Mutex()
     private val mutableMarksRevision = MutableStateFlow(0L)
     val marksRevision = mutableMarksRevision.asStateFlow()
+    private val mutableHistoryRevision = MutableStateFlow(0L)
+    val historyRevision = mutableHistoryRevision.asStateFlow()
+
+    suspend fun recordHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, ownerVersion: Long): Unit = withContext(Dispatchers.IO) { mutex.withLock {
+        val expected = session.value
+        if (expected.user == null) throw SessionExpiredException()
+        if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
+        transport.saveHistory(event, sessions.current())
+        currentCoroutineContext().ensureActive()
+        if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+        mutableHistoryRevision.value++
+    } }
 
     suspend fun restore(): Unit = withContext(Dispatchers.IO) { mutex.withLock {
         if (!sessions.hasSession()) return@withLock

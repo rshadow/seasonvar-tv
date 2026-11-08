@@ -197,7 +197,7 @@ internal fun SeasonvarApp(
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
-    onPersonalVisible: (PersonalFeed) -> Unit = {},
+    onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
@@ -303,7 +303,7 @@ private fun SeasonvarContent(
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
-    onPersonalVisible: (PersonalFeed) -> Unit = {},
+    onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
     onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
@@ -408,7 +408,6 @@ private fun SeasonvarContent(
         pendingHistoryQuery = null
         detailsOpen = false
         section = item
-        item.personalFeed?.let(onPersonalVisible)
         val feed = item.publicFeed
         if (feed != null) {
             activeFeed = feed
@@ -435,6 +434,10 @@ private fun SeasonvarContent(
     DisposableEffect(smart) {
         onSmartVisible(smart)
         onDispose { onSmartVisible(false) }
+    }
+    DisposableEffect(personalFeed) {
+        onPersonalVisible(personalFeed)
+        onDispose { onPersonalVisible(null) }
     }
     DisposableEffect(searching) {
         onSearchVisible(searching)

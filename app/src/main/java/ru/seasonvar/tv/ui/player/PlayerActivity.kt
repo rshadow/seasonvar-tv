@@ -88,12 +88,14 @@ class PlayerActivity : ComponentActivity() {
     private var completionVisible by mutableStateOf(false)
     private var markPolicy: AccountMarkPolicy? = null
     private var markOwnerVersion: Long? = null
+    private var historyStart = ru.seasonvar.tv.data.playback.PlaybackHistoryStart()
     private val container get() = application as SeasonvarApplication
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val initial = readRequest(intent)
         request = savedInstanceState?.getString("current_episode")?.let { initial?.selectEpisode(it) } ?: initial
+        historyStart.submitted = savedInstanceState?.getBoolean("history_submitted") ?: false
         if (request == null) { finish(); return }
         // Media3's diagnostic exceptions may contain temporary media URLs.
         androidx.media3.common.util.Log.setLogLevel(androidx.media3.common.util.Log.LOG_LEVEL_OFF)
@@ -251,6 +253,10 @@ class PlayerActivity : ComponentActivity() {
 
     private fun preparePlayback(selected: PlaybackRequest? = request, resume: Boolean = true) {
         selected ?: return
+        if (!resume) historyStart = ru.seasonvar.tv.data.playback.PlaybackHistoryStart()
+        historyStart.resetSurface()
+        val historyGate = historyStart
+        val historyAccount = container.account.session.value
         trace("open season=" + selected.seasonId + " translation=" + selected.translationId + " episode=" + selected.episodeId)
         resolveJob?.cancel()
         releasePlayback()
@@ -292,14 +298,24 @@ class PlayerActivity : ComponentActivity() {
                         trace("state=" + state + " positionMs=" + player.currentPosition)
                     }
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        if (playback === player) sampleAccountMark()
+                        if (playback === player) {
+                            sampleAccountMark()
+                            if (historyGate.playing(isPlaying)) source.history?.let {
+                                container.playbackHistory.enqueue(it, historyAccount.version)
+                            }
+                        }
                     }
                     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                         if (playback !== player) return
                         if (!playWhenReady) savePosition(MarkEvent.PAUSE) else sampleAccountMark()
                     }
                     override fun onRenderedFirstFrame() {
-                        if (playback === player) trace("first-frame positionMs=" + player.currentPosition)
+                        if (playback === player) {
+                            trace("first-frame positionMs=" + player.currentPosition)
+                            if (historyGate.firstFrame(player.isPlaying)) source.history?.let {
+                                container.playbackHistory.enqueue(it, historyAccount.version)
+                            }
+                        }
                     }
                     override fun onPlayerError(error: PlaybackException) {
                         if (playback !== player) return
@@ -474,6 +490,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         request?.let { outState.putString("current_episode", it.episodeId) }
+        outState.putBoolean("history_submitted", historyStart.submitted)
         super.onSaveInstanceState(outState)
     }
 

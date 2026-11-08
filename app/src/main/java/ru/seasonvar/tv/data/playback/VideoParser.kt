@@ -31,7 +31,10 @@ object VideoParser {
         return uri.toASCIIString().replaceFirst("http:", "https:")
     }
 
-    fun source(json: String, request: PlaybackRequest): VideoSource {
+    fun serialId(html: String): String? = Jsoup.parse(html).selectFirst(".pgs-sinfo[data-id-serial]")
+        ?.attr("data-id-serial")?.takeIf { it.matches(Regex("[1-9][0-9]*")) }
+
+    fun source(json: String, request: PlaybackRequest, serialId: String? = null): VideoSource {
         val leaves = mutableListOf<JSONObject>()
         fun flatten(array: JSONArray, depth: Int) {
             if (depth > 8) throw MarkupChangedException()
@@ -74,7 +77,12 @@ object VideoParser {
         val authority = url.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
         if (parsed.scheme != "https" || parsed.username.isNotEmpty() || parsed.password.isNotEmpty() ||
             '@' in authority || parsed.port != 443) throw MarkupChangedException()
-        return VideoSource(parsed.toUri().toASCIIString())
+        val leaf = matches.single()
+        val history = if (serialId == null) null else try {
+            PlaybackHistoryEvent(request.seasonId, request.pageUrl, serialId,
+                leaf.optString("vars"), request.translationId, leaf.optString("id"))
+        } catch (_: IllegalArgumentException) { null }
+        return VideoSource(parsed.toUri().toASCIIString(), history)
     }
 
     private fun clean(value: String) = Jsoup.parseBodyFragment(value).text().trim()

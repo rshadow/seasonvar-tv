@@ -12,6 +12,6 @@ class VideoRepository(private val resource: suspend (String, String) -> String) 
             origin.userInfo != null || origin.port !in listOf(-1, 443)) throw MarkupChangedException()
         val page = resource(request.pageUrl, "https://seasonvar.ru/")
         val playlist = VideoParser.playlistUrl(page, request)
-        VideoParser.source(resource(playlist, request.pageUrl), request)
+        VideoParser.source(resource(playlist, request.pageUrl), request, VideoParser.serialId(page))
     }
 }

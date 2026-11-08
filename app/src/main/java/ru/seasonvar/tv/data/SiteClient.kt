@@ -3,6 +3,7 @@ package ru.seasonvar.tv.data
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.FormBody
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Callback
 import okhttp3.Request
 import ru.seasonvar.tv.data.network.NetworkClients
@@ -57,13 +58,20 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     suspend fun accountRemoveMark(mark: ru.seasonvar.tv.data.account.AccountListMark, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
         execute(removeMarkRequest(mark), jar)
 
-    private suspend fun execute(initial: Request, jar: ru.seasonvar.tv.data.account.SessionCookies? = sessions?.current(), loginRedirect: Boolean = false): String {
+    suspend fun accountHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent,
+        jar: ru.seasonvar.tv.data.account.SessionCookies): Unit {
+        val index = jar.scriptCookieNameIndex(event.pageUrl.toHttpUrl(), "svid1")
+        execute(historyRequest(event, index), jar, readBody = false)
+    }
+
+    private suspend fun execute(initial: Request, jar: ru.seasonvar.tv.data.account.SessionCookies? = sessions?.current(), loginRedirect: Boolean = false,
+        readBody: Boolean = true): String {
         var request = initial
         repeat(5) {
             val result = client(jar).newCall(request.newBuilder()
                 .header("User-Agent", "Mozilla/5.0 (Android TV) SeasonvarTV/" + ru.seasonvar.tv.BuildConfig.VERSION_NAME)
                 .header("Accept-Language", "ru-RU,ru;q=0.9")
-                .build()).awaitResult()
+                .build()).awaitResult(readBody)
             if (result.status in setOf(301, 302, 303, 307, 308)) {
                 if (request.method != "GET" && (!loginRedirect || result.status !in setOf(301, 302, 303))) {
                     throw IOException("Unexpected redirect")
@@ -85,6 +93,13 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        internal fun historyRequest(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, cookieNameIndex: Int): Request =
+            Request.Builder().url("https://seasonvar.ru/plStat.php")
+                .header("Referer", event.pageUrl).header("Origin", "https://seasonvar.ru")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .post(FormBody.Builder().apply { event.form(cookieNameIndex).forEach { (name, value) -> add(name, value) } }.build())
+                .build()
+
         internal fun removeMarkRequest(mark: ru.seasonvar.tv.data.account.AccountListMark): Request = Request.Builder()
             .url("https://seasonvar.ru/jsonMark.php")
             .header("Referer", mark.pageUrl)
@@ -130,7 +145,7 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
 
     private data class Result(val status: Int, val location: String?, val body: String)
 
-    private suspend fun Call.awaitResult(): Result = suspendCancellableCoroutine { continuation ->
+    private suspend fun Call.awaitResult(readBody: Boolean): Result = suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation { cancel() }
         enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -141,7 +156,8 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
             override fun onResponse(call: Call, response: Response) {
                 try {
                     val result = response.use {
-                        val body = it.body ?: throw IOException("Empty body")
+                        if (!readBody) return@use Result(it.code, it.header("Location"), "")
+                        val body = it.body
                         val source = body.source()
                         source.request(8L * 1024 * 1024 + 1)
                         if (source.buffer.size > 8L * 1024 * 1024) {
