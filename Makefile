@@ -44,6 +44,7 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 PLAYER_PROBE_PAGE ?= https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html
 PLAYER_PROBE_OUT ?= build/player-probe
 HISTORY_PROBE_OUT ?= build/history-probe
+PUBLIC_FILTERS_PROBE_OUT ?= build/public-filters-probe
 BEST_FILTERS_PROBE_OUT ?= build/best-filters-probe
 PERSONAL_FILTERS_PROBE_OUT ?= build/personal-filters-probe
 HOME_PROBE_OUT ?= build/home-probe
@@ -87,6 +88,7 @@ help:
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
 		'make history-probe          Record Naruto episode one through the emulator player; inspect frames' \
+		'make public-filters-probe   Research public filters in guest and account contexts' \
 		'make best-filters-probe     Check live best-list switches without changing account marks' \
 		'make personal-filters-probe Check live genre/country queries without changing account marks' \
 		'make home-probe             Verify home channels, links and video in emulator; inspect frames' \
@@ -415,6 +417,16 @@ home-probe:
 	$(ENV) python3 scripts/probe-home.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(HOME_PROBE_OUT)"
 
 .PHONY: history-probe
+.PHONY: public-filters-probe
+public-filters-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for filter verification.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ENV) python3 scripts/probe-public-filters.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(PUBLIC_FILTERS_PROBE_OUT)"
+
 .PHONY: best-filters-probe
 best-filters-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for filter verification.' >&2; exit 1;; esac
