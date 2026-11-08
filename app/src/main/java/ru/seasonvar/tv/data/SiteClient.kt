@@ -44,6 +44,9 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     suspend fun accountGet(url: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
         execute(Request.Builder().url(url).header("Referer", "https://seasonvar.ru/").build(), jar)
 
+    suspend fun accountFilters(filters: ru.seasonvar.tv.data.account.PersonalListFilters,
+        jar: ru.seasonvar.tv.data.account.SessionCookies): String = execute(personalFiltersRequest(filters), jar)
+
     suspend fun accountLogin(login: String, password: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
         execute(Request.Builder().url("https://seasonvar.ru/?mod=login")
             .header("Referer", "https://seasonvar.ru/")
@@ -93,6 +96,12 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        internal fun personalFiltersRequest(filters: ru.seasonvar.tv.data.account.PersonalListFilters): Request =
+            Request.Builder().url("https://seasonvar.ru/ajax.php")
+                .header("Referer", "https://seasonvar.ru/resume").header("Origin", "https://seasonvar.ru")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .post(FormBody.Builder().apply { filters.form().forEach { (name, value) -> add(name, value) } }.build()).build()
+
         internal fun historyRequest(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, cookieNameIndex: Int): Request =
             Request.Builder().url("https://seasonvar.ru/plStat.php")
                 .header("Referer", event.pageUrl).header("Origin", "https://seasonvar.ru")

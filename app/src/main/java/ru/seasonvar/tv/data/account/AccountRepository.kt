@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.data.SiteClient
 
 interface AccountTransport {
+    suspend fun filters(filters: PersonalListFilters, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun get(url: String, jar: SessionCookies): String
     suspend fun login(login: String, password: String, jar: SessionCookies): String
     suspend fun removeMark(mark: AccountListMark, jar: SessionCookies): String = throw UnsupportedOperationException()
@@ -23,6 +24,7 @@ data class AccountSession(val user: AccountUser? = null, val version: Long = 0, 
 
 class AccountRepository(private val sessions: SessionManager, private val transport: AccountTransport) {
     constructor(sessions: SessionManager, client: SiteClient) : this(sessions, object : AccountTransport {
+        override suspend fun filters(filters: PersonalListFilters, jar: SessionCookies) = client.accountFilters(filters, jar)
         override suspend fun get(url: String, jar: SessionCookies): String {
             val html = client.accountGet(url, jar)
             if (ru.seasonvar.tv.BuildConfig.DEBUG && url == "https://seasonvar.ru/resume") {
@@ -79,6 +81,38 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     } }
 
     suspend fun resume(): AccountPage = personalList(PersonalFeed.RESUME)
+
+    suspend fun personalFilterOptions(): PersonalFilterOptions = withContext(Dispatchers.IO) {
+        PersonalFilterParser.options(authenticatedHtml("https://seasonvar.ru/resume"))
+    }
+
+    suspend fun filteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters): FilteredPersonalPage = withContext(Dispatchers.IO) {
+        require(feed != PersonalFeed.HISTORY)
+        val expected = session.value
+        val jar = sessions.current()
+        val html = authenticatedHtml("https://seasonvar.ru/resume")
+        fun valid() { if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException() }
+        valid()
+        val options = PersonalFilterParser.options(html)
+        val selected = options.normalize(requested)
+        val user = expected.user ?: throw SessionExpiredException()
+        val page = if (!selected.active) AccountParser.personalList(html, feed) else {
+            val response = transport.filters(selected, jar)
+            currentCoroutineContext().ensureActive()
+            valid()
+            try { AccountParser.filteredPersonalList(response, user, feed) }
+            catch (error: SessionExpiredException) {
+                mutex.withLock { if (session.value.version == expected.version) clear(expired = true) }
+                throw error
+            } catch (error: ru.seasonvar.tv.data.MarkupChangedException) {
+                authenticatedHtml("https://seasonvar.ru/resume")
+                throw error
+            }
+        }
+        currentCoroutineContext().ensureActive()
+        valid()
+        FilteredPersonalPage(page, options, selected)
+    }
 
     suspend fun personalList(feed: PersonalFeed, pageUrl: String? = null): AccountPage = withContext(Dispatchers.IO) {
         val url = if (pageUrl == null) feed.url else {

@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         }
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
         personalModels = PersonalFeed.entries.associateWith { feed ->
-            ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed))
+            ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed, container.listFilterPreferences))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,
+                personalFilters = personalModels.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 smartState = smartState, smartDescription = smartDescription,
                 onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
                 onSmartSelect = smartModel::select,

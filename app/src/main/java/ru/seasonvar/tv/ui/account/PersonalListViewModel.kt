@@ -15,15 +15,20 @@ import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.ui.catalog.*
 import java.io.IOException
+import ru.seasonvar.tv.ui.filters.*
+import ru.seasonvar.tv.data.playback.markOwner
 
 class PersonalListViewModel internal constructor(
     private val session: StateFlow<AccountSession>,
     private val load: suspend () -> AccountPage,
     private val loadNext: suspend (String) -> AccountPage = { throw MarkupChangedException() },
+    private val filterSource: ListFilterSource? = null,
     private val describe: suspend (SeriesEntry) -> SeriesDescription,
 ) : ViewModel() {
-    constructor(account: AccountRepository, catalog: CatalogRepository, feed: PersonalFeed) :
-        this(account.session, { account.personalList(feed) }, { account.personalList(feed, it) }, catalog::description)
+    constructor(account: AccountRepository, catalog: CatalogRepository, feed: PersonalFeed,
+        preferences: ListFilterPreferences = ListFilterPreferences()) :
+        this(account.session, { account.personalList(feed) }, { account.personalList(feed, it) },
+            if (feed == PersonalFeed.HISTORY) null else PersonalListFilterSource(account, feed, preferences), catalog::description)
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
     private val mutableDescription = MutableStateFlow(DescriptionState())
@@ -37,12 +42,40 @@ class PersonalListViewModel internal constructor(
     private var active = false
     private var dirty = false
     private var generation = 0L
+    private var filterOptionsJob: Job? = null
+    private var filterApplyJob: Job? = null
+    private val mutableFilters = MutableStateFlow(initialFilters())
+    val filters: ListFiltersController? = filterSource?.let { object : ListFiltersController {
+        override val state = mutableFilters.asStateFlow()
+        override fun open() = openFilters()
+        override fun dismiss() = dismissFilters()
+        override fun choose(field: String, value: String) {
+            val current = state.value
+            if (!current.loading && !current.applying && current.fields.find { it.id == field }?.options?.any { it.value == value } == true)
+                mutableFilters.value = current.copy(draft = current.draft + (field to value), applyFailure = null)
+        }
+        override fun reset() {
+            val current = state.value
+            if (!current.open || current.loading || current.applying || current.failure != null) return
+            mutableFilters.value = current.copy(draft = defaults(), applyFailure = null)
+            applyFilters()
+        }
+        override fun apply() = applyFilters()
+    } }
+    private fun defaults() = filterSource?.fields.orEmpty().associate { it.id to it.defaultValue }
+    private fun initialFilters(owner: String? = null): ListFiltersState {
+        val saved = owner?.let { filterSource?.restore(it) }.orEmpty()
+        val values = defaults().mapValues { (key, value) -> saved[key] ?: value }
+        return ListFiltersState(fields = filterSource?.fields.orEmpty(), values = values, draft = values)
+    }
     init { viewModelScope.launch { session.collect { session ->
         if (version != session.version) {
             version = session.version
             generation++
             dirty = false
             refreshJob?.cancel(); descriptionJob?.cancel(); moreJob?.cancel()
+            filterOptionsJob?.cancel(); filterApplyJob?.cancel()
+            mutableFilters.value = initialFilters(markOwner(session.user))
             nextPage = null; visitedPages.clear()
             mutableState.value = CatalogUiState(loading = false)
             mutableDescription.value = DescriptionState()
@@ -61,19 +94,23 @@ class PersonalListViewModel internal constructor(
     fun retryOrRefresh() { if (state.value.moreFailure != null) loadMore(retry = true) else refresh() }
     fun refresh() {
         if (session.value.user == null) return
+        if (mutableFilters.value.applying) return
         refreshJob?.cancel(); moreJob?.cancel()
         val expectedGeneration = ++generation
         nextPage = null; visitedPages.clear()
         mutableState.value = state.value.copy(loading = true, failure = null, loadingMore = false, moreFailure = null, hasMore = false)
         val expected = session.value.version
+        val expectedOwner = markOwner(session.value.user)
         refreshJob = viewModelScope.launch {
             try {
-                val page = load()
+                val filtered = filterSource?.load(mutableFilters.value.values)
+                val page = filtered?.page ?: load()
                 ensureActive()
                 if (session.value.version == expected && generation == expectedGeneration) {
                     dirty = false
                     nextPage = page.nextPage
                     mutableState.value = CatalogUiState(entries = page.entries, loading = false, loaded = true, hasMore = page.nextPage != null)
+                    if (filtered != null) acceptFilters(filtered, close = false, owner = expectedOwner)
                 }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
@@ -83,6 +120,70 @@ class PersonalListViewModel internal constructor(
             }
         }
     }
+    private fun acceptFilters(result: FilteredListPage, close: Boolean, owner: String?) {
+        val current = mutableFilters.value
+        mutableFilters.value = current.copy(open = current.open && !close, fields = result.fields,
+            values = result.values, draft = if (current.open && !close) current.draft else result.values,
+            applying = false, applyFailure = null)
+        owner?.let { filterSource?.save(it, result.values) }
+    }
+    private fun openFilters() {
+        val source = filterSource ?: return
+        if (session.value.user == null || mutableFilters.value.applying) return
+        filterOptionsJob?.cancel()
+        val expected = session.value.version
+        mutableFilters.value = mutableFilters.value.copy(open = true, draft = mutableFilters.value.values,
+            loading = true, failure = null, applyFailure = null)
+        filterOptionsJob = viewModelScope.launch {
+            try {
+                val fields = source.options()
+                ensureActive()
+                if (session.value.version != expected) return@launch
+                val current = mutableFilters.value
+                val draft = fields.associate { field -> field.id to (current.draft[field.id]
+                    ?.takeIf { value -> field.options.any { it.value == value } } ?: field.defaultValue) }
+                mutableFilters.value = current.copy(fields = fields, draft = draft, loading = false)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                ensureActive()
+                if (session.value.version == expected) mutableFilters.value = mutableFilters.value.copy(loading = false, failure = failure(e))
+            }
+        }
+    }
+    private fun dismissFilters() {
+        filterOptionsJob?.cancel(); filterApplyJob?.cancel()
+        mutableFilters.value = mutableFilters.value.copy(open = false, loading = false, applying = false,
+            draft = mutableFilters.value.values, applyFailure = null)
+    }
+    private fun applyFilters() {
+        val source = filterSource ?: return
+        val selected = mutableFilters.value
+        if (!selected.open || selected.loading || selected.applying || selected.failure != null || session.value.user == null) return
+        if (selected.draft == selected.values) { dismissFilters(); return }
+        refreshJob?.cancel(); moreJob?.cancel()
+        val expectedGeneration = ++generation
+        val expected = session.value.version
+        val expectedOwner = markOwner(session.value.user)
+        mutableFilters.value = selected.copy(applying = true, applyFailure = null)
+        mutableState.value = state.value.copy(loading = false, loadingMore = false)
+        filterApplyJob = viewModelScope.launch {
+            try {
+                val result = source.load(selected.draft)
+                ensureActive()
+                if (session.value.version != expected || generation != expectedGeneration) return@launch
+                dirty = false; visitedPages.clear(); nextPage = result.page.nextPage
+                mutableState.value = CatalogUiState(entries = result.page.entries, loaded = true, loading = false, hasMore = nextPage != null)
+                acceptFilters(result, close = true, owner = expectedOwner)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                ensureActive()
+                if (session.value.version == expected && generation == expectedGeneration) {
+                    mutableFilters.value = mutableFilters.value.copy(applying = false, applyFailure = failure(e))
+                }
+            }
+        }
+    }
+    private fun failure(e: Exception) = when (e) { is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP }
     fun loadMore(retry: Boolean = false) {
         if (dirty) { activate(); return }
         val next = nextPage ?: return
@@ -133,10 +234,11 @@ class PersonalListViewModel internal constructor(
             catch (_: Exception) { if (session.value.version == expected) mutableDescription.value = DescriptionState(entry.key, failed = true) }
         }
     }
-    class Factory(private val account: AccountRepository, private val catalog: CatalogRepository, private val feed: PersonalFeed) : ViewModelProvider.Factory {
+    class Factory(private val account: AccountRepository, private val catalog: CatalogRepository, private val feed: PersonalFeed,
+        private val preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(PersonalListViewModel::class.java))
-            @Suppress("UNCHECKED_CAST") return PersonalListViewModel(account, catalog, feed) as T
+            @Suppress("UNCHECKED_CAST") return PersonalListViewModel(account, catalog, feed, preferences) as T
         }
     }
 }
