@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.data.SiteClient
 
 interface AccountTransport {
+    suspend fun clearHistory(jar: SessionCookies): Unit = throw UnsupportedOperationException()
     suspend fun filters(filters: PersonalListFilters, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun get(url: String, jar: SessionCookies): String
     suspend fun login(login: String, password: String, jar: SessionCookies): String
@@ -24,6 +25,7 @@ data class AccountSession(val user: AccountUser? = null, val version: Long = 0, 
 
 class AccountRepository(private val sessions: SessionManager, private val transport: AccountTransport) {
     constructor(sessions: SessionManager, client: SiteClient) : this(sessions, object : AccountTransport {
+        override suspend fun clearHistory(jar: SessionCookies) = client.accountClearHistory(jar)
         override suspend fun filters(filters: PersonalListFilters, jar: SessionCookies) = client.accountFilters(filters, jar)
         override suspend fun get(url: String, jar: SessionCookies): String {
             val html = client.accountGet(url, jar)
@@ -49,11 +51,44 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     val marksRevision = mutableMarksRevision.asStateFlow()
     private val mutableHistoryRevision = MutableStateFlow(0L)
     val historyRevision = mutableHistoryRevision.asStateFlow()
+    private val mutableHistoryReset = MutableStateFlow(0L)
+    val historyReset = mutableHistoryReset.asStateFlow()
 
-    suspend fun recordHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, ownerVersion: Long): Unit = withContext(Dispatchers.IO) { mutex.withLock {
+    suspend fun clearHistory(ownerVersion: Long): Unit = withContext(Dispatchers.IO) { mutex.withLock {
         val expected = session.value
         if (expected.user == null) throw SessionExpiredException()
         if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
+        val jar = sessions.current()
+        suspend fun read(): AccountPage {
+            val html = transport.get(PersonalFeed.HISTORY.url, jar)
+            currentCoroutineContext().ensureActive()
+            if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+            if (AccountParser.user(html)?.id != expected.user.id) {
+                clear(expired = true)
+                throw SessionExpiredException()
+            }
+            return HistoryParser.parse(html)
+        }
+        val before = read()
+        mutableHistoryReset.value++
+        try {
+            if (before.entries.isNotEmpty() || before.nextPage != null) {
+                transport.clearHistory(jar)
+                currentCoroutineContext().ensureActive()
+                val after = read()
+                if (after.entries.isNotEmpty() || after.nextPage != null) throw ru.seasonvar.tv.data.MarkupChangedException()
+            }
+        } finally {
+            if (session.value.version == expected.version) mutableHistoryRevision.value++
+        }
+    } }
+
+    suspend fun recordHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, ownerVersion: Long,
+        expectedReset: Long = historyReset.value): Unit = withContext(Dispatchers.IO) { mutex.withLock {
+        val expected = session.value
+        if (expected.user == null) throw SessionExpiredException()
+        if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
+        if (historyReset.value != expectedReset) return@withLock
         transport.saveHistory(event, sessions.current())
         currentCoroutineContext().ensureActive()
         if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()

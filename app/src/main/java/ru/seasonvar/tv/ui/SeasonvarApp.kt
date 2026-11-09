@@ -201,6 +201,7 @@ internal fun SeasonvarApp(
     onCheckAccount: () -> Unit = {},
     personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
     publicFilters: Map<PublicFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
+    historyClear: ru.seasonvar.tv.ui.account.HistoryClearController? = null,
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
@@ -250,7 +251,7 @@ internal fun SeasonvarApp(
             smartState = smartState, smartDescription = smartDescription,
             onSmartVisible = onSmartVisible, onSmartRefresh = onSmartRefresh, onSmartSelect = onSmartSelect,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
-            personalFilters = personalFilters, publicFilters = publicFilters,
+            personalFilters = personalFilters, publicFilters = publicFilters, historyClear = historyClear,
             onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore, onPersonalSelect = onPersonalSelect,
         )
     }
@@ -310,6 +311,7 @@ private fun SeasonvarContent(
     onCheckAccount: () -> Unit = {},
     personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
     publicFilters: Map<PublicFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
+    historyClear: ru.seasonvar.tv.ui.account.HistoryClearController? = null,
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
@@ -701,6 +703,7 @@ private fun SeasonvarContent(
                                             } else false
                                         },
                                     active = section == item,
+                                    contentAlignment = Alignment.CenterStart,
                                     contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
                                 )
                             }
@@ -797,6 +800,7 @@ private fun SeasonvarContent(
                     smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
                     filters = if (personalFeed != null) personalFilters[personalFeed]
                         else if (!searching && !smart) publicFilters[activeFeed] else null,
+                    historyClear = if (personalFeed == PersonalFeed.HISTORY) historyClear else null,
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
                     onOpen = ::openDetails,
@@ -808,6 +812,7 @@ private fun SeasonvarContent(
             }
         }
     }
+    historyClear?.let { ru.seasonvar.tv.ui.account.HistoryClearDialog(it, backNavigation::reset) }
     MarkRemovalDialog(removalState,
         onDismiss = { backNavigation.reset(); onRemovalDismiss() },
         onRefresh = { backNavigation.reset(); onRemovalRefresh() },
@@ -830,7 +835,7 @@ internal fun ThemeButton(
     avatarUrl: String? = null,
     avatarKey: Long = 0,
     enabled: Boolean = true,
-    contentAlignment: Alignment? = null,
+    contentAlignment: Alignment = Alignment.Center,
     actionEnabled: Boolean = true,
     checked: Boolean? = null,
     reserveCheckSpace: Boolean = false,
@@ -924,7 +929,8 @@ internal fun ThemeButton(
             }
         }
     } else {
-        Button(onClick = action, enabled = enabled, modifier = buttonModifier,
+        Button(onClick = action, enabled = enabled,
+            modifier = buttonModifier.width(IntrinsicSize.Max).height(IntrinsicSize.Min),
             shape = shape, scale = scale, colors = colors, contentPadding = contentPadding) {
             if (checked != null || reserveCheckSpace) Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
@@ -933,9 +939,9 @@ internal fun ThemeButton(
                         modifier = Modifier.size(d.headerButtonIconSize))
                 }
                 Text(text, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            } else if (contentAlignment != null) Box(Modifier.fillMaxSize(), contentAlignment = contentAlignment) {
+            } else Box(Modifier.fillMaxSize(), contentAlignment = contentAlignment) {
                 Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            } else Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -986,9 +992,20 @@ private fun CatalogPane(
     onLayoutChange: () -> Unit = {},
     onEnterContent: () -> Unit = {},
     filters: ru.seasonvar.tv.ui.filters.ListFiltersController? = null,
+    historyClear: ru.seasonvar.tv.ui.account.HistoryClearController? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    val clearState = historyClear?.state?.collectAsStateWithLifecycle()?.value
+    val clearFocus = remember { FocusRequester() }
+    var clearWasOpen by remember(historyClear) { mutableStateOf(false) }
+    LaunchedEffect(clearState?.visible) {
+        if (clearWasOpen && clearState?.visible == false) {
+            repeat(2) { withFrameNanos { } }
+            clearFocus.requestFocus()
+        }
+        clearWasOpen = clearState?.visible == true
+    }
     val filterState = filters?.state?.collectAsStateWithLifecycle()?.value
     val filterFocus = remember { FocusRequester() }
     var filtersWereOpen by remember(filters) { mutableStateOf(false) }
@@ -1081,10 +1098,14 @@ private fun CatalogPane(
                         .focusProperties { left = menuFocus; right = layoutFocus }.then(enterCards),
                     icon = R.drawable.ic_filter, badgeCount = filterState.activeCount,
                 )
+                if (historyClear != null) ThemeButton(stringResource(R.string.history_clear_action), historyClear::ask,
+                    Modifier.focusRequester(clearFocus).focusProperties { left = menuFocus; right = layoutFocus }.then(enterCards),
+                    icon = R.drawable.ic_delete,
+                    actionEnabled = state.loaded && !state.loading && state.entries.isNotEmpty() && clearState?.busy != true)
                 ThemeButton(
                     stringResource(if (layout == CatalogLayout.STRIP) R.string.catalog_show_grid else R.string.catalog_show_strip),
                     onLayoutChange,
-                    Modifier.focusRequester(layoutFocus).focusProperties { left = if (filters != null) filterFocus else menuFocus; right = refreshFocus }
+                    Modifier.focusRequester(layoutFocus).focusProperties { left = if (historyClear != null) clearFocus else if (filters != null) filterFocus else menuFocus; right = refreshFocus }
                         .semantics { stateDescription = layoutLabel }.then(enterCards),
                     icon = if (layout == CatalogLayout.GRID) R.drawable.ic_catalog_grid else R.drawable.ic_catalog_strip,
                 )

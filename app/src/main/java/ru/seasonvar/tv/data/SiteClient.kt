@@ -69,6 +69,10 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
         execute(historyRequest(event, index), jar, readBody = false)
     }
 
+    suspend fun accountClearHistory(jar: ru.seasonvar.tv.data.account.SessionCookies) {
+        execute(clearHistoryRequest(), jar, readBody = false)
+    }
+
     private suspend fun execute(initial: Request, jar: ru.seasonvar.tv.data.account.SessionCookies? = sessions?.current(), loginRedirect: Boolean = false,
         readBody: Boolean = true): String {
         var request = initial
@@ -98,6 +102,16 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        internal fun clearHistoryRequest(): Request = Request.Builder().url("https://seasonvar.ru/ajax.php")
+            .header("Referer", "https://seasonvar.ru/?mod=history").header("Origin", "https://seasonvar.ru")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .post(object : okhttp3.RequestBody() {
+                private val form = FormBody.Builder().add("dellAllHistory", "true").build()
+                override fun contentType() = form.contentType()
+                override fun contentLength() = form.contentLength()
+                override fun isOneShot() = true
+                override fun writeTo(sink: okio.BufferedSink) = form.writeTo(sink)
+            }).build()
         internal fun bestFiltersRequest(filters: BestListFilters): Request = Request.Builder().url(filters.url())
             .header("Referer", filters.url()).header("Origin", "https://seasonvar.ru")
             .header("X-Requested-With", "XMLHttpRequest")

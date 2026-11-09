@@ -155,9 +155,13 @@ object MarkMenuLayoutProbe {
             val confirmLabels = listOf(text(R.string.mark_remove_cancel), text(R.string.mark_remove_action))
             fun confirmationBounds() = confirmLabels.associateWith { Rect().also { rect -> checkNotNull(control(it)).getBoundsInScreen(rect) } }
             val confirmation = confirmationBounds()
+            confirmLabels.forEach { ButtonAlignmentChecks.centered(probe, it) }
+            capture("07-confirmation")
             key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { main { state.value.busy } }
             waitFor { focus(text(R.string.mark_remove_action)) }
+            confirmLabels.forEach { ButtonAlignmentChecks.centered(probe, it) }
+            capture("08-confirmation-busy")
             update { it.copy(busy = false, failure = LoadFailure.NETWORK) }
             waitFor { focus(text(R.string.mark_remove_action)) }; check(confirmationBounds() == confirmation)
             key(KeyEvent.KEYCODE_ESCAPE); waitFor { main { !state.value.visible } }

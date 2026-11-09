@@ -60,6 +60,13 @@ class SmartContinueViewModel internal constructor(
         refreshJob?.cancel()
         if (visible) refresh() else mutableState.value = state.value.copy(loading = false)
     }
+    fun historyCleared() {
+        refreshJob?.cancel(); descriptionJob?.cancel()
+        dirty = false
+        mutableState.value = CatalogUiState(loading = false, loaded = true)
+        mutableDescription.value = DescriptionState()
+        markOwner(session.value.user)?.let { expectedOwner -> viewModelScope.launch { cache.clear(expectedOwner) } }
+    }
     fun refresh() {
         if (session.value.user == null) return
         val expectedOwner = markOwner(session.value.user) ?: run {
