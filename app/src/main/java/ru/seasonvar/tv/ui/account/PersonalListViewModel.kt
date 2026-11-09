@@ -22,11 +22,13 @@ class PersonalListViewModel internal constructor(
     private val load: suspend () -> AccountPage,
     private val loadNext: suspend (String) -> AccountPage = { throw MarkupChangedException() },
     private val filterSource: ListFilterSource<AccountPage>? = null,
+    private val cached: suspend () -> AccountPage? = { null },
 ) : ViewModel() {
     constructor(account: AccountRepository, feed: PersonalFeed,
         preferences: ListFilterPreferences = ListFilterPreferences()) :
         this(account.session, { account.personalList(feed) }, { account.personalList(feed, it) },
-            if (feed == PersonalFeed.HISTORY) null else PersonalListFilterSource(account, feed, preferences))
+            if (feed == PersonalFeed.HISTORY) null else PersonalListFilterSource(account, feed, preferences),
+            { account.cachedPersonalList(feed) })
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
     private var refreshJob: Job? = null
@@ -102,6 +104,14 @@ class PersonalListViewModel internal constructor(
         val expectedOwner = markOwner(session.value.user)
         refreshJob = viewModelScope.launch {
             try {
+                if (!state.value.loaded) {
+                    val filteredCache = filterSource?.cached(mutableFilters.value.values)
+                    val saved = filteredCache?.page ?: if (filterSource == null) cached() else null
+                    ensureActive()
+                    if (saved != null && session.value.version == expected && generation == expectedGeneration) {
+                        mutableState.value = state.value.copy(entries = saved.entries, loaded = true, cached = true)
+                    }
+                }
                 val filtered = filterSource?.load(mutableFilters.value.values)
                 val page = filtered?.page ?: load()
                 ensureActive()

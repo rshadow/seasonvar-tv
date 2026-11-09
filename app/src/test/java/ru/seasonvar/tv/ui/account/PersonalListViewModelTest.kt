@@ -1,5 +1,7 @@
 package ru.seasonvar.tv.ui.account
 
+import kotlinx.coroutines.CompletableDeferred
+
 import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,6 +30,29 @@ class PersonalListViewModelTest {
         PersonalListViewModel(session, load).also { store.put(key, it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
+
+    @Test fun disk_snapshot_is_visible_while_refresh_runs_and_survives_a_network_failure() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val model = PersonalListViewModel(session, { gate.await(); throw IOException() },
+            cached = { AccountPage(user, listOf(entry("1"))) }).also { store.put("cached", it) }
+        runCurrent(); model.activate(); runCurrent()
+        assertEquals(listOf("1"), model.state.value.entries.map { it.id })
+        assertTrue(model.state.value.loaded); assertTrue(model.state.value.cached); assertTrue(model.state.value.loading)
+        gate.complete(Unit); advanceUntilIdle()
+        assertFalse(model.state.value.loading); assertEquals(LoadFailure.NETWORK, model.state.value.failure)
+        assertEquals(listOf("1"), model.state.value.entries.map { it.id })
+    }
+
+    @Test fun a_late_private_disk_snapshot_cannot_restore_a_list_after_logout() = runTest(dispatcher) {
+        var requests = 0
+        val model = PersonalListViewModel(session, { requests++; AccountPage(user, listOf(entry("2"))) },
+            cached = { withContext(NonCancellable) { delay(1000) }; AccountPage(user, listOf(entry("1"))) })
+            .also { store.put("cached", it) }
+        runCurrent(); model.activate(); runCurrent()
+        session.value = AccountSession(version = 2)
+        advanceUntilIdle()
+        assertTrue(model.state.value.entries.isEmpty()); assertEquals(0, requests)
+    }
 
     @Test fun cleared_history_cannot_be_restored_by_old_pagination_or_late_refresh() = runTest(dispatcher) {
         var calls = 0

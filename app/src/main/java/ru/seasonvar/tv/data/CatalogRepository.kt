@@ -9,6 +9,7 @@ import java.io.File
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.time.LocalDate
 import java.time.ZoneId
+import ru.seasonvar.tv.data.cache.*
 
 class CatalogRepository(
     private val directory: File,
@@ -16,24 +17,26 @@ class CatalogRepository(
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val cacheToken: () -> Long? = { 0L },
+    responseCache: HtmlResponseCache? = null,
+    cardCache: CardDataCache? = null,
 ) {
+    val htmlCache = responseCache ?: HtmlResponseCache(directory,
+        scope = { cacheToken()?.let { CacheScope(false, it) } }, now = nowMillis)
+    val cardData = cardCache ?: CardDataCache(htmlCache, now = nowMillis)
     suspend fun cached(day: LocalDate, feed: PublicFeed = PublicFeed.TODAY): CatalogPage? =
         withContext(Dispatchers.IO) {
-            if (cacheToken() == null) return@withContext null
-            val file = File(directory, cacheName(feed))
-            if (!file.isFile) return@withContext null
-            val fresh = when (feed) {
-                PublicFeed.TODAY -> java.time.Instant.ofEpochMilli(file.lastModified())
+            val lease = htmlCache.capture()
+            val saved = htmlCache.read(cacheName(feed), lease, fresh = { timestamp -> when (feed) {
+                PublicFeed.TODAY -> java.time.Instant.ofEpochMilli(timestamp)
                     .atZone(zone).toLocalDate() == day
-                PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST, PublicFeed.BEST, PublicFeed.ANNOUNCEMENTS -> nowMillis() - file.lastModified() in 0 until 86_400_000L
-            }
-            if (!fresh) return@withContext null
-            runCatching { parse(file.readText(), day, feed) }.getOrNull()
+                PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST, PublicFeed.BEST, PublicFeed.ANNOUNCEMENTS -> nowMillis() - timestamp in 0 until HtmlResponseCache.DAY
+            } }) ?: return@withContext null
+            runCatching { parse(saved.html, day, feed) }.getOrNull()?.takeIf { htmlCache.isCurrent(lease) }
         }
 
     suspend fun load(day: LocalDate, feed: PublicFeed = PublicFeed.TODAY): CatalogPage =
         withContext(Dispatchers.IO) {
-            val token = cacheToken()
+            val lease = htmlCache.capture()
             val html = when (feed) {
                 PublicFeed.TODAY -> source.get("https://seasonvar.ru/")
                 PublicFeed.BEST -> source.get("https://seasonvar.ru/?mode=top")
@@ -41,7 +44,8 @@ class CatalogRepository(
                 PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> source.sidebar(feed)
             }
             val parsed = parse(html, day, feed)
-            if (token != null && cacheToken() == token) save(cacheName(feed), html)
+            if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("List cache scope changed")
+            htmlCache.save(cacheName(feed), html, lease)
             parsed
         }
 
@@ -73,14 +77,12 @@ class CatalogRepository(
     }
 
     suspend fun cachedBest(day: LocalDate, filters: BestListFilters): FilteredBestPage? = withContext(Dispatchers.IO) {
-        if (cacheToken() == null) return@withContext null
         val selected = filters.safe()
-        val file = File(directory, selected.cacheName)
-        if (!file.isFile || nowMillis() - file.lastModified() !in 0 until 86_400_000L) return@withContext null
+        val cached = htmlCache.read(selected.cacheName, htmlCache.capture()) ?: return@withContext null
         runCatching {
-            if (selected.switches.isEmpty()) BestFilterParser.parse(file.readText(), day, selected)
+            if (selected.switches.isEmpty()) BestFilterParser.parse(cached.html, day, selected)
             else {
-                val saved = JSONObject(file.readText())
+                val saved = JSONObject(cached.html)
                 require(saved.getInt("version") == 1)
                 val values = saved.getJSONObject("filters")
                 require(values.keys().asSequence().associateWith { values.getString(it) } == selected.values())
@@ -96,7 +98,7 @@ class CatalogRepository(
         suspend fun metadata(selected: BestListFilters): String = if (selected.switches.any { it.personal })
             (authenticatedMetadata ?: throw ru.seasonvar.tv.data.account.SessionExpiredException())(selected)
             else source.get(selected.url())
-        val token = cacheToken()
+        val lease = htmlCache.capture()
         var selected = filters.safe()
         var html = metadata(selected)
         currentCoroutineContext().ensureActive()
@@ -115,50 +117,31 @@ class CatalogRepository(
             cached = JSONObject().put("version", 1).put("filters", JSONObject(selected.values()))
                 .put("metadata", html).put("fragment", fragment).toString()
         }
-        if (token != null && cacheToken() == token) save(selected.cacheName, cached)
+        if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("List cache scope changed")
+        htmlCache.save(selected.cacheName, cached, lease)
         result
     }
 
-    suspend fun description(entry: SeriesEntry): SeriesDescription {
-        val token = withContext(Dispatchers.IO) { cacheToken() }
-        val cached = withContext(Dispatchers.IO) {
-            val file = File(directory, "series-" + entry.id + ".html")
-            if (token != null && file.isFile && nowMillis() - file.lastModified() < 86_400_000L) {
-                runCatching { SeasonvarParser.description(file.readText(), entry) }.getOrNull()
-            } else null
-        }
-        if (cached != null) return cached
-        return withContext(Dispatchers.IO) {
-            val html = source.get(entry.url)
-            val description = SeasonvarParser.description(html, entry)
-            if (token != null && cacheToken() == token) save("series-" + entry.id + ".html", html)
-            description
-        }
+    fun cachedDescription(entry: SeriesEntry): SeriesDescription? = cardData.description(entry.id)
+
+    suspend fun description(entry: SeriesEntry): SeriesDescription = withContext(Dispatchers.IO) {
+        cachedDescription(entry) ?: loadCard(entry, force = false).description
     }
 
     suspend fun details(entry: SeriesEntry, force: Boolean = false): SeriesDetails = withContext(Dispatchers.IO) {
-        val token = cacheToken()
-        val name = "series-" + entry.id + ".html"
-        val file = File(directory, name)
-        if (token != null && !force && file.isFile && nowMillis() - file.lastModified() in 0 until 86_400_000L) {
-            runCatching { SeriesDetailsParser.parse(file.readText(), entry) }.getOrNull()?.let { return@withContext it }
-        }
-        val html = source.get(entry.url)
-        val details = SeriesDetailsParser.parse(html, entry)
-        if (token != null && cacheToken() == token) save(name, html)
-        details
+        val lease = htmlCache.capture()
+        if (!force) cardData.details(entry, lease)?.let { return@withContext it }
+        val data = loadCard(entry, force, lease, needDetails = true)
+        if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("Card cache scope changed")
+        cardData.contextual(data, entry) ?: throw MarkupChangedException()
     }
 
-    private fun save(name: String, html: String) {
-        runCatching {
-            directory.mkdirs()
-            val temporary = File.createTempFile("response-", ".html", directory)
-            try {
-                temporary.writeText(html)
-                check(temporary.renameTo(File(directory, name)))
-            } finally {
-                temporary.delete()
-            }
-        }
-    }
+    private suspend fun loadCard(entry: SeriesEntry, force: Boolean, lease: CacheLease = htmlCache.capture(), needDetails: Boolean = false): CardData =
+        cardData.load(entry, lease, force, fetch = { bypassCache ->
+            val name = "series-" + entry.id + ".html"
+            val cached = if (!force && !bypassCache) htmlCache.read(name, lease) else null
+            cached ?: CachedHtml(source.get(entry.url), nowMillis())
+        }, persist = { response ->
+            if (!response.fromDisk) htmlCache.save("series-" + entry.id + ".html", response.html, lease)
+        }, needDetails = needDetails)
 }

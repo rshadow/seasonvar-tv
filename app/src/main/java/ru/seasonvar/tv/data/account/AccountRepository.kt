@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.data.SiteClient
+import ru.seasonvar.tv.data.cache.*
 
 interface AccountTransport {
     suspend fun clearHistory(jar: SessionCookies): Unit = throw UnsupportedOperationException()
@@ -23,8 +24,10 @@ interface AccountTransport {
 
 data class AccountSession(val user: AccountUser? = null, val version: Long = 0, val expired: Boolean = false)
 
-class AccountRepository(private val sessions: SessionManager, private val transport: AccountTransport) {
-    constructor(sessions: SessionManager, client: SiteClient) : this(sessions, object : AccountTransport {
+class AccountRepository(private val sessions: SessionManager, private val transport: AccountTransport,
+    private val htmlCache: HtmlResponseCache? = null, private val cardData: CardDataCache? = null) {
+    constructor(sessions: SessionManager, client: SiteClient, htmlCache: HtmlResponseCache? = null,
+        cardData: CardDataCache? = null) : this(sessions, object : AccountTransport {
         override suspend fun clearHistory(jar: SessionCookies) = client.accountClearHistory(jar)
         override suspend fun filters(filters: PersonalListFilters, jar: SessionCookies) = client.accountFilters(filters, jar)
         override suspend fun get(url: String, jar: SessionCookies): String {
@@ -43,7 +46,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         override suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies) = client.accountStatus(change, jar)
         override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = client.accountMark(mark, jar)
         override suspend fun saveHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, jar: SessionCookies) = client.accountHistory(event, jar)
-    })
+    }, htmlCache, cardData)
     private val mutableSession = MutableStateFlow(AccountSession())
     val session = mutableSession.asStateFlow()
     private val mutex = Mutex()
@@ -70,6 +73,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             return HistoryParser.parse(html)
         }
         val before = read()
+        invalidateHistoryCache()
         mutableHistoryReset.value++
         try {
             if (before.entries.isNotEmpty() || before.nextPage != null) {
@@ -79,7 +83,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
                 if (after.entries.isNotEmpty() || after.nextPage != null) throw ru.seasonvar.tv.data.MarkupChangedException()
             }
         } finally {
-            if (session.value.version == expected.version) mutableHistoryRevision.value++
+            if (session.value.version == expected.version) { invalidateHistoryCache(); mutableHistoryRevision.value++ }
         }
     } }
 
@@ -92,6 +96,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         transport.saveHistory(event, sessions.current())
         currentCoroutineContext().ensureActive()
         if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
+        invalidateHistoryCache()
         mutableHistoryRevision.value++
     } }
 
@@ -101,6 +106,8 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         val user = AccountParser.user(html)
         currentCoroutineContext().ensureActive()
         if (user == null) { clear(expired = true); throw SessionExpiredException() }
+        sessions.confirmAccount(user.id)
+        htmlCache?.let { it.save(personalKey(PersonalFeed.RESUME), html, it.capture()) }
         mutableSession.value = AccountSession(user, session.value.version + 1)
     } }
 
@@ -109,9 +116,11 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         val candidate = sessions.candidate()
         transport.get("https://seasonvar.ru/?mod=login", candidate)
         transport.login(login.trim(), password, candidate)
-        val user = AccountParser.user(transport.get("https://seasonvar.ru/resume", candidate)) ?: throw LoginRejectedException()
+        val html = transport.get("https://seasonvar.ru/resume", candidate)
+        val user = AccountParser.user(html) ?: throw LoginRejectedException()
         currentCoroutineContext().ensureActive()
-        sessions.commit(candidate)
+        sessions.commit(candidate, user.id)
+        htmlCache?.let { it.save(personalKey(PersonalFeed.RESUME), html, it.capture()) }
         mutableSession.value = AccountSession(user, session.value.version + 1)
     } }
 
@@ -128,18 +137,22 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     suspend fun filteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters): FilteredPersonalPage = withContext(Dispatchers.IO) {
         require(feed != PersonalFeed.HISTORY)
         val expected = session.value
+        val lease = htmlCache?.capture()
         val jar = sessions.current()
         val html = authenticatedHtml("https://seasonvar.ru/resume")
         fun valid() { if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException() }
         valid()
         val options = PersonalFilterParser.options(html)
         val selected = options.normalize(requested)
+        if (lease != null) htmlCache.save(personalKey(PersonalFeed.RESUME), html, lease)
         val user = expected.user ?: throw SessionExpiredException()
         val page = if (!selected.active) AccountParser.personalList(html, feed) else {
             val response = transport.filters(selected, jar)
             currentCoroutineContext().ensureActive()
             valid()
-            try { AccountParser.filteredPersonalList(response, user, feed) }
+            try { AccountParser.filteredPersonalList(response, user, feed).also {
+                if (lease != null) htmlCache.save(filterKey(selected), response, lease)
+            } }
             catch (error: SessionExpiredException) {
                 mutex.withLock { if (session.value.version == expected.version) clear(expired = true) }
                 throw error
@@ -154,11 +167,59 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     }
 
     suspend fun personalList(feed: PersonalFeed, pageUrl: String? = null): AccountPage = withContext(Dispatchers.IO) {
+        val lease = htmlCache?.capture()
         val url = if (pageUrl == null) feed.url else {
             require(feed == PersonalFeed.HISTORY)
             HistoryParser.pageUrl(pageUrl) ?: throw ru.seasonvar.tv.data.MarkupChangedException()
         }
-        AccountParser.personalList(authenticatedHtml(url), feed, url)
+        val html = authenticatedHtml(url)
+        AccountParser.personalList(html, feed, url).also {
+            if (lease != null) htmlCache.save(personalKey(feed, url), html, lease)
+        }
+    }
+
+    suspend fun cachedPersonalList(feed: PersonalFeed, pageUrl: String = feed.url): AccountPage? = withContext(Dispatchers.IO) {
+        val cache = htmlCache ?: return@withContext null
+        val expected = session.value
+        val owner = expected.user?.id ?: return@withContext null
+        val lease = cache.capture()
+        val saved = cache.read(personalKey(feed, pageUrl), lease) ?: return@withContext null
+        runCatching {
+            require(AccountParser.user(saved.html)?.id == owner)
+            AccountParser.personalList(saved.html, feed, pageUrl)
+        }.getOrNull()?.takeIf { session.value.version == expected.version && cache.isCurrent(lease) }
+    }
+
+    suspend fun cachedFilteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters): FilteredPersonalPage? =
+        withContext(Dispatchers.IO) {
+            val cache = htmlCache ?: return@withContext null
+            val expected = session.value
+            val user = expected.user ?: return@withContext null
+            val lease = cache.capture()
+            val metadata = cache.read(personalKey(PersonalFeed.RESUME), lease) ?: return@withContext null
+            runCatching {
+                require(AccountParser.user(metadata.html)?.id == user.id)
+                val options = PersonalFilterParser.options(metadata.html)
+                val selected = options.normalize(requested)
+                require(selected == requested)
+                val page = if (!selected.active) AccountParser.personalList(metadata.html, feed) else {
+                    val response = cache.read(filterKey(selected), lease) ?: return@runCatching null
+                    AccountParser.filteredPersonalList(response.html, user, feed)
+                }
+                FilteredPersonalPage(page, options, selected)
+            }.getOrNull()?.takeIf { session.value.version == expected.version && cache.isCurrent(lease) }
+        }
+
+    private fun personalKey(feed: PersonalFeed, url: String = feed.url) = HtmlResponseCache.requestKey(
+        if (feed == PersonalFeed.HISTORY) "history-" else "personal-", "GET", url)
+    private fun filterKey(filters: PersonalListFilters) = HtmlResponseCache.requestKey(
+        "personal-filter-", "POST", "https://seasonvar.ru/ajax.php", filters.form())
+
+    private fun invalidateHistoryCache() { htmlCache?.invalidate("history-") }
+    private fun invalidateMarksCache(seasonId: String) {
+        htmlCache?.invalidate("personal-")
+        htmlCache?.invalidate("series-$seasonId.html")
+        cardData?.clearPrivate(cancelLoads = false)
     }
 
     internal suspend fun seasonPage(entry: ru.seasonvar.tv.data.SeriesEntry): String = authenticatedHtml(entry.url)
@@ -193,6 +254,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         catch (error: MarkSaveRejectedException) { read(); throw error }
         val confirmed = PlaybackMarkParser.parse(read(), mark.seasonId, mark.pageUrl)
         if (confirmed != mark) throw MarkVerificationException()
+        invalidateMarksCache(mark.seasonId)
         mutableMarksRevision.value++
         mark
     } }
@@ -229,6 +291,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         catch (error: MarkSaveRejectedException) { read(); throw error }
         val after = PlaybackMarkParser.snapshot(read(), target.seasonId, target.pageUrl)
         if (AccountListStatus.from(after) != status || watching != null && after.mark != watching) throw MarkVerificationException()
+        invalidateMarksCache(target.seasonId)
         mutableMarksRevision.value++
         after
     } }
@@ -264,6 +327,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val after = read()
             if (after.mark != null || after.status != null) throw MarkVerificationException()
         }
+        invalidateMarksCache(target.seasonId)
         mutableMarksRevision.value++
     } }
 

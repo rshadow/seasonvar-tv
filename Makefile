@@ -25,6 +25,8 @@ PROFILE_OUT ?= build/profile-navigation
 PROFILE_ARGS ?=
 MARK_MENU_PROBE_OUT ?= build/mark-menu-probe
 SERIES_LIST_PROBE_OUT ?= build/series-list-probe
+SHARED_CARD_CACHE_PROBE_OUT ?= build/shared-card-cache-probe
+CACHE_MEMORY_PROBE_OUT ?= build/cache-memory-probe
 LAYOUT_PROBE_MODE ?= mark-menu-layout
 DETAILS_PROGRESS_PROBE_OUT ?= build/details-progress-probe
 BUILD_TYPE ?= debug
@@ -89,6 +91,8 @@ help:
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
 		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
 		'make series-list-probe      Verify shared renderer on 33,000 offline entries in emulator' \
+		'make shared-card-cache-probe Verify cross-list card reuse, logout and configured cache capacity' \
+		'make cache-memory-probe     Measure native card cache and poster memory in emulator' \
 		'make details-progress-probe Verify stable progress layout across loading states offline' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
@@ -501,6 +505,14 @@ history-clear-probe:
 
 .PHONY: details-progress-probe
 .PHONY: series-list-probe
+.PHONY: shared-card-cache-probe
+.PHONY: cache-memory-probe
+cache-memory-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=cache-memory MARK_MENU_PROBE_OUT="$(CACHE_MEMORY_PROBE_OUT)"
+
+shared-card-cache-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=shared-card-cache MARK_MENU_PROBE_OUT="$(SHARED_CARD_CACHE_PROBE_OUT)"
+
 series-list-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=series-list-engine MARK_MENU_PROBE_OUT="$(SERIES_LIST_PROBE_OUT)"
 

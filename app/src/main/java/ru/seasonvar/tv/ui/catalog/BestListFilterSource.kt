@@ -43,7 +43,7 @@ class BestListFilterSource(private val repository: CatalogRepository, private va
         val filters = requested.copy(switches = requested.switches.filter { !it.personal || accountOwner() != null }.toSet())
         return result(repository.best(LocalDate.now(), filters, account?.let { it::bestFilterMetadata }))
     }
-    suspend fun cached(values: Map<String, String>) = repository.cachedBest(LocalDate.now(), BestListFilters.from(values))?.let(::result)
+    override suspend fun cached(values: Map<String, String>) = repository.cachedBest(LocalDate.now(), BestListFilters.from(values))?.let(::result)
     private fun result(value: FilteredBestPage): FilteredListPage<CatalogPage> {
         val fields = fields(value.options)
         return FilteredListPage(value.page, fields, value.filters.values().filterKeys { id -> fields.any { it.id == id } })

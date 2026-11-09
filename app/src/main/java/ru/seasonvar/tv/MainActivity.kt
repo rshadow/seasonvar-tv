@@ -168,6 +168,7 @@ class MainActivity : ComponentActivity() {
                 onPlay = { playbackLauncher.launch(PlayerActivity.intent(this, it)) },
                 states = states,
                 loadDescription = container.repository::description,
+                cardData = container.cardData,
                 searchState = search,
                 onSearchQuery = searchModel::queryChanged,
                 onSearchSubmit = searchModel::submit,

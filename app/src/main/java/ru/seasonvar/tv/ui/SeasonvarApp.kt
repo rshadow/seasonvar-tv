@@ -149,6 +149,7 @@ internal fun SeasonvarApp(
     states: Map<PublicFeed, CatalogUiState>,
     onRefresh: (PublicFeed) -> Unit,
     loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)? = null,
+    cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
     onFeedVisible: (PublicFeed) -> Unit = {},
     searchState: SearchUiState = SearchUiState(),
     onSearchQuery: (String) -> Unit = {},
@@ -208,6 +209,7 @@ internal fun SeasonvarApp(
             states = states,
             onRefresh = onRefresh,
             loadDescription = loadDescription,
+            cardData = cardData,
             onFeedVisible = onFeedVisible,
             searchState = searchState,
             onSearchQuery = onSearchQuery,
@@ -249,6 +251,7 @@ private fun SeasonvarContent(
     states: Map<PublicFeed, CatalogUiState>,
     onRefresh: (PublicFeed) -> Unit,
     loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)?,
+    cardData: ru.seasonvar.tv.data.cache.CardDataCache?,
     onFeedVisible: (PublicFeed) -> Unit = {},
     searchState: SearchUiState = SearchUiState(),
     onSearchQuery: (String) -> Unit = {},
@@ -744,6 +747,7 @@ private fun SeasonvarContent(
                     }, refreshFocus, retryFocus,
                     imagePrefetchEnabled = imagePrefetchEnabled,
                     loadDescription = loadDescription,
+                    cardData = cardData,
                     preparationContext = Triple(accountSession.version, bypassEnabled, dnsProvider),
                     cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
                     onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
@@ -971,10 +975,11 @@ private fun CatalogPane(
     historyClear: ru.seasonvar.tv.ui.account.HistoryClearController? = null,
     loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)? = null,
     preparationContext: Any? = null,
+    cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
-    val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext)
+    val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext, cardData)
     val clearState = historyClear?.state?.collectAsStateWithLifecycle()?.value
     val clearFocus = remember { FocusRequester() }
     var clearWasOpen by remember(historyClear) { mutableStateOf(false) }
@@ -1235,9 +1240,9 @@ internal fun SeriesThumbnail(
     ) {
         val prepared = content()
         if (prepared != null) {
-            Poster(entry, Modifier.fillMaxWidth().height(metrics.posterHeight))
+            Poster(prepared.entry, Modifier.fillMaxWidth().height(metrics.posterHeight))
             Spacer(Modifier.height(d.spacingSmall))
-            Text(entry.title, modifier = Modifier.height(metrics.titleHeight),
+            Text(prepared.entry.title, modifier = Modifier.height(metrics.titleHeight),
                 style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(prepared.subtitle, modifier = Modifier.height(metrics.subtitleHeight),

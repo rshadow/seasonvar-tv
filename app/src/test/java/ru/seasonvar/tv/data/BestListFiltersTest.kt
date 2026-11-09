@@ -80,7 +80,7 @@ class BestListFiltersTest {
             override suspend fun get(url: String): String { token++; return html }
             override suspend fun sidebar(feed: PublicFeed): String = error("Wrong feed")
         }, cacheToken = { token })
-        repository.best(day, BestListFilters())
+        assertTrue(runCatching { repository.best(day, BestListFilters()) }.exceptionOrNull() is kotlinx.coroutines.CancellationException)
         assertTrue(directory.listFiles()!!.isEmpty())
     }
 }
