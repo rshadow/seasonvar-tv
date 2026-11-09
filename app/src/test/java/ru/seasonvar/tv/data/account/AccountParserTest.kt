@@ -57,6 +57,27 @@ class AccountParserTest {
         assertEquals("Тестовый пользователь", result.user.name)
         assertEquals("https://cdn.svstat.net/avatar/example.jpg", result.user.avatarUrl)
     }
+    @Test fun ignores_season_messages_without_changing_user_progress_or_entry_context() {
+        val baseline = AccountParser.resume(current).entries.first()
+        for (caption in listOf("Сезон 2 из 5", "Сезон 1 из 7", "сезон 12 из 20")) {
+            val parsed = AccountParser.resume(current.replace("Новые серии", caption)).entries.first()
+            assertEquals(baseline.copy(accountMark = baseline.accountMark!!.copy(status = "")), parsed)
+            assertNull(parsed.accountProgress?.seasons)
+        }
+    }
+    @Test fun a_season_message_alone_creates_neither_a_mark_nor_progress_in_any_personal_tab() {
+        val doc = org.jsoup.Jsoup.parse(current)
+        doc.select(".pgs-marks-current, .pgs-marks-mess").remove()
+        val baseline = doc.outerHtml()
+        doc.select(".pgs-marks-el").forEach { it.append("<div class='pgs-marks-mess'>Сезон 6 из 7</div>") }
+        val fragment = doc.select("[data-tabr]").outerHtml()
+        val user = AccountParser.user(baseline)!!
+        for (feed in PersonalFeed.entries.filter { it != PersonalFeed.HISTORY }) {
+            val expected = AccountParser.personalList(baseline, feed)
+            assertEquals(feed.name, expected, AccountParser.personalList(doc.outerHtml(), feed))
+            assertEquals(feed.name, expected, AccountParser.filteredPersonalList(fragment, user, feed))
+        }
+    }
     @Test fun empty_in_progress_tabs_do_not_fall_back_to_want_or_watched() {
         val page = current.replace(Regex("""<li data-tabr="marks-new">.*?</li>""", RegexOption.DOT_MATCHES_ALL), "<li data-tabr=marks-new></li>")
             .replace(Regex("""<li data-tabr="marks-nonew" hidden>.*?</li>""", RegexOption.DOT_MATCHES_ALL), "<li data-tabr=marks-nonew></li>")
