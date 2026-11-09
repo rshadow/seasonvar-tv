@@ -29,6 +29,20 @@ class PersonalListViewModelTest {
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
 
+    @Test fun cleared_history_cannot_be_restored_by_old_pagination_or_late_refresh() = runTest(dispatcher) {
+        var calls = 0
+        val history = PersonalListViewModel(session, {
+            calls++
+            AccountPage(user, listOf(entry("1")), "page2")
+        }, { withContext(NonCancellable) { delay(1000) }; AccountPage(user, listOf(entry("2"))) }) {
+            SeriesDescription(emptyList())
+        }.also { store.put("history", it) }
+        runCurrent(); history.activate(); runCurrent(); history.loadMore(); runCurrent()
+        history.historyCleared(); advanceUntilIdle(); history.activate(); runCurrent()
+        assertTrue(history.state.value.loaded); assertTrue(history.state.value.entries.isEmpty())
+        assertFalse(history.state.value.hasMore); assertFalse(history.state.value.loadingMore); assertEquals(1, calls)
+    }
+
     @Test fun history_invalidation_is_lazy_keeps_cards_and_refreshes_from_page_one_without_touching_other_lists() = runTest(dispatcher) {
         var calls = 0; var wantCalls = 0; var nextCalls = 0
         val history = PersonalListViewModel(session, {

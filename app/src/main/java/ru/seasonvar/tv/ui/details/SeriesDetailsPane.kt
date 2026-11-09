@@ -292,7 +292,7 @@ internal fun SeriesDetailsPane(
                             items(episodes, key = { it.id }) { episode ->
                                 ThemeButton(episode.label, onClick = { onInteraction(); model.selectEpisode(episode.id); model.playbackRequest(episode.id)?.let(onPlay) },
                                     Modifier.height(d.headerButtonSize).then(if (episode.id == focusId) Modifier.focusRequester(focus) else Modifier),
-                                    active = episode.id == state.episodeId, contentAlignment = Alignment.Center)
+                                    active = episode.id == state.episodeId)
                             }
                         }
                         LaunchedEffect(focusId) {
@@ -425,7 +425,7 @@ private fun EpisodeList(
                                     if (index == episodes.lastIndex) right = FocusRequester.Cancel
                                     this.up = up
                                     down = if (showAllEpisodes) allFocus else FocusRequester.Cancel
-                                }, active = state.episodeId == episode.id, contentAlignment = Alignment.Center)
+                                }, active = state.episodeId == episode.id)
                     }
                 }
             } else Text(if (preparing) stringResource(R.string.description_loading)
@@ -445,7 +445,7 @@ private fun EpisodeList(
                 .focusProperties {
                     left = menuFocus; right = FocusRequester.Cancel
                     this.up = selectedFocus; down = FocusRequester.Cancel
-                }, contentAlignment = Alignment.Center)
+                })
     }
 }
 

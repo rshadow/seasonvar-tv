@@ -81,4 +81,15 @@ class SmartContinueViewModelTest {
         model.setVisible(false);runCurrent();model.setVisible(true);runCurrent();assertEquals(2, calls)
     }
 
+    @Test fun history_clear_erases_continue_cache_and_blocks_late_refresh() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SmartContinuePage>(); val cache = Cache(listOf(entry))
+        val model = model(cache) { withContext(NonCancellable) { gate.await() } }
+        runCurrent(); model.setVisible(true); runCurrent()
+        assertEquals(listOf(entry), model.state.value.entries)
+        model.historyCleared(); runCurrent()
+        assertTrue(model.state.value.loaded); assertTrue(model.state.value.entries.isEmpty()); assertNull(cache.rows)
+        gate.complete(SmartContinuePage(listOf(entry), emptySet(), false)); runCurrent()
+        assertTrue(model.state.value.entries.isEmpty()); assertNull(cache.rows)
+    }
+
 }

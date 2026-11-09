@@ -6,6 +6,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import ru.seasonvar.tv.data.SiteHttpException
@@ -16,22 +17,23 @@ import java.io.IOException
 class PlaybackHistoryWriter internal constructor(
     scope: CoroutineScope,
     private val session: StateFlow<AccountSession>,
-    private val save: suspend (PlaybackHistoryEvent, Long) -> Unit,
+    private val save: suspend (PlaybackHistoryEvent, Long, Long) -> Unit,
     private val retryMillis: Long = 2_000,
     private val log: (String) -> Unit = {},
     private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000 },
+    private val reset: StateFlow<Long> = MutableStateFlow(0L),
 ) {
     constructor(scope: CoroutineScope, account: AccountRepository) : this(scope, account.session, account::recordHistory,
-        log = { phase -> if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarHistory", phase) })
+        log = { phase -> if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarHistory", phase) }, reset = account.historyReset)
 
-    private data class Pending(val event: PlaybackHistoryEvent, val version: Long, val deadline: Long)
+    private data class Pending(val event: PlaybackHistoryEvent, val version: Long, val deadline: Long, val reset: Long)
     private val pending = Channel<Pending>(64)
 
     init { scope.launch {
         session.collectLatest { account ->
             if (account.user == null) return@collectLatest
             for (item in pending) {
-                if (item.version != account.version || session.value != account) continue
+                if (item.version != account.version || session.value != account || item.reset != reset.value) continue
                 val remaining = item.deadline - nowMillis()
                 if (remaining > 0) withTimeoutOrNull(remaining) { send(item) }
             }
@@ -41,16 +43,16 @@ class PlaybackHistoryWriter internal constructor(
     fun enqueue(event: PlaybackHistoryEvent, ownerVersion: Long) {
         val account = session.value
         if (account.user != null && account.version == ownerVersion) {
-            if (pending.trySend(Pending(event, ownerVersion, nowMillis() + 30_000)).isFailure) log("queue_full")
+            if (pending.trySend(Pending(event, ownerVersion, nowMillis() + 30_000, reset.value)).isFailure) log("queue_full")
         }
     }
 
     private suspend fun send(item: Pending) {
         repeat(3) { attempt ->
-            if (session.value.user == null || session.value.version != item.version) return
+            if (session.value.user == null || session.value.version != item.version || reset.value != item.reset) return
             try {
-                save(item.event, item.version)
-                log("write_success")
+                save(item.event, item.version, item.reset)
+                log(if (reset.value == item.reset) "write_success" else "write_discarded")
                 return
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) {

@@ -25,6 +25,10 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "ui-dialogs-layout") { UiScreensLayoutProbe.run(this, dialogsOnly = true); return }
+        if (mode == "ui-screens-layout") { UiScreensLayoutProbe.run(this); return }
+        if (mode == "history-clear-layout") { HistoryClearLayoutProbe.run(this); return }
+        if (mode == "history-filters-live") { HistoryFiltersLiveProbe.run(this); return }
         if (mode == "public-filters-live") { PublicFiltersLiveProbe.run(this); return }
         if (mode == "best-filters-live") { BestFiltersLiveProbe.run(this); return }
         if (mode == "personal-filters-live") { PersonalFiltersLiveProbe.run(this); return }

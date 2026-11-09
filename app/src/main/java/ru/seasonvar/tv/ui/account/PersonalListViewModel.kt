@@ -91,6 +91,13 @@ class PersonalListViewModel internal constructor(
         mutableState.value = state.value.copy(loading = false, loadingMore = false, moreFailure = null, hasMore = false)
     }
     fun refreshIfActive() { if (active) refresh() }
+    fun historyCleared() {
+        invalidate()
+        descriptionJob?.cancel()
+        dirty = false
+        mutableState.value = CatalogUiState(loading = false, loaded = true)
+        mutableDescription.value = DescriptionState()
+    }
     fun retryOrRefresh() { if (state.value.moreFailure != null) loadMore(retry = true) else refresh() }
     fun refresh() {
         if (session.value.user == null) return

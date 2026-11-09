@@ -44,6 +44,9 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 PLAYER_PROBE_PAGE ?= https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html
 PLAYER_PROBE_OUT ?= build/player-probe
 HISTORY_PROBE_OUT ?= build/history-probe
+UI_SCREENS_PROBE_OUT ?= build/ui-screens-probe
+HISTORY_CLEAR_PROBE_OUT ?= build/history-clear-probe
+HISTORY_FILTERS_PROBE_OUT ?= build/history-filters-probe
 PUBLIC_FILTERS_PROBE_OUT ?= build/public-filters-probe
 BEST_FILTERS_PROBE_OUT ?= build/best-filters-probe
 PERSONAL_FILTERS_PROBE_OUT ?= build/personal-filters-probe
@@ -88,6 +91,10 @@ help:
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
 		'make history-probe          Record Naruto episode one through the emulator player; inspect frames' \
+		'make ui-screens-probe       Inspect screens and dialogs using local fixtures' \
+		'make button-layout-probe    Verify shared button text alignment and dialog states' \
+		'make history-clear-probe    Verify history confirmation using offline fixtures' \
+		'make history-filters-probe  Research authenticated history controls without writes' \
 		'make public-filters-probe   Research public filters in guest and account contexts' \
 		'make best-filters-probe     Check live best-list switches without changing account marks' \
 		'make personal-filters-probe Check live genre/country queries without changing account marks' \
@@ -417,6 +424,16 @@ home-probe:
 	$(ENV) python3 scripts/probe-home.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(HOME_PROBE_OUT)"
 
 .PHONY: history-probe
+.PHONY: history-filters-probe
+history-filters-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for filter verification.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ENV) python3 scripts/probe-history-filters.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --output "$(HISTORY_FILTERS_PROBE_OUT)"
+
 .PHONY: public-filters-probe
 public-filters-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for filter verification.' >&2; exit 1;; esac
@@ -464,6 +481,21 @@ player-probe:
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)"
+
+.PHONY: ui-dialogs-probe
+ui-dialogs-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=ui-dialogs-layout MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"
+
+.PHONY: ui-screens-probe
+ui-screens-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=ui-screens-layout MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"
+
+.PHONY: button-layout-probe
+button-layout-probe: history-clear-probe
+
+.PHONY: history-clear-probe
+history-clear-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=history-clear-layout MARK_MENU_PROBE_OUT="$(HISTORY_CLEAR_PROBE_OUT)"
 
 .PHONY: details-progress-probe
 details-progress-probe:

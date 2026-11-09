@@ -71,6 +71,14 @@ class MainActivity : ComponentActivity() {
         smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
             container.account, repository, container.smartContinueCache,
             { container.interfaceSettings.preferredTranslations.value }))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
+        val historyClearModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.HistoryClearViewModel.Factory(
+            container.account,
+            onStarted = { personalModels.getValue(PersonalFeed.HISTORY).invalidate() },
+            onCleared = {
+                personalModels.getValue(PersonalFeed.HISTORY).historyCleared()
+                smartModel.historyCleared()
+                (application as SeasonvarApplication).homeChannels.requestRefresh()
+            }))[ru.seasonvar.tv.ui.account.HistoryClearViewModel::class.java]
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 container.account.historyRevision.collect { revision ->
@@ -149,6 +157,7 @@ class MainActivity : ComponentActivity() {
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
                 personalStates = personalStates, personalDescriptions = personalDescriptions,
+                historyClear = historyClearModel,
                 personalFilters = personalModels.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 publicFilters = models.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 smartState = smartState, smartDescription = smartDescription,

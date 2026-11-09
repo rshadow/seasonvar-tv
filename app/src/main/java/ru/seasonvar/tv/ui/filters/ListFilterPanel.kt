@@ -97,11 +97,11 @@ fun ListFilterPanel(title: String, state: ListFiltersState, controller: ListFilt
                         }), if (state.failure != null) controller::open else controller::apply,
                             Modifier.weight(1f).height(d.navigationButtonHeight).focusRequester(applyFocus)
                                 .focusProperties { left = FocusRequester.Cancel; right = resetFocus; down = FocusRequester.Cancel },
-                            actionEnabled = !state.loading && !state.applying, contentAlignment = Alignment.Center)
+                            actionEnabled = !state.loading && !state.applying)
                         ThemeButton(stringResource(R.string.filters_reset), controller::reset,
                             Modifier.weight(1f).height(d.navigationButtonHeight).focusRequester(resetFocus)
                                 .focusProperties { left = applyFocus; right = FocusRequester.Cancel; down = FocusRequester.Cancel },
-                            actionEnabled = !state.loading && !state.applying && state.failure == null, contentAlignment = Alignment.Center)
+                            actionEnabled = !state.loading && !state.applying && state.failure == null)
                     }
                     LaunchedEffect(choosing) {
                         repeat(2) { withFrameNanos { } }

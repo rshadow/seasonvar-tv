@@ -311,4 +311,11 @@
     <string name="smart_continue_hint">Продолжение по отметкам аккаунта</string>
     <string name="smart_continue_empty">Пока нечего продолжать</string>
     <string name="smart_continue_empty_hint">Здесь появятся сериалы из истории просмотра, у которых остались непросмотренные серии.</string>
+    <string name="history_clear_action">Очистить историю</string>
+    <string name="history_clear_question">Очистить историю просмотров?</string>
+    <string name="history_clear_explanation">Вся история просмотров будет удалена на сайте Seasonvar и в приложении. Отменить это действие нельзя.</string>
+    <string name="history_clear_cancel">Отмена</string>
+    <string name="history_clear_close">Закрыть</string>
+    <string name="history_clearing">Очищаю…</string>
+    <string name="history_clear_error">Не удалось очистить историю. Обновите список и попробуйте ещё раз.</string>
 </resources>
