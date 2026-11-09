@@ -111,7 +111,7 @@ help:
 		'make update-restore         Restore normal test build after an update preview (emulator only)' \
 		'make update-preview         Preview update flow with a newer test APK in emulator' \
 		'make account-test           Check account, personal lists, cookies and private cache' \
-		'make mark-probe             Inspect account marks (catalog-badges reads list icons; roundtrip/delete-roundtrip verify and restore changes)' \
+		'make mark-probe             Inspect account marks (season-messages reads season captions; roundtrip/delete-roundtrip verify and restore changes)' \
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
 		'make emulator               Start the local emulator window' \

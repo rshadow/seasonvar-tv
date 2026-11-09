@@ -18,6 +18,7 @@ class SessionExpiredException : Exception("Session expired")
 class LoginRejectedException : Exception("Login rejected")
 
 object AccountParser {
+    private val seasonMessage = Regex("""Сезон\s+[0-9]+\s+из\s+[0-9]+""", RegexOption.IGNORE_CASE)
     fun user(html: String): AccountUser? = user(Jsoup.parse(html, "https://seasonvar.ru/"))
     private fun user(doc: Document): AccountUser? {
         val header = doc.selectFirst(".headblock-menu") ?: throw MarkupChangedException()
@@ -77,7 +78,8 @@ object AccountParser {
                 val season = row.selectFirst(".pgs-marks-seas")?.text()?.let { Regex("[0-9]+").find(it)?.value?.toIntOrNull() }
                     ?: seasonNumber(name)
                 val current = row.selectFirst(".pgs-marks-current")?.text()?.trim().orEmpty()
-                val message = row.selectFirst(".pgs-marks-mess")?.text()?.trim().orEmpty()
+                val message = row.selectFirst(".pgs-marks-mess")?.text()?.trim()
+                    ?.takeUnless(seasonMessage::matches).orEmpty()
                 val counter = AccountProgressParser.episodes(current)
                 val complete = tab.attr("data-tabr") == "marks-watched" || (counter != null && counter.marked == counter.total)
                 val accountMark = if (current.isNotBlank() || message.isNotBlank() || complete) AccountMark(current, message, complete) else null

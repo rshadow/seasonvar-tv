@@ -9,7 +9,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", required=True)
     parser.add_argument("--runner", required=True)
-    parser.add_argument("--mode", choices=("inspect", "roundtrip", "delete-roundtrip", "status-roundtrip", "catalog-badges", "smart-inspect"), default="inspect")
+    parser.add_argument("--mode", choices=("inspect", "roundtrip", "delete-roundtrip", "status-roundtrip", "catalog-badges", "smart-inspect", "season-messages"), default="inspect")
     parser.add_argument("--target-season", default="")
     args = parser.parse_args()
     if args.target_season and not re.fullmatch(r"[1-9][0-9]*", args.target_season):
@@ -29,6 +29,11 @@ def main():
                     "smart_target_episode", "smart_target_seek_ms", "history_target_found"})
     allowed.update(prefix + suffix for prefix in ("today", "updates") for suffix in
                    ("_target_found", "_classes", "_child_classes", "_attributes", "_script_variables", "_marker_parents", "_target_index", "_watching_parsed"))
+    allowed.update(("read_only", "want_example_playback_mark", "want_example_status"))
+    allowed.update(tab + suffix for tab in ("new", "nonew", "want", "watched")
+                   for suffix in ("_rows", "_season_messages", "_messages_without_counter", "_messages_zero_counter", "_messages_older_season"))
+    allowed.update("season_" + season + suffix for season in ("5", "6")
+                   for suffix in ("_listed", "_message", "_playback_mark", "_status"))
     for line in result.stdout.splitlines():
         if not line.startswith("INSTRUMENTATION_RESULT: "):
             continue

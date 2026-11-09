@@ -18,7 +18,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.tv.material3.MaterialTheme
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
+import ru.seasonvar.tv.data.account.AccountParser
 import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.details.DetailsUiState
 import ru.seasonvar.tv.ui.details.SeasonProgress
@@ -29,7 +31,11 @@ object DetailsProgressLayoutProbe {
     fun run(probe: Instrumentation) = with(probe) {
         val result = Bundle()
         var activity: MarkMenuPreviewActivity? = null
-        val entry = SeriesEntry("123", "https://seasonvar.ru/serial-123-Test.html", "Проверка прогресса", 1, "", "")
+        val seasonMessage = "Сезон 2 из 5"
+        val entry = AccountParser.resume("""<div class='headblock-menu'><a href='/profile/12'>Тест</a></div>
+            <div class='pgs-marks'><li data-tabr='marks-new'><div class='pgs-marks-el' data-marksel='123'>
+            <a href='/serial-123-Test.html'><span class='pgs-marks-name'>Проверка прогресса</span></a>
+            <div class='pgs-marks-mess'>$seasonMessage</div></div></li><li data-tabr='marks-nonew'></li></div>""").entries.single()
         val state = mutableStateOf(DetailsUiState())
         val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("details-progress-probe")), "run-" + System.currentTimeMillis())
         fun find(node: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
@@ -66,6 +72,7 @@ object DetailsProgressLayoutProbe {
                         val focus = remember { FocusRequester() }
                         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(d.spacingLarge),
                             verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                            AccountEntryDetails(state.value.entry ?: entry, includeProgress = false)
                             ThemeButton("Смотреть", {})
                             SeasonProgress(state.value, state.value.entry ?: entry)
                             ThemeButton("1", {}, Modifier.focusRequester(focus))
@@ -84,6 +91,7 @@ object DetailsProgressLayoutProbe {
                 waitFor { find(uiAutomation.rootInActiveWindow, expected) != null }
                 check(bounds(checkNotNull(find(uiAutomation.rootInActiveWindow, expected))).top == progressTop)
                 check(bounds(checkNotNull(episode())) == episodeBounds && episode()?.isFocused == true)
+                check(find(uiAutomation.rootInActiveWindow, seasonMessage) == null)
                 capture(name)
             }
             checkState("02-loading", DetailsUiState(entry = entry, progressLoading = true), loading)
@@ -96,6 +104,15 @@ object DetailsProgressLayoutProbe {
             val unknown = message(targetContext.getString(R.string.details_progress_unknown))
             checkState("05-unknown", DetailsUiState(entry = entry), unknown)
             checkState("06-failed", DetailsUiState(entry = entry, progressFailure = LoadFailure.NETWORK), unknown)
+            val news = entry.copy(accountMark = AccountMark("", "Новые серии"))
+            runOnMainSync { state.value = DetailsUiState(entry = news) }
+            waitFor { find(uiAutomation.rootInActiveWindow, "Новые серии") != null }
+            check(episode()?.isFocused == true)
+            capture("07-site-message")
+            val different = ready.copy(accountProgress = ready.accountProgress!!.copy(seasons = ProgressCounter(1, 5)))
+            checkState("08-different-progress", DetailsUiState(entry = different),
+                message(targetContext.getString(R.string.details_progress_season, 1, 5) + " · " +
+                    targetContext.getString(R.string.details_progress_episode, 3, 10)))
             result.putBoolean("geometry_stable", true)
             result.putBoolean("focus_preserved", true)
             result.putBoolean("progress_visible", true)
