@@ -19,6 +19,10 @@ class PersonalListFilterSource(
         val result = account.filteredPersonalList(feed, PersonalListFilters.from(values))
         return FilteredListPage(result.page, fields(result.options), result.filters.values())
     }
+    override suspend fun cached(values: Map<String, String>): FilteredListPage<AccountPage>? {
+        val result = account.cachedFilteredPersonalList(feed, PersonalListFilters.from(values)) ?: return null
+        return FilteredListPage(result.page, fields(result.options), result.filters.values())
+    }
     override fun restore(owner: String) = preferences.read(owner, feed.catalogKey)
     override fun save(owner: String, values: Map<String, String>) = preferences.write(owner, feed.catalogKey, values)
 }

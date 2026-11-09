@@ -74,6 +74,21 @@ class SeriesListEngineTest {
         assertEquals("Новое название", engine.content("test|" + updated[4].key, updated[4])?.subtitle)
         engine.clear()
     }
+    @Test fun enriched_card_is_reused_until_its_source_entry_changes() = runTest {
+        val rows = entries(20); var preparations = 0
+        val engine = engine(prepare = { preparations++; SeriesCardContent(it.copy(originalTitle = "Original"), it.title) })
+        engine.update(input(rows)); advanceUntilIdle()
+        val first = engine.content("test|" + rows[4].key, rows[4])
+        assertEquals("Original", first?.entry?.originalTitle)
+        engine.update(input(rows)); advanceUntilIdle()
+        assertSame(first, engine.content("test|" + rows[4].key, rows[4]))
+        assertEquals(14, preparations)
+        val changed = rows.toMutableList().apply { this[4] = this[4].copy(title = "Другое название") }
+        engine.update(input(changed)); advanceUntilIdle()
+        assertNull(engine.content("test|" + rows[4].key, rows[4]))
+        assertEquals("Другое название", engine.content("test|" + changed[4].key, changed[4])?.entry?.title)
+        assertEquals(15, preparations); engine.clear()
+    }
     @Test fun window_planning_does_not_walk_the_whole_list_on_normal_focus_moves() = runTest {
         val rows = entries(33000); var reads = 0
         val measured = object : AbstractList<SeriesEntry>() {

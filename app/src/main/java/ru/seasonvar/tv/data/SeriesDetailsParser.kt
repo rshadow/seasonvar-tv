@@ -9,8 +9,9 @@ object SeriesDetailsParser {
     private val seasonNumber = Regex("""(\d+)\s*сезон""", RegexOption.IGNORE_CASE)
     private val episodeAssignment = Regex("""\b(?:var\s+)?arEpisodes\s*=""")
 
-    fun parse(html: String, entry: SeriesEntry): SeriesDetails {
-        val doc = Jsoup.parse(html, entry.url)
+    fun parse(html: String, entry: SeriesEntry): SeriesDetails = parse(Jsoup.parse(html, entry.url), entry)
+
+    internal fun parse(doc: org.jsoup.nodes.Document, entry: SeriesEntry): SeriesDetails {
         val info = doc.selectFirst(".pgs-sinfo[data-id-season]") ?: throw MarkupChangedException()
         if (info.attr("data-id-season") != entry.id) throw MarkupChangedException()
         val serialId = info.attr("data-id-serial")
@@ -61,7 +62,7 @@ object SeriesDetailsParser {
         return SeriesDetails(
             entry.copy(originalTitle = original, season = seasons.first { it.id == entry.id }.number,
                 posterUrl = poster.ifBlank { entry.posterUrl }),
-            serialId, SeasonvarParser.description(html, entry).paragraphs, facts,
+            serialId, SeasonvarParser.description(doc, entry).paragraphs, facts,
             info.select(".pgs-sinfo-actor a").map { it.text() }.filter { it.isNotBlank() },
             seasons, translations, default,
             doc.selectFirst(".pgs-player-block:not(.error)")?.text()?.takeIf { it.isNotBlank() },

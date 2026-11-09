@@ -43,6 +43,7 @@ interface ListFilterSource<P> {
     val fields: List<ListFilterField>
     suspend fun options(): List<ListFilterField>
     suspend fun load(values: Map<String, String>): FilteredListPage<P>
+    suspend fun cached(values: Map<String, String>): FilteredListPage<P>? = null
     fun restore(owner: String): Map<String, String>
     fun save(owner: String, values: Map<String, String>)
 }

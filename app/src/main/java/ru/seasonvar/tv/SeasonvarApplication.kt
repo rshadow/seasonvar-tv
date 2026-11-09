@@ -14,13 +14,24 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     internal val applicationScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
     internal val interfaceSettings by lazy { ru.seasonvar.tv.ui.settings.InterfaceSettings(this) }
     val networkSettings by lazy { NetworkSettings(this) }
-    val sessions by lazy { ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) }
+    val sessions: ru.seasonvar.tv.data.account.SessionManager by lazy {
+        ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) {
+            val current = sessions.currentCacheScope()
+            if (current?.private == true && current.owner != null) htmlCache.selectPrivateOwner(current.owner)
+            else if (current?.private == false) htmlCache.clearPrivate()
+            cardData.clearPrivate()
+        }
+    }
+    val htmlCache by lazy { ru.seasonvar.tv.data.cache.HtmlResponseCache(File(cacheDir, "seasonvar-public"),
+        scope = sessions::cacheScope, currentScope = sessions::currentCacheScope) }
+    val cardData by lazy { ru.seasonvar.tv.data.cache.CardDataCache(htmlCache) }
     internal val listResourcePermits = kotlinx.coroutines.sync.Semaphore(ru.seasonvar.tv.data.images.LIST_RESOURCE_CONCURRENCY)
     val siteClient by lazy { SiteClient(networkSettings, sessions) }
-    val account by lazy { ru.seasonvar.tv.data.account.AccountRepository(sessions, siteClient) }
+    val account by lazy { ru.seasonvar.tv.data.account.AccountRepository(sessions, siteClient, htmlCache, cardData) }
     val translationCatalog by lazy { ru.seasonvar.tv.data.TranslationCatalogRepository(siteClient) }
     val searchHistory by lazy { ru.seasonvar.tv.data.SearchHistory(ru.seasonvar.tv.data.PreferencesSearchHistoryStore(this)) }
-    val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient, cacheToken = sessions::cacheToken) }
+    val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient,
+        responseCache = htmlCache, cardCache = cardData) }
 
     val nextSeasons by lazy { ru.seasonvar.tv.data.playback.NextSeasonResolver(
         load = { repository.details(it, force = true) },

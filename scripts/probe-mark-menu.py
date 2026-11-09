@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--device", required=True)
 parser.add_argument("--runner", required=True)
 parser.add_argument("--output", required=True, type=Path)
-parser.add_argument("--mode", choices=("mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine"), default="mark-menu-layout")
+parser.add_argument("--mode", choices=("mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine", "shared-card-cache", "cache-memory"), default="mark-menu-layout")
 args = parser.parse_args()
 if not args.device.startswith("emulator-"):
     parser.error("This probe runs only on an emulator")
@@ -19,11 +19,11 @@ args.output.mkdir(parents=True, exist_ok=True)
 adb = ["adb", "-s", args.device]
 process = subprocess.Popen(adb + ["shell", "am", "instrument", "-w", "-r", "-e", "mode", args.mode, args.runner],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-watchdog = threading.Timer(180, process.kill)
+watchdog = threading.Timer(300 if args.mode in ("shared-card-cache", "cache-memory") else 180, process.kill)
 watchdog.daemon = True
 watchdog.start()
 fields = {}
-allowed = {"descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
+allowed = {"memory_measured", "read_only", "native_total_kib", "native_common_kib", "native_private_kib", "poster_kib", "poster_limit_kib", "poster_keys", "live_card_records", "native_shared", "private_cleared", "memory_bounded", "cache_records", "cache_heap_growth_kib", "descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
            "focus_preserved", "progress_visible", "text_centered", "screens_verified", "dialogs_verified",
            "script_success", "failure_type", "failure_phase", "failure_line", "failure_geometry", "failure_focus", "failure_counts", "artifacts"}
 for line in process.stdout:
@@ -38,7 +38,7 @@ for line in process.stdout:
 code = process.wait(timeout=10)
 watchdog.cancel()
 remote = fields.pop("artifacts", None)
-artifact_dir = "series-list-probe" if args.mode == "series-list-engine" else "ui-screens-probe" if args.mode in ("ui-screens-layout", "ui-dialogs-layout") else "details-progress-probe" if args.mode == "details-progress-layout" else "history-clear-probe" if args.mode == "history-clear-layout" else "mark-menu-probe"
+artifact_dir = "cache-memory-probe" if args.mode == "cache-memory" else "shared-card-cache-probe" if args.mode == "shared-card-cache" else "series-list-probe" if args.mode == "series-list-engine" else "ui-screens-probe" if args.mode in ("ui-screens-layout", "ui-dialogs-layout") else "details-progress-probe" if args.mode == "details-progress-layout" else "history-clear-probe" if args.mode == "history-clear-layout" else "mark-menu-probe"
 if isinstance(remote, str) and re.fullmatch(r"/storage/emulated/0/Android/data/ru\.seasonvar\.tv/files/" + artifact_dir + r"/run-[0-9]+", remote):
     copied = subprocess.run(adb + ["pull", remote + "/.", str(args.output)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     fields["artifacts_copied"] = copied.returncode == 0
@@ -53,7 +53,11 @@ if args.mode == "ui-screens-layout":
     checks = ("screens_verified", "dialogs_verified", "text_centered", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "ui-dialogs-layout":
     checks = ("dialogs_verified", "text_centered", "fixture_only", "script_success", "artifacts_copied")
-if args.mode == "series-list-engine":
+if args.mode in ("series-list-engine", "shared-card-cache"):
     checks = ("descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "focus_preserved", "fixture_only", "script_success", "artifacts_copied")
+if args.mode == "shared-card-cache":
+    checks += ("native_shared", "private_cleared", "memory_bounded")
+if args.mode == "cache-memory":
+    checks = ("memory_measured", "read_only", "script_success", "artifacts_copied")
 if code or any(fields.get(key) is not True for key in checks):
     raise SystemExit(1)

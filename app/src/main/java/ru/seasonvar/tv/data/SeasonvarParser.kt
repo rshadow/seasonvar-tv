@@ -215,8 +215,9 @@ object SeasonvarParser {
         }
     }
 
-    fun description(html: String, entry: SeriesEntry): SeriesDescription {
-        val doc = Jsoup.parse(html, entry.url)
+    fun description(html: String, entry: SeriesEntry): SeriesDescription = description(Jsoup.parse(html, entry.url), entry)
+
+    internal fun description(doc: org.jsoup.nodes.Document, entry: SeriesEntry): SeriesDescription {
         val info = doc.selectFirst(".pgs-sinfo[data-id-season]")
             ?: throw MarkupChangedException()
         if (info.attr("data-id-season") != entry.id) throw MarkupChangedException()

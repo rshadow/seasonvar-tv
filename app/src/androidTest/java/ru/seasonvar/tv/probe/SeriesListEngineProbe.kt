@@ -22,6 +22,7 @@ import androidx.tv.material3.MaterialTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.SeriesDescription
@@ -33,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 object SeriesListEngineProbe {
-    fun run(probe: Instrumentation) = with(probe) {
+    fun run(probe: Instrumentation, sharedCache: Boolean = false) = with(probe) {
         val result = Bundle()
         var activity: MarkMenuPreviewActivity? = null
         var phase = "start"
@@ -53,7 +54,9 @@ object SeriesListEngineProbe {
         lateinit var jump: (Int) -> Unit
         var imageLoads = 0; var opened = 0; var actions = 0
         val descriptionLoads = ConcurrentHashMap<String, AtomicInteger>()
-        val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("series-list-probe")), "run-" + System.currentTimeMillis())
+        val backend = if (sharedCache) SharedCardCacheFixture(targetContext, descriptionLoads) else null
+        val holder = Any()
+        val artifacts = File(checkNotNull(targetContext.getExternalFilesDir(if (sharedCache) "shared-card-cache-probe" else "series-list-probe")), "run-" + System.currentTimeMillis())
         fun <T> main(block: () -> T): T {
             var value: Any? = null; var failure: Throwable? = null
             runOnMainSync { try { value = block() } catch (error: Throwable) { failure = error } }
@@ -108,10 +111,13 @@ object SeriesListEngineProbe {
                 engine = remember { SeriesListEngine(scope,
                     prepare = { SeriesCardContent(it, "Сезон 1") }, loadImage = { imageLoads++ },
                     permits = Semaphore(3), nextFrame = { withFrameNanos { } }, loadDescription = { entry ->
-                        descriptionLoads.getOrPut(entry.id) { AtomicInteger() }.incrementAndGet()
-                        delay(80)
-                        SeriesDescription(listOf("Описание: " + entry.title))
-                    }) }
+                        if (backend != null) backend.repository.description(entry) else {
+                            descriptionLoads.getOrPut(entry.id) { AtomicInteger() }.incrementAndGet()
+                            delay(80)
+                            SeriesDescription(listOf("Описание: " + entry.title))
+                        }
+                    }, cachedDescription = { backend?.repository?.cachedDescription(it) },
+                    retainData = { backend?.cards?.retain(holder, it) }) }
                 initialized = true
                 jump = { index -> scope.launch {
                     selected.value = all[index].key
@@ -151,9 +157,25 @@ object SeriesListEngineProbe {
             } } }
             stage("small_list")
             ready(); focus(0); val original = bounds(0)
-            val preparedBeforeAppend = main { engine.preparedCount }; val imagesBeforeAppend = main { imageLoads }
-            val descriptionsBeforeAppend = descriptionLoads.values.sumOf { it.get() }
+            val preparedBeforeAppend = main { engine.preparedCount }; var imagesBeforeAppend = main { imageLoads }
+            var descriptionsBeforeAppend = descriptionLoads.values.sumOf { it.get() }
             capture("01-small-strip")
+            if (backend != null) {
+                stage("shared_lists")
+                val originalDescription = backend.repository.cachedDescription(all[0])
+                main { rows.value = all.drop(3).take(100); selected.value = all[3].key; selectedEntry.value = all[3]; catalog.value = "list_b" }
+                settle(); ready(); focus(3)
+                val count = descriptionLoads.values.sumOf { it.get() }
+                main { rows.value = all.take(100); selected.value = all[0].key; selectedEntry.value = all[0]; catalog.value = "fixture" }
+                check(main { !engine.description(all[0]).loading })
+                settle(); ready(); focus(0)
+                check(backend.repository.cachedDescription(all[0]) === originalDescription)
+                check(descriptionLoads.values.sumOf { it.get() } == count)
+                result.putBoolean("native_shared", true)
+                capture("01-shared-return")
+                imagesBeforeAppend = main { imageLoads }
+                descriptionsBeforeAppend = descriptionLoads.values.sumOf { it.get() }
+            }
             stage("append_full_data")
             main { rows.value = all }; settle(); ready()
             check(main { engine.preparedCount == preparedBeforeAppend && imageLoads == imagesBeforeAppend && selected.value == all[0].key })
@@ -199,6 +221,16 @@ object SeriesListEngineProbe {
             check(main { engine.preparedCount <= 7 && cards.keys.all { it.startsWith("other|") } })
             result.putBoolean("window_bounded", true); result.putBoolean("fixture_only", true)
             result.putBoolean("descriptions_prefetched", true)
+            if (backend != null) {
+                stage("private_clear")
+                runBlocking { backend.verifyLogout(all[0]) }
+                check(main { !engine.description(all[0]).loading })
+                result.putBoolean("private_cleared", true)
+                stage("memory_capacity")
+                result.putString("cache_heap_growth_kib", runBlocking { backend.measureCapacity() }.toString())
+                result.putString("cache_records", backend.cards.size.toString())
+                result.putBoolean("memory_bounded", true)
+            }
             result.putBoolean("script_success", true); result.putString("artifacts", artifacts.absolutePath)
             finish(Activity.RESULT_OK, result)
         } catch (error: Throwable) {
@@ -213,6 +245,6 @@ object SeriesListEngineProbe {
             }
             File(artifacts, "accessibility.txt").writeText(describe(uiAutomation.rootInActiveWindow))
             finish(Activity.RESULT_CANCELED, result)
-        } finally { activity?.let { main { it.finish() } } }
+        } finally { activity?.let { main { it.finish() } }; backend?.close() }
     }
 }

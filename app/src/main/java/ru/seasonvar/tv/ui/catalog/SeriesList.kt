@@ -95,12 +95,13 @@ internal fun SeriesList(
 
 @Composable
 internal fun rememberSeriesListEngine(loadDescription: (suspend (SeriesEntry) -> SeriesDescription)? = null,
-    contextKey: Any? = null): SeriesListEngine {
+    contextKey: Any? = null, cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null): SeriesListEngine {
     val context = LocalContext.current.applicationContext
     val loader = context.imageLoader
     val locale = LocalConfiguration.current.locales.toLanguageTags()
     val scope = rememberCoroutineScope()
-    return remember(context, loader, scope, locale, loadDescription, contextKey) {
+    return remember(context, loader, scope, locale, loadDescription, contextKey, cardData) {
+        val holder = Any()
         SeriesListEngine(scope, prepare = { entry ->
             val subtitle = if (entry.expectedReleaseDate != null) context.getString(R.string.announcements_expected, entry.expectedReleaseDate)
             else if (entry.historyVisitedAt != null && entry.initialSelection.episodeLabel != null) listOfNotNull(
@@ -109,10 +110,12 @@ internal fun rememberSeriesListEngine(loadDescription: (suspend (SeriesEntry) ->
             ).joinToString(" · ") else entry.subtitle.ifBlank {
                 entry.season?.let { context.getString(R.string.season_number, it) }.orEmpty()
             }
-            SeriesCardContent(entry, subtitle)
+            SeriesCardContent(cardData?.entry(entry) ?: entry, subtitle)
         }, loadImage = { prefetchImage(context, loader, it) },
             permits = (context as SeasonvarApplication).listResourcePermits,
-            nextFrame = { withFrameNanos { } }, loadDescription = loadDescription)
+            nextFrame = { withFrameNanos { } }, loadDescription = loadDescription,
+            cachedDescription = { cardData?.description(it.id) },
+            retainData = { cardData?.retain(holder, it) })
     }
 }
 

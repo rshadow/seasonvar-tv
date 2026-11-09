@@ -31,10 +31,13 @@ internal class SeriesListEngine(
     private val nextFrame: suspend () -> Unit,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val loadDescription: (suspend (SeriesEntry) -> SeriesDescription)? = null,
+    private val cachedDescription: (SeriesEntry) -> SeriesDescription? = { null },
+    private val retainData: (Set<String>) -> Unit = {},
 ) {
     private data class Slot(val index: Int, val key: String, val entry: SeriesEntry)
     private data class Plan(val window: SeriesListWindow, val slots: List<Slot>, val images: List<PrefetchImage>)
     private data class Preparation(val token: Long, val slot: Slot)
+    private data class Prepared(val source: SeriesEntry, val content: SeriesCardContent)
     private sealed interface Resource {
         val key: String
         data class Image(val image: PrefetchImage) : Resource { override val key = "image|" + image.key }
@@ -58,14 +61,14 @@ internal class SeriesListEngine(
             }
         }
     }, permits = permits)
-    private val prepared = mutableStateMapOf<String, SeriesCardContent>()
+    private val prepared = mutableStateMapOf<String, Prepared>()
     private var desired = emptyMap<String, Preparation>()
     private var nextToken = 0L
     private val cards = WindowPrefetcher(scope, { it: Preparation -> it.token.toString() }, { task ->
         val content = withContext(dispatcher) { prepare(task.slot.entry) }
         nextFrame()
         currentCoroutineContext().ensureActive()
-        if (desired[task.slot.key]?.token == task.token) prepared[task.slot.key] = content
+        if (desired[task.slot.key]?.token == task.token) prepared[task.slot.key] = Prepared(task.slot.entry, content)
     }, parallelism = 1)
     private var knownIndices = emptyMap<String, Int>()
     private var catalogKey: String? = null
@@ -77,10 +80,11 @@ internal class SeriesListEngine(
     internal val descriptionCount get() = described.size
 
     fun content(key: String, entry: SeriesEntry): SeriesCardContent? =
-        prepared[key]?.takeIf { it.entry == entry }
+        prepared[key]?.takeIf { it.source == entry }?.content
 
     fun description(entry: SeriesEntry): DescriptionState =
-        described[descriptionKey(entry)]?.copy(key = entry.key)
+        cachedDescription(entry)?.let { DescriptionState(entry.key, it) }
+            ?: described[descriptionKey(entry)]?.copy(key = entry.key)
             ?: DescriptionState(key = entry.key, loading = loadDescription != null)
 
     private fun descriptionKey(entry: SeriesEntry) = entry.id + "|" + entry.url
@@ -103,6 +107,7 @@ internal class SeriesListEngine(
             ensureActive()
             if (version != generation) return@launch
             window = plan.window
+            retainData(plan.slots.mapTo(hashSetOf()) { it.entry.id })
             knownIndices = plan.slots.associate { it.entry.key to it.index }
             val previous = desired
             desired = plan.slots.associate { slot ->
@@ -110,10 +115,10 @@ internal class SeriesListEngine(
                     ?: Preparation(++nextToken, slot))
             }
             prepared.keys.toList().forEach { key ->
-                if (desired[key]?.slot?.entry != prepared[key]?.entry) prepared.remove(key)
+                if (desired[key]?.slot?.entry != prepared[key]?.source) prepared.remove(key)
             }
             updateResources(plan, input.selectedKey)
-            cards.update(desired.values.filter { prepared[it.slot.key]?.entry != it.slot.entry })
+            cards.update(desired.values.filter { prepared[it.slot.key]?.source != it.slot.entry })
         }
     }
 
@@ -168,6 +173,7 @@ internal class SeriesListEngine(
     }
 
     fun clear() {
+        retainData(emptySet())
         generation++
         work?.cancel()
         work = null
