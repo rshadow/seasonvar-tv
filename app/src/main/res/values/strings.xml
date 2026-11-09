@@ -148,8 +148,8 @@
     <string name="episode_number">Серия %1$s</string>
     <string name="season_number">Сезон %1$d</string>
     <string name="today_loading_hint">Связываемся с seasonvar.ru…</string>
-    <string name="image_prefetch_title">Загружать обложки заранее</string>
-    <string name="image_prefetch_description">Подготавливать миниатюры и большие обложки на два экрана вперёд от выбранного сериала. Листать быстрее, но расходуется больше интернета. Если выключить — загружаются только картинки на экране.</string>
+    <string name="image_prefetch_title">Подготавливать списки заранее</string>
+    <string name="image_prefetch_description">Подготавливать карточки, описания и обложки на два экрана вперёд от выбранного сериала. Листать быстрее, но расходуется больше интернета. Если выключить — загружаются только видимые карточки, их описания и картинки.</string>
     <string name="settings_title">Настройки</string>
     <string name="menu_visibility_title">Разделы меню</string>
     <string name="menu_visibility_description">Выберите пункты бокового меню. Изменения сохраняются сразу. Личные списки появляются после входа в аккаунт.</string>

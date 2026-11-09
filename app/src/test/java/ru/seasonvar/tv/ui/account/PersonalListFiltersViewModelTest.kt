@@ -40,9 +40,8 @@ class PersonalListFiltersViewModelTest {
         override fun restore(owner: String) = saved[owner].orEmpty()
         override fun save(owner: String, values: Map<String, String>) { saved[owner] = values }
     }
-    private fun model(name: String, source: Source) = PersonalListViewModel(session, { error("Unfiltered bypass") }, filterSource = source) {
-        SeriesDescription(emptyList())
-    }.also { store.put(name, it) }
+    private fun model(name: String, source: Source) = PersonalListViewModel(session, { error("Unfiltered bypass") }, filterSource = source)
+        .also { store.put(name, it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
 

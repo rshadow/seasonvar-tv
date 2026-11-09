@@ -133,7 +133,8 @@ object UiScreensLayoutProbe {
             settle()
         }
         fun root(page: Section, state: CatalogUiState = catalog) = render {
-            SeasonvarApp(PublicFeed.entries.associateWith { state }, PublicFeed.entries.associateWith { DescriptionState() }, {}, { _, _, _ -> }, startPage = page,
+            SeasonvarApp(PublicFeed.entries.associateWith { state }, {}, startPage = page,
+                loadDescription = { SeriesDescription(listOf("Синтетическое описание для проверки общего движка.")) },
                 accountSession = account, personalStates = PersonalFeed.entries.associateWith { state }, smartState = state,
                 searchState = SearchUiState(showHistory = true, recentQueries = listOf("Комедия", "Сериал")),
                 translationSettingsModel = translations, updateModel = update,

@@ -1,8 +1,10 @@
 package ru.seasonvar.tv.data.images
 
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.SeriesListWindow
+import ru.seasonvar.tv.data.seriesListWindow
 
-internal const val IMAGE_PREFETCH_CONCURRENCY = 3
+internal const val LIST_RESOURCE_CONCURRENCY = 3
 
 internal enum class PrefetchKind { THUMBNAIL, LARGE }
 internal data class PrefetchImage(val url: String, val kind: PrefetchKind, val width: Int = 0, val height: Int = 0) {
@@ -14,11 +16,18 @@ internal fun imagePrefetchPlan(
     thumbnailWidth: Int, thumbnailHeight: Int, selectedPosterVisible: Boolean,
 ): List<PrefetchImage> {
     if (selectedIndex !in entries.indices || pageSize <= 0) return emptyList()
-    val end = (selectedIndex.toLong() + pageSize.toLong() * 2).coerceAtMost(entries.size.toLong()).toInt()
+    return imagePrefetchPlan(entries, selectedIndex,
+        seriesListWindow(entries.size, selectedIndex, pageSize, visible, true),
+        thumbnailWidth, thumbnailHeight, selectedPosterVisible)
+}
+
+internal fun imagePrefetchPlan(entries: List<SeriesEntry>, selectedIndex: Int, window: SeriesListWindow,
+    thumbnailWidth: Int, thumbnailHeight: Int, selectedPosterVisible: Boolean): List<PrefetchImage> {
+    if (selectedIndex !in entries.indices || window.ahead.isEmpty()) return emptyList()
     val displayedPoster = if (selectedPosterVisible) entries[selectedIndex].largePosterUrl else null
-    val visiblePosters = entries.indices.filter { it in visible }.map { entries[it].posterUrl }.toSet()
+    val visiblePosters = window.visible.mapTo(hashSetOf()) { entries[it].posterUrl }
     val result = linkedMapOf<String, PrefetchImage>()
-    for (index in selectedIndex until end) {
+    for (index in window.ahead) {
         val entry = entries[index]
         if (entry.posterUrl !in visiblePosters) {
             val image = PrefetchImage(entry.posterUrl, PrefetchKind.THUMBNAIL, thumbnailWidth, thumbnailHeight)

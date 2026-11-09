@@ -25,6 +25,7 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "series-list-engine") { SeriesListEngineProbe.run(this); return }
         if (mode == "ui-dialogs-layout") { UiScreensLayoutProbe.run(this, dialogsOnly = true); return }
         if (mode == "ui-screens-layout") { UiScreensLayoutProbe.run(this); return }
         if (mode == "history-clear-layout") { HistoryClearLayoutProbe.run(this); return }

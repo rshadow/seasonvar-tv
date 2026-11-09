@@ -15,7 +15,7 @@ internal class WindowPrefetcher<T>(
     private val scope: CoroutineScope,
     private val key: (T) -> String,
     private val load: suspend (T) -> Unit,
-    private val parallelism: Int = IMAGE_PREFETCH_CONCURRENCY,
+    private val parallelism: Int = LIST_RESOURCE_CONCURRENCY,
     private val permits: Semaphore = Semaphore(parallelism),
 ) {
     private var window = linkedMapOf<String, T>()
@@ -41,7 +41,7 @@ internal class WindowPrefetcher<T>(
                 } catch (error: CancellationException) {
                     throw error
                 } catch (_: Exception) {
-                    // A failed speculative load must not affect the visible catalogue.
+                    // A failed load must not affect the rest of the window.
                 } finally {
                     if (active[id] === currentCoroutineContext()[Job]) {
                         active.remove(id)

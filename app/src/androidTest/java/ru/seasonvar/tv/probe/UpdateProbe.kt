@@ -14,7 +14,6 @@ import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.update.*
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
-import ru.seasonvar.tv.ui.catalog.DescriptionState
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.update.UpdateViewModel
 import java.io.File
@@ -70,8 +69,7 @@ object UpdateProbe {
                         })
                     activity.setContent {
                         SeasonvarApp(states = PublicFeed.entries.associateWith { CatalogUiState() },
-                            descriptions = PublicFeed.entries.associateWith { DescriptionState() },
-                            onRefresh = {}, onSelect = { _, _, _ -> }, startPage = Section.ABOUT, updateModel = model)
+                            onRefresh = {}, startPage = Section.ABOUT, updateModel = model)
                     }
                 }
                 result.putBoolean("preview_ready", true)
