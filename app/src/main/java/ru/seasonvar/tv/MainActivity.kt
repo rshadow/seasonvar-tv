@@ -65,11 +65,11 @@ class MainActivity : ComponentActivity() {
         }
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
         personalModels = PersonalFeed.entries.associateWith { feed ->
-            ViewModelProvider(this, PersonalListViewModel.Factory(container.account, repository, feed, container.listFilterPreferences))
+            ViewModelProvider(this, PersonalListViewModel.Factory(container.account, feed, container.listFilterPreferences))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
-            container.account, repository, container.smartContinueCache,
+            container.account, container.smartContinueCache,
             { container.interfaceSettings.preferredTranslations.value }))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
         val historyClearModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.HistoryClearViewModel.Factory(
             container.account,
@@ -111,7 +111,6 @@ class MainActivity : ComponentActivity() {
             val accountState by accountModel.state.collectAsStateWithLifecycle()
             val removalState by removalModel.state.collectAsStateWithLifecycle()
             val smartState by smartModel.state.collectAsStateWithLifecycle()
-            val smartDescription by smartModel.description.collectAsStateWithLifecycle()
             val marksRevision by container.account.marksRevision.collectAsStateWithLifecycle()
             LaunchedEffect(marksRevision) {
                 if (marksRevision > 0) {
@@ -123,7 +122,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val personalStates = personalModels.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
-            val personalDescriptions = personalModels.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             LaunchedEffect(accountSession.version) {
                 if (accountSession.version > 0) {
                     models.values.forEach { it.sessionChanged() }
@@ -131,9 +129,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val search by searchModel.state.collectAsStateWithLifecycle()
-            val searchDescription by searchModel.description.collectAsStateWithLifecycle()
             val states = models.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
-            val descriptions = models.mapValues { (_, model) -> model.description.collectAsStateWithLifecycle().value }
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val imagePrefetchEnabled by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
@@ -156,13 +152,12 @@ class MainActivity : ComponentActivity() {
                 onRemovalRefresh = removalModel::refreshStatus, onRemovalSetStatus = removalModel::selectStatus,
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
-                personalStates = personalStates, personalDescriptions = personalDescriptions,
+                personalStates = personalStates,
                 historyClear = historyClearModel,
                 personalFilters = personalModels.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 publicFilters = models.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
-                smartState = smartState, smartDescription = smartDescription,
+                smartState = smartState,
                 onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
-                onSmartSelect = smartModel::select,
                 onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,
                 onPersonalVisible = { feed ->
                     visiblePersonalFeed = feed
@@ -170,20 +165,16 @@ class MainActivity : ComponentActivity() {
                 },
                 onPersonalRefresh = { personalModels.getValue(it).retryOrRefresh() },
                 onPersonalMore = { personalModels.getValue(it).loadMore() },
-                onPersonalSelect = { feed, entry, retry -> personalModels.getValue(feed).select(entry, retry) },
                 onPlay = { playbackLauncher.launch(PlayerActivity.intent(this, it)) },
                 states = states,
-                descriptions = descriptions,
+                loadDescription = container.repository::description,
                 searchState = search,
-                searchDescription = searchDescription,
                 onSearchQuery = searchModel::queryChanged,
                 onSearchSubmit = searchModel::submit,
                 onSearchRecall = searchModel::recall, onSearchClearHistory = searchModel::clearHistory,
                 onSearchRemember = searchModel::rememberCurrentQuery,
-                onSearchSelect = searchModel::select,
                 onSearchVisible = { visible -> if (visible) searchModel.activate() else searchModel.deactivate() },
                 onRefresh = { feed -> models.getValue(feed).refresh() },
-                onSelect = { feed, entry, retry -> models.getValue(feed).select(entry, retry) },
                 onFeedVisible = { feed -> models.getValue(feed).activate() },
                 bypassEnabled = network.bypassEnabled,
                 onBypassChange = { enabled ->

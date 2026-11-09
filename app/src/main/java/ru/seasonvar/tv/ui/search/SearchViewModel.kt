@@ -12,11 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.data.CatalogRepository
 import ru.seasonvar.tv.data.MarkupChangedException
-import ru.seasonvar.tv.data.SeriesDescription
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.SiteHttpException
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
-import ru.seasonvar.tv.ui.catalog.DescriptionState
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 
 data class SearchUiState(
@@ -33,14 +31,10 @@ data class SearchUiState(
 class SearchViewModel(
     private val search: suspend (String) -> List<SeriesEntry>,
     private val history: ru.seasonvar.tv.data.SearchHistory? = null,
-    private val loadDescription: suspend (SeriesEntry) -> SeriesDescription,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(SearchUiState(historyLoading = history != null))
     val state = mutableState.asStateFlow()
-    private val mutableDescription = MutableStateFlow(DescriptionState())
-    val description = mutableDescription.asStateFlow()
     private var searchJob: Job? = null
-    private var descriptionJob: Job? = null
     private var active = false
     private var touchedDuringVisit = false
     private var historyDirty = false
@@ -110,16 +104,12 @@ class SearchViewModel(
         rememberPendingQuery()
         active = false
         searchJob?.cancel()
-        descriptionJob?.cancel()
-        mutableDescription.value = DescriptionState()
         mutableState.value = mutableState.value.copy(results = mutableState.value.results.copy(loading = false))
     }
 
     fun queryChanged(query: String) {
         if (query == mutableState.value.query) return
         searchJob?.cancel()
-        descriptionJob?.cancel()
-        mutableDescription.value = DescriptionState()
         touchedDuringVisit = true
         historyDirty = query.isNotBlank()
         mutableState.value = state.value.copy(query = query, results = CatalogUiState(loading = query.isNotBlank()),
@@ -135,8 +125,7 @@ class SearchViewModel(
     }
 
     fun sessionChanged() {
-        searchJob?.cancel(); descriptionJob?.cancel()
-        mutableDescription.value = DescriptionState()
+        searchJob?.cancel()
         mutableState.value = state.value.copy(results = CatalogUiState(loading = false))
         if (active) request(debounce = false)
     }
@@ -149,7 +138,6 @@ class SearchViewModel(
 
     fun networkChanged() {
         if (active) {
-            mutableDescription.value = DescriptionState()
             request(debounce = false)
         }
     }
@@ -180,31 +168,11 @@ class SearchViewModel(
         }
     }
 
-    fun select(entry: SeriesEntry, retry: Boolean = false) {
-        if (!active || state.value.showHistory) return
-        if (!retry && mutableDescription.value.key == entry.key) return
-        descriptionJob?.cancel()
-        mutableDescription.value = DescriptionState(key = entry.key, loading = true)
-        descriptionJob = viewModelScope.launch {
-            try {
-                delay(180)
-                val result = loadDescription(entry)
-                ensureActive()
-                mutableDescription.value = DescriptionState(entry.key, result)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                ensureActive()
-                mutableDescription.value = DescriptionState(entry.key, failed = true)
-            }
-        }
-    }
-
     class Factory(private val repository: CatalogRepository, private val history: ru.seasonvar.tv.data.SearchHistory) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SearchViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return SearchViewModel(repository::search, history, repository::description) as T
+            return SearchViewModel(repository::search, history) as T
         }
     }
 }

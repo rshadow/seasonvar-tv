@@ -26,8 +26,8 @@ class SmartContinueViewModelTest {
         override suspend fun write(owner: String, entries: List<SeriesEntry>) { rows = entries }
         override suspend fun clear(owner: String) { rows = null; cleared++ }
     }
-    private fun model(cache: Cache, load: suspend () -> SmartContinuePage) = SmartContinueViewModel(session, load, cache,
-        { SeriesDescription(emptyList()) }).also { store.put("smart", it) }
+    private fun model(cache: Cache, load: suspend () -> SmartContinuePage) = SmartContinueViewModel(session, load, cache)
+        .also { store.put("smart", it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
     @Test fun hidden_continue_invalidation_keeps_cached_cards_and_waits_until_open_to_load_new_history_order() = runTest(dispatcher) {

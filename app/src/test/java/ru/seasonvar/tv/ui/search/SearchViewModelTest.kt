@@ -11,7 +11,6 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import ru.seasonvar.tv.data.MarkupChangedException
-import ru.seasonvar.tv.data.SeriesDescription
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.SiteHttpException
 import ru.seasonvar.tv.ui.catalog.LoadFailure
@@ -24,7 +23,7 @@ class SearchViewModelTest {
     @After fun teardown() { Dispatchers.resetMain() }
     private fun entry(id: String) = SeriesEntry(id, "https://seasonvar.ru/serial-$id-test.html", id, null, "", "")
     private fun model(search: suspend (String) -> List<SeriesEntry>) =
-        SearchViewModel(search) { SeriesDescription(emptyList()) }.also { it.activate() }
+        SearchViewModel(search).also { it.activate() }
 
     @Test fun typing_is_debounced_and_blank_query_clears_results_without_request() = runTest(dispatcher) {
         val calls = mutableListOf<String>()

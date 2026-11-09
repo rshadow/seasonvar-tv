@@ -30,13 +30,10 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import ru.seasonvar.tv.ui.catalog.CatalogHeading
 import ru.seasonvar.tv.ui.catalog.catalogHeaderMetadata
-import ru.seasonvar.tv.ui.catalog.CatalogGrid
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.CatalogCardMetrics
 import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -112,7 +109,6 @@ import ru.seasonvar.tv.ui.search.SearchUiState
 import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
-internal const val CARD_WARMUP_FRAMES = 8
 private data class RemovalFocusOrigin(val catalogKey: String, val keys: List<String>, val selected: String)
 
 private fun personalTitle(feed: PersonalFeed) = when (feed) {
@@ -151,18 +147,15 @@ internal fun menuGroupTitle(group: MenuGroup): Int = when (group) {
 @Composable
 internal fun SeasonvarApp(
     states: Map<PublicFeed, CatalogUiState>,
-    descriptions: Map<PublicFeed, DescriptionState>,
     onRefresh: (PublicFeed) -> Unit,
-    onSelect: (PublicFeed, SeriesEntry, Boolean) -> Unit,
+    loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)? = null,
     onFeedVisible: (PublicFeed) -> Unit = {},
     searchState: SearchUiState = SearchUiState(),
-    searchDescription: DescriptionState = DescriptionState(),
     onSearchQuery: (String) -> Unit = {},
     onSearchSubmit: () -> Unit = {},
     onSearchRecall: (String) -> Unit = {},
     onSearchClearHistory: () -> Unit = {},
     onSearchRemember: () -> Unit = {},
-    onSearchSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onSearchVisible: (Boolean) -> Unit = {},
     bypassEnabled: Boolean = true,
     onBypassChange: (Boolean) -> Unit = {},
@@ -190,12 +183,9 @@ internal fun SeasonvarApp(
     accountSession: AccountSession = AccountSession(),
     accountState: AccountUiState = AccountUiState(busy = false),
     personalStates: Map<PersonalFeed, CatalogUiState> = emptyMap(),
-    personalDescriptions: Map<PersonalFeed, DescriptionState> = emptyMap(),
     smartState: CatalogUiState = CatalogUiState(loading = false),
-    smartDescription: DescriptionState = DescriptionState(),
     onSmartVisible: (Boolean) -> Unit = {},
     onSmartRefresh: () -> Unit = {},
-    onSmartSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
@@ -205,7 +195,6 @@ internal fun SeasonvarApp(
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
-    onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRefresh: () -> Unit = {},
@@ -217,16 +206,13 @@ internal fun SeasonvarApp(
     SeasonvarTheme {
         SeasonvarContent(
             states = states,
-            descriptions = descriptions,
             onRefresh = onRefresh,
-            onSelect = onSelect,
+            loadDescription = loadDescription,
             onFeedVisible = onFeedVisible,
             searchState = searchState,
-            searchDescription = searchDescription,
             onSearchQuery = onSearchQuery,
             onSearchSubmit = onSearchSubmit,
             onSearchRecall = onSearchRecall, onSearchClearHistory = onSearchClearHistory, onSearchRemember = onSearchRemember,
-            onSearchSelect = onSearchSelect,
             onSearchVisible = onSearchVisible,
             bypassEnabled = bypassEnabled,
             onBypassChange = onBypassChange,
@@ -247,12 +233,12 @@ internal fun SeasonvarApp(
             onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState,
-            personalStates = personalStates, personalDescriptions = personalDescriptions,
-            smartState = smartState, smartDescription = smartDescription,
-            onSmartVisible = onSmartVisible, onSmartRefresh = onSmartRefresh, onSmartSelect = onSmartSelect,
+            personalStates = personalStates,
+            smartState = smartState,
+            onSmartVisible = onSmartVisible, onSmartRefresh = onSmartRefresh,
             onLogin = onLogin, onLogout = onLogout, onCheckAccount = onCheckAccount,
             personalFilters = personalFilters, publicFilters = publicFilters, historyClear = historyClear,
-            onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore, onPersonalSelect = onPersonalSelect,
+            onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore,
         )
     }
 }
@@ -261,18 +247,15 @@ internal fun SeasonvarApp(
 @Composable
 private fun SeasonvarContent(
     states: Map<PublicFeed, CatalogUiState>,
-    descriptions: Map<PublicFeed, DescriptionState>,
     onRefresh: (PublicFeed) -> Unit,
-    onSelect: (PublicFeed, SeriesEntry, Boolean) -> Unit,
+    loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)?,
     onFeedVisible: (PublicFeed) -> Unit = {},
     searchState: SearchUiState = SearchUiState(),
-    searchDescription: DescriptionState = DescriptionState(),
     onSearchQuery: (String) -> Unit = {},
     onSearchSubmit: () -> Unit = {},
     onSearchRecall: (String) -> Unit = {},
     onSearchClearHistory: () -> Unit = {},
     onSearchRemember: () -> Unit = {},
-    onSearchSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onSearchVisible: (Boolean) -> Unit = {},
     bypassEnabled: Boolean = true,
     onBypassChange: (Boolean) -> Unit = {},
@@ -300,12 +283,9 @@ private fun SeasonvarContent(
     accountSession: AccountSession = AccountSession(),
     accountState: AccountUiState = AccountUiState(busy = false),
     personalStates: Map<PersonalFeed, CatalogUiState> = emptyMap(),
-    personalDescriptions: Map<PersonalFeed, DescriptionState> = emptyMap(),
     smartState: CatalogUiState = CatalogUiState(loading = false),
-    smartDescription: DescriptionState = DescriptionState(),
     onSmartVisible: (Boolean) -> Unit = {},
     onSmartRefresh: () -> Unit = {},
-    onSmartSelect: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onLogin: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
@@ -315,7 +295,6 @@ private fun SeasonvarContent(
     onPersonalVisible: (PersonalFeed?) -> Unit = {},
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
-    onPersonalSelect: (PersonalFeed, SeriesEntry, Boolean) -> Unit = { _, _, _ -> },
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
     onRemovalActions: (SeriesEntry) -> Unit = {},
     onRemovalRefresh: () -> Unit = {},
@@ -340,7 +319,6 @@ private fun SeasonvarContent(
     val personalFeed = section.personalFeed
     val catalogKey = if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
     val state = if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
-    val description = if (searching) searchDescription else if (smart) smartDescription else if (personalFeed != null) personalDescriptions[personalFeed] ?: DescriptionState() else descriptions.getValue(activeFeed)
     val selectedKey = selectedKeys[catalogKey]
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
@@ -462,9 +440,6 @@ private fun SeasonvarContent(
             val origin = removalOrigin?.takeIf { it.catalogKey == catalogKey && it.selected == selectedKey }
             selectEntry(if (origin != null) removalNeighbor(origin.keys, state.entries.map { it.key }, origin.selected) else selected?.key)
         }
-    }
-    LaunchedEffect(catalogKey, selected?.key, selected?.id, description.key, searchState.showHistory, catalogLayout) {
-        if (catalogLayout == CatalogLayout.STRIP) selected?.let { if (searching) onSearchSelect(it, false) else if (smart) onSmartSelect(it, false) else if (personalFeed != null) onPersonalSelect(personalFeed, it, false) else onSelect(activeFeed, it, false) }
     }
     val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy, hiddenSections)
     LaunchedEffect(startupTarget) {
@@ -758,7 +733,7 @@ private fun SeasonvarContent(
                 )
             } else {
                 CatalogPane(
-                    state, description, selected, listState, cards, if (searching || smart || personalFeed != null) null else activeFeed,
+                    state, selected, listState, cards, if (searching || smart || personalFeed != null) null else activeFeed,
                     if (searching) searchFocus else if (smart) smartFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
                         PublicFeed.TODAY -> todayFocus
                         PublicFeed.UPDATES -> updatesFocus
@@ -768,6 +743,8 @@ private fun SeasonvarContent(
                         PublicFeed.ANNOUNCEMENTS -> announcementsFocus
                     }, refreshFocus, retryFocus,
                     imagePrefetchEnabled = imagePrefetchEnabled,
+                    loadDescription = loadDescription,
+                    preparationContext = Triple(accountSession.version, bypassEnabled, dnsProvider),
                     cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
                     onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
                     onEnterContent = ::enterContent,
@@ -964,7 +941,6 @@ private fun catalogStrings(feed: PublicFeed): CatalogStrings = when (feed) {
 @Composable
 private fun CatalogPane(
     state: CatalogUiState,
-    description: DescriptionState,
     selected: SeriesEntry?,
     listState: LazyListState,
     cards: MutableMap<String, FocusRequester>,
@@ -993,9 +969,12 @@ private fun CatalogPane(
     onEnterContent: () -> Unit = {},
     filters: ru.seasonvar.tv.ui.filters.ListFiltersController? = null,
     historyClear: ru.seasonvar.tv.ui.account.HistoryClearController? = null,
+    loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)? = null,
+    preparationContext: Any? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
+    val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext)
     val clearState = historyClear?.state?.collectAsStateWithLifecycle()?.value
     val clearFocus = remember { FocusRequester() }
     var clearWasOpen by remember(historyClear) { mutableStateOf(false) }
@@ -1024,14 +1003,6 @@ private fun CatalogPane(
         else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_loading, R.string.search_empty)
         else catalogStrings(feed)
     }
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    if (imagePrefetchEnabled && historyContent == null && state.entries.isNotEmpty()) {
-        ru.seasonvar.tv.ui.catalog.CatalogImagePrefetch(catalogKey, state.entries, selected?.key, layout,
-            listState, gridState, cardMetrics.columns,
-            thumbnailWidth = with(density) { (cardMetrics.width - d.cardPadding * 2).roundToPx().coerceAtLeast(1) },
-            thumbnailHeight = with(density) { cardMetrics.posterHeight.roundToPx().coerceAtLeast(1) },
-            gridRowHeight = with(density) { (cardMetrics.height + d.spacingSmall).roundToPx().coerceAtLeast(1) })
-    }
     val latestLoadMore by rememberUpdatedState(onLoadMore)
     LaunchedEffect(catalogKey, layout, listState, gridState, state.entries.size, state.hasMore, state.moreFailure) {
         if (state.hasMore && state.moreFailure == null) snapshotFlow {
@@ -1056,14 +1027,6 @@ private fun CatalogPane(
         state.failure != null -> stringResource(R.string.catalog_refresh_error)
         else -> null
     })
-    val cardFrames = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { mutableIntStateOf(0) }
-    val firstCard = remember(catalogKey, state.entries.firstOrNull()?.key, listState) { listState.firstVisibleItemIndex }
-    LaunchedEffect(cardFrames, layout) {
-        if (layout == CatalogLayout.STRIP && state.entries.isNotEmpty()) repeat(CARD_WARMUP_FRAMES) {
-            withFrameNanos { }
-            cardFrames.intValue++
-        }
-    }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().heightIn(min = d.headerButtonSize),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1157,50 +1120,21 @@ private fun CatalogPane(
                     )
                 }
             }
-        } else if (layout == CatalogLayout.GRID) {
-            CatalogGrid(state.entries, gridState, catalogKey, cards, layoutFocus, menuFocus, cardMetrics,
-                Modifier.fillMaxWidth().weight(1f), onFocused, onOpen, if (allowAccountActions) onActions else null)
         } else {
-            SelectedPanel(selected, description, Modifier.weight(1f).padding(bottom = d.spacingMedium))
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
-                state = listState,
-                horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
-                contentPadding = PaddingValues(d.cardPadding),
-            ) {
-                itemsIndexed(
-                    state.entries,
-                    key = { _, item -> catalogKey + "|" + item.key },
-                    contentType = { _, _ -> "series" },
-                ) { index, item ->
-                    val cardKey = catalogKey + "|" + item.key
-                    val cachedRequester = cards[cardKey]
-                    val requester = remember(cardKey, cachedRequester) {
-                        cachedRequester ?: FocusRequester().also { cards[cardKey] = it }
-                    }
-                    val contentReady = remember(cardFrames, firstCard, index) {
-                        derivedStateOf {
-                            val count = cardFrames.intValue
-                            count >= CARD_WARMUP_FRAMES || index in firstCard until (firstCard + count)
-                        }
-                    }
-                    SeriesThumbnail(
-                        item, requester, layoutFocus, cardMetrics,
-                        if (index == 0) menuFocus else null,
-                        right = if (index == state.entries.lastIndex) FocusRequester.Cancel else FocusRequester.Default,
-                        contentReady = { contentReady.value },
-                        onFocused = { onFocused(item) }, onClick = { onOpen(item) },
-                        onLongClick = if (allowAccountActions) ({ onActions(item) }) else null,
-                    )
-                }
-            }
+            if (layout == CatalogLayout.STRIP)
+                SelectedPanel(selected, { engine.description(selected) }, Modifier.weight(1f).padding(bottom = d.spacingMedium))
+            ru.seasonvar.tv.ui.catalog.SeriesList(state.entries, catalogKey, selected.key, layout,
+                listState, gridState, cards, layoutFocus, menuFocus, cardMetrics, imagePrefetchEnabled,
+                if (layout == CatalogLayout.GRID) Modifier.fillMaxWidth().weight(1f)
+                else Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
+                onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine)
         }
     }
     if (filters != null && filterState != null) ru.seasonvar.tv.ui.filters.ListFilterPanel(stringResource(strings.title), filterState, filters)
 }
 
 @Composable
-private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, modifier: Modifier) {
+private fun SelectedPanel(entry: SeriesEntry, description: () -> DescriptionState, modifier: Modifier) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     var posterRatio by remember(entry.posterUrl, d.posterWidth, d.posterHeight) {
@@ -1222,11 +1156,12 @@ private fun SelectedPanel(entry: SeriesEntry, description: DescriptionState, mod
                         style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(Modifier.height(d.spacingSmall))
+                val state = description()
                 val text = when {
-                    description.key != entry.key || description.loading -> entry.previewDescription ?: stringResource(R.string.description_loading)
-                    description.failed -> entry.previewDescription ?: stringResource(R.string.description_error)
-                    description.description?.paragraphs.isNullOrEmpty() -> entry.previewDescription ?: stringResource(R.string.description_empty)
-                    else -> description.description.paragraphs.joinToString("\n\n")
+                    state.key != entry.key || state.loading -> entry.previewDescription ?: stringResource(R.string.description_loading)
+                    state.failed -> entry.previewDescription ?: stringResource(R.string.description_error)
+                    state.description?.paragraphs.isNullOrEmpty() -> entry.previewDescription ?: stringResource(R.string.description_empty)
+                    else -> state.description.paragraphs.joinToString("\n\n")
                 }
                 Text(text, style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant,
                     maxLines = 4, overflow = TextOverflow.Ellipsis)
@@ -1246,7 +1181,7 @@ internal fun SeriesThumbnail(
     metrics: CatalogCardMetrics,
     left: FocusRequester?,
     right: FocusRequester,
-    contentReady: () -> Boolean,
+    content: () -> ru.seasonvar.tv.ui.catalog.SeriesCardContent?,
     onFocused: () -> Unit,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
@@ -1298,21 +1233,14 @@ internal fun SeriesThumbnail(
                 onLongClickLabel = if (onLongClick != null) stringResource(R.string.mark_actions_title) else null)
             .padding(d.cardPadding),
     ) {
-        if (contentReady()) {
+        val prepared = content()
+        if (prepared != null) {
             Poster(entry, Modifier.fillMaxWidth().height(metrics.posterHeight))
             Spacer(Modifier.height(d.spacingSmall))
             Text(entry.title, modifier = Modifier.height(metrics.titleHeight),
                 style = MaterialTheme.typography.labelMedium, color = c.onSurface,
                 minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            val subtitle = if (entry.expectedReleaseDate != null)
-                stringResource(R.string.announcements_expected, entry.expectedReleaseDate)
-            else if (entry.historyVisitedAt != null && entry.initialSelection.episodeLabel != null) listOfNotNull(
-                entry.season?.let { stringResource(R.string.season_number, it) },
-                stringResource(R.string.episode_number, entry.initialSelection.episodeLabel),
-            ).joinToString(" · ") else entry.subtitle.ifBlank {
-                entry.season?.let { stringResource(R.string.season_number, it) }.orEmpty()
-            }
-            Text(subtitle, modifier = Modifier.height(metrics.subtitleHeight),
+            Text(prepared.subtitle, modifier = Modifier.height(metrics.subtitleHeight),
                 style = MaterialTheme.typography.labelSmall, color = c.onSurface,
                 minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -1730,7 +1658,6 @@ private fun playerClockLabel(position: PlayerClockPosition): Int = when (positio
 private fun CatalogPreview() {
     SeasonvarApp(
         PublicFeed.entries.associateWith { CatalogUiState() },
-        PublicFeed.entries.associateWith { DescriptionState() },
-        {}, { _, _, _ -> },
+        {},
     )
 }

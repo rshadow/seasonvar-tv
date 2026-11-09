@@ -24,6 +24,7 @@ PROFILE_BUILD_TYPE := $(shell python3 -c 'import json; print(json.load(open("too
 PROFILE_OUT ?= build/profile-navigation
 PROFILE_ARGS ?=
 MARK_MENU_PROBE_OUT ?= build/mark-menu-probe
+SERIES_LIST_PROBE_OUT ?= build/series-list-probe
 LAYOUT_PROBE_MODE ?= mark-menu-layout
 DETAILS_PROGRESS_PROBE_OUT ?= build/details-progress-probe
 BUILD_TYPE ?= debug
@@ -87,6 +88,7 @@ help:
 		'make lint                   Run Android Lint' \
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
 		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
+		'make series-list-probe      Verify shared renderer on 33,000 offline entries in emulator' \
 		'make details-progress-probe Verify stable progress layout across loading states offline' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
@@ -498,6 +500,10 @@ history-clear-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=history-clear-layout MARK_MENU_PROBE_OUT="$(HISTORY_CLEAR_PROBE_OUT)"
 
 .PHONY: details-progress-probe
+.PHONY: series-list-probe
+series-list-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=series-list-engine MARK_MENU_PROBE_OUT="$(SERIES_LIST_PROBE_OUT)"
+
 details-progress-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=details-progress-layout MARK_MENU_PROBE_OUT="$(DETAILS_PROGRESS_PROBE_OUT)"
 

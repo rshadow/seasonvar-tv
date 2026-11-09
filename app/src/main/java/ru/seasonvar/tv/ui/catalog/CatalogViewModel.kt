@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,10 +44,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
     private val accountOwner: () -> String? = { null }) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState(loading = feed == PublicFeed.TODAY))
     val state = mutableState.asStateFlow()
-    private val mutableDescription = MutableStateFlow(DescriptionState())
-    val description = mutableDescription.asStateFlow()
     private var refreshJob: Job? = null
-    private var descriptionJob: Job? = null
 
     private var started = false
     private var generation = 0L
@@ -141,19 +137,16 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
     fun sessionChanged() {
         val reload = started
         generation++
-        refreshJob?.cancel(); descriptionJob?.cancel()
+        refreshJob?.cancel()
         filterController?.contextChanged()
         mutableState.value = CatalogUiState(loading = false)
-        mutableDescription.value = DescriptionState()
         started = false
         if (reload) refresh()
     }
 
     fun networkChanged() {
         if (!started) return
-        val selected = mutableState.value.entries.firstOrNull { it.key == mutableDescription.value.key }
         refresh()
-        selected?.let { select(it, true) }
     }
 
     fun refreshIfStarted() {
@@ -162,23 +155,6 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
 
     fun refreshIfDateChanged() {
         if (started && mutableState.value.date != LocalDate.now()) refresh()
-    }
-
-    fun select(entry: SeriesEntry, retry: Boolean = false) {
-        if (!retry && mutableDescription.value.key == entry.key) return
-        descriptionJob?.cancel()
-        mutableDescription.value = DescriptionState(key = entry.key, loading = true)
-        descriptionJob = viewModelScope.launch {
-            try {
-                delay(180)
-                val result = repository.description(entry)
-                mutableDescription.value = DescriptionState(entry.key, result)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                mutableDescription.value = DescriptionState(entry.key, failed = true)
-            }
-        }
     }
 
     class Factory(private val repository: CatalogRepository, private val feed: PublicFeed,

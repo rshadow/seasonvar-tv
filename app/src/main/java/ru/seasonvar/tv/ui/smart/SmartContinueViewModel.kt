@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,15 +21,10 @@ class SmartContinueViewModel internal constructor(
     private val session: StateFlow<AccountSession>,
     private val load: suspend () -> SmartContinuePage,
     private val cache: SmartContinueCache,
-    private val describe: suspend (SeriesEntry) -> SeriesDescription,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
-    private val mutableDescription = MutableStateFlow(DescriptionState())
-    val description = mutableDescription.asStateFlow()
     private var refreshJob: Job? = null
-    private var descriptionJob: Job? = null
-    private var describedSeason: String? = null
     private var visible = false
     private var dirty = true
     private var owner: String? = null
@@ -41,9 +35,8 @@ class SmartContinueViewModel internal constructor(
             ownerVersion = current.version
             val previous = owner
             owner = next
-            refreshJob?.cancel(); descriptionJob?.cancel()
+            refreshJob?.cancel()
             mutableState.value = CatalogUiState(loading = false)
-            mutableDescription.value = DescriptionState()
             dirty = true
             if (previous != null && previous != next) cache.clear(previous)
             if (visible && next != null) refresh()
@@ -61,10 +54,9 @@ class SmartContinueViewModel internal constructor(
         if (visible) refresh() else mutableState.value = state.value.copy(loading = false)
     }
     fun historyCleared() {
-        refreshJob?.cancel(); descriptionJob?.cancel()
+        refreshJob?.cancel()
         dirty = false
         mutableState.value = CatalogUiState(loading = false, loaded = true)
-        mutableDescription.value = DescriptionState()
         markOwner(session.value.user)?.let { expectedOwner -> viewModelScope.launch { cache.clear(expectedOwner) } }
     }
     fun refresh() {
@@ -107,28 +99,13 @@ class SmartContinueViewModel internal constructor(
         is SiteHttpException -> LoadFailure.HTTP
         else -> LoadFailure.MARKUP
     }
-    fun select(entry: SeriesEntry, retry: Boolean) {
-        if (!retry && description.value.key == entry.key && describedSeason == entry.id) return
-        descriptionJob?.cancel()
-        describedSeason = entry.id
-        mutableDescription.value = DescriptionState(entry.key, loading = true)
-        val version = session.value.version
-        descriptionJob = viewModelScope.launch {
-            try {
-                delay(180)
-                val text = describe(entry)
-                if (session.value.version == version) mutableDescription.value = DescriptionState(entry.key, text)
-            } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { if (session.value.version == version) mutableDescription.value = DescriptionState(entry.key, failed = true) }
-        }
-    }
-    class Factory(private val account: AccountRepository, private val catalog: CatalogRepository,
+    class Factory(private val account: AccountRepository,
         private val cache: SmartContinueCache, private val preferences: () -> List<String>) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SmartContinueViewModel::class.java))
             val repository = SmartContinueRepository(account, preferences)
             @Suppress("UNCHECKED_CAST")
-            return SmartContinueViewModel(account.session, repository::load, cache, catalog::description) as T
+            return SmartContinueViewModel(account.session, repository::load, cache) as T
         }
     }
 }

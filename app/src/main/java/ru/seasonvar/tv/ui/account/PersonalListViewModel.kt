@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,18 +22,14 @@ class PersonalListViewModel internal constructor(
     private val load: suspend () -> AccountPage,
     private val loadNext: suspend (String) -> AccountPage = { throw MarkupChangedException() },
     private val filterSource: ListFilterSource<AccountPage>? = null,
-    private val describe: suspend (SeriesEntry) -> SeriesDescription,
 ) : ViewModel() {
-    constructor(account: AccountRepository, catalog: CatalogRepository, feed: PersonalFeed,
+    constructor(account: AccountRepository, feed: PersonalFeed,
         preferences: ListFilterPreferences = ListFilterPreferences()) :
         this(account.session, { account.personalList(feed) }, { account.personalList(feed, it) },
-            if (feed == PersonalFeed.HISTORY) null else PersonalListFilterSource(account, feed, preferences), catalog::description)
+            if (feed == PersonalFeed.HISTORY) null else PersonalListFilterSource(account, feed, preferences))
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
-    private val mutableDescription = MutableStateFlow(DescriptionState())
-    val description = mutableDescription.asStateFlow()
     private var refreshJob: Job? = null
-    private var descriptionJob: Job? = null
     private var moreJob: Job? = null
     private var nextPage: String? = null
     private val visitedPages = mutableSetOf<String>()
@@ -73,12 +68,11 @@ class PersonalListViewModel internal constructor(
             version = session.version
             generation++
             dirty = false
-            refreshJob?.cancel(); descriptionJob?.cancel(); moreJob?.cancel()
+            refreshJob?.cancel(); moreJob?.cancel()
             filterOptionsJob?.cancel(); filterApplyJob?.cancel()
             mutableFilters.value = initialFilters(markOwner(session.user))
             nextPage = null; visitedPages.clear()
             mutableState.value = CatalogUiState(loading = false)
-            mutableDescription.value = DescriptionState()
             if (active && session.user != null) refresh()
         }
     } } }
@@ -93,10 +87,8 @@ class PersonalListViewModel internal constructor(
     fun refreshIfActive() { if (active) refresh() }
     fun historyCleared() {
         invalidate()
-        descriptionJob?.cancel()
         dirty = false
         mutableState.value = CatalogUiState(loading = false, loaded = true)
-        mutableDescription.value = DescriptionState()
     }
     fun retryOrRefresh() { if (state.value.moreFailure != null) loadMore(retry = true) else refresh() }
     fun refresh() {
@@ -221,31 +213,13 @@ class PersonalListViewModel internal constructor(
     fun markRemoved(target: AccountListMark) {
         val entries = state.value.entries.filterNot { it.accountListMark?.seasonId == target.seasonId }
         mutableState.value = state.value.copy(entries = entries)
-        if (description.value.key !in entries.map { it.key }) {
-            descriptionJob?.cancel()
-            mutableDescription.value = DescriptionState()
-        }
     }
 
-    fun select(entry: SeriesEntry, retry: Boolean) {
-        if (!retry && description.value.key == entry.key) return
-        descriptionJob?.cancel()
-        mutableDescription.value = DescriptionState(entry.key, loading = true)
-        val expected = session.value.version
-        descriptionJob = viewModelScope.launch {
-            try {
-                delay(180)
-                val result = describe(entry)
-                if (session.value.version == expected) mutableDescription.value = DescriptionState(entry.key, result)
-            } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { if (session.value.version == expected) mutableDescription.value = DescriptionState(entry.key, failed = true) }
-        }
-    }
-    class Factory(private val account: AccountRepository, private val catalog: CatalogRepository, private val feed: PersonalFeed,
+    class Factory(private val account: AccountRepository, private val feed: PersonalFeed,
         private val preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(PersonalListViewModel::class.java))
-            @Suppress("UNCHECKED_CAST") return PersonalListViewModel(account, catalog, feed, preferences) as T
+            @Suppress("UNCHECKED_CAST") return PersonalListViewModel(account, feed, preferences) as T
         }
     }
 }

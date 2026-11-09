@@ -24,7 +24,7 @@ class SearchHistoryViewModelTest {
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { models.clear(); Dispatchers.resetMain() }
     private fun model(store: SearchHistoryStore, search: suspend (String) -> List<SeriesEntry> = { emptyList() }): SearchViewModel =
-        SearchViewModel(search, SearchHistory(store)) { SeriesDescription(emptyList()) }.also { models.put("search", it); it.activate() }
+        SearchViewModel(search, SearchHistory(store)).also { models.put("search", it); it.activate() }
 
     @Test fun opening_recent_queries_does_not_send_a_request_and_recall_runs_immediately_once() = runTest(dispatcher) {
         val store = MemoryStore(listOf("old", "Naruto")); val calls = mutableListOf<String>()
@@ -84,19 +84,6 @@ class SearchHistoryViewModelTest {
         model.queryChanged("Naruto"); model.submit(); runCurrent()
         assertTrue(model.state.value.historyFailed); assertNull(model.state.value.results.failure); assertTrue(model.state.value.results.loaded)
     }
-    @Test fun history_screen_does_not_load_hidden_result_descriptions() = runTest(dispatcher) {
-        var descriptions = 0
-        val model = SearchViewModel({ emptyList() }, SearchHistory(MemoryStore(listOf("Naruto")))) {
-            descriptions++; SeriesDescription(emptyList())
-        }
-        models.put("search", model); model.activate(); runCurrent()
-        model.select(SeriesEntry("1", "https://seasonvar.ru/serial-1-test.html", "Тест", null, "", ""))
-        advanceUntilIdle(); assertEquals(0, descriptions)
-        model.recall("Naruto"); runCurrent()
-        model.select(SeriesEntry("1", "https://seasonvar.ru/serial-1-test.html", "Тест", null, "", ""))
-        advanceUntilIdle(); assertEquals(1, descriptions)
-    }
-
     @Test fun backgrounding_remembers_a_completed_auto_query_but_not_an_unfinished_one() = runTest(dispatcher) {
         val store = MemoryStore(); val model = model(store); runCurrent()
         model.queryChanged("first"); model.rememberPendingQuery(); runCurrent(); assertTrue(store.saved.isEmpty())
