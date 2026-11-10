@@ -1,5 +1,26 @@
 # Доступ к публичным страницам Seasonvar
 
+## Закрепление ключей TLS в приложении
+
+Android-клиенты используют общую конфигурацию [TlsPinSettings.kt](../../app/src/main/java/ru/seasonvar/tv/data/settings/TlsPinSettings.kt) по [ADR-0133](../adr/0133-centralized-tls-pinning.md). Pins — SHA-256 публичных ключей SPKI удостоверяющих центров. Совпадение одного из разрешённых ключей проверяется дополнительно к системному доверию и имени сервера. Ошибка не разрешает повторить запрос без pinning.
+
+Проверено агентом 2026-11-10 через HTTPS с действующей проверкой цепочки и имени, включая транспорт обхода для Seasonvar:
+
+| Домены | Наблюдаемая цепочка | Основной / резервный ключ |
+| --- | --- | --- |
+| `seasonvar.ru`, `www.seasonvar.ru`, `cdn.svstat.net` | Let’s Encrypt YR2 → Root YR → ISRG Root X1 | Root YR / Root YE |
+| `github.com`, `api.github.com` | Sectigo DV E36 → Root E46 | Sectigo E46 / R46 |
+| `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Let’s Encrypt YR1 → Root YR → ISRG Root X1 | Root YR / Root YE |
+| `dns.quad9.net` | DigiCert G3 TLS ECC SHA384 2020 CA1 → Global Root G3 | DigiCert G3 / G2 |
+
+Root YR присутствует в проверенной цепочке и при кросс-подписи через X1; сам X1 не закреплён. Резервные ключи взяты из опубликованных корней соответствующих центров. Смена ключа промежуточного или серверного сертификата внутри закреплённой цепочки допустима. При переходе на другой корень требуется обновление приложения. Нельзя автоматически заменять pins значениями из не прошедшего проверку соединения.
+
+Все запросы приложения к Seasonvar проходят через `SiteClient` и `NetworkClients`: вход, списки, отметки, карточки, Coil, плейлисты и Media3. Клиенты с cookie и медиаклиенты наследуют политику при любых комбинациях DNS/DPI. `GitHubUpdateSource` использует отдельный закреплённый клиент для метаданных, описаний релизов и APK, включая каждый разрешённый редирект. DoH также имеет отдельный закреплённый клиент. Динамические сторонние видеохосты сохраняют стандартную проверку TLS. Внешний браузер и исследовательские Python-скрипты используют собственные транспорты; описанный ниже загрузчик сохраняет стандартную проверку TLS.
+
+Источники: [проверка OkHttp в CodeQL](https://codeql.github.com/codeql-query-help/java/java-android-missing-certificate-pinning/), [Android о SPKI и резервных ключах](https://developer.android.com/privacy-and-security/security-config#CertificatePinning), [цепочки Let’s Encrypt](https://letsencrypt.org/certificates/), [корни Sectigo](https://support.sectigo.com/Com_KnowledgeDetailPage?Id=kA0Uj0000004IrB), [DigiCert G3](https://cacerts.digicert.com/DigiCertGlobalRootG3.crt.pem) и [G2](https://cacerts.digicert.com/DigiCertGlobalRootG2.crt.pem). Публичные PEM для проверки констант хранятся в тестовых ресурсах и не добавляются в доверенное хранилище приложения.
+
+## Исследовательский загрузчик
+
 Загрузчик [scripts/fetch-seasonvar.py](../../scripts/fetch-seasonvar.py) получает HTML и JSON оригинального сайта из сети, где обычный HTTPS блокируется. Нужны Python 3.12+ и curl с поддержкой HTTP/2; сторонние Python-пакеты не требуются.
 
 ## Команды

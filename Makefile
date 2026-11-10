@@ -108,6 +108,7 @@ help:
 		'make home-platform          Inspect launcher and channel approval support on DEVICE' \
 		'make update-test            Run offline update tests' \
 		'make update-probe           Check live GitHub metadata and APK integrity in emulator' \
+		'make tls-pins-probe         Check real TLS chains and reject wrong pins in emulator' \
 		'make update-restore         Restore normal test build after an update preview (emulator only)' \
 		'make update-preview         Preview update flow with a newer test APK in emulator' \
 		'make account-test           Check account, personal lists, cookies and private cache' \
@@ -385,6 +386,15 @@ check-build-crypto: check-resolved-dependencies
 
 update-test:
 	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.update.*' --tests 'ru.seasonvar.tv.ui.update.*'
+
+.PHONY: tls-pins-probe
+tls-pins-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for TLS probes.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ENV) python3 scripts/probe-tls-pins.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"
 
 update-fixture:
 	python3 scripts/update-fixture.py

@@ -10,6 +10,7 @@ import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import ru.seasonvar.tv.data.settings.TlsPinSettings
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -24,6 +25,7 @@ interface UpdateSource {
 class GitHubUpdateSource internal constructor(
     // GitHub requests never share Seasonvar cookies, headers or DPI transport.
     private val client: OkHttpClient = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
+        .certificatePinner(TlsPinSettings.certificatePinner)
         .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(3, TimeUnit.MINUTES).build(),
 ) : UpdateSource {
