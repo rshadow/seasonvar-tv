@@ -79,51 +79,56 @@ object ProxySettingsProbe {
                 image.recycle()
             }
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
-            runOnMainSync { activity.setContent {
-                SeasonvarApp(ru.seasonvar.tv.data.PublicFeed.entries.associateWith { ru.seasonvar.tv.ui.catalog.CatalogUiState(loading = false) }, {}, startPage = Section.SETTINGS, imagePrefetchEnabled = false,
-                    proxy = proxy.value, onProxyChange = {
-                        withContext(Dispatchers.IO) { settings.setProxy(it) }
-                        saves++; proxy.value = it; true
-                    })
-            } }
-            settle()
-            phase = "open"
-            key(KeyEvent.KEYCODE_DPAD_RIGHT)
-            repeat(10) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
-            key(KeyEvent.KEYCODE_DPAD_CENTER)
-            capture("proxy-open")
-            ButtonAlignmentChecks.centered(probe, text(R.string.proxy_save))
-            ButtonAlignmentChecks.centered(probe, text(R.string.proxy_cancel))
-            capture("proxy-off")
-            phase = "edit"
-            key(KeyEvent.KEYCODE_DPAD_CENTER)
-            key(KeyEvent.KEYCODE_DPAD_DOWN)
-            key(KeyEvent.KEYCODE_DPAD_CENTER)
-            fill(R.string.proxy_host, "127.0.0.1")
-            fill(R.string.proxy_port, "4080")
-            fill(R.string.proxy_username, "fixture-user")
-            fill(R.string.proxy_password, "fixture-password")
-            check(node(R.string.proxy_password, editable = true).isPassword)
-            capture("proxy-edit")
-            click(R.string.proxy_save)
-            val expected = ProxyConfiguration.Server("127.0.0.1", 4080, "fixture-user", "fixture-password")
-            check(proxy.value == expected && saves == 1)
-            check(NetworkSettings(targetContext, storeName).configuration.value.proxy == expected)
-            val sealed = checkNotNull(preferences.getString("proxy_sealed", null))
-            check(!sealed.contains("fixture-user") && !sealed.contains("fixture-password"))
-            result.putBoolean("proxy_saved", true)
-            phase = "cancel"
-            key(KeyEvent.KEYCODE_DPAD_CENTER)
-            fill(R.string.proxy_username, "changed")
-            click(R.string.proxy_cancel)
-            check(proxy.value == expected && saves == 1)
-            result.putBoolean("proxy_cancelled", true)
-            phase = "corrupt"
-            check(preferences.edit().putString("proxy_sealed", "corrupt").commit())
-            check(NetworkSettings(targetContext, storeName).configuration.value.proxy == ProxyConfiguration.Unavailable)
-            settings.setProxy(ProxyConfiguration.Disabled)
-            check(NetworkSettings(targetContext, storeName).configuration.value.proxy == ProxyConfiguration.Disabled)
-            result.putBoolean("proxy_fail_closed", true)
+            for (protocol in ProxyProtocol.entries) {
+                saves = 0
+                runOnMainSync { proxy.value = ProxyConfiguration.Disabled; activity.setContent { key(protocol) {
+                    SeasonvarApp(ru.seasonvar.tv.data.PublicFeed.entries.associateWith { ru.seasonvar.tv.ui.catalog.CatalogUiState(loading = false) }, {}, startPage = Section.SETTINGS, imagePrefetchEnabled = false,
+                        proxy = proxy.value, onProxyChange = {
+                            withContext(Dispatchers.IO) { settings.setProxy(it) }
+                            saves++; proxy.value = it; true
+                        })
+                } } }
+                settle()
+                phase = "open"
+                key(KeyEvent.KEYCODE_DPAD_RIGHT)
+                repeat(10) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                capture("proxy-open")
+                ButtonAlignmentChecks.centered(probe, text(R.string.proxy_save))
+                ButtonAlignmentChecks.centered(probe, text(R.string.proxy_cancel))
+                capture("proxy-${protocol.storageId}-off")
+                phase = "edit"
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                capture("proxy-types")
+                repeat(protocol.ordinal + 1) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                fill(R.string.proxy_host, "127.0.0.1")
+                fill(R.string.proxy_port, "4080")
+                fill(R.string.proxy_username, "fixture-user")
+                fill(R.string.proxy_password, "fixture-password")
+                check(node(R.string.proxy_password, editable = true).isPassword)
+                capture("proxy-${protocol.storageId}-edit")
+                click(R.string.proxy_save)
+                val expected = ProxyConfiguration.Server("127.0.0.1", 4080, "fixture-user", "fixture-password", protocol)
+                check(proxy.value == expected && saves == 1)
+                capture("proxy-${protocol.storageId}-saved")
+                check(NetworkSettings(targetContext, storeName).configuration.value.proxy == expected)
+                val sealed = checkNotNull(preferences.getString("proxy_sealed", null))
+                check(!sealed.contains("fixture-user") && !sealed.contains("fixture-password"))
+                result.putBoolean("proxy_saved", true)
+                phase = "cancel"
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                fill(R.string.proxy_username, "changed")
+                click(R.string.proxy_cancel)
+                check(proxy.value == expected && saves == 1)
+                result.putBoolean("proxy_cancelled", true)
+                phase = "corrupt"
+                check(preferences.edit().putString("proxy_sealed", "corrupt").commit())
+                check(NetworkSettings(targetContext, storeName).configuration.value.proxy == ProxyConfiguration.Unavailable)
+                settings.setProxy(ProxyConfiguration.Disabled)
+                check(NetworkSettings(targetContext, storeName).configuration.value.proxy == ProxyConfiguration.Disabled)
+                result.putBoolean("proxy_fail_closed", true)
+            }
             result.putBoolean("text_centered", true)
             result.putBoolean("fixture_only", true)
             result.putBoolean("script_success", true)

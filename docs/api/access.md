@@ -22,7 +22,7 @@ Root YR присутствует в проверенной цепочке и п�
 
 ## Прокси приложения
 
-По [ADR-0139](../adr/0139-http-connect-proxy.md) пользователь может направить Seasonvar, постеры, плейлисты и видео через свой HTTP CONNECT-прокси. Basic-авторизация необязательна и обрабатывается только на уровне прокси по 407, без передачи Proxy-Authorization сайту. TLS и pins действуют внутри туннеля, прямого повторения при ошибке нет. DoH для разрешения имени прокси и обновления GitHub не проходят через этот туннель. Основные правила протокола: [RFC 9110, CONNECT](https://www.rfc-editor.org/rfc/rfc9110.html#name-connect) и [RFC 7617, Basic](https://www.rfc-editor.org/rfc/rfc7617.html).
+По [ADR-0139](../adr/0139-http-connect-proxy.md) пользователь может направить Seasonvar, постеры, плейлисты и видео через свой HTTP CONNECT-прокси. Basic-авторизация необязательна и обрабатывается только на уровне прокси по 407, без передачи Proxy-Authorization сайту. TLS и pins действуют внутри туннеля, прямого повторения при ошибке нет. DoH для разрешения имени прокси и обновления GitHub не проходят через этот туннель. SOCKS5 добавлен в ту же настройку по [ADR-0140](../adr/0140-socks5-proxy.md): удалённое разрешение имён, необязательная авторизация [RFC 1929](https://www.rfc-editor.org/rfc/rfc1929.html) без глобального обработчика; CONNECT по [RFC 1928](https://www.rfc-editor.org/rfc/rfc1928.html). Основные правила HTTP: [RFC 9110, CONNECT](https://www.rfc-editor.org/rfc/rfc9110.html#name-connect) и [RFC 7617, Basic](https://www.rfc-editor.org/rfc/rfc7617.html).
 
 ## DNS в приложении
 

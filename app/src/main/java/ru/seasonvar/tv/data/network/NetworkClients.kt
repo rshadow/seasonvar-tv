@@ -90,7 +90,11 @@ internal class NetworkClients {
             when (val proxy = configuration.proxy) {
                 ProxyConfiguration.Disabled -> Unit
                 ProxyConfiguration.Unavailable -> builder.addInterceptor { throw IOException("Proxy settings unavailable") }
-                is ProxyConfiguration.Server -> {
+                is ProxyConfiguration.Server -> if (proxy.protocol == ProxyProtocol.SOCKS5) {
+                    val routes = socks5Routes(proxy, dns)
+                    // Адреса маршрутов принадлежат прокси, поэтому объединять HTTP/2-соединения по IP нельзя.
+                    builder.dns(routes).socketFactory(Socks5SocketFactory(proxy, routes)).protocols(listOf(Protocol.HTTP_1_1))
+                } else {
                     val endpoint = Proxy(Proxy.Type.HTTP, proxy.address())
                     builder.proxy(endpoint)
                     if (proxy.authenticated) builder.proxyAuthenticator { route, response ->

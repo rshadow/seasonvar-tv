@@ -23,6 +23,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.data.network.ProxyProtocol
 import ru.seasonvar.tv.data.network.ProxyConfiguration
 import ru.seasonvar.tv.data.network.canonicalHost
 import ru.seasonvar.tv.ui.RemoteTextField
@@ -54,7 +55,7 @@ internal fun ProxySetting(value: ProxyConfiguration, onSave: suspend (ProxyConfi
         Text(stringResource(when (value) {
             ProxyConfiguration.Disabled -> R.string.proxy_off
             ProxyConfiguration.Unavailable -> R.string.proxy_unavailable
-            is ProxyConfiguration.Server -> R.string.proxy_http
+            is ProxyConfiguration.Server -> proxyLabel(value.protocol)
         }), style = MaterialTheme.typography.bodyLarge, color = c.primary)
     }
     if (open) ProxyDialog(value, onSave, ::close)
@@ -63,7 +64,8 @@ internal fun ProxySetting(value: ProxyConfiguration, onSave: suspend (ProxyConfi
 @Composable
 private fun ProxyDialog(value: ProxyConfiguration, onSave: suspend (ProxyConfiguration) -> Boolean, onClose: () -> Unit) {
     val server = value as? ProxyConfiguration.Server
-    var enabled by remember { mutableStateOf(value != ProxyConfiguration.Disabled) }
+    var protocol by remember { mutableStateOf(if (value == ProxyConfiguration.Disabled) null else server?.protocol ?: ProxyProtocol.HTTP_CONNECT) }
+    val enabled = protocol != null
     var host by remember { mutableStateOf(server?.host.orEmpty()) }
     var port by remember { mutableStateOf(server?.port?.toString().orEmpty()) }
     var username by remember { mutableStateOf(server?.username.orEmpty()) }
@@ -79,7 +81,9 @@ private fun ProxyDialog(value: ProxyConfiguration, onSave: suspend (ProxyConfigu
     fun save() {
         if (busy) return
         val config = try {
-            if (enabled) ProxyConfiguration.Server(canonicalHost(host), port.toInt(), username, password) else ProxyConfiguration.Disabled
+            val selected = protocol
+            if (selected != null) ProxyConfiguration.Server(canonicalHost(host), port.toInt(), username, password, selected)
+            else ProxyConfiguration.Disabled
         } catch (_: IllegalArgumentException) { showShortMessage(context, R.string.proxy_invalid); return }
         busy = true
         scope.launch {
@@ -95,7 +99,7 @@ private fun ProxyDialog(value: ProxyConfiguration, onSave: suspend (ProxyConfigu
             verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
             Text(stringResource(R.string.proxy_title), style = MaterialTheme.typography.headlineMedium, color = c.onBackground)
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-                ThemeButton(stringResource(R.string.proxy_type, stringResource(if (enabled) R.string.proxy_http else R.string.proxy_off)),
+                ThemeButton(stringResource(R.string.proxy_type, stringResource(proxyLabel(protocol))),
                     { choosing = true }, Modifier.fillMaxWidth().height(d.headerButtonSize).focusRequester(focus[0])
                         .focusProperties { up = FocusRequester.Cancel; down = if (enabled) focus[1] else focus[5] },
                     enabled = !busy, contentAlignment = Alignment.CenterStart)
@@ -117,10 +121,16 @@ private fun ProxyDialog(value: ProxyConfiguration, onSave: suspend (ProxyConfigu
             }
         }
     }
-    if (choosing) SettingsChoiceDialog(R.string.proxy_type_title, listOf(false, true), enabled,
-        { if (it) R.string.proxy_http else R.string.proxy_off },
-        { enabled = it; choosing = false; scope.launch { repeat(2) { withFrameNanos { } }; focus[0].requestFocus() } },
+    if (choosing) SettingsChoiceDialog(R.string.proxy_type_title, listOf(null) + ProxyProtocol.entries, protocol,
+        ::proxyLabel,
+        { protocol = it; choosing = false; scope.launch { repeat(2) { withFrameNanos { } }; focus[0].requestFocus() } },
         { choosing = false }, { choosing = false }, {})
     LaunchedEffect(Unit) { repeat(2) { withFrameNanos { } }; focus[0].requestFocus() }
     DisposableEffect(Unit) { onDispose { username = ""; password = "" } }
+}
+
+private fun proxyLabel(protocol: ProxyProtocol?): Int = when (protocol) {
+    null -> R.string.proxy_off
+    ProxyProtocol.HTTP_CONNECT -> R.string.proxy_http
+    ProxyProtocol.SOCKS5 -> R.string.proxy_socks5
 }
