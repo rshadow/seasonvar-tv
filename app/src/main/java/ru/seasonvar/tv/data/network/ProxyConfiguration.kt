@@ -5,15 +5,25 @@ import org.json.JSONObject
 import java.net.InetAddress
 import java.net.InetSocketAddress
 
+enum class ProxyProtocol(val storageId: String) {
+    HTTP_CONNECT("http_connect"), SOCKS5("socks5")
+}
+
 sealed interface ProxyConfiguration {
     data object Disabled : ProxyConfiguration
     data object Unavailable : ProxyConfiguration
 
-    data class Server(val host: String, val port: Int, val username: String = "", val password: String = "") : ProxyConfiguration {
+    data class Server(val host: String, val port: Int, val username: String = "", val password: String = "",
+        val protocol: ProxyProtocol = ProxyProtocol.HTTP_CONNECT) : ProxyConfiguration {
         init {
             require(port in 1..65535)
             require(host.isNotBlank() && host == canonicalHost(host))
-            require(':' !in username && username.none { it.isISOControl() } && password.none { it.isISOControl() })
+            require(username.none { it.isISOControl() } && password.none { it.isISOControl() })
+            if (protocol == ProxyProtocol.HTTP_CONNECT) require(':' !in username)
+            if (protocol == ProxyProtocol.SOCKS5 && username.isNotEmpty()) {
+                require(username.toByteArray(Charsets.UTF_8).size in 1..255)
+                require(password.toByteArray(Charsets.UTF_8).size in 1..255)
+            }
             require(username.isNotEmpty() || password.isEmpty())
         }
         val authenticated: Boolean get() = username.isNotEmpty()
@@ -27,13 +37,14 @@ internal fun canonicalHost(value: String): String = HttpUrl.Builder().scheme("ht
 
 internal object ProxyCodec {
     fun encode(value: ProxyConfiguration.Server): String = JSONObject().put("version", 1)
-        .put("type", "http_connect").put("host", value.host).put("port", value.port)
+        .put("type", value.protocol.storageId).put("host", value.host).put("port", value.port)
         .put("username", value.username).put("password", value.password).toString()
 
     fun decode(value: String): ProxyConfiguration.Server {
         val data = JSONObject(value)
-        require(data.getInt("version") == 1 && data.getString("type") == "http_connect")
+        require(data.getInt("version") == 1)
+        val protocol = requireNotNull(ProxyProtocol.entries.firstOrNull { it.storageId == data.getString("type") })
         return ProxyConfiguration.Server(canonicalHost(data.getString("host")), data.getInt("port"),
-            data.getString("username"), data.getString("password"))
+            data.getString("username"), data.getString("password"), protocol)
     }
 }

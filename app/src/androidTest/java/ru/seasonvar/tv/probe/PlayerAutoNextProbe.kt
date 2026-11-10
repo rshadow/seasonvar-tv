@@ -14,7 +14,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.SeriesDetailsParser
@@ -31,8 +32,8 @@ object PlayerAutoNextProbe {
     fun run(probe: Instrumentation, arguments: Bundle) = with(probe) {
         val result = Bundle()
         val app = targetContext.applicationContext as SeasonvarApplication
-        // Home channels can restore the account after the initial guest check.
-        app.applicationScope.cancel()
+        // Фоновая задача лент может восстановить аккаунт независимо; проверка не должна отправлять отметки.
+        runBlocking { app.applicationScope.coroutineContext[kotlinx.coroutines.Job]?.cancelAndJoin() }
         val preferences = targetContext.getSharedPreferences("playback-progress", Context.MODE_PRIVATE)
         val originalProgress = linkedMapOf<String, String?>()
         val originalTimes = linkedMapOf<String, Long?>()
@@ -129,13 +130,27 @@ object PlayerAutoNextProbe {
         fun stage(name: String) { phase = name; sendStatus(Activity.RESULT_OK, Bundle().apply { putString("phase", name) }) }
         try {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
-            check(app.account.session.value.user == null)
+            check(!app.applicationScope.isActive)
             arguments.getString("proxy-port")?.let { port ->
                 check(originalProxy != ru.seasonvar.tv.data.network.ProxyConfiguration.Unavailable)
                 val authenticated = arguments.getString("proxy-auth") == "true"
                 app.networkSettings.setProxy(ru.seasonvar.tv.data.network.ProxyConfiguration.Server("10.0.2.2", port.toInt(),
-                    if (authenticated) "fixture-user" else "", if (authenticated) "fixture-password" else ""))
+                    if (authenticated) "fixture-user" else "", if (authenticated) "fixture-password" else "",
+                    if (arguments.getString("proxy-protocol") == "socks5") ru.seasonvar.tv.data.network.ProxyProtocol.SOCKS5
+                    else ru.seasonvar.tv.data.network.ProxyProtocol.HTTP_CONNECT))
                 proxyChanged = true
+                stage("proxy_tls")
+                val clients = ru.seasonvar.tv.data.network.NetworkClients()
+                for (bypass in listOf(false, true)) {
+                    val config = app.networkSettings.configuration.value.copy(bypassEnabled = bypass)
+                    val client = clients.forConfiguration(config)
+                    client.newCall(okhttp3.Request.Builder().url("https://cloudflare-dns.com/dns-query").build()).execute().use {
+                        check(it.code == 400 && it.handshake != null)
+                    }
+                    client.connectionPool.evictAll()
+                }
+                result.putBoolean("proxy_tls_transports_verified", true)
+                stage("metadata")
             }
             val page = arguments.getString("page") ?: "https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html"
             check(page.matches(Regex("https://seasonvar\\.ru/serial-[0-9]+[^/?#]*\\.html")))
@@ -249,7 +264,7 @@ object PlayerAutoNextProbe {
             Thread.sleep(2000); capture("17-season-seek"); Thread.sleep(2000); capture("20-season-after-seek")
             result.putBoolean("season_pause_seek", true)
             key(KeyEvent.KEYCODE_BACK); waitFor(5000) { main { activity?.isDestroyed == true } }
-            check(app.account.session.value.user == null && app.account.marksRevision.value == 0L && app.account.historyRevision.value == 0L)
+            check(!app.applicationScope.isActive && app.account.marksRevision.value == 0L && app.account.historyRevision.value == 0L)
             result.putBoolean("no_account_marks_written", true)
             result.putBoolean("script_success", true)
         } catch (error: Throwable) {
@@ -258,6 +273,9 @@ object PlayerAutoNextProbe {
             result.putBoolean("offer_visible", offer())
             result.putBoolean("script_success", false)
             result.putString("failure_type", error.javaClass.simpleName)
+            error.stackTrace.firstOrNull { it.className.startsWith("ru.seasonvar.tv") }?.let {
+                result.putString("failure_origin", it.className.substringAfterLast('.').replace('$', '_') + ":" + it.lineNumber)
+            }
             result.putString("phase", phase)
         } finally {
             main { activity?.finish() }

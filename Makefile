@@ -47,6 +47,7 @@ SITE_SCRIPT_VERSION ?= 25.4.1
 PLAYER_PROBE_PAGE ?= https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html
 PLAYER_PROBE_OUT ?= build/player-probe
 PROXY_PROBE_AUTH ?= true
+PROXY_PROBE_PROTOCOL ?= http_connect
 HISTORY_PROBE_OUT ?= build/history-probe
 UI_SCREENS_PROBE_OUT ?= build/ui-screens-probe
 HISTORY_CLEAR_PROBE_OUT ?= build/history-clear-probe
@@ -406,7 +407,7 @@ proxy-live-probe:
 	$(GRADLE) :app:assembleDebugAndroidTest
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
-	$(ENV) python3 scripts/probe-proxy.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)" --auth "$(PROXY_PROBE_AUTH)"
+	$(ENV) python3 scripts/probe-proxy.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)" --auth "$(PROXY_PROBE_AUTH)" --protocol "$(PROXY_PROBE_PROTOCOL)"
 
 .PHONY: proxy-settings-probe
 proxy-settings-probe:
