@@ -34,10 +34,11 @@ object BrowseCatalogLayoutProbe {
                 listOf(Translation("0", "Оригинал", listOf(Episode("1", "1")))), "0")
         }.also { store.put("details", it) }
         val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("catalog-layout-probe")), "run-" + System.currentTimeMillis())
-        val entries = ListParsingWindow.open((1..600).asSequence().map {
+        val allEntries = (1..600).map {
             SeriesEntry(it.toString(), "https://seasonvar.ru/serial-$it-Test.html", "Сериал $it", 1, "",
                 "android.resource://ru.seasonvar.tv/drawable/poster_placeholder")
-        })
+        }
+        var entries = ListParsingWindow.open(allEntries.asSequence())
         val options = CatalogFilterOptions(mapOf(
             "country" to listOf(FilterOption("all", "Любая страна"), FilterOption("Япония", "Япония")),
             "genres" to listOf(FilterOption("all", "Любой жанр"), FilterOption("1", "Комедия")),
@@ -52,11 +53,24 @@ object BrowseCatalogLayoutProbe {
         val controller = object : BrowseCatalogController {
             override val state = MutableStateFlow(BrowseCatalogState(CatalogUiState(entries = entries, loaded = true, loading = false), options))
             var applied = 0; var resets = 0
+            var fail = false
             override fun activate() = Unit
-            override fun refresh() = Unit
+            private fun replace(filters: CatalogFilters) {
+                val filtered = allEntries.filter { filters["country"] == "all" || it.id.toInt() <= 500 }
+                val ordered = if (filters["sort"] == "name") filtered.sortedBy { it.title } else filtered
+                entries.window?.close()
+                entries = ListParsingWindow.open(ordered.asSequence())
+                state.value = state.value.copy(page = CatalogUiState(entries = entries, loaded = true, loading = false),
+                    applied = filters)
+            }
+            override fun refresh() = replace(state.value.applied)
             override fun choose(key: String, value: String) { state.value = state.value.copy(draft = state.value.draft.with(key, value)) }
-            override fun apply() { applied++; state.value = state.value.copy(applied = state.value.draft) }
-            override fun reset() { resets++; state.value = state.value.copy(applied = CatalogFilters(), draft = CatalogFilters()) }
+            override fun apply() {
+                applied++
+                if (fail) state.value = state.value.copy(page = state.value.page.copy(failure = LoadFailure.NETWORK))
+                else replace(state.value.draft)
+            }
+            override fun reset() { resets++; state.value = state.value.copy(draft = CatalogFilters()); replace(CatalogFilters()) }
         }
         fun main(block: () -> Unit) = runOnMainSync(block)
         fun settle() { waitForIdleSync(); if (android.os.Build.VERSION.SDK_INT >= 33) uiAutomation.clearCache() }
@@ -71,8 +85,8 @@ object BrowseCatalogLayoutProbe {
                 node ?: return null
                 if (node.text?.toString()?.lineSequence()?.any { it == text } == true || node.contentDescription?.toString() == text) {
                     var candidate: AccessibilityNodeInfo = node
-                    while (!candidate.isClickable) candidate = candidate.parent ?: break
-                    if (candidate.isClickable) return candidate
+                    while (!candidate.isClickable && !candidate.isFocusable) candidate = candidate.parent ?: break
+                    if (candidate.isClickable || candidate.isFocusable) return candidate
                 }
                 for (i in 0 until node.childCount) search(node.getChild(i))?.let { return it }
                 return null
@@ -105,8 +119,11 @@ object BrowseCatalogLayoutProbe {
             ButtonAlignmentChecks.centered(this, "Страна"); ButtonAlignmentChecks.centered(this, "Применить")
             waitFor { find(uiAutomation.rootInActiveWindow, "Описание выделенного сериала остаётся под фильтрами и над общим списком карточек.") != null }
             stage("country_dialog")
-            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { find(uiAutomation.rootInActiveWindow, "Любая страна") != null }
-            key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { control("Назад") != null && focused("Страна") }
+            stage("country_options")
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Любая страна") }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Япония") }
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Страна") }
             key(KeyEvent.KEYCODE_BACK); waitFor { focused("Страна: Япония") }; capture("country_selected")
             check(controller.state.value.applied["country"] == "all")
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Применить") }
@@ -153,6 +170,48 @@ object BrowseCatalogLayoutProbe {
             stage("return_catalog")
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Страна") }
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
+            stage("sort_resets_selection")
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
+            repeat(4) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focused("По добавлению") }
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { control("Назад") != null && focused("По добавлению") }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("По названию") }
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { control("Назад") == null && focused("По названию") }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
+            key(KeyEvent.KEYCODE_DPAD_UP)
+            waitFor { focused("Применить") }; key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { controller.state.value.applied["sort"] == "name" && control("Сериал 1") != null }
+            check(entries.window!!.state.value.entries.size == 250)
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 1") }; capture("sort_reset")
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused("Сериал 10") }
+
+            stage("filter_resets_selection")
+            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Страна") }
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { control("Назад") != null && focused("Страна") }
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Любая страна") }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_BACK)
+            waitFor { control("Назад") == null && focused("Страна: Япония") }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 10") }
+            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { controller.state.value.applied["country"] == "Япония" }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 1") }; capture("filter_reset")
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused("Сериал 10") }
+
+            stage("reset_resets_selection")
+            key(KeyEvent.KEYCODE_DPAD_UP); repeat(5) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }
+            waitFor { focused("Сбросить") }; key(KeyEvent.KEYCODE_DPAD_CENTER)
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 1") }; capture("defaults_reset")
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused("Сериал 2") }
+
+            stage("refresh_and_failure_preserve_selection")
+            main { controller.refresh() }; waitFor { focused("Сериал 2") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
+            main { controller.choose("year", "2025"); controller.fail = true }
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { controller.state.value.page.failure == LoadFailure.NETWORK }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 2") }
+            result.putBoolean("sort_reset", true); result.putBoolean("filter_reset", true)
+            result.putBoolean("defaults_reset", true); result.putBoolean("refresh_failure_preserved", true)
             result.putBoolean("window_bounded", true); result.putBoolean("focus_preserved", true)
             result.putBoolean("geometry_stable", true); result.putBoolean("text_centered", true)
             result.putBoolean("fixture_only", true); result.putBoolean("script_success", true)
