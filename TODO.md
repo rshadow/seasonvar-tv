@@ -14,6 +14,8 @@
 
 ## Настройки и сведения
 
+- [x] **HTTP CONNECT-прокси** — свой сервер с необязательной Basic-авторизацией, защищённым хранением и общим транспортом сайта и видео; [ADR-0139](docs/adr/0139-http-connect-proxy.md).
+
 - [x] **Cloudflare DoH** — дополнительный DNS в настройках сети, независимый от DPI-обхода; [ADR-0138](docs/adr/0138-cloudflare-dns-provider.md).
 
 - [x] **TLS pinning** — общие основные и резервные ключи для Seasonvar, GitHub и DoH без настройки в интерфейсе; [ADR-0133](docs/adr/0133-centralized-tls-pinning.md).

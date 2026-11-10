@@ -166,6 +166,8 @@ internal fun SeasonvarApp(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    proxy: ru.seasonvar.tv.data.network.ProxyConfiguration = ru.seasonvar.tv.data.network.ProxyConfiguration.Disabled,
+    onProxyChange: suspend (ru.seasonvar.tv.data.network.ProxyConfiguration) -> Boolean = { true },
     imagePrefetchEnabled: Boolean = true,
     onImagePrefetchChange: (Boolean) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
@@ -224,7 +226,7 @@ internal fun SeasonvarApp(
             bypassEnabled = bypassEnabled,
             onBypassChange = onBypassChange,
             dnsProvider = dnsProvider,
-            onDnsChange = onDnsChange,
+            onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
             imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
@@ -270,6 +272,8 @@ private fun SeasonvarContent(
     onBypassChange: (Boolean) -> Unit = {},
     dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
     onDnsChange: (DnsProvider) -> Unit = {},
+    proxy: ru.seasonvar.tv.data.network.ProxyConfiguration = ru.seasonvar.tv.data.network.ProxyConfiguration.Disabled,
+    onProxyChange: suspend (ru.seasonvar.tv.data.network.ProxyConfiguration) -> Boolean = { true },
     imagePrefetchEnabled: Boolean = true,
     onImagePrefetchChange: (Boolean) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
@@ -742,7 +746,7 @@ private fun SeasonvarContent(
                     menuFocus = settingsFocus,
                     onBypassChange = onBypassChange,
                     dnsProvider = dnsProvider,
-                    onDnsChange = onDnsChange,
+                    onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
                     startPage = startPage, onStartPageChange = onStartPageChange,
                     hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
                     autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
@@ -771,7 +775,7 @@ private fun SeasonvarContent(
                     imagePrefetchEnabled = imagePrefetchEnabled,
                     loadDescription = loadDescription,
                     cardData = cardData,
-                    preparationContext = Triple(accountSession.version, bypassEnabled, dnsProvider),
+                    preparationContext = listOf(accountSession.version, bypassEnabled, dnsProvider, proxy),
                     cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
                     onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
                     onEnterContent = ::enterContent,
@@ -1379,6 +1383,8 @@ private fun SettingsPane(
     onBypassChange: (Boolean) -> Unit,
     dnsProvider: DnsProvider,
     onDnsChange: (DnsProvider) -> Unit,
+    proxy: ru.seasonvar.tv.data.network.ProxyConfiguration,
+    onProxyChange: suspend (ru.seasonvar.tv.data.network.ProxyConfiguration) -> Boolean,
     startPage: Section,
     onStartPageChange: (Section) -> Unit,
     hiddenSections: Set<Section>,
@@ -1409,6 +1415,7 @@ private fun SettingsPane(
     var focused by remember { mutableStateOf(false) }
     var dnsFocused by remember { mutableStateOf(false) }
     val dnsFocus = remember { FocusRequester() }
+    val proxyFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(stringResource(R.string.settings_title),
@@ -1551,7 +1558,7 @@ private fun SettingsPane(
                 .focusProperties {
                     left = menuFocus
                     up = bypassFocus
-                    down = FocusRequester.Cancel
+                    down = proxyFocus
                 }
                 .onFocusChanged { dnsFocused = it.isFocused }
                 .border(d.focusBorderWidth, if (dnsFocused) c.primary else Color.Transparent,
@@ -1571,6 +1578,8 @@ private fun SettingsPane(
             Text(stringResource(dnsLabel(dnsProvider)), color = c.primary,
                 style = MaterialTheme.typography.bodyLarge)
         }
+        Spacer(Modifier.height(d.spacingLarge))
+        ru.seasonvar.tv.ui.settings.ProxySetting(proxy, onProxyChange, proxyFocus, dnsFocus, menuFocus)
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge)
@@ -1622,7 +1631,7 @@ private fun SettingsPane(
 }
 
 @Composable
-private fun <T> SettingsChoiceDialog(
+internal fun <T> SettingsChoiceDialog(
     @StringRes title: Int,
     options: List<T>,
     selected: T,

@@ -52,6 +52,8 @@ object PlayerAutoNextProbe {
         val originalClockValue = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
             .getString("player_clock_position", null)
         var expectedClock: PlayerClockPosition? = null
+        val originalProxy = app.networkSettings.configuration.value.proxy
+        var proxyChanged = false
         var phase = "metadata"
         fun <T> main(block: () -> T): T {
             var value: Any? = null
@@ -128,6 +130,13 @@ object PlayerAutoNextProbe {
         try {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
             check(app.account.session.value.user == null)
+            arguments.getString("proxy-port")?.let { port ->
+                check(originalProxy != ru.seasonvar.tv.data.network.ProxyConfiguration.Unavailable)
+                val authenticated = arguments.getString("proxy-auth") == "true"
+                app.networkSettings.setProxy(ru.seasonvar.tv.data.network.ProxyConfiguration.Server("10.0.2.2", port.toInt(),
+                    if (authenticated) "fixture-user" else "", if (authenticated) "fixture-password" else ""))
+                proxyChanged = true
+            }
             val page = arguments.getString("page") ?: "https://seasonvar.ru/serial-2779--Naruto_pssrhvg-0-season.html"
             check(page.matches(Regex("https://seasonvar\\.ru/serial-[0-9]+[^/?#]*\\.html")))
             val id = checkNotNull(Regex("/serial-([0-9]+)").find(page)).groupValues[1]
@@ -252,6 +261,10 @@ object PlayerAutoNextProbe {
             result.putString("phase", phase)
         } finally {
             main { activity?.finish() }
+            if (proxyChanged) {
+                app.networkSettings.setProxy(originalProxy)
+                result.putBoolean("proxy_settings_restored", app.networkSettings.configuration.value.proxy == originalProxy)
+            }
             activity?.let { runCatching { waitFor(5000) { main { it.isDestroyed } } } }
             originalProgress.forEach { (name, value) ->
                 preferences.edit().apply { if (value == null) remove(name) else putString(name, value) }.commit()

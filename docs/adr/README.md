@@ -152,3 +152,4 @@
 | [0136 — Аватар справа в карточке аккаунта](0136-account-pane-avatar.md) | 2026-11-10 | Принято |
 | [0137 — Премиум под действиями аккаунта](0137-premium-below-account-actions.md) | 2026-11-10 | Принято |
 | [0138 — Cloudflare в выборе DNS](0138-cloudflare-dns-provider.md) | 2026-11-10 | Принято |
+| [0139 — HTTP CONNECT в настройках сети](0139-http-connect-proxy.md) | 2026-11-11 | Принято |

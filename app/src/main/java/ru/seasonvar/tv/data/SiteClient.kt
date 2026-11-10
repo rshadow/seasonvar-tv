@@ -16,15 +16,18 @@ import kotlin.coroutines.resumeWithException
 class SiteClient(private val settings: NetworkSettings, private val sessions: ru.seasonvar.tv.data.account.SessionManager? = null) : HtmlSource, Call.Factory {
     private val clients = NetworkClients()
 
+    private var lastProxy: ru.seasonvar.tv.data.network.ProxyConfiguration = ru.seasonvar.tv.data.network.ProxyConfiguration.Disabled
     private var lastJar: ru.seasonvar.tv.data.account.SessionCookies? = null
     private val sessionClients = mutableMapOf<ru.seasonvar.tv.data.network.NetworkConfiguration, okhttp3.OkHttpClient>()
 
     @Synchronized
     private fun client(jar: ru.seasonvar.tv.data.account.SessionCookies?): okhttp3.OkHttpClient {
-        if (jar == null) return clients.forConfiguration(settings.configuration.value)
+        val configuration = settings.configuration.value
+        if (lastProxy != configuration.proxy) { sessionClients.clear(); lastProxy = configuration.proxy }
+        if (jar == null) return clients.forConfiguration(configuration)
         if (lastJar !== jar) { sessionClients.clear(); lastJar = jar }
-        return sessionClients.getOrPut(settings.configuration.value) {
-            clients.forConfiguration(settings.configuration.value).newBuilder().cookieJar(jar).build()
+        return sessionClients.getOrPut(configuration) {
+            clients.forConfiguration(configuration).newBuilder().cookieJar(jar).build()
         }
     }
     override fun newCall(request: Request): Call = client(sessions?.current()).newCall(request)
