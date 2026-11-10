@@ -12,7 +12,8 @@ import ru.seasonvar.tv.data.SeasonvarParser
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.parseEntries
 
-data class AccountUser(val id: String, val name: String, val avatarUrl: String?)
+data class AccountUser(val id: String, val name: String, val avatarUrl: String?,
+    val premium: AccountPremium = AccountPremium.Unknown)
 data class AccountPage(val user: AccountUser, val entries: List<SeriesEntry>, val nextPage: String? = null)
 class SessionExpiredException : Exception("Session expired")
 class LoginRejectedException : Exception("Login rejected")
@@ -48,7 +49,25 @@ object AccountParser {
             it.isNotEmpty() && it.lowercase(java.util.Locale.ROOT) !in setOf("профиль", "мой профиль", "profile", "my profile")
         }
         val name = menuName ?: profileName ?: "Аккаунт Seasonvar"
-        return AccountUser(id, name, avatar)
+        val premiumLabels = links.filter { (_, url) -> url.encodedPath.trimEnd('/') == "/premium" && url.query == null }
+            .map { (link, _) -> link.text().replace('\u00a0', ' ').trim() }
+        return AccountUser(id, name, avatar, premium(premiumLabels))
+    }
+
+    private fun premium(labels: List<String>): AccountPremium {
+        if (labels.isEmpty()) return AccountPremium.Unknown
+        val pattern = Regex("""Премиум(?:\s+аккаунт)?(?:\s+активен)?\s+до\s+([0-9]{2}\.[0-9]{2}\.[0-9]{4})""", RegexOption.IGNORE_CASE)
+        val format = java.time.format.DateTimeFormatter.ofPattern("dd.MM.uuuu", java.util.Locale.ROOT)
+            .withResolverStyle(java.time.format.ResolverStyle.STRICT)
+        val dates = labels.mapNotNull { label ->
+            val text = pattern.matchEntire(label)?.groupValues?.get(1) ?: return@mapNotNull null
+            try { java.time.LocalDate.parse(text, format) } catch (_: java.time.DateTimeException) { return AccountPremium.Unknown }
+        }.distinct()
+        if (dates.size == 1 && labels.all { pattern.matches(it) || it.equals("Премиум", true) || it.equals("Премиум аккаунт", true) })
+            return AccountPremium.Until(dates.single())
+        if (dates.isEmpty() && labels.all { it.equals("Премиум", true) || it.equals("Премиум аккаунт", true) })
+            return AccountPremium.Inactive
+        return AccountPremium.Unknown
     }
     fun resume(html: String): AccountPage = personalList(html, PersonalFeed.RESUME)
 

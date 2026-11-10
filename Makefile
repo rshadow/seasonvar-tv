@@ -112,6 +112,7 @@ help:
 		'make update-restore         Restore normal test build after an update preview (emulator only)' \
 		'make update-preview         Preview update flow with a newer test APK in emulator' \
 		'make account-test           Check account, personal lists, cookies and private cache' \
+		'make account-premium-probe  Verify premium expiration across authenticated pages in emulator' \
 		'make mark-probe             Inspect account marks (season-messages reads season captions; roundtrip/delete-roundtrip verify and restore changes)' \
 		'make check                  Build, run unit tests and Android Lint' \
 		'make avd                    Create the local Android TV emulator' \
@@ -361,6 +362,15 @@ site-video-probe:
 
 account-test:
 	$(GRADLE) :app:testDebugUnitTest --tests 'ru.seasonvar.tv.data.account.*' --tests 'ru.seasonvar.tv.ui.account.*' --tests 'ru.seasonvar.tv.data.playback.AccountMark*'
+
+.PHONY: account-premium-probe
+account-premium-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for premium probes.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ENV) python3 scripts/probe-account-premium.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"
 
 mark-probe:
 	$(MAKE) devices

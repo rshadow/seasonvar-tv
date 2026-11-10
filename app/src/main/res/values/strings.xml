@@ -222,6 +222,10 @@
     <string name="account_password">Пароль</string>
     <string name="account_login_hint">Войдите в свою учётную запись Seasonvar. Пароль не сохраняется.</string>
     <string name="account_signed_in_hint">Вы вошли в Seasonvar. Личные разделы доступны в меню.</string>
+    <string name="account_premium_until">Премиум до %1$s</string>
+    <string name="account_premium_inactive">Премиум не активен</string>
+    <string name="account_premium_unknown">Премиум: срок не указан</string>
+    <string name="account_premium_hd_hint">С премиумом видео доступно в HD.</string>
     <string name="account_wait">Пожалуйста, подождите…</string>
     <string name="account_required">Введите логин и пароль.</string>
     <string name="account_bad_credentials">Не удалось войти. Проверьте логин и пароль.</string>

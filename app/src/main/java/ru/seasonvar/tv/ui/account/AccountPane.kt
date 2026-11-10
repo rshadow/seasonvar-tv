@@ -26,6 +26,7 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.account.AccountSession
+import ru.seasonvar.tv.data.account.AccountPremium
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.ui.showShortMessage
@@ -58,6 +59,7 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
         if (!state.busy) { repeat(2) { withFrameNanos { } }; if (session.user == null) loginFocus.requestFocus() else submitFocus.requestFocus() }
     }
     DisposableEffect(Unit) { onDispose { password = ""; login = "" } }
+    LaunchedEffect(Unit) { if (session.user != null && !state.busy) onCheck() }
     Column(Modifier.fillMaxWidth().widthIn(max = d.dialogWidth), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
         Text(stringResource(R.string.account_title), style = MaterialTheme.typography.headlineSmall, color = c.onBackground)
         val user = session.user
@@ -75,6 +77,16 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
         } else {
             Text(user.name, style = MaterialTheme.typography.titleLarge, color = c.onBackground)
             Text(stringResource(R.string.account_signed_in_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            val premiumText = when (val premium = user.premium) {
+                is AccountPremium.Until -> stringResource(R.string.account_premium_until,
+                    premium.date.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.uuuu", java.util.Locale.ROOT)))
+                AccountPremium.Inactive -> stringResource(R.string.account_premium_inactive)
+                AccountPremium.Unknown -> stringResource(R.string.account_premium_unknown)
+            }
+            Text(premiumText, style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            Text(if (user.premium is AccountPremium.Until) stringResource(R.string.account_premium_hd_hint) else "",
+                style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,
+                minLines = 1, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             ThemeButton(stringResource(R.string.account_sign_out), onLogout,
                 Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus },
                 loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
