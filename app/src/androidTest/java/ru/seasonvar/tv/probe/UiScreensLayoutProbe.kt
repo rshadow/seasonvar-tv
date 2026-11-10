@@ -188,7 +188,9 @@ object UiScreensLayoutProbe {
                         val hintBounds = Rect().also(checkNotNull(find(uiAutomation.rootInActiveWindow, text(R.string.account_signed_in_hint)))::getBoundsInScreen)
                         val premiumBounds = Rect().also(checkNotNull(find(uiAutomation.rootInActiveWindow, checkNotNull(expected)))::getBoundsInScreen)
                         val hdBounds = Rect().also(checkNotNull(hdHint)::getBoundsInScreen)
-                        check(hintBounds.bottom < premiumBounds.top && premiumBounds.bottom < hdBounds.top)
+                        val signOutBounds = Rect().also(checkNotNull(control(actionLabel))::getBoundsInScreen)
+                        check(hintBounds.bottom < signOutBounds.top && premiumBounds.bottom < hdBounds.top)
+                        check(premiumBounds.top - signOutBounds.bottom >= premiumBounds.height())
                     }
                     if (session.user != null) {
                         val avatar = checkNotNull(find(uiAutomation.rootInActiveWindow, text(R.string.account_avatar)))
