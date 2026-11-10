@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
+import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.update.*
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.account.*
@@ -48,6 +49,7 @@ object UiScreensLayoutProbe {
         val entry = SeriesEntry("123", "https://seasonvar.ru/serial-123-example.html", "Проверка интерфейса", 1, "", "")
         val catalog = CatalogUiState(loading = false, loaded = true, entries = listOf(entry))
         val preferred = MutableStateFlow(listOf("AniDub", "LostFilm"))
+        val dns = mutableStateOf(DnsProvider.QUAD9_DOH)
         val translations = TranslationSettingsViewModel(preferred, { preferred.value = it }, { throw IOException() })
         val update = UpdateViewModel("1.0.0", { GitHubRelease("99.0.0", ReleaseAsset("test.apk",
             "https://github.com/rshadow/seasonvar-tv/releases/download/v99.0.0/test.apk", 1, "0".repeat(64))) },
@@ -140,7 +142,8 @@ object UiScreensLayoutProbe {
                 searchState = SearchUiState(showHistory = true, recentQueries = listOf("Комедия", "Сериал")),
                 translationSettingsModel = translations, updateModel = update,
                 personalFilters = PersonalFeed.entries.filter { it != PersonalFeed.HISTORY }.associateWith { filterController },
-                publicFilters = mapOf(PublicFeed.BEST to filterController), imagePrefetchEnabled = false)
+                publicFilters = mapOf(PublicFeed.BEST to filterController), imagePrefetchEnabled = false,
+                dnsProvider = dns.value, onDnsChange = { dns.value = it })
         }
         fun centered(vararg labels: String) { labels.forEach { label ->
             waitFor { control(label) != null }
@@ -213,8 +216,31 @@ object UiScreensLayoutProbe {
             for ((name, id) in listOf("start" to R.string.start_page_title, "menu" to R.string.menu_visibility_title,
                 "channels" to R.string.home_settings_title, "clock" to R.string.player_clock_title, "dns" to R.string.dns_setting_title)) {
                 stage("settings_" + name)
-                click(text(id))
+                if (name == "dns") {
+                    root(Section.SETTINGS)
+                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+                    settle()
+                    repeat(9) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
+                    capture("settings-dns-focused")
+                    check(control(text(id)) != null)
+                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                    settle()
+                } else click(text(id))
                 if (name in listOf("menu", "channels")) centered(text(R.string.menu_visibility_done))
+                if (name == "dns") {
+                    check(control(text(R.string.dns_system)) != null)
+                    check(find(uiAutomation.rootInActiveWindow, text(R.string.dns_quad9)) != null)
+                    check(control(text(R.string.dns_cloudflare)) != null)
+                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                    settle()
+                    check(dns.value == DnsProvider.CLOUDFLARE_DOH)
+                    check(find(uiAutomation.rootInActiveWindow, text(R.string.dns_cloudflare)) != null)
+                    capture("settings-dns-selected")
+                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                    settle()
+                    check(control(text(R.string.dns_system)) != null)
+                }
                 capture("settings-$name-dialog"); back()
             }
             click(text(R.string.preferred_translation_title))

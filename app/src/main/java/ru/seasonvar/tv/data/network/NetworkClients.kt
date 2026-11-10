@@ -35,15 +35,17 @@ internal class NetworkClients {
             .build()
     }
 
-    private val quad9 by lazy {
+    private val quad9 by lazy { dnsOverHttps("https://dns.quad9.net/dns-query", "9.9.9.9") }
+    private val cloudflare by lazy { dnsOverHttps("https://cloudflare-dns.com/dns-query", "1.1.1.1") }
+
+    private fun dnsOverHttps(url: String, bootstrapAddress: String): DnsOverHttps =
         DnsOverHttps.Builder()
             .client(OkHttpClient.Builder().certificatePinner(TlsPinSettings.certificatePinner)
                 .callTimeout(8, TimeUnit.SECONDS).build())
-            .url("https://dns.quad9.net/dns-query".toHttpUrl())
-            .bootstrapDnsHosts(InetAddress.getByName("9.9.9.9"))
+            .url(url.toHttpUrl())
+            .bootstrapDnsHosts(InetAddress.getByName(bootstrapAddress))
             .includeIPv6(false)
             .build()
-    }
 
     private val clients = mutableMapOf<NetworkConfiguration, OkHttpClient>()
 
@@ -65,6 +67,7 @@ internal class NetworkClients {
             val dns = when (configuration.dnsProvider) {
                 DnsProvider.SYSTEM -> Dns.SYSTEM
                 DnsProvider.QUAD9_DOH -> quad9
+                DnsProvider.CLOUDFLARE_DOH -> cloudflare
             }
             transport.newBuilder().dns(dns).build()
         }

@@ -14,9 +14,10 @@ def main():
     result = subprocess.run(["adb", "-s", args.device, "shell", "am", "instrument", "-w", "-e",
                              "mode", "tls-pins", args.runner], capture_output=True, text=True, timeout=300)
     hosts = ("seasonvar.ru", "www.seasonvar.ru", "cdn.svstat.net", "github.com", "api.github.com",
-             "objects.githubusercontent.com", "release-assets.githubusercontent.com", "dns.quad9.net")
+             "objects.githubusercontent.com", "release-assets.githubusercontent.com", "dns.quad9.net", "cloudflare-dns.com")
     required = {host.replace(".", "_") + "_verified" for host in hosts}
     required.add("release_notes_verified")
+    required.add("cloudflare_dns_verified")
     allowed = required | {"probe_success", "phase", "failure_type"}
     fields = {}
     for line in result.stdout.splitlines():
