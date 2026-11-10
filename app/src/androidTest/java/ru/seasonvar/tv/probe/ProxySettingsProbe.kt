@@ -91,7 +91,13 @@ object ProxySettingsProbe {
                 settle()
                 phase = "open"
                 key(KeyEvent.KEYCODE_DPAD_RIGHT)
-                repeat(10) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                repeat(7) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                capture("settings-network")
+                key(KeyEvent.KEYCODE_DPAD_DOWN)
+                capture("settings-connection")
+                key(KeyEvent.KEYCODE_DPAD_UP)
+                key(KeyEvent.KEYCODE_DPAD_DOWN)
+                repeat(2) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
                 key(KeyEvent.KEYCODE_DPAD_CENTER)
                 capture("proxy-open")
                 ButtonAlignmentChecks.centered(probe, text(R.string.proxy_save))
