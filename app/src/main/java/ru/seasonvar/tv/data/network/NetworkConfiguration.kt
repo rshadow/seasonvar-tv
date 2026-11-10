@@ -14,4 +14,5 @@ enum class DnsProvider(val storageId: String) {
 data class NetworkConfiguration(
     val bypassEnabled: Boolean = true,
     val dnsProvider: DnsProvider = DnsProvider.QUAD9_DOH,
+    val proxy: ProxyConfiguration = ProxyConfiguration.Disabled,
 )

@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.network
 
+import okhttp3.Credentials
 import okhttp3.Dns
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -7,6 +8,8 @@ import okhttp3.Protocol
 import okhttp3.dnsoverhttps.DnsOverHttps
 import ru.seasonvar.tv.data.settings.TlsPinSettings
 import java.net.InetAddress
+import java.net.Proxy
+import java.io.IOException
 import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
@@ -51,24 +54,55 @@ internal class NetworkClients {
 
     private val mediaClients = mutableMapOf<NetworkConfiguration, OkHttpClient>()
 
-    @Synchronized
-    fun forMedia(configuration: NetworkConfiguration): OkHttpClient = mediaClients.getOrPut(configuration) {
-        forConfiguration(configuration).newBuilder()
-            .followRedirects(true)
-            .followSslRedirects(false)
-            .callTimeout(0, TimeUnit.SECONDS)
-            .build()
+    private var activeProxy: ProxyConfiguration = ProxyConfiguration.Disabled
+
+    private fun selectProxy(proxy: ProxyConfiguration) {
+        if (activeProxy == proxy) return
+        (clients.values + mediaClients.values).forEach { it.connectionPool.evictAll() }
+        clients.clear()
+        mediaClients.clear()
+        activeProxy = proxy
     }
 
     @Synchronized
-    fun forConfiguration(configuration: NetworkConfiguration): OkHttpClient =
-        clients.getOrPut(configuration) {
+    fun forMedia(configuration: NetworkConfiguration): OkHttpClient {
+        selectProxy(configuration.proxy)
+        return mediaClients.getOrPut(configuration) {
+            forConfiguration(configuration).newBuilder()
+                .followRedirects(true)
+                .followSslRedirects(false)
+                .callTimeout(0, TimeUnit.SECONDS)
+                .build()
+        }
+    }
+
+    @Synchronized
+    fun forConfiguration(configuration: NetworkConfiguration): OkHttpClient {
+        selectProxy(configuration.proxy)
+        return clients.getOrPut(configuration) {
             val transport = if (configuration.bypassEnabled) bypassClient else directClient
             val dns = when (configuration.dnsProvider) {
                 DnsProvider.SYSTEM -> Dns.SYSTEM
                 DnsProvider.QUAD9_DOH -> quad9
                 DnsProvider.CLOUDFLARE_DOH -> cloudflare
             }
-            transport.newBuilder().dns(dns).build()
+            val builder = transport.newBuilder().dns(dns).proxy(Proxy.NO_PROXY)
+            when (val proxy = configuration.proxy) {
+                ProxyConfiguration.Disabled -> Unit
+                ProxyConfiguration.Unavailable -> builder.addInterceptor { throw IOException("Proxy settings unavailable") }
+                is ProxyConfiguration.Server -> {
+                    val endpoint = Proxy(Proxy.Type.HTTP, proxy.address())
+                    builder.proxy(endpoint)
+                    if (proxy.authenticated) builder.proxyAuthenticator { route, response ->
+                        if (route?.proxy != endpoint ||
+                            response.request.header("Proxy-Authorization") != null ||
+                            response.challenges().none { it.scheme.equals("Basic", ignoreCase = true) }) null
+                        else response.request.newBuilder().header("Proxy-Authorization",
+                            Credentials.basic(proxy.username, proxy.password, Charsets.UTF_8)).build()
+                    }
+                }
+            }
+            builder.build()
         }
+    }
 }

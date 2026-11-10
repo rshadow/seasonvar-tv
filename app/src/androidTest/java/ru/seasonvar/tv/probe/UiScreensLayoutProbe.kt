@@ -86,7 +86,7 @@ object UiScreensLayoutProbe {
             while (!node.isClickable && node.parent != null) node = node.parent
             return node.takeIf { it.isClickable }
         }
-        fun settle() { Thread.sleep(500); waitForIdleSync() }
+        fun settle() { Thread.sleep(500); waitForIdleSync(); if (android.os.Build.VERSION.SDK_INT >= 34) uiAutomation.clearCache() }
         fun click(label: String) {
             if (control(label) == null) {
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)

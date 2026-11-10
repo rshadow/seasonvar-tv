@@ -44,6 +44,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun networkChanged() {
+        smartModel.invalidate()
+        models.values.forEach { it.networkChanged() }
+        browseModel.refreshIfStarted()
+        searchModel.networkChanged()
+        personalModels.values.forEach { it.refreshIfActive() }
+        models.values.forEach { it.refreshIfStarted() }
+        searchModel.marksChanged()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -188,26 +198,24 @@ class MainActivity : ComponentActivity() {
                 bypassEnabled = network.bypassEnabled,
                 onBypassChange = { enabled ->
                     container.networkSettings.setBypassEnabled(enabled)
-                    smartModel.invalidate()
-                    models.values.forEach { it.networkChanged() }
-                    browseModel.refreshIfStarted()
-                    searchModel.networkChanged()
-                    personalModels.values.forEach { it.refreshIfActive() }
-                    models.values.forEach { it.refreshIfStarted() }
-                    searchModel.marksChanged()
+                    networkChanged()
                 },
                 onExit = ::finishAndRemoveTask,
+                proxy = network.proxy,
+                onProxyChange = { proxy ->
+                    val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { container.networkSettings.setProxy(proxy) }.isSuccess
+                    }
+                    if (saved && proxy != network.proxy) {
+                        networkChanged()
+                    }
+                    saved
+                },
                 dnsProvider = network.dnsProvider,
                 onDnsChange = { provider ->
                     if (provider != network.dnsProvider) {
                         container.networkSettings.setDnsProvider(provider)
-                        smartModel.invalidate()
-                        models.values.forEach { it.networkChanged() }
-                        browseModel.refreshIfStarted()
-                        searchModel.networkChanged()
-                        personalModels.values.forEach { it.refreshIfActive() }
-                    models.values.forEach { it.refreshIfStarted() }
-                    searchModel.marksChanged()
+                        networkChanged()
                     }
                 },
             )

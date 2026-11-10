@@ -345,4 +345,20 @@
     <string name="history_clear_close">Закрыть</string>
     <string name="history_clearing">Очищаю…</string>
     <string name="history_clear_error">Не удалось очистить историю. Обновите список и попробуйте ещё раз.</string>
+    <string name="proxy_title">Прокси</string>
+    <string name="proxy_description">Подключение к сайту, постерам и видео через ваш сервер.</string>
+    <string name="proxy_off">Выключен</string>
+    <string name="proxy_http" translatable="false">HTTP CONNECT</string>
+    <string name="proxy_unavailable">Проверьте настройки</string>
+    <string name="proxy_type_title">Тип прокси</string>
+    <string name="proxy_type">Тип: %1$s</string>
+    <string name="proxy_host">Адрес сервера без http://</string>
+    <string name="proxy_port">Порт</string>
+    <string name="proxy_username">Логин прокси</string>
+    <string name="proxy_password">Пароль прокси</string>
+    <string name="proxy_auth_hint">Если сервер не требует авторизации, оставьте логин и пароль пустыми.</string>
+    <string name="proxy_save">Сохранить</string>
+    <string name="proxy_cancel">Отмена</string>
+    <string name="proxy_invalid">Проверьте адрес, порт (1–65535) и логин прокси.</string>
+    <string name="proxy_save_failed">Не удалось сохранить настройки прокси.</string>
 </resources>

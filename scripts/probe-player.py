@@ -13,19 +13,22 @@ parser.add_argument("--runner", required=True)
 parser.add_argument("--page", required=True)
 parser.add_argument("--season-page", required=True)
 parser.add_argument("--output", required=True, type=Path)
+parser.add_argument("--proxy-port", type=int)
+parser.add_argument("--proxy-auth", choices=("true", "false"), default="false")
 args = parser.parse_args()
 if not args.device.startswith("emulator-"):
     parser.error("The player probe runs only on an emulator")
 args.output.mkdir(parents=True, exist_ok=True)
 adb = ["adb", "-s", args.device]
+extra = [] if args.proxy_port is None else ["-e", "proxy-port", str(args.proxy_port), "-e", "proxy-auth", args.proxy_auth]
 process = subprocess.Popen(adb + ["shell", "am", "instrument", "-w", "-r", "-e", "mode", "player-auto-next",
-                                  "-e", "page", args.page, "-e", "season-page", args.season_page, args.runner], stdout=subprocess.PIPE,
+                                  "-e", "page", args.page, "-e", "season-page", args.season_page, *extra, args.runner], stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT, text=True)
 watchdog = threading.Timer(600, process.kill)
 watchdog.daemon = True
 watchdog.start()
 fields = {}
-allowed = {"phase", "default_enabled", "automatic_next", "disabled_stays", "last_stays", "last_closes",
+allowed = {"proxy_settings_restored", "phase", "default_enabled", "automatic_next", "disabled_stays", "last_stays", "last_closes",
            "default_season_enabled", "season_disabled_stays", "automatic_season", "season_pause_seek",
            "clock_positions_verified", "clock_setting_restored",
            "no_account_marks_written", "script_success", "explicit_resume_verified", "position_restored", "settings_restored", "season_title_verified", "failure_type", "activity_state", "offer_visible", "artifacts"}
@@ -50,6 +53,8 @@ if fields.get("automatic_season") is not True or fields.get("season_disabled_sta
 if fields.get("settings_restored") is not True or fields.get("season_title_verified") is not True:
     raise SystemExit(1)
 if fields.get("clock_positions_verified") is not True or fields.get("clock_setting_restored") is not True:
+    raise SystemExit(1)
+if args.proxy_port is not None and fields.get("proxy_settings_restored") is not True:
     raise SystemExit(1)
 if code or fields.get("script_success") is not True or fields.get("position_restored") is not True or fields.get("explicit_resume_verified") is not True:
     raise SystemExit(1)

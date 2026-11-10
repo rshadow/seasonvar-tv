@@ -1,12 +1,8 @@
 package ru.seasonvar.tv.ui.account
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -14,16 +10,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.*
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
@@ -33,6 +23,7 @@ import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.data.account.AccountPremium
+import ru.seasonvar.tv.ui.RemoteTextField
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.ui.showShortMessage
@@ -71,11 +62,11 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
         val user = session.user
         if (user == null) {
             Text(stringResource(R.string.account_login_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-            AccountField(login, { login = it }, R.string.account_login, false,
+            RemoteTextField(login, { login = it }, R.string.account_login, false,
                 loginFocus, passwordFocus, menuFocus, state.busy, onNext = {
                     passwordFocus.requestFocus(); scope.launch { withFrameNanos { }; keyboard?.show() }
                 })
-            AccountField(password, { password = it }, R.string.account_password, true,
+            RemoteTextField(password, { password = it }, R.string.account_password, true,
                 passwordFocus, submitFocus, menuFocus, state.busy, previous = loginFocus, onNext = ::submit)
             ThemeButton(stringResource(if (state.busy) R.string.account_wait else R.string.account_sign_in), ::submit,
                 Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus; up = passwordFocus },
@@ -126,51 +117,5 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
             ThemeButton(stringResource(R.string.account_check), onCheck,
                 Modifier.height(d.headerButtonSize).focusProperties { left = menuFocus }, loading = state.busy)
         }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AccountField(value: String, onValue: (String) -> Unit, label: Int, password: Boolean,
-    focus: FocusRequester, next: FocusRequester, menu: FocusRequester, busy: Boolean,
-    previous: FocusRequester = FocusRequester.Cancel, onNext: () -> Unit) {
-    val d = SeasonvarTheme.dimensions
-    val c = MaterialTheme.colorScheme
-    val title = stringResource(label)
-    var focused by remember { mutableStateOf(false) }
-    val keyboard = LocalSoftwareKeyboardController.current
-    val ime = WindowInsets.isImeVisible
-    val scope = rememberCoroutineScope()
-    Column(verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-        Text(title, style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
-        BasicTextField(value, onValue, enabled = !busy, singleLine = true,
-            modifier = Modifier.fillMaxWidth().height(d.navigationButtonHeight).focusRequester(focus)
-                .onFocusChanged { focused = it.isFocused }
-                .focusProperties { left = menu; down = next; up = previous }
-                .onPreviewKeyEvent {
-                    when {
-                        it.key == Key.DirectionCenter -> {
-                            if (it.type == KeyEventType.KeyDown) {
-                                focus.requestFocus(); scope.launch { withFrameNanos { }; keyboard?.show() }
-                            }; true
-                        }
-                        !ime && it.key == Key.DirectionDown && it.type == KeyEventType.KeyDown -> { next.requestFocus(); true }
-                        !ime && it.key == Key.DirectionUp && it.type == KeyEventType.KeyDown -> {
-                            if (previous != FocusRequester.Cancel) previous.requestFocus()
-                            true
-                        }
-                        !ime && it.key == Key.DirectionLeft && it.type == KeyEventType.KeyDown -> { menu.requestFocus(); true }
-                        else -> false
-                    }
-                }.semantics { contentDescription = title },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = c.onBackground), cursorBrush = SolidColor(c.primary),
-            visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
-            keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else KeyboardType.Email,
-                imeAction = if (password) ImeAction.Done else ImeAction.Next, autoCorrectEnabled = false),
-            keyboardActions = KeyboardActions(onNext = { onNext() }, onDone = { onNext() }),
-            decorationBox = { inner -> Box(Modifier.fillMaxSize()
-                .background(c.background, RoundedCornerShape(d.buttonCornerRadius))
-                .border(d.focusBorderWidth, if (focused) c.primary else c.onSurfaceVariant, RoundedCornerShape(d.buttonCornerRadius))
-                .padding(d.spacingSmall), contentAlignment = androidx.compose.ui.Alignment.CenterStart) { inner() } })
     }
 }

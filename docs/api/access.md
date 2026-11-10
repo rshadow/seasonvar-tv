@@ -20,6 +20,10 @@ Root YR присутствует в проверенной цепочке и п�
 
 Источники: [проверка OkHttp в CodeQL](https://codeql.github.com/codeql-query-help/java/java-android-missing-certificate-pinning/), [Android о SPKI и резервных ключах](https://developer.android.com/privacy-and-security/security-config#CertificatePinning), [цепочки Let’s Encrypt](https://letsencrypt.org/certificates/), [корни Sectigo](https://support.sectigo.com/Com_KnowledgeDetailPage?Id=kA0Uj0000004IrB), [DigiCert G3](https://cacerts.digicert.com/DigiCertGlobalRootG3.crt.pem) и [G2](https://cacerts.digicert.com/DigiCertGlobalRootG2.crt.pem). Публичные PEM для проверки констант хранятся в тестовых ресурсах и не добавляются в доверенное хранилище приложения.
 
+## Прокси приложения
+
+По [ADR-0139](../adr/0139-http-connect-proxy.md) пользователь может направить Seasonvar, постеры, плейлисты и видео через свой HTTP CONNECT-прокси. Basic-авторизация необязательна и обрабатывается только на уровне прокси по 407, без передачи Proxy-Authorization сайту. TLS и pins действуют внутри туннеля, прямого повторения при ошибке нет. DoH для разрешения имени прокси и обновления GitHub не проходят через этот туннель. Основные правила протокола: [RFC 9110, CONNECT](https://www.rfc-editor.org/rfc/rfc9110.html#name-connect) и [RFC 7617, Basic](https://www.rfc-editor.org/rfc/rfc7617.html).
+
 ## DNS в приложении
 
 Системный DNS, Quad9 DoH и Cloudflare DoH выбираются независимо от DPI-обхода по [ADR-0138](../adr/0138-cloudflare-dns-provider.md). Quad9 остаётся начальным значением. Для Cloudflare используется [официальный endpoint](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/) `https://cloudflare-dns.com/dns-query`, bootstrap `1.1.1.1`, бинарный DNS wireformat по HTTPS. Проверка TLS и имени `cloudflare-dns.com` сохраняется; дополнительные pins взяты из [публичного репозитория SSL.com](https://www.ssl.com/repository/).
