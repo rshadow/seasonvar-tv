@@ -178,6 +178,7 @@
     <string name="menu_visibility_settings_required">Всегда доступны, чтобы вернуть скрытые разделы.</string>
     <string name="menu_visibility_done">Готово</string>
     <string name="network_title">Сеть</string>
+    <string name="connection_title">Подключение</string>
     <string name="bypass_title">Обход блокировок</string>
     <string name="bypass_description">Помогает открыть сайт при сетевых ограничениях. Проверка HTTPS-сертификатов остаётся включённой.</string>
     <string name="network_applies">Настройки сохраняются и применяются к новым запросам страниц и постеров. Список «Сегодня» обновляется при изменении.</string>

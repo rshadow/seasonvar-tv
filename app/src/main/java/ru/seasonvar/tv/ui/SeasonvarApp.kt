@@ -1526,6 +1526,9 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = imagePrefetchEnabled, onCheckedChange = null)
         }
+        Spacer(Modifier.height(d.spacingLarge))
+        Text(stringResource(R.string.connection_title),
+            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
