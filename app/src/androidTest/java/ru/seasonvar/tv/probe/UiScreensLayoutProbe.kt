@@ -161,11 +161,14 @@ object UiScreensLayoutProbe {
                 centered(text(R.string.search_history_clear))
                 stage("account_screens")
                 var accountActionTop: Int? = null
+                var accountAvatarBounds: Rect? = null
                 for ((name, session, state) in listOf(Triple("guest", AccountSession(), AccountUiState(busy = false)),
                     Triple("busy", AccountSession(), AccountUiState(busy = true)),
                     Triple("error", AccountSession(), AccountUiState(busy = false, failure = AccountFailure.NETWORK)),
                     Triple("signed-in", account, AccountUiState(busy = false)),
-                    Triple("premium", account.copy(user = user.copy(premium = AccountPremium.Until(java.time.LocalDate.of(2030, 12, 31)))), AccountUiState(busy = false)),
+                    Triple("premium", account.copy(user = user.copy(avatarUrl = "android.resource://ru.seasonvar.tv/drawable/poster_placeholder",
+                        premium = AccountPremium.Until(java.time.LocalDate.of(2030, 12, 31)))), AccountUiState(busy = false)),
+                    Triple("avatar-error", account.copy(user = user.copy(avatarUrl = "android.resource://ru.seasonvar.tv/drawable/missing_account_avatar")), AccountUiState(busy = false)),
                     Triple("premium-inactive", account.copy(user = user.copy(premium = AccountPremium.Inactive)), AccountUiState(busy = false)),
                     Triple("premium-loading", account, AccountUiState(busy = true)))) {
                     render { AccountPane(session, state, remember { FocusRequester() }, { _, _ -> }, {}, {}) }
@@ -188,6 +191,14 @@ object UiScreensLayoutProbe {
                         check(hintBounds.bottom < premiumBounds.top && premiumBounds.bottom < hdBounds.top)
                     }
                     if (session.user != null) {
+                        val avatar = checkNotNull(find(uiAutomation.rootInActiveWindow, text(R.string.account_avatar)))
+                        val avatarBounds = Rect().also(avatar::getBoundsInScreen)
+                        val nameBounds = Rect().also(checkNotNull(find(uiAutomation.rootInActiveWindow, user.name))::getBoundsInScreen)
+                        check(!avatar.isFocusable && !avatar.isClickable)
+                        check(avatarBounds.width() == avatarBounds.height() && avatarBounds.width() > 0)
+                        check(avatarBounds.left > nameBounds.right && avatarBounds.top == nameBounds.top)
+                        accountAvatarBounds?.let { check(it == avatarBounds) }
+                        accountAvatarBounds = avatarBounds
                         val action = checkNotNull(control(actionLabel))
                         val bounds = Rect().also(action::getBoundsInScreen)
                         accountActionTop?.let { check(it == bounds.top) }

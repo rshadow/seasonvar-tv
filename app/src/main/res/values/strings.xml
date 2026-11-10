@@ -216,6 +216,7 @@
     <string name="player_playback_error">Не удалось воспроизвести видео</string>
     <string name="details_reload">Обновить данные</string>
     <string name="account_title">Аккаунт</string>
+    <string name="account_avatar">Аватар аккаунта</string>
     <string name="account_sign_in">Войти</string>
     <string name="account_sign_out">Выйти из аккаунта</string>
     <string name="account_login">Логин или e-mail</string>

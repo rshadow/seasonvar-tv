@@ -9,6 +9,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -18,11 +20,15 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.*
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.account.AccountSession
@@ -75,21 +81,34 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
                 Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus; up = passwordFocus },
                 loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
         } else {
-            Text(user.name, style = MaterialTheme.typography.titleLarge, color = c.onBackground)
-            Text(stringResource(R.string.account_signed_in_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-            val premiumText = when (val premium = user.premium) {
-                is AccountPremium.Until -> stringResource(R.string.account_premium_until,
-                    premium.date.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.uuuu", java.util.Locale.ROOT)))
-                AccountPremium.Inactive -> stringResource(R.string.account_premium_inactive)
-                AccountPremium.Unknown -> stringResource(R.string.account_premium_unknown)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingLarge)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                    Text(user.name, style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                    Text(stringResource(R.string.account_signed_in_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                    val premiumText = when (val premium = user.premium) {
+                        is AccountPremium.Until -> stringResource(R.string.account_premium_until,
+                            premium.date.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.uuuu", java.util.Locale.ROOT)))
+                        AccountPremium.Inactive -> stringResource(R.string.account_premium_inactive)
+                        AccountPremium.Unknown -> stringResource(R.string.account_premium_unknown)
+                    }
+                    Text(premiumText, style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                    Text(if (user.premium is AccountPremium.Until) stringResource(R.string.account_premium_hd_hint) else "",
+                        style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,
+                        minLines = 1, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    ThemeButton(stringResource(R.string.account_sign_out), onLogout,
+                        Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus },
+                        loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
+                }
+                val fallback = painterResource(R.drawable.ic_person)
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(user.avatarUrl)
+                        .diskCachePolicy(CachePolicy.DISABLED)
+                        .memoryCacheKey("account-pane-avatar-${user.id}-${session.version}-${user.avatarUrl}").build(),
+                    contentDescription = stringResource(R.string.account_avatar), contentScale = ContentScale.Crop,
+                    placeholder = fallback, error = fallback, fallback = fallback,
+                    modifier = Modifier.size(d.accountAvatarSize).clip(RoundedCornerShape(d.cardCornerRadius))
+                        .background(c.surfaceVariant))
             }
-            Text(premiumText, style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-            Text(if (user.premium is AccountPremium.Until) stringResource(R.string.account_premium_hd_hint) else "",
-                style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,
-                minLines = 1, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            ThemeButton(stringResource(R.string.account_sign_out), onLogout,
-                Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus },
-                loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
         }
         val error = when {
             state.failure == AccountFailure.CREDENTIALS -> R.string.account_bad_credentials
