@@ -38,16 +38,16 @@ internal fun calculateCatalogCardMetrics(
 }
 
 @Composable
-internal fun rememberCatalogCardMetrics(availableWidth: Dp): CatalogCardMetrics {
+internal fun rememberCatalogCardMetrics(availableWidth: Dp, minimumWidth: Dp = SeasonvarTheme.dimensions.catalogMinCardWidth): CatalogCardMetrics {
     val d = SeasonvarTheme.dimensions
     val density = LocalDensity.current
     val title = MaterialTheme.typography.labelMedium
     val subtitle = MaterialTheme.typography.labelSmall
     val textMeasurer = rememberTextMeasurer()
-    return remember(availableWidth, d, density.density, density.fontScale, title, subtitle, textMeasurer) {
+    return remember(availableWidth, minimumWidth, d, density.density, density.fontScale, title, subtitle, textMeasurer) {
         with(density) {
             calculateCatalogCardMetrics(
-                availableWidth, d.catalogMinCardWidth, d.cardPadding, d.spacingSmall, d.posterWidth / d.posterHeight,
+                availableWidth, minimumWidth, d.cardPadding, d.spacingSmall, d.posterWidth / d.posterHeight,
                 textMeasurer.measure("M\nM", style = title, maxLines = 2).size.height.toDp(),
                 textMeasurer.measure("M", style = subtitle, maxLines = 1).size.height.toDp(), density,
             )

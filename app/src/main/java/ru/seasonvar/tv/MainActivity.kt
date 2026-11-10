@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel
     private lateinit var smartModel: ru.seasonvar.tv.ui.smart.SmartContinueViewModel
     private lateinit var detailsModel: SeriesDetailsViewModel
+    private lateinit var browseModel: ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel
     private lateinit var searchModel: SearchViewModel
     private lateinit var models: Map<PublicFeed, CatalogViewModel>
     private lateinit var personalModels: Map<PersonalFeed, PersonalListViewModel>
@@ -63,6 +64,10 @@ class MainActivity : ComponentActivity() {
             })
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
         }
+        browseModel = ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel.Factory(
+            repository, container.listFilterPreferences, container.account) {
+                ru.seasonvar.tv.data.playback.markOwner(container.account.session.value.user)
+            })[ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel::class.java]
         val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
         personalModels = PersonalFeed.entries.associateWith { feed ->
             ViewModelProvider(this, PersonalListViewModel.Factory(container.account, feed, container.listFilterPreferences))
@@ -118,6 +123,7 @@ class MainActivity : ComponentActivity() {
                     personalModels.values.forEach { it.refreshIfActive() }
                     models.values.forEach { it.refreshIfStarted() }
                     searchModel.marksChanged()
+                    browseModel.refreshIfStarted()
                     detailsModel.refreshResume()
                 }
             }
@@ -125,6 +131,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(accountSession.version) {
                 if (accountSession.version > 0) {
                     models.values.forEach { it.sessionChanged() }
+                    browseModel.sessionChanged()
                     searchModel.sessionChanged()
                 }
             }
@@ -139,6 +146,7 @@ class MainActivity : ComponentActivity() {
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
             val playerClockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
             SeasonvarApp(
+                browseCatalog = browseModel,
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = container.interfaceSettings::setImagePrefetchEnabled,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
@@ -182,6 +190,7 @@ class MainActivity : ComponentActivity() {
                     container.networkSettings.setBypassEnabled(enabled)
                     smartModel.invalidate()
                     models.values.forEach { it.networkChanged() }
+                    browseModel.refreshIfStarted()
                     searchModel.networkChanged()
                     personalModels.values.forEach { it.refreshIfActive() }
                     models.values.forEach { it.refreshIfStarted() }
@@ -194,6 +203,7 @@ class MainActivity : ComponentActivity() {
                         container.networkSettings.setDnsProvider(provider)
                         smartModel.invalidate()
                         models.values.forEach { it.networkChanged() }
+                        browseModel.refreshIfStarted()
                         searchModel.networkChanged()
                         personalModels.values.forEach { it.refreshIfActive() }
                     models.values.forEach { it.refreshIfStarted() }

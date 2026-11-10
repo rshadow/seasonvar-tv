@@ -497,6 +497,22 @@ ui-screens-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=ui-screens-layout MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"
 
 .PHONY: button-layout-probe
+.PHONY: catalog-live-probe
+.PHONY: catalog-layout-probe
+catalog-layout-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=catalog-layout MARK_MENU_PROBE_OUT="$(CATALOG_LAYOUT_PROBE_OUT)"
+
+CATALOG_LAYOUT_PROBE_OUT ?= build/catalog-layout-probe
+
+catalog-live-probe:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for catalog verification.' >&2; exit 1;; esac
+	$(MAKE) devices
+	$(MAKE) install BUILD_TYPE=debug
+	$(GRADLE) :app:assembleDebugAndroidTest
+	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+	$(ADB) shell am force-stop "$(APP_ID)"
+	$(ENV) python3 scripts/probe-catalog.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)"
+
 button-layout-probe: history-clear-probe
 
 .PHONY: history-clear-probe
