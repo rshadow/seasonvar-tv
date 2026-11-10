@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -159,13 +160,39 @@ object UiScreensLayoutProbe {
                 root(Section.TODAY); click(text(R.string.search_title)); capture("search-history")
                 centered(text(R.string.search_history_clear))
                 stage("account_screens")
+                var accountActionTop: Int? = null
                 for ((name, session, state) in listOf(Triple("guest", AccountSession(), AccountUiState(busy = false)),
                     Triple("busy", AccountSession(), AccountUiState(busy = true)),
                     Triple("error", AccountSession(), AccountUiState(busy = false, failure = AccountFailure.NETWORK)),
-                    Triple("signed-in", account, AccountUiState(busy = false)))) {
+                    Triple("signed-in", account, AccountUiState(busy = false)),
+                    Triple("premium", account.copy(user = user.copy(premium = AccountPremium.Until(java.time.LocalDate.of(2030, 12, 31)))), AccountUiState(busy = false)),
+                    Triple("premium-inactive", account.copy(user = user.copy(premium = AccountPremium.Inactive)), AccountUiState(busy = false)),
+                    Triple("premium-loading", account, AccountUiState(busy = true)))) {
                     render { AccountPane(session, state, remember { FocusRequester() }, { _, _ -> }, {}, {}) }
-                    centered(text(if (state.busy) R.string.account_wait else if (session.user == null) R.string.account_sign_in else R.string.account_sign_out))
+                    val actionLabel = text(if (session.user != null) R.string.account_sign_out else if (state.busy) R.string.account_wait else R.string.account_sign_in)
+                    centered(actionLabel)
                     capture("account-$name")
+                    val expected = when (name) {
+                        "signed-in", "premium-loading" -> text(R.string.account_premium_unknown)
+                        "premium" -> targetContext.getString(R.string.account_premium_until, "31.12.2030")
+                        "premium-inactive" -> text(R.string.account_premium_inactive)
+                        else -> null
+                    }
+                    if (expected != null) check(find(uiAutomation.rootInActiveWindow, expected) != null)
+                    val hdHint = find(uiAutomation.rootInActiveWindow, text(R.string.account_premium_hd_hint))
+                    check((hdHint != null) == (session.user?.premium is AccountPremium.Until))
+                    if (name == "premium") {
+                        val hintBounds = Rect().also(checkNotNull(find(uiAutomation.rootInActiveWindow, text(R.string.account_signed_in_hint)))::getBoundsInScreen)
+                        val premiumBounds = Rect().also(checkNotNull(find(uiAutomation.rootInActiveWindow, checkNotNull(expected)))::getBoundsInScreen)
+                        val hdBounds = Rect().also(checkNotNull(hdHint)::getBoundsInScreen)
+                        check(hintBounds.bottom < premiumBounds.top && premiumBounds.bottom < hdBounds.top)
+                    }
+                    if (session.user != null) {
+                        val action = checkNotNull(control(actionLabel))
+                        val bounds = Rect().also(action::getBoundsInScreen)
+                        accountActionTop?.let { check(it == bounds.top) }
+                        accountActionTop = bounds.top
+                    }
                 }
             }
             stage("settings_dialogs")

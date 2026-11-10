@@ -108,7 +108,8 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         if (user == null) { clear(expired = true); throw SessionExpiredException() }
         sessions.confirmAccount(user.id)
         htmlCache?.let { it.save(personalKey(PersonalFeed.RESUME), html, it.capture()) }
-        mutableSession.value = AccountSession(user, session.value.version + 1)
+        val version = session.value.version + if (user.id != "session" && session.value.user?.id == user.id) 0 else 1
+        mutableSession.value = AccountSession(user, version)
     } }
 
     suspend fun login(login: String, password: String): Unit = withContext(Dispatchers.IO) { mutex.withLock {

@@ -43,6 +43,50 @@ class AccountRepositoryTest {
         restored.restore()
         assertEquals("12", restored.session.value.user!!.id)
     }
+    @Test fun profile_refresh_updates_premium_without_changing_the_session_generation() = runBlocking {
+        val transport = Transport()
+        fun premium(date: String) = authenticated.replace("headblock-menu\">",
+            "headblock-menu\"><a href='/premium'>Премиум до $date</a>")
+        transport.page = premium("10.11.2028")
+        val repository = AccountRepository(SessionManager(MemorySessionStore()), transport)
+        repository.login("example", "dummy-password")
+        val version = repository.session.value.version
+        assertEquals(AccountPremium.Until(java.time.LocalDate.of(2028, 11, 10)), repository.session.value.user!!.premium)
+        transport.page = premium("11.12.2029")
+        repository.restore()
+        assertEquals(version, repository.session.value.version)
+        assertEquals(AccountPremium.Until(java.time.LocalDate.of(2029, 12, 11)), repository.session.value.user!!.premium)
+        transport.offline = true
+        try { repository.restore(); fail() } catch (_: IOException) { }
+        assertEquals(version, repository.session.value.version)
+        assertEquals(AccountPremium.Until(java.time.LocalDate.of(2029, 12, 11)), repository.session.value.user!!.premium)
+        transport.offline = false; transport.expired = true
+        try { repository.restore(); fail() } catch (_: SessionExpiredException) { }
+        assertNull(repository.session.value.user)
+        assertTrue(repository.session.value.version > version)
+    }
+
+    @Test fun restoring_a_different_account_changes_the_session_generation() = runBlocking {
+        val transport = Transport()
+        val repository = AccountRepository(SessionManager(MemorySessionStore()), transport)
+        repository.login("example", "dummy-password")
+        val version = repository.session.value.version
+        transport.page = authenticated.replace("/profile/12", "/profile/13")
+        repository.restore()
+        assertEquals("13", repository.session.value.user!!.id)
+        assertEquals(version + 1, repository.session.value.version)
+    }
+
+    @Test fun unknown_account_identifier_does_not_preserve_the_session_generation() = runBlocking {
+        val transport = Transport().apply { page = authenticated.replace("/profile/12", "/other") }
+        val repository = AccountRepository(SessionManager(MemorySessionStore()), transport)
+        repository.login("example", "dummy-password")
+        val version = repository.session.value.version
+        assertEquals("session", repository.session.value.user!!.id)
+        repository.restore()
+        assertEquals(version + 1, repository.session.value.version)
+    }
+
     @Test fun successful_http_or_post_body_is_not_proof_of_login() = runBlocking {
         val store = MemorySessionStore(); val transport = Transport().apply { accepted = false }
         val repository = AccountRepository(SessionManager(store), transport)
