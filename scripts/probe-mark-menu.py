@@ -25,6 +25,7 @@ watchdog.start()
 fields = {}
 allowed = {"memory_measured", "read_only", "native_total_kib", "native_common_kib", "native_private_kib", "poster_kib", "poster_limit_kib", "poster_keys", "live_card_records", "native_shared", "private_cleared", "memory_bounded", "cache_records", "cache_heap_growth_kib", "descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
            "focus_preserved", "progress_visible", "text_centered", "screens_verified", "dialogs_verified",
+           "sort_reset", "filter_reset", "defaults_reset", "refresh_failure_preserved",
            "script_success", "failure_type", "failure_phase", "failure_line", "failure_geometry", "failure_focus", "failure_counts", "artifacts"}
 for line in process.stdout:
     if line.startswith("INSTRUMENTATION_STATUS: phase="):
@@ -58,7 +59,8 @@ if args.mode in ("series-list-engine", "shared-card-cache"):
 if args.mode == "shared-card-cache":
     checks += ("native_shared", "private_cleared", "memory_bounded")
 if args.mode == "catalog-layout":
-    checks = ("window_bounded", "focus_preserved", "geometry_stable", "text_centered", "fixture_only", "script_success", "artifacts_copied")
+    checks = ("sort_reset", "filter_reset", "defaults_reset", "refresh_failure_preserved",
+              "window_bounded", "focus_preserved", "geometry_stable", "text_centered", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "cache-memory":
     checks = ("memory_measured", "read_only", "script_success", "artifacts_copied")
 if code or any(fields.get(key) is not True for key in checks):

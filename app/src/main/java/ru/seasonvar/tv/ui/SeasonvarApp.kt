@@ -93,6 +93,7 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.CatalogFilters
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
@@ -321,15 +322,17 @@ private fun SeasonvarContent(
     var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
     val browsing = section == Section.CATALOG
     val browseState = browseCatalog?.state?.collectAsStateWithLifecycle()?.value ?: ru.seasonvar.tv.ui.catalog.BrowseCatalogState()
+    val browseConditions = remember(browseState.applied) { CatalogFilters.defaults.mapValues { browseState.applied[it.key] } }
     val catalogLayout = if (browsing) CatalogLayout.STRIP else catalogLayouts[section] ?: CatalogLayout.STRIP
     var activeFeed by rememberSaveable { mutableStateOf(section.publicFeed ?: PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
+    var browseSelectedKey by rememberSaveable(browseConditions) { mutableStateOf<String?>(null) }
     val smart = section == Section.SMART_CONTINUE
     val searching = section == Section.SEARCH
     val personalFeed = section.personalFeed
     val catalogKey = if (browsing) "CATALOG" else if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
     val sourceState = if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
-    val selectedKey = selectedKeys[catalogKey]
+    val selectedKey = if (browsing) browseSelectedKey else selectedKeys[catalogKey]
     val activeFilters = (if (personalFeed != null) personalFilters[personalFeed] else publicFilters[activeFeed])
         ?.state?.collectAsStateWithLifecycle()?.value?.values
     val state = ru.seasonvar.tv.ui.catalog.parsedCatalogState(sourceState, selectedKey,
@@ -345,8 +348,8 @@ private fun SeasonvarContent(
     val newestListState = rememberLazyListState()
     val bestListState = rememberLazyListState()
     val announcementsListState = rememberLazyListState()
-    val browseListState = rememberLazyListState()
-    val browseGridState = rememberLazyGridState()
+    val browseListState = key(browseConditions) { rememberLazyListState() }
+    val browseGridState = key(browseConditions) { rememberLazyGridState() }
     val searchListState = rememberLazyListState()
     val smartListState = rememberLazyListState()
     val personalListStates = PersonalFeed.entries.associateWith { rememberLazyListState() }
@@ -407,7 +410,8 @@ private fun SeasonvarContent(
     val latestCatalogLayout by rememberUpdatedState(catalogLayout)
 
     fun selectEntry(key: String?) {
-        selectedKeys = if (key == null) selectedKeys - catalogKey
+        if (browsing) browseSelectedKey = key
+        else selectedKeys = if (key == null) selectedKeys - catalogKey
             else selectedKeys + (catalogKey to key)
     }
 
