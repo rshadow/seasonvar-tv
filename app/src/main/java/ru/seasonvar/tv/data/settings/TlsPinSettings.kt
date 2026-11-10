@@ -9,6 +9,8 @@ internal object TlsPinSettings {
     const val SECTIGO_ROOT_R46 = "sha256/Douxi77vs4G+Ib/BogbTFymEYq0QSFXwSgVCaZcI09Q="
     const val DIGICERT_GLOBAL_ROOT_G3 = "sha256/uUwZgwDOxcBXrQcntwu+kYFpkiVkOaezL0WYEZ3anJc="
     const val DIGICERT_GLOBAL_ROOT_G2 = "sha256/i7WTqTvh0OioIruIfFR4kMPnBqrS2rdiVPl/s2uC/CY="
+    const val SSL_COM_ROOT_ECC = "sha256/oyD01TTXvpfBro3QSZc1vIlcMjrdLTiL/M9mLCPX+Zo="
+    const val SSL_COM_ROOT_RSA = "sha256/0cRTd+vc1hjNFlHcLgLCHXUeWqn80bNDH/bs9qMTSPo="
 
     val certificatePinner: CertificatePinner = CertificatePinner.Builder()
         .add("seasonvar.ru", ISRG_ROOT_YR, ISRG_ROOT_YE)
@@ -20,5 +22,6 @@ internal object TlsPinSettings {
         .add("githubusercontent.com", ISRG_ROOT_YR, ISRG_ROOT_YE)
         .add("*.githubusercontent.com", ISRG_ROOT_YR, ISRG_ROOT_YE)
         .add("dns.quad9.net", DIGICERT_GLOBAL_ROOT_G3, DIGICERT_GLOBAL_ROOT_G2)
+        .add("cloudflare-dns.com", SSL_COM_ROOT_ECC, SSL_COM_ROOT_RSA)
         .build()
 }

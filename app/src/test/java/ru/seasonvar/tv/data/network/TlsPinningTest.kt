@@ -29,6 +29,7 @@ class TlsPinningTest {
                 listOf("isrg-root-yr", "isrg-root-ye"),
             listOf("github.com", "api.github.com") to listOf("sectigo-root-e46", "sectigo-root-r46"),
             listOf("dns.quad9.net") to listOf("digicert-global-root-g3", "digicert-global-root-g2"),
+            listOf("cloudflare-dns.com") to listOf("sslcom-root-ecc", "sslcom-root-rsa"),
         )
         for ((hosts, certificates) in groups) {
             for (host in hosts) for (name in certificates) {

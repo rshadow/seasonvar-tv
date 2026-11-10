@@ -12,12 +12,17 @@ Android-клиенты используют общую конфигурацию 
 | `github.com`, `api.github.com` | Sectigo DV E36 → Root E46 | Sectigo E46 / R46 |
 | `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Let’s Encrypt YR1 → Root YR → ISRG Root X1 | Root YR / Root YE |
 | `dns.quad9.net` | DigiCert G3 TLS ECC SHA384 2020 CA1 → Global Root G3 | DigiCert G3 / G2 |
+| `cloudflare-dns.com` | SSL.com SSL Intermediate CA ECC R2 → SSL.com Root Certification Authority ECC | SSL.com ECC / RSA |
 
 Root YR присутствует в проверенной цепочке и при кросс-подписи через X1; сам X1 не закреплён. Резервные ключи взяты из опубликованных корней соответствующих центров. Смена ключа промежуточного или серверного сертификата внутри закреплённой цепочки допустима. При переходе на другой корень требуется обновление приложения. Нельзя автоматически заменять pins значениями из не прошедшего проверку соединения.
 
 Все запросы приложения к Seasonvar проходят через `SiteClient` и `NetworkClients`: вход, списки, отметки, карточки, Coil, плейлисты и Media3. Клиенты с cookie и медиаклиенты наследуют политику при любых комбинациях DNS/DPI. `GitHubUpdateSource` использует отдельный закреплённый клиент для метаданных, описаний релизов и APK, включая каждый разрешённый редирект. DoH также имеет отдельный закреплённый клиент. Динамические сторонние видеохосты сохраняют стандартную проверку TLS. Внешний браузер и исследовательские Python-скрипты используют собственные транспорты; описанный ниже загрузчик сохраняет стандартную проверку TLS.
 
 Источники: [проверка OkHttp в CodeQL](https://codeql.github.com/codeql-query-help/java/java-android-missing-certificate-pinning/), [Android о SPKI и резервных ключах](https://developer.android.com/privacy-and-security/security-config#CertificatePinning), [цепочки Let’s Encrypt](https://letsencrypt.org/certificates/), [корни Sectigo](https://support.sectigo.com/Com_KnowledgeDetailPage?Id=kA0Uj0000004IrB), [DigiCert G3](https://cacerts.digicert.com/DigiCertGlobalRootG3.crt.pem) и [G2](https://cacerts.digicert.com/DigiCertGlobalRootG2.crt.pem). Публичные PEM для проверки констант хранятся в тестовых ресурсах и не добавляются в доверенное хранилище приложения.
+
+## DNS в приложении
+
+Системный DNS, Quad9 DoH и Cloudflare DoH выбираются независимо от DPI-обхода по [ADR-0138](../adr/0138-cloudflare-dns-provider.md). Quad9 остаётся начальным значением. Для Cloudflare используется [официальный endpoint](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/) `https://cloudflare-dns.com/dns-query`, bootstrap `1.1.1.1`, бинарный DNS wireformat по HTTPS. Проверка TLS и имени `cloudflare-dns.com` сохраняется; дополнительные pins взяты из [публичного репозитория SSL.com](https://www.ssl.com/repository/).
 
 ## Исследовательский загрузчик
 

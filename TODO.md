@@ -14,6 +14,8 @@
 
 ## Настройки и сведения
 
+- [x] **Cloudflare DoH** — дополнительный DNS в настройках сети, независимый от DPI-обхода; [ADR-0138](docs/adr/0138-cloudflare-dns-provider.md).
+
 - [x] **TLS pinning** — общие основные и резервные ключи для Seasonvar, GitHub и DoH без настройки в интерфейсе; [ADR-0133](docs/adr/0133-centralized-tls-pinning.md).
 - [x] **Настройки** — группы «Приложение», «Плеер» и «Сеть»; [ADR-0103](docs/adr/0103-player-settings-group.md).
 - [x] **При запуске** — выбор первого раздела; [ADR-0045](docs/adr/0045-start-page-setting.md).

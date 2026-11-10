@@ -21,7 +21,7 @@ object TlsPinningProbe {
                 "https://cdn.svstat.net/", "https://github.com/rshadow/seasonvar-tv",
                 "https://api.github.com/repos/rshadow/seasonvar-tv/releases/latest",
                 "https://objects.githubusercontent.com/", "https://release-assets.githubusercontent.com/",
-                "https://dns.quad9.net/dns-query")
+                "https://dns.quad9.net/dns-query", "https://cloudflare-dns.com/dns-query")
             for (url in urls) {
                 val request = Request.Builder().url(url).build()
                 val host = request.url.host
@@ -46,6 +46,18 @@ object TlsPinningProbe {
                     rejected.connectionPool.evictAll()
                 }
             }
+            phase = "cloudflare_dns"
+            val cloudflare = clients.forConfiguration(NetworkConfiguration(true, DnsProvider.CLOUDFLARE_DOH))
+            check(cloudflare.dns.lookup("seasonvar.ru").isNotEmpty())
+            check(cloudflare.dns.lookup("cdn.svstat.net").isNotEmpty())
+            cloudflare.newCall(Request.Builder().url("https://seasonvar.ru/").build()).execute().use {
+                check(it.isSuccessful)
+            }
+            clients.forMedia(NetworkConfiguration(true, DnsProvider.CLOUDFLARE_DOH))
+                .newCall(Request.Builder().url("https://cdn.svstat.net/oblojka/32752.jpg").build()).execute().use {
+                    check(it.isSuccessful && it.header("Content-Type")?.startsWith("image/") == true)
+                }
+            result.putBoolean("cloudflare_dns_verified", true)
             phase = "release_notes"
             check(kotlinx.coroutines.runBlocking {
                 ru.seasonvar.tv.data.update.GitHubUpdateSource().releases(1)

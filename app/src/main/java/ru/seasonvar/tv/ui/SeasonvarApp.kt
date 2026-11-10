@@ -1681,6 +1681,7 @@ private fun <T> SettingsChoiceDialog(
 private fun dnsLabel(provider: DnsProvider): Int = when (provider) {
     DnsProvider.SYSTEM -> R.string.dns_system
     DnsProvider.QUAD9_DOH -> R.string.dns_quad9
+    DnsProvider.CLOUDFLARE_DOH -> R.string.dns_cloudflare
 }
 
 private fun playerClockLabel(position: PlayerClockPosition): Int = when (position) {
