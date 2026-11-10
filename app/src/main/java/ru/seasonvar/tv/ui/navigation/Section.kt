@@ -10,7 +10,7 @@ internal enum class Section(
     val publicFeed: PublicFeed? = null,
     val personalFeed: PersonalFeed? = null,
 ) {
-    SEARCH("search"), ACCOUNT("account"),
+    SEARCH("search"), CATALOG("catalog"), ACCOUNT("account"),
     SMART_CONTINUE("smart_continue"),
     RESUME("resume", personalFeed = PersonalFeed.RESUME),
     PERSONAL_UPDATES("personal_updates", personalFeed = PersonalFeed.UPDATES),
@@ -24,7 +24,7 @@ internal enum class Section(
     SETTINGS("settings"), ABOUT("about");
 
     val requiresAccount: Boolean get() = personalFeed != null || this == SMART_CONTINUE
-    val canHide: Boolean get() = this != SETTINGS && this != SEARCH && this != ACCOUNT
+    val canHide: Boolean get() = this != SETTINGS && this != SEARCH && this != ACCOUNT && this != CATALOG
 
     fun availableAtStart(signedIn: Boolean, hiddenSections: Set<Section> = emptySet()): Section =
         startPages(signedIn, hiddenSections).let { pages -> if (this in pages) this else pages.first() }

@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -121,6 +122,7 @@ private fun personalTitle(feed: PersonalFeed) = when (feed) {
 }
 
 internal fun sectionTitle(item: Section): Int = when (item) {
+    Section.CATALOG -> R.string.browse_catalog_title
     Section.SEARCH -> R.string.search_title
     Section.SMART_CONTINUE -> R.string.smart_continue_title
     Section.ACCOUNT -> R.string.account_title
@@ -150,6 +152,7 @@ internal fun SeasonvarApp(
     onRefresh: (PublicFeed) -> Unit,
     loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)? = null,
     cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
+    browseCatalog: ru.seasonvar.tv.ui.catalog.BrowseCatalogController? = null,
     onFeedVisible: (PublicFeed) -> Unit = {},
     searchState: SearchUiState = SearchUiState(),
     onSearchQuery: (String) -> Unit = {},
@@ -210,6 +213,7 @@ internal fun SeasonvarApp(
             onRefresh = onRefresh,
             loadDescription = loadDescription,
             cardData = cardData,
+            browseCatalog = browseCatalog,
             onFeedVisible = onFeedVisible,
             searchState = searchState,
             onSearchQuery = onSearchQuery,
@@ -252,6 +256,7 @@ private fun SeasonvarContent(
     onRefresh: (PublicFeed) -> Unit,
     loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)?,
     cardData: ru.seasonvar.tv.data.cache.CardDataCache?,
+    browseCatalog: ru.seasonvar.tv.ui.catalog.BrowseCatalogController? = null,
     onFeedVisible: (PublicFeed) -> Unit = {},
     searchState: SearchUiState = SearchUiState(),
     onSearchQuery: (String) -> Unit = {},
@@ -314,15 +319,21 @@ private fun SeasonvarContent(
     var startupPending by rememberSaveable { mutableStateOf(true) }
     var menuOwnsInput by remember { mutableStateOf(true) }
     var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
-    val catalogLayout = catalogLayouts[section] ?: CatalogLayout.STRIP
+    val browsing = section == Section.CATALOG
+    val browseState = browseCatalog?.state?.collectAsStateWithLifecycle()?.value ?: ru.seasonvar.tv.ui.catalog.BrowseCatalogState()
+    val catalogLayout = if (browsing) CatalogLayout.STRIP else catalogLayouts[section] ?: CatalogLayout.STRIP
     var activeFeed by rememberSaveable { mutableStateOf(section.publicFeed ?: PublicFeed.TODAY) }
     var selectedKeys by rememberSaveable { mutableStateOf(mapOf<String, String>()) }
     val smart = section == Section.SMART_CONTINUE
     val searching = section == Section.SEARCH
     val personalFeed = section.personalFeed
-    val catalogKey = if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
-    val state = if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
+    val catalogKey = if (browsing) "CATALOG" else if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
+    val sourceState = if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
     val selectedKey = selectedKeys[catalogKey]
+    val activeFilters = (if (personalFeed != null) personalFilters[personalFeed] else publicFilters[activeFeed])
+        ?.state?.collectAsStateWithLifecycle()?.value?.values
+    val state = ru.seasonvar.tv.ui.catalog.parsedCatalogState(sourceState, selectedKey,
+        Triple(catalogKey, if (browsing) browseState.applied.values else activeFilters, accountSession.version))
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
@@ -334,10 +345,12 @@ private fun SeasonvarContent(
     val newestListState = rememberLazyListState()
     val bestListState = rememberLazyListState()
     val announcementsListState = rememberLazyListState()
+    val browseListState = rememberLazyListState()
+    val browseGridState = rememberLazyGridState()
     val searchListState = rememberLazyListState()
     val smartListState = rememberLazyListState()
     val personalListStates = PersonalFeed.entries.associateWith { rememberLazyListState() }
-    val listState = if (searching) searchListState else if (smart) smartListState else if (personalFeed != null) personalListStates.getValue(personalFeed) else when (activeFeed) {
+    val listState = if (browsing) browseListState else if (searching) searchListState else if (smart) smartListState else if (personalFeed != null) personalListStates.getValue(personalFeed) else when (activeFeed) {
         PublicFeed.TODAY -> todayListState
         PublicFeed.UPDATES -> updatesListState
         PublicFeed.TOP -> topListState
@@ -349,9 +362,13 @@ private fun SeasonvarContent(
     val personalGridStates = PersonalFeed.entries.associateWith { rememberLazyGridState() }
     val searchGridState = rememberLazyGridState()
     val smartGridState = rememberLazyGridState()
-    val gridState = if (searching) searchGridState else if (smart) smartGridState else if (personalFeed != null) personalGridStates.getValue(personalFeed)
+    val gridState = if (browsing) browseGridState else if (searching) searchGridState else if (smart) smartGridState else if (personalFeed != null) personalGridStates.getValue(personalFeed)
         else publicGridStates.getValue(activeFeed)
+    val contentFocus = remember { FocusRequester() }
+    var returningToList by remember { mutableStateOf(false) }
     val layoutFocus = remember { FocusRequester() }
+    val browseFocus = remember { FocusRequester() }
+    val browseFiltersFocus = remember { FocusRequester() }
     val searchFocus = remember { FocusRequester() }
     val smartFocus = remember { FocusRequester() }
     val accountFocus = remember { FocusRequester() }
@@ -406,6 +423,7 @@ private fun SeasonvarContent(
     }
 
     fun sectionFocus(item: Section): FocusRequester = when (item) {
+        Section.CATALOG -> browseFocus
         Section.SEARCH -> searchFocus
         Section.SMART_CONTINUE -> smartFocus
         Section.ACCOUNT -> accountFocus
@@ -421,6 +439,7 @@ private fun SeasonvarContent(
         Section.ABOUT -> aboutFocus
     }
 
+    LaunchedEffect(browsing) { if (browsing) browseCatalog?.activate() }
     DisposableEffect(smart) {
         onSmartVisible(smart)
         onDispose { onSmartVisible(false) }
@@ -492,43 +511,47 @@ private fun SeasonvarContent(
 
     fun enterContent() {
         val requestedSection = section
+        val restoring = returningToList
         scope.launch {
-            repeat(2) { withFrameNanos { } }
-            if (section != requestedSection) return@launch
-            val selected = latestSelected
-            val state = latestState
-            val listState = latestListState
-            if (section == Section.SEARCH && latestSearchState.showHistory) {
-                if (!latestSearchState.historyLoading) {
-                    if (latestSearchState.recentQueries.isEmpty()) searchInputFocus.requestFocus() else searchHistoryFocus.requestFocus()
-                }
-            } else if (section == Section.ACCOUNT) {
-                accountFocus.requestFocus()
-            } else if (section == Section.SETTINGS) {
-                settingsContentFocus.requestFocus()
-            } else if (section == Section.ABOUT) {
-                aboutContentFocus.requestFocus()
-            } else if (selected == null) {
-                if (searching) searchInputFocus.requestFocus()
-                else if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
-            } else {
-                inputModeManager.requestInputMode(InputMode.Keyboard)
-                val index = state.entries.indexOfFirst { it.key == selected.key }
-                val cardKey = catalogKey + "|" + selected.key
-                val targetLayout = latestCatalogLayout
-                if (targetLayout == CatalogLayout.GRID) {
-                    val grid = latestGridState
-                    if (grid.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
-                        grid.scrollToItem(index.coerceAtLeast(0))
-                    }
-                } else if (listState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
-                    listState.scrollToItem(index.coerceAtLeast(0))
-                }
+            try {
                 repeat(2) { withFrameNanos { } }
-                if (section == requestedSection && !detailsOpen && latestCatalogLayout == targetLayout && latestSelected?.key == selected.key) {
-                    cards[cardKey]?.requestFocus()
+                if (section != requestedSection) return@launch
+                val selected = latestSelected
+                val state = latestState
+                val listState = latestListState
+                if (section == Section.SEARCH && latestSearchState.showHistory) {
+                    if (!latestSearchState.historyLoading) {
+                        if (latestSearchState.recentQueries.isEmpty()) searchInputFocus.requestFocus() else searchHistoryFocus.requestFocus()
+                    }
+                } else if (section == Section.ACCOUNT) {
+                    accountFocus.requestFocus()
+                } else if (section == Section.SETTINGS) {
+                    settingsContentFocus.requestFocus()
+                } else if (section == Section.ABOUT) {
+                    aboutContentFocus.requestFocus()
+                } else if (selected == null) {
+                    if (browsing) layoutFocus.requestFocus()
+                    else if (searching) searchInputFocus.requestFocus()
+                    else if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
+                } else {
+                    inputModeManager.requestInputMode(InputMode.Keyboard)
+                    val index = state.entries.indexOfFirst { it.key == selected.key }
+                    val cardKey = catalogKey + "|" + selected.key
+                    val targetLayout = latestCatalogLayout
+                    if (targetLayout == CatalogLayout.GRID) {
+                        val grid = latestGridState
+                        if (grid.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
+                            grid.scrollToItem(index.coerceAtLeast(0))
+                        }
+                    } else if (listState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
+                        listState.scrollToItem(index.coerceAtLeast(0))
+                    }
+                    repeat(2) { withFrameNanos { } }
+                    if (section == requestedSection && !detailsOpen && latestCatalogLayout == targetLayout && latestSelected?.key == selected.key) {
+                        cards[cardKey]?.requestFocus()
+                    }
                 }
-            }
+            } finally { if (restoring) returningToList = false }
         }
     }
 
@@ -553,6 +576,7 @@ private fun SeasonvarContent(
             if (section != requestedSection) return@launch
             when (section) {
                 Section.SMART_CONTINUE -> smartFocus.requestFocus()
+                Section.CATALOG -> browseFocus.requestFocus()
                 Section.SEARCH -> searchFocus.requestFocus()
                 Section.ACCOUNT -> accountFocus.requestFocus()
                 Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
@@ -570,6 +594,9 @@ private fun SeasonvarContent(
     }
 
     fun closeDetails() {
+        // Контейнер удерживает фокус до восстановления карточки ленивого списка.
+        returningToList = true
+        contentFocus.requestFocus()
         detailsOpen = false
         enterContent()
     }
@@ -637,11 +664,16 @@ private fun SeasonvarContent(
             Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 ThemeButton(stringResource(R.string.search_title), onClick = {
                     startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
-                }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = sectionFocus(visibleMenuPages.first()); right = accountFocus },
+                }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = sectionFocus(visibleMenuPages.first()); right = browseFocus },
                     icon = R.drawable.ic_search)
+                ThemeButton(stringResource(R.string.browse_catalog_title), {
+                    startupPending = false; backNavigation.reset(); selectSection(Section.CATALOG)
+                    scope.launch { repeat(2) { withFrameNanos { } }; if (section == Section.CATALOG) browseFiltersFocus.requestFocus() }
+                }, Modifier.focusRequester(browseFocus).focusProperties { left = searchFocus; right = accountFocus; down = sectionFocus(visibleMenuPages.first()) },
+                    icon = R.drawable.ic_catalog, actionEnabled = browseCatalog != null)
                 ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
                     onClick = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
-                    modifier = Modifier.focusRequester(accountFocus).focusProperties { left = searchFocus; right = FocusRequester.Cancel; down = sectionFocus(visibleMenuPages.first()) },
+                    modifier = Modifier.focusRequester(accountFocus).focusProperties { left = browseFocus; right = FocusRequester.Cancel; down = sectionFocus(visibleMenuPages.first()) },
                     icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
             }
             Spacer(Modifier.height(d.menuHeaderSpacing))
@@ -692,9 +724,10 @@ private fun SeasonvarContent(
         }
         BoxWithConstraints(
             Modifier.weight(1f).fillMaxHeight()
+                .focusRequester(contentFocus).focusProperties { canFocus = returningToList }.focusTarget()
                 .onFocusChanged { if (it.hasFocus) menuOwnsInput = false }.focusGroup()
         ) {
-            val cardMetrics = rememberCatalogCardMetrics(maxWidth)
+            val cardMetrics = rememberCatalogCardMetrics(maxWidth, if (browsing) d.browseCatalogMinCardWidth else d.catalogMinCardWidth)
             if (section == Section.ACCOUNT) {
                 AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
             } else if (section == Section.SETTINGS) {
@@ -724,27 +757,13 @@ private fun SeasonvarContent(
                     onActions = if (accountSession.user == null) null else ::openSeriesActions,
                     removalDialogOpen = removalState.visible,
                     onPlay = onPlay,
-                    menuFocus = if (searching) searchFocus else if (smart) smartFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
-                        PublicFeed.TODAY -> todayFocus
-                        PublicFeed.UPDATES -> updatesFocus
-                        PublicFeed.TOP -> topFocus
-                        PublicFeed.NEWEST -> newestFocus
-                        PublicFeed.BEST -> bestFocus
-                        PublicFeed.ANNOUNCEMENTS -> announcementsFocus
-                    },
+                    menuFocus = sectionFocus(section),
                     onInteraction = backNavigation::reset,
                 )
             } else {
                 CatalogPane(
-                    state, selected, listState, cards, if (searching || smart || personalFeed != null) null else activeFeed,
-                    if (searching) searchFocus else if (smart) smartFocus else if (personalFeed != null) personalFocus.getValue(personalFeed) else when (activeFeed) {
-                        PublicFeed.TODAY -> todayFocus
-                        PublicFeed.UPDATES -> updatesFocus
-                        PublicFeed.TOP -> topFocus
-                        PublicFeed.NEWEST -> newestFocus
-                        PublicFeed.BEST -> bestFocus
-                        PublicFeed.ANNOUNCEMENTS -> announcementsFocus
-                    }, refreshFocus, retryFocus,
+                    state, selected, listState, cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
+                    sectionFocus(section), refreshFocus, retryFocus,
                     imagePrefetchEnabled = imagePrefetchEnabled,
                     loadDescription = loadDescription,
                     cardData = cardData,
@@ -752,6 +771,11 @@ private fun SeasonvarContent(
                     cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
                     onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
                     onEnterContent = ::enterContent,
+                    inlineFilters = if (browsing && browseCatalog != null) ({
+                        ru.seasonvar.tv.ui.catalog.BrowseCatalogFilters(browseState, browseCatalog, accountSession.user != null,
+                            layoutFocus, browseFiltersFocus, refreshFocus, browseFocus, ::enterContent)
+                    }) else null,
+                    browsing = browsing,
                     query = if (searching) searchState.query else null,
                     searchHeader = if (searching) { {
                         SearchControls(
@@ -777,10 +801,10 @@ private fun SeasonvarContent(
                             onRecall = { query -> pendingHistoryQuery = query; keyboard?.hide(); onSearchRecall(query) },
                             onClear = onSearchClearHistory)
                     }) else null,
-                    onRefresh = { if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
+                    onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                     smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
                     filters = if (personalFeed != null) personalFilters[personalFeed]
-                        else if (!searching && !smart) publicFilters[activeFeed] else null,
+                        else if (!browsing && !searching && !smart) publicFilters[activeFeed] else null,
                     historyClear = if (personalFeed == PersonalFeed.HISTORY) historyClear else null,
                     onLoadMore = { personalFeed?.let(onPersonalMore) },
                     onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
@@ -956,6 +980,8 @@ private fun CatalogPane(
     onFocused: (SeriesEntry) -> Unit,
     onOpen: (SeriesEntry) -> Unit,
     query: String? = null,
+    browsing: Boolean = false,
+    inlineFilters: (@Composable () -> Unit)? = null,
     searchHeader: (@Composable () -> Unit)? = null,
     historyContent: (@Composable () -> Unit)? = null,
     smart: Boolean = false,
@@ -1002,8 +1028,9 @@ private fun CatalogPane(
     }
     val isToday = feed == PublicFeed.TODAY
     val personal = personalFeed != null || smart
-    val strings = remember(feed, personalFeed, smart) {
-        if (smart) CatalogStrings(R.string.smart_continue_title, R.string.resume_loading, R.string.smart_continue_empty)
+    val strings = remember(feed, personalFeed, smart, browsing) {
+        if (browsing) CatalogStrings(R.string.browse_catalog_title, R.string.browse_catalog_loading, R.string.browse_catalog_empty)
+        else if (smart) CatalogStrings(R.string.smart_continue_title, R.string.resume_loading, R.string.smart_continue_empty)
         else if (personalFeed != null) CatalogStrings(personalTitle(personalFeed), R.string.resume_loading, R.string.resume_empty)
         else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_loading, R.string.search_empty)
         else catalogStrings(feed)
@@ -1070,7 +1097,7 @@ private fun CatalogPane(
                     Modifier.focusRequester(clearFocus).focusProperties { left = menuFocus; right = layoutFocus }.then(enterCards),
                     icon = R.drawable.ic_delete,
                     actionEnabled = state.loaded && !state.loading && state.entries.isNotEmpty() && clearState?.busy != true)
-                ThemeButton(
+                if (!browsing) ThemeButton(
                     stringResource(if (layout == CatalogLayout.STRIP) R.string.catalog_show_grid else R.string.catalog_show_strip),
                     onLayoutChange,
                     Modifier.focusRequester(layoutFocus).focusProperties { left = if (historyClear != null) clearFocus else if (filters != null) filterFocus else menuFocus; right = refreshFocus }
@@ -1086,6 +1113,7 @@ private fun CatalogPane(
             }
         }
         Spacer(Modifier.height(d.spacingSmall))
+        if (inlineFilters != null) { inlineFilters(); Spacer(Modifier.height(d.spacingSmall)) }
         if (historyContent != null) Box(Modifier.weight(1f).fillMaxWidth()) { historyContent() }
         else if (selected == null) {
             Column(
@@ -1095,7 +1123,7 @@ private fun CatalogPane(
                 val message = when {
                     query != null && query.isBlank() -> R.string.search_hint
                     state.loading && !state.loaded -> strings.loading
-                    state.failure == LoadFailure.MARKUP -> if (personal) R.string.resume_error else if (feed == null) R.string.search_error else R.string.today_markup_error
+                    state.failure == LoadFailure.MARKUP -> if (browsing) R.string.browse_catalog_error else if (personal) R.string.resume_error else if (feed == null) R.string.search_error else R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
                     else -> if ((filterState?.activeCount ?: 0) > 0) R.string.filters_empty else strings.empty
@@ -1110,7 +1138,7 @@ private fun CatalogPane(
                         else if (smart) R.string.smart_continue_empty_hint
                         else if (personalFeed == PersonalFeed.HISTORY) R.string.history_empty_hint
                         else if (personalFeed == PersonalFeed.RESUME) R.string.resume_empty_hint
-                        else if (personal) R.string.personal_empty_hint else if (feed == null) {
+                        else if (personal) R.string.personal_empty_hint else if (browsing) R.string.browse_catalog_hint else if (feed == null) {
                             if (query.isNullOrBlank()) R.string.search_input_hint else R.string.search_empty_hint
                         } else R.string.today_empty_hint),
                     style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant,

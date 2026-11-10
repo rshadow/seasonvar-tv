@@ -65,7 +65,7 @@ object BestFilterParser {
         return BestFilterOptions(genres, periods, switches)
     }
 
-    fun parse(html: String, day: LocalDate, expected: BestListFilters): FilteredBestPage {
+    fun parse(html: String, day: LocalDate, expected: BestListFilters, windowed: Boolean = false): FilteredBestPage {
         val options = options(html)
         val doc = Jsoup.parse(html)
         val script = doc.select("script:not([src])").joinToString("\n") { it.data() }
@@ -81,6 +81,6 @@ object BestFilterParser {
             ?: doc.select("input.per[checked]").singleOrNull()?.attr("value") ?: throw MarkupChangedException()
         val filters = BestListFilters(genre, period)
         if (filters != expected || options.normalize(filters) != filters) throw MarkupChangedException()
-        return FilteredBestPage(SeasonvarParser.best(html, day), options, filters)
+        return FilteredBestPage(SeasonvarParser.best(html, day, windowed), options, filters)
     }
 }

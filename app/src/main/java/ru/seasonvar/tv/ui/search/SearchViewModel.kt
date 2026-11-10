@@ -34,6 +34,7 @@ class SearchViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(SearchUiState(historyLoading = history != null))
     val state = mutableState.asStateFlow()
+    init { ru.seasonvar.tv.ui.catalog.manageListParsing(viewModelScope, state) { it.results.entries } }
     private var searchJob: Job? = null
     private var active = false
     private var touchedDuringVisit = false

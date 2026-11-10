@@ -51,6 +51,13 @@ class HtmlResponseCache(
         Unit
     }
 
+    fun openReader(name: String, lease: CacheLease, lifetime: Long = DAY): java.io.Reader? = synchronized(monitor) {
+        val file = file(name, lease) ?: return@synchronized null
+        if (!isCurrent(lease) || lease.revision != revision || !file.isFile ||
+            now() - file.lastModified() !in 0 until lifetime) return@synchronized null
+        runCatching { file.reader(Charsets.UTF_8) }.getOrNull()
+    }
+
     fun invalidate(prefix: String, lease: CacheLease = capture()) = synchronized(monitor) {
         if (!isCurrent(lease)) return@synchronized
         revision++

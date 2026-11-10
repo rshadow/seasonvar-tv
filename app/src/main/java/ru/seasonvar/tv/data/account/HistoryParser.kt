@@ -6,6 +6,7 @@ import java.security.MessageDigest
 import ru.seasonvar.tv.data.MarkupChangedException
 import ru.seasonvar.tv.data.SeasonvarParser
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.parseEntries
 import ru.seasonvar.tv.data.EntrySelectionParser
 
 object HistoryParser {
@@ -21,7 +22,7 @@ object HistoryParser {
         return PersonalFeed.HISTORY.url + if (page == 1) "" else "&page=$page"
     }
 
-    fun parse(html: String, requestedUrl: String = PersonalFeed.HISTORY.url): AccountPage {
+    fun parse(html: String, requestedUrl: String = PersonalFeed.HISTORY.url, windowed: Boolean = false): AccountPage {
         val user = AccountParser.user(html) ?: throw SessionExpiredException()
         val canonical = pageUrl(requestedUrl) ?: throw MarkupChangedException()
         val current = canonical.toHttpUrlOrNull()!!.queryParameter("page")?.toInt() ?: 1
@@ -30,7 +31,8 @@ object HistoryParser {
         val list = result.selectFirst(".pgs-history-c") ?: throw MarkupChangedException()
         if (list.children().any { it.tagName() !in setOf("a", "br") } || list.ownText().isNotBlank()) throw MarkupChangedException()
         val occurrences = mutableMapOf<String, Int>()
-        val entries = list.select("a").map { link ->
+        val anchors = list.select("a")
+        val entries = anchors.asSequence().map { link ->
             val url = SeasonvarParser.pageUrl(link.attr("href").substringBefore('#')) ?: throw MarkupChangedException()
             val id = Regex("/serial-([0-9]+)").find(url)?.groupValues?.get(1) ?: throw MarkupChangedException()
             val name = link.selectFirst("b")?.text()?.trim().orEmpty()
@@ -54,7 +56,7 @@ object HistoryParser {
         }.distinct()
         val next = pages.map { it to (it.toHttpUrlOrNull()!!.queryParameter("page")?.toInt() ?: 1) }
             .filter { it.second > current }.minByOrNull { it.second }
-        if (next != null && (next.second != current + 1 || entries.isEmpty())) throw MarkupChangedException()
-        return AccountPage(user, entries, next?.first)
+        if (next != null && (next.second != current + 1 || anchors.isEmpty())) throw MarkupChangedException()
+        return AccountPage(user, entries.parseEntries(windowed), next?.first)
     }
 }

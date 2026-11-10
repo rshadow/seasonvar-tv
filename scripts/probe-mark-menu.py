@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--device", required=True)
 parser.add_argument("--runner", required=True)
 parser.add_argument("--output", required=True, type=Path)
-parser.add_argument("--mode", choices=("mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine", "shared-card-cache", "cache-memory"), default="mark-menu-layout")
+parser.add_argument("--mode", choices=("catalog-layout", "mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine", "shared-card-cache", "cache-memory"), default="mark-menu-layout")
 args = parser.parse_args()
 if not args.device.startswith("emulator-"):
     parser.error("This probe runs only on an emulator")
@@ -38,7 +38,7 @@ for line in process.stdout:
 code = process.wait(timeout=10)
 watchdog.cancel()
 remote = fields.pop("artifacts", None)
-artifact_dir = "cache-memory-probe" if args.mode == "cache-memory" else "shared-card-cache-probe" if args.mode == "shared-card-cache" else "series-list-probe" if args.mode == "series-list-engine" else "ui-screens-probe" if args.mode in ("ui-screens-layout", "ui-dialogs-layout") else "details-progress-probe" if args.mode == "details-progress-layout" else "history-clear-probe" if args.mode == "history-clear-layout" else "mark-menu-probe"
+artifact_dir = "catalog-layout-probe" if args.mode == "catalog-layout" else "cache-memory-probe" if args.mode == "cache-memory" else "shared-card-cache-probe" if args.mode == "shared-card-cache" else "series-list-probe" if args.mode == "series-list-engine" else "ui-screens-probe" if args.mode in ("ui-screens-layout", "ui-dialogs-layout") else "details-progress-probe" if args.mode == "details-progress-layout" else "history-clear-probe" if args.mode == "history-clear-layout" else "mark-menu-probe"
 if isinstance(remote, str) and re.fullmatch(r"/storage/emulated/0/Android/data/ru\.seasonvar\.tv/files/" + artifact_dir + r"/run-[0-9]+", remote):
     copied = subprocess.run(adb + ["pull", remote + "/.", str(args.output)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     fields["artifacts_copied"] = copied.returncode == 0
@@ -57,6 +57,8 @@ if args.mode in ("series-list-engine", "shared-card-cache"):
     checks = ("descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "focus_preserved", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "shared-card-cache":
     checks += ("native_shared", "private_cleared", "memory_bounded")
+if args.mode == "catalog-layout":
+    checks = ("window_bounded", "focus_preserved", "geometry_stable", "text_centered", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "cache-memory":
     checks = ("memory_measured", "read_only", "script_success", "artifacts_copied")
 if code or any(fields.get(key) is not True for key in checks):

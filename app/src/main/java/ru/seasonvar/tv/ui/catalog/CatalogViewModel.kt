@@ -30,6 +30,7 @@ data class CatalogUiState(
     val loadingMore: Boolean = false,
     val moreFailure: LoadFailure? = null,
     val hasMore: Boolean = false,
+    val parsingWindow: ru.seasonvar.tv.data.ListParsingWindow? = (entries as? ru.seasonvar.tv.data.ParsedSeriesEntries)?.window,
 )
 
 data class DescriptionState(
@@ -44,6 +45,7 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
     private val accountOwner: () -> String? = { null }) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState(loading = feed == PublicFeed.TODAY))
     val state = mutableState.asStateFlow()
+    init { ru.seasonvar.tv.ui.catalog.manageListParsing(viewModelScope, state) { it.entries } }
     private var refreshJob: Job? = null
 
     private var started = false

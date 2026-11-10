@@ -50,10 +50,10 @@ class CatalogRepository(
         }
 
     private fun parse(html: String, day: LocalDate, feed: PublicFeed): CatalogPage = when (feed) {
-        PublicFeed.TODAY -> SeasonvarParser.today(html, day)
-        PublicFeed.BEST -> SeasonvarParser.best(html, day)
-        PublicFeed.ANNOUNCEMENTS -> SeasonvarParser.announcements(html, day)
-        PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> SeasonvarParser.sidebar(html, day)
+        PublicFeed.TODAY -> SeasonvarParser.today(html, day, windowed = true)
+        PublicFeed.BEST -> SeasonvarParser.best(html, day, windowed = true)
+        PublicFeed.ANNOUNCEMENTS -> SeasonvarParser.announcements(html, day, windowed = true)
+        PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> SeasonvarParser.sidebar(html, day, windowed = true)
     }
 
     private fun cacheName(feed: PublicFeed): String = when (feed) {
@@ -69,7 +69,7 @@ class CatalogRepository(
         if (query.isBlank()) return@withContext emptyList()
         val url = "https://seasonvar.ru/autocomplete.php".toHttpUrl().newBuilder()
             .addQueryParameter("query", query).build()
-        SeasonvarParser.search(source.get(url.toString()), query)
+        SeasonvarParser.search(source.get(url.toString()), query, windowed = true)
     }
 
     suspend fun bestFilterOptions(): BestFilterOptions = withContext(Dispatchers.IO) {
@@ -80,15 +80,16 @@ class CatalogRepository(
         val selected = filters.safe()
         val cached = htmlCache.read(selected.cacheName, htmlCache.capture()) ?: return@withContext null
         runCatching {
-            if (selected.switches.isEmpty()) BestFilterParser.parse(cached.html, day, selected)
+            if (selected.switches.isEmpty()) BestFilterParser.parse(cached.html, day, selected, windowed = true)
             else {
                 val saved = JSONObject(cached.html)
                 require(saved.getInt("version") == 1)
                 val values = saved.getJSONObject("filters")
                 require(values.keys().asSequence().associateWith { values.getString(it) } == selected.values())
-                val metadata = BestFilterParser.parse(saved.getString("metadata"), day, selected.base())
+                val metadata = BestFilterParser.parse(saved.getString("metadata"), day, selected.base(), windowed = true)
                 require(metadata.options.normalize(selected) == selected)
-                metadata.copy(page = SeasonvarParser.bestFragment(saved.getString("fragment"), day), filters = selected)
+                (metadata.page.entries as? ParsedSeriesEntries)?.window?.close()
+                metadata.copy(page = SeasonvarParser.bestFragment(saved.getString("fragment"), day, windowed = true), filters = selected)
             }
         }.getOrNull()
     }
@@ -108,12 +109,13 @@ class CatalogRepository(
             currentCoroutineContext().ensureActive()
         }
         selected = normalized
-        var result = BestFilterParser.parse(html, day, selected.base())
+        var result = BestFilterParser.parse(html, day, selected.base(), windowed = true)
         var cached = html
         if (selected.switches.isNotEmpty()) {
             val fragment = source.bestFilters(selected)
             currentCoroutineContext().ensureActive()
-            result = result.copy(page = SeasonvarParser.bestFragment(fragment, day), filters = selected)
+            (result.page.entries as? ParsedSeriesEntries)?.window?.close()
+            result = result.copy(page = SeasonvarParser.bestFragment(fragment, day, windowed = true), filters = selected)
             cached = JSONObject().put("version", 1).put("filters", JSONObject(selected.values()))
                 .put("metadata", html).put("fragment", fragment).toString()
         }
@@ -123,6 +125,46 @@ class CatalogRepository(
     }
 
     fun cachedDescription(entry: SeriesEntry): SeriesDescription? = cardData.description(entry.id)
+
+    suspend fun catalogOptions(authenticated: (suspend () -> String)? = null): CatalogFilterOptions = withContext(Dispatchers.IO) {
+        val lease = htmlCache.capture()
+        val html = authenticated?.invoke() ?: source.get("https://seasonvar.ru/")
+        val options = BrowseCatalogParser.options(html)
+        currentCoroutineContext().ensureActive()
+        if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("Catalog scope changed")
+        htmlCache.save("catalog-options.html", html, lease)
+        options
+    }
+
+    suspend fun cachedCatalogOptions(): CatalogFilterOptions? = withContext(Dispatchers.IO) {
+        htmlCache.read("catalog-options.html", htmlCache.capture())?.let { runCatching { BrowseCatalogParser.options(it.html) }.getOrNull() }
+    }
+
+    private fun catalogCacheName(filters: CatalogFilters) = HtmlResponseCache.requestKey("catalog-", "POST",
+        "https://seasonvar.ru/index.php", CatalogFilters.defaults + filters.values)
+
+    suspend fun cachedCatalog(filters: CatalogFilters): CatalogPage? = withContext(Dispatchers.IO) {
+        val lease = htmlCache.capture()
+        val reader = htmlCache.openReader(catalogCacheName(filters), lease) ?: return@withContext null
+        val page = runCatching { CatalogPage(LocalDate.now(), BrowseCatalogParser.entries(reader)) }.getOrNull()
+        if (htmlCache.isCurrent(lease)) page else {
+            (page?.entries as? ParsedSeriesEntries)?.window?.close()
+            null
+        }
+    }
+
+    suspend fun catalog(filters: CatalogFilters): CatalogPage = withContext(Dispatchers.IO) {
+        val lease = htmlCache.capture()
+        val html = source.catalog(filters)
+        val initial = BrowseCatalogParser.entries(html.reader())
+        initial.window?.close()
+        currentCoroutineContext().ensureActive()
+        if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("Catalog scope changed")
+        htmlCache.save(catalogCacheName(filters), html, lease)
+        val reader = htmlCache.openReader(catalogCacheName(filters), lease)
+            ?: throw java.io.IOException("Catalog snapshot unavailable")
+        CatalogPage(LocalDate.now(), BrowseCatalogParser.entries(reader))
+    }
 
     suspend fun description(entry: SeriesEntry): SeriesDescription = withContext(Dispatchers.IO) {
         cachedDescription(entry) ?: loadCard(entry, force = false).description

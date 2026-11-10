@@ -10,8 +10,8 @@ import ru.seasonvar.tv.data.EntrySelectionParser
 import ru.seasonvar.tv.data.MarkupChangedException
 import ru.seasonvar.tv.data.SeasonvarParser
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.parseEntries
 
-// Account data stays in memory; only encrypted session cookies survive a restart.
 data class AccountUser(val id: String, val name: String, val avatarUrl: String?)
 data class AccountPage(val user: AccountUser, val entries: List<SeriesEntry>, val nextPage: String? = null)
 class SessionExpiredException : Exception("Session expired")
@@ -19,7 +19,16 @@ class LoginRejectedException : Exception("Login rejected")
 
 object AccountParser {
     private val seasonMessage = Regex("""Сезон\s+[0-9]+\s+из\s+[0-9]+""", RegexOption.IGNORE_CASE)
-    fun user(html: String): AccountUser? = user(Jsoup.parse(html, "https://seasonvar.ru/"))
+    fun user(html: String): AccountUser? {
+        org.jsoup.parser.StreamParser(org.jsoup.parser.Parser.htmlParser()).use { parser ->
+            parser.parse(html.reader(), "https://seasonvar.ru/")
+            while (true) {
+                val element = parser.selectNext(".headblock-menu, a[data-id]") ?: throw MarkupChangedException()
+                if (element.hasClass("headblock-menu")) return user(Jsoup.parse(element.outerHtml(), "https://seasonvar.ru/"))
+                element.remove()
+            }
+        }
+    }
     private fun user(doc: Document): AccountUser? {
         val header = doc.selectFirst(".headblock-menu") ?: throw MarkupChangedException()
         val links = header.select("a[href]").mapNotNull { a ->
@@ -43,31 +52,31 @@ object AccountParser {
     }
     fun resume(html: String): AccountPage = personalList(html, PersonalFeed.RESUME)
 
-    fun personalList(html: String, feed: PersonalFeed, pageUrl: String = feed.url): AccountPage {
-        if (feed == PersonalFeed.HISTORY) return HistoryParser.parse(html, pageUrl)
+    fun personalList(html: String, feed: PersonalFeed, pageUrl: String = feed.url, windowed: Boolean = false): AccountPage {
+        if (feed == PersonalFeed.HISTORY) return HistoryParser.parse(html, pageUrl, windowed)
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         val user = user(doc) ?: throw SessionExpiredException()
         if (doc.selectFirst(".pgs-marks") == null) throw MarkupChangedException()
-        return AccountPage(user, entries(doc, feed))
+        return AccountPage(user, entries(doc, feed, windowed))
     }
 
-    fun filteredPersonalList(html: String, expectedUser: AccountUser, feed: PersonalFeed): AccountPage {
+    fun filteredPersonalList(html: String, expectedUser: AccountUser, feed: PersonalFeed, windowed: Boolean = false): AccountPage {
         require(feed != PersonalFeed.HISTORY)
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         if (doc.selectFirst(".headblock-menu") != null && user(doc)?.id != expectedUser.id) throw SessionExpiredException()
         val tabs = doc.select("[data-tabr]")
         if (tabs.size != 4 || tabs.map { it.attr("data-tabr") }.toSet() !=
             setOf("marks-new", "marks-nonew", "marks-want", "marks-watched")) throw MarkupChangedException()
-        return AccountPage(expectedUser, entries(doc, feed))
+        return AccountPage(expectedUser, entries(doc, feed, windowed))
     }
 
-    private fun entries(doc: Document, feed: PersonalFeed): List<SeriesEntry> {
+    private fun entries(doc: Document, feed: PersonalFeed, windowed: Boolean): List<SeriesEntry> {
         val tabs = doc.select(feed.tabs.joinToString(", ") { "[data-tabr=$it]" })
         if (tabs.size != feed.tabs.size && (feed != PersonalFeed.RESUME || tabs.isNotEmpty())) {
             throw MarkupChangedException()
         }
         val entries = if (tabs.isNotEmpty()) {
-            tabs.flatMap { tab -> tab.select(".pgs-marks-el").mapIndexed { index, row ->
+            tabs.asSequence().flatMap { tab -> tab.select(".pgs-marks-el").asSequence().mapIndexed { index, row ->
                 val anchor = row.selectFirst("a[href*=serial-]") ?: throw MarkupChangedException()
                 val url = SeasonvarParser.pageUrl(anchor.attr("href").substringBefore('#')) ?: throw MarkupChangedException()
                 val id = seasonId(url)
@@ -89,7 +98,7 @@ object AccountParser {
                     sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark, accountProgress = progress, initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")), accountListMark = AccountListMark(id, url))
             } }
         } else {
-            doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.map { anchor ->
+            doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.asSequence()?.map { anchor ->
                 val url = SeasonvarParser.pageUrl(anchor.attr("href").substringBefore('#')) ?: throw MarkupChangedException()
                 val id = seasonId(url)
                 val name = anchor.selectFirst(".pgs-marks-name")?.text() ?: anchor.text()
@@ -98,8 +107,8 @@ object AccountParser {
                     initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")), accountListMark = AccountListMark(id, url))
             }?.distinctBy { it.url }.orEmpty()
         }
-        if (entries.map { it.key }.toSet().size != entries.size) throw MarkupChangedException()
-        return entries
+        val seen = HashSet<String>()
+        return entries.onEach { if (!seen.add(it.key)) throw MarkupChangedException() }.parseEntries(windowed)
     }
     private fun seasonId(url: String) = Regex("/serial-([0-9]+)").find(url)?.groupValues?.get(1) ?: throw MarkupChangedException()
     private fun seasonNumber(name: String) = Regex("\\((\\d+)\\s*сезон\\)", RegexOption.IGNORE_CASE).find(name)?.groupValues?.get(1)?.toIntOrNull()

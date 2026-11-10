@@ -130,11 +130,13 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         authenticatedHtml(filters.safe().url())
     }
 
+    suspend fun catalogMetadata(): String = withContext(Dispatchers.IO) { authenticatedHtml("https://seasonvar.ru/") }
+
     suspend fun personalFilterOptions(): PersonalFilterOptions = withContext(Dispatchers.IO) {
         PersonalFilterParser.options(authenticatedHtml("https://seasonvar.ru/resume"))
     }
 
-    suspend fun filteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters): FilteredPersonalPage = withContext(Dispatchers.IO) {
+    suspend fun filteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters, windowed: Boolean = false): FilteredPersonalPage = withContext(Dispatchers.IO) {
         require(feed != PersonalFeed.HISTORY)
         val expected = session.value
         val lease = htmlCache?.capture()
@@ -146,11 +148,11 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         val selected = options.normalize(requested)
         if (lease != null) htmlCache.save(personalKey(PersonalFeed.RESUME), html, lease)
         val user = expected.user ?: throw SessionExpiredException()
-        val page = if (!selected.active) AccountParser.personalList(html, feed) else {
+        val page = if (!selected.active) AccountParser.personalList(html, feed, windowed = windowed) else {
             val response = transport.filters(selected, jar)
             currentCoroutineContext().ensureActive()
             valid()
-            try { AccountParser.filteredPersonalList(response, user, feed).also {
+            try { AccountParser.filteredPersonalList(response, user, feed, windowed).also {
                 if (lease != null) htmlCache.save(filterKey(selected), response, lease)
             } }
             catch (error: SessionExpiredException) {
@@ -166,19 +168,19 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         FilteredPersonalPage(page, options, selected)
     }
 
-    suspend fun personalList(feed: PersonalFeed, pageUrl: String? = null): AccountPage = withContext(Dispatchers.IO) {
+    suspend fun personalList(feed: PersonalFeed, pageUrl: String? = null, windowed: Boolean = false): AccountPage = withContext(Dispatchers.IO) {
         val lease = htmlCache?.capture()
         val url = if (pageUrl == null) feed.url else {
             require(feed == PersonalFeed.HISTORY)
             HistoryParser.pageUrl(pageUrl) ?: throw ru.seasonvar.tv.data.MarkupChangedException()
         }
         val html = authenticatedHtml(url)
-        AccountParser.personalList(html, feed, url).also {
+        AccountParser.personalList(html, feed, url, windowed).also {
             if (lease != null) htmlCache.save(personalKey(feed, url), html, lease)
         }
     }
 
-    suspend fun cachedPersonalList(feed: PersonalFeed, pageUrl: String = feed.url): AccountPage? = withContext(Dispatchers.IO) {
+    suspend fun cachedPersonalList(feed: PersonalFeed, pageUrl: String = feed.url, windowed: Boolean = false): AccountPage? = withContext(Dispatchers.IO) {
         val cache = htmlCache ?: return@withContext null
         val expected = session.value
         val owner = expected.user?.id ?: return@withContext null
@@ -186,11 +188,11 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         val saved = cache.read(personalKey(feed, pageUrl), lease) ?: return@withContext null
         runCatching {
             require(AccountParser.user(saved.html)?.id == owner)
-            AccountParser.personalList(saved.html, feed, pageUrl)
+            AccountParser.personalList(saved.html, feed, pageUrl, windowed)
         }.getOrNull()?.takeIf { session.value.version == expected.version && cache.isCurrent(lease) }
     }
 
-    suspend fun cachedFilteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters): FilteredPersonalPage? =
+    suspend fun cachedFilteredPersonalList(feed: PersonalFeed, requested: PersonalListFilters, windowed: Boolean = false): FilteredPersonalPage? =
         withContext(Dispatchers.IO) {
             val cache = htmlCache ?: return@withContext null
             val expected = session.value
@@ -202,9 +204,9 @@ class AccountRepository(private val sessions: SessionManager, private val transp
                 val options = PersonalFilterParser.options(metadata.html)
                 val selected = options.normalize(requested)
                 require(selected == requested)
-                val page = if (!selected.active) AccountParser.personalList(metadata.html, feed) else {
+                val page = if (!selected.active) AccountParser.personalList(metadata.html, feed, windowed = windowed) else {
                     val response = cache.read(filterKey(selected), lease) ?: return@runCatching null
-                    AccountParser.filteredPersonalList(response.html, user, feed)
+                    AccountParser.filteredPersonalList(response.html, user, feed, windowed)
                 }
                 FilteredPersonalPage(page, options, selected)
             }.getOrNull()?.takeIf { session.value.version == expected.version && cache.isCurrent(lease) }

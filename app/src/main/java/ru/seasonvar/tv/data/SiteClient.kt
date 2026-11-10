@@ -41,6 +41,8 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
 
     override suspend fun bestFilters(filters: BestListFilters): String = execute(bestFiltersRequest(filters))
 
+    override suspend fun catalog(filters: CatalogFilters): String = execute(catalogRequest(filters))
+
     override suspend fun sidebar(feed: PublicFeed): String = execute(sidebarRequest(feed))
 
     suspend fun accountGet(url: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =
@@ -102,6 +104,10 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     }
 
     companion object {
+        internal fun catalogRequest(filters: CatalogFilters): Request = Request.Builder().url("https://seasonvar.ru/index.php")
+            .header("Referer", "https://seasonvar.ru/").header("Origin", "https://seasonvar.ru")
+            .header("X-Requested-With", "XMLHttpRequest")
+            .post(FormBody.Builder().apply { filters.form().forEach { (key, value) -> add(key, value) } }.build()).build()
         internal fun clearHistoryRequest(): Request = Request.Builder().url("https://seasonvar.ru/ajax.php")
             .header("Referer", "https://seasonvar.ru/?mod=history").header("Origin", "https://seasonvar.ru")
             .header("X-Requested-With", "XMLHttpRequest")

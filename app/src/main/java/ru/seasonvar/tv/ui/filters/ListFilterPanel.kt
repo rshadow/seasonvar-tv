@@ -134,7 +134,7 @@ fun ListFilterPanel(title: String, state: ListFiltersState, controller: ListFilt
 }
 
 @Composable
-private fun FilterRow(title: String, value: String?, modifier: Modifier, selected: Boolean? = null,
+internal fun FilterRow(title: String, value: String?, modifier: Modifier, selected: Boolean? = null,
     checkboxChecked: Boolean? = null, onClick: () -> Unit) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme

@@ -25,6 +25,8 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (probeArguments.getString("mode") == "catalog-layout") { BrowseCatalogLayoutProbe.run(this); return }
+        if (probeArguments.getString("mode") == "catalog-live") { BrowseCatalogLiveProbe.run(this); return }
         if (mode == "season-messages") { SeasonMessagesLiveProbe.run(this); return }
         if (mode == "series-list-engine") { SeriesListEngineProbe.run(this); return }
         if (mode == "shared-card-cache") { SeriesListEngineProbe.run(this, sharedCache = true); return }

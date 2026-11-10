@@ -26,11 +26,12 @@ class PersonalListViewModel internal constructor(
 ) : ViewModel() {
     constructor(account: AccountRepository, feed: PersonalFeed,
         preferences: ListFilterPreferences = ListFilterPreferences()) :
-        this(account.session, { account.personalList(feed) }, { account.personalList(feed, it) },
+        this(account.session, { account.personalList(feed, windowed = true) }, { account.personalList(feed, it, windowed = true) },
             if (feed == PersonalFeed.HISTORY) null else PersonalListFilterSource(account, feed, preferences),
-            { account.cachedPersonalList(feed) })
+            { account.cachedPersonalList(feed, windowed = true) })
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
+    init { ru.seasonvar.tv.ui.catalog.manageListParsing(viewModelScope, state) { it.entries } }
     private var refreshJob: Job? = null
     private var moreJob: Job? = null
     private var nextPage: String? = null
@@ -109,7 +110,8 @@ class PersonalListViewModel internal constructor(
                     val saved = filteredCache?.page ?: if (filterSource == null) cached() else null
                     ensureActive()
                     if (saved != null && session.value.version == expected && generation == expectedGeneration) {
-                        mutableState.value = state.value.copy(entries = saved.entries, loaded = true, cached = true)
+                        mutableState.value = state.value.copy(entries = saved.entries, loaded = true, cached = true,
+                            parsingWindow = (saved.entries as? ParsedSeriesEntries)?.window)
                     }
                 }
                 val filtered = filterSource?.load(mutableFilters.value.values)
@@ -194,6 +196,8 @@ class PersonalListViewModel internal constructor(
     }
     private fun failure(e: Exception) = when (e) { is IOException -> LoadFailure.NETWORK; is SiteHttpException -> LoadFailure.HTTP; else -> LoadFailure.MARKUP }
     fun loadMore(retry: Boolean = false) {
+        val parsed = (state.value.entries as? ParsedSeriesEntries)?.window?.state?.value
+        if (parsed?.hasMore == true || parsed?.failed == true) return
         if (dirty) { activate(); return }
         val next = nextPage ?: return
         if (session.value.user == null || state.value.loading || state.value.loadingMore || (!retry && state.value.moreFailure != null)) return
@@ -207,11 +211,13 @@ class PersonalListViewModel internal constructor(
                 if (session.value.version != expected || generation != expectedGeneration) return@launch
                 if (next in visitedPages || page.nextPage == next || page.nextPage in visitedPages ||
                     (page.entries.isEmpty() && page.nextPage != null)) throw MarkupChangedException()
-                val entries = state.value.entries + page.entries
+                val previous = (state.value.entries as? ParsedSeriesEntries)?.window?.state?.value?.entries ?: state.value.entries
+                val entries = (page.entries as? ParsedSeriesEntries)?.prepend(previous) ?: (previous + page.entries)
                 if (entries.map { it.key }.toSet().size != entries.size) throw MarkupChangedException()
                 visitedPages += next
                 nextPage = page.nextPage
-                mutableState.value = state.value.copy(entries = entries, loadingMore = false, hasMore = page.nextPage != null)
+                mutableState.value = state.value.copy(entries = entries, loadingMore = false, hasMore = page.nextPage != null,
+                    parsingWindow = (entries as? ParsedSeriesEntries)?.window)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 ensureActive()
@@ -221,6 +227,11 @@ class PersonalListViewModel internal constructor(
         }
     }
     fun markRemoved(target: AccountListMark) {
+        val parsed = (state.value.entries as? ParsedSeriesEntries)?.window
+        if (parsed != null) {
+            viewModelScope.launch { parsed.excludeSeason(target.seasonId) }
+            return
+        }
         val entries = state.value.entries.filterNot { it.accountListMark?.seasonId == target.seasonId }
         mutableState.value = state.value.copy(entries = entries)
     }
