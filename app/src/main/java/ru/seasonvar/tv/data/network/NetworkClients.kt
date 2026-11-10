@@ -5,6 +5,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.dnsoverhttps.DnsOverHttps
+import ru.seasonvar.tv.data.settings.TlsPinSettings
 import java.net.InetAddress
 import java.security.KeyStore
 import java.util.concurrent.TimeUnit
@@ -14,6 +15,7 @@ import javax.net.ssl.X509TrustManager
 
 internal class NetworkClients {
     private val directClient = OkHttpClient.Builder()
+        .certificatePinner(TlsPinSettings.certificatePinner)
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(35, TimeUnit.SECONDS)
@@ -35,7 +37,8 @@ internal class NetworkClients {
 
     private val quad9 by lazy {
         DnsOverHttps.Builder()
-            .client(OkHttpClient.Builder().callTimeout(8, TimeUnit.SECONDS).build())
+            .client(OkHttpClient.Builder().certificatePinner(TlsPinSettings.certificatePinner)
+                .callTimeout(8, TimeUnit.SECONDS).build())
             .url("https://dns.quad9.net/dns-query".toHttpUrl())
             .bootstrapDnsHosts(InetAddress.getByName("9.9.9.9"))
             .includeIPv6(false)

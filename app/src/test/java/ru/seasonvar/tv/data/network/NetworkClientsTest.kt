@@ -5,6 +5,7 @@ import okhttp3.Protocol
 import okhttp3.dnsoverhttps.DnsOverHttps
 import org.junit.Assert.*
 import org.junit.Test
+import ru.seasonvar.tv.data.settings.TlsPinSettings
 
 class NetworkClientsTest {
     @Test fun dns_selection_is_independent_of_bypass_in_all_four_combinations() {
@@ -12,6 +13,10 @@ class NetworkClientsTest {
         for (bypass in listOf(false, true)) {
             for (provider in DnsProvider.entries) {
                 val client = clients.forConfiguration(NetworkConfiguration(bypass, provider))
+                assertEquals(TlsPinSettings.certificatePinner.pins, client.certificatePinner.pins)
+                assertEquals(TlsPinSettings.certificatePinner.pins,
+                    clients.forMedia(NetworkConfiguration(bypass, provider)).certificatePinner.pins)
+                assertEquals(TlsPinSettings.certificatePinner.pins, client.newBuilder().build().certificatePinner.pins)
                 when (provider) {
                     DnsProvider.SYSTEM -> assertSame(Dns.SYSTEM, client.dns)
                     DnsProvider.QUAD9_DOH -> assertTrue(client.dns is DnsOverHttps)

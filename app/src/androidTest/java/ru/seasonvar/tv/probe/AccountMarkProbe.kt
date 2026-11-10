@@ -25,6 +25,7 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "tls-pins") { TlsPinningProbe.run(this); return }
         if (probeArguments.getString("mode") == "catalog-layout") { BrowseCatalogLayoutProbe.run(this); return }
         if (probeArguments.getString("mode") == "catalog-live") { BrowseCatalogLiveProbe.run(this); return }
         if (mode == "season-messages") { SeasonMessagesLiveProbe.run(this); return }
