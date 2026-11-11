@@ -409,6 +409,10 @@ proxy-live-probe:
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-proxy.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)" --auth "$(PROXY_PROBE_AUTH)" --protocol "$(PROXY_PROBE_PROTOCOL)"
 
+.PHONY: connection-checks-probe
+connection-checks-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=connection-checks MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"
+
 .PHONY: proxy-settings-probe
 proxy-settings-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=proxy-settings MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"

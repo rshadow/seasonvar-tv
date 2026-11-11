@@ -363,4 +363,18 @@
     <string name="proxy_cancel">Отмена</string>
     <string name="proxy_invalid">Проверьте адрес, порт (1–65535), логин и пароль прокси.</string>
     <string name="proxy_save_failed">Не удалось сохранить настройки прокси.</string>
+    <string name="connection_refresh">Проверить подключение заново</string>
+    <string name="connection_site">Сайт</string>
+    <string name="connection_posters">Постеры</string>
+    <string name="connection_video">Видео</string>
+    <string name="connection_checking">Идёт проверка…</string>
+    <string name="connection_all_available">Все проверки прошли</string>
+    <string name="connection_failed">Не прошли проверки: %1$s</string>
+    <string name="connection_available">Доступно</string>
+    <string name="connection_timeout">Время ожидания истекло</string>
+    <string name="connection_network_failure">Нет соединения</string>
+    <string name="connection_tls_failure">Ошибка защищённого соединения</string>
+    <string name="connection_http_failure">Сервер отклонил запрос</string>
+    <string name="connection_content_failure">Неожиданный ответ сервера</string>
+    <string name="connection_source_failure">Не удалось получить источник</string>
 </resources>

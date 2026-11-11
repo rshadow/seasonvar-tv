@@ -8,6 +8,27 @@ import org.junit.Test
 import ru.seasonvar.tv.data.settings.TlsPinSettings
 
 class NetworkClientsTest {
+    @Test fun diagnostic_timeouts_preserve_pins_and_do_not_change_normal_request_budgets() {
+        val normal = NetworkClients().forConfiguration(NetworkConfiguration())
+        val diagnostic = NetworkClients(3_000, 5_000).forConfiguration(NetworkConfiguration())
+        assertEquals(8_000, normal.connectTimeoutMillis)
+        assertEquals(30_000, normal.readTimeoutMillis)
+        assertEquals(35_000, normal.callTimeoutMillis)
+        assertEquals(3_000, diagnostic.connectTimeoutMillis)
+        assertEquals(5_000, diagnostic.readTimeoutMillis)
+        assertEquals(5_000, diagnostic.callTimeoutMillis)
+        assertEquals(normal.certificatePinner.pins, diagnostic.certificatePinner.pins)
+        assertNotSame(normal.connectionPool, diagnostic.connectionPool)
+    }
+
+    @Test fun closing_a_diagnostic_transport_releases_its_dispatcher_without_closing_the_application_transport() {
+        val application = NetworkClients().forConfiguration(NetworkConfiguration())
+        val transports = NetworkClients(3_000, 5_000)
+        val diagnostic = transports.forConfiguration(NetworkConfiguration())
+        transports.close()
+        assertTrue(diagnostic.dispatcher.executorService.isShutdown)
+        assertFalse(application.dispatcher.executorService.isShutdown)
+    }
     @Test fun dns_selection_is_independent_of_bypass_for_every_provider() {
         val clients = NetworkClients()
         for (bypass in listOf(false, true)) {

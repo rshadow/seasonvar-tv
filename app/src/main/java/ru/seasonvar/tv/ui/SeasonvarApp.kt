@@ -168,6 +168,9 @@ internal fun SeasonvarApp(
     onDnsChange: (DnsProvider) -> Unit = {},
     proxy: ru.seasonvar.tv.data.network.ProxyConfiguration = ru.seasonvar.tv.data.network.ProxyConfiguration.Disabled,
     onProxyChange: suspend (ru.seasonvar.tv.data.network.ProxyConfiguration) -> Boolean = { true },
+    connectionCheck: ru.seasonvar.tv.ui.settings.ConnectionCheckState = ru.seasonvar.tv.ui.settings.ConnectionCheckState(),
+    onConnectionRefresh: () -> Unit = {},
+    onConnectionVisible: (Boolean) -> Unit = {},
     imagePrefetchEnabled: Boolean = true,
     onImagePrefetchChange: (Boolean) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
@@ -227,6 +230,8 @@ internal fun SeasonvarApp(
             onBypassChange = onBypassChange,
             dnsProvider = dnsProvider,
             onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
+            connectionCheck = connectionCheck, onConnectionRefresh = onConnectionRefresh,
+            onConnectionVisible = onConnectionVisible,
             imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
@@ -274,6 +279,9 @@ private fun SeasonvarContent(
     onDnsChange: (DnsProvider) -> Unit = {},
     proxy: ru.seasonvar.tv.data.network.ProxyConfiguration = ru.seasonvar.tv.data.network.ProxyConfiguration.Disabled,
     onProxyChange: suspend (ru.seasonvar.tv.data.network.ProxyConfiguration) -> Boolean = { true },
+    connectionCheck: ru.seasonvar.tv.ui.settings.ConnectionCheckState = ru.seasonvar.tv.ui.settings.ConnectionCheckState(),
+    onConnectionRefresh: () -> Unit = {},
+    onConnectionVisible: (Boolean) -> Unit = {},
     imagePrefetchEnabled: Boolean = true,
     onImagePrefetchChange: (Boolean) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
@@ -740,6 +748,8 @@ private fun SeasonvarContent(
                 AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
             } else if (section == Section.SETTINGS) {
                 SettingsPane(
+                    connectionCheck = connectionCheck, onConnectionRefresh = onConnectionRefresh,
+                    onConnectionVisible = onConnectionVisible,
                     imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
                     bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
                     translationSettingsModel = translationSettingsModel,
@@ -1368,6 +1378,9 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier, large: Boolean = fals
 
 @Composable
 private fun SettingsPane(
+    connectionCheck: ru.seasonvar.tv.ui.settings.ConnectionCheckState,
+    onConnectionRefresh: () -> Unit,
+    onConnectionVisible: (Boolean) -> Unit,
     imagePrefetchEnabled: Boolean,
     onImagePrefetchChange: (Boolean) -> Unit,
     autoNextSeasonEnabled: Boolean,
@@ -1398,6 +1411,12 @@ private fun SettingsPane(
     val c = MaterialTheme.colorScheme
     var startDialogOpen by rememberSaveable { mutableStateOf(false) }
     var startFocused by remember { mutableStateOf(false) }
+    val connectionRefreshFocus = remember { FocusRequester() }
+    val visibleCallback by rememberUpdatedState(onConnectionVisible)
+    DisposableEffect(Unit) {
+        visibleCallback(true)
+        onDispose { visibleCallback(false) }
+    }
     val bypassFocus = remember { FocusRequester() }
     val translationFocus = remember { FocusRequester() }
     val menuVisibilityFocus = remember { FocusRequester() }
@@ -1512,7 +1531,7 @@ private fun SettingsPane(
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(prefetchFocus)
-            .focusProperties { left = menuFocus; up = clockFocus; down = bypassFocus }
+            .focusProperties { left = menuFocus; up = clockFocus; down = connectionRefreshFocus }
             .onFocusChanged { prefetchFocused = it.isFocused }
             .border(d.focusBorderWidth, if (prefetchFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))
@@ -1527,14 +1546,15 @@ private fun SettingsPane(
             Checkbox(checked = imagePrefetchEnabled, onCheckedChange = null)
         }
         Spacer(Modifier.height(d.spacingLarge))
-        Text(stringResource(R.string.connection_title),
-            style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+        ru.seasonvar.tv.ui.settings.ConnectionChecks(
+            connectionCheck, { onInteraction(); onConnectionRefresh() }, connectionRefreshFocus,
+            prefetchFocus, bypassFocus, menuFocus)
         Spacer(Modifier.height(d.spacingMedium))
         Row(
             Modifier.fillMaxWidth().focusRequester(bypassFocus)
                 .focusProperties {
                     left = menuFocus
-                    up = prefetchFocus
+                    up = connectionRefreshFocus
                     down = dnsFocus
                 }
                 .onFocusChanged { focused = it.isFocused }
