@@ -17,15 +17,33 @@ class NetworkSettings(context: Context, storeName: String = "network") {
     )
     val configuration = mutableConfiguration.asStateFlow()
 
+    fun savedManualProxy(): ProxyConfiguration.Server? = try {
+        preferences.getString("proxy_sealed", null)?.let { ProxyCodec.decode(cipher.open(it)) }
+    } catch (_: Exception) { null }
+
+    fun savedPacUrl(): String = preferences.getString("pac_url", "").orEmpty()
+
     private fun readProxy(): ProxyConfiguration = try {
-        preferences.getString("proxy_sealed", null)?.let { ProxyCodec.decode(cipher.open(it)) } ?: ProxyConfiguration.Disabled
+        when (preferences.getString("proxy_mode", null)) {
+            "off" -> ProxyConfiguration.Disabled
+            "antizapret" -> ProxyConfiguration.AntiZapret
+            "pac" -> ProxyConfiguration.Pac(savedPacUrl())
+            "manual" -> ProxyCodec.decode(cipher.open(checkNotNull(preferences.getString("proxy_sealed", null))))
+            null -> preferences.getString("proxy_sealed", null)?.let { ProxyCodec.decode(cipher.open(it)) } ?: ProxyConfiguration.Disabled
+            else -> ProxyConfiguration.Unavailable
+        }
     } catch (_: Exception) { ProxyConfiguration.Unavailable }
 
     fun setProxy(proxy: ProxyConfiguration) {
         require(proxy != ProxyConfiguration.Unavailable)
         val edit = preferences.edit()
-        if (proxy is ProxyConfiguration.Server) edit.putString("proxy_sealed", cipher.seal(ProxyCodec.encode(proxy)))
-        else edit.remove("proxy_sealed")
+        when (proxy) {
+            is ProxyConfiguration.Server -> edit.putString("proxy_mode", "manual")
+                .putString("proxy_sealed", cipher.seal(ProxyCodec.encode(proxy)))
+            is ProxyConfiguration.Pac -> edit.putString("proxy_mode", "pac").putString("pac_url", proxy.url)
+            ProxyConfiguration.AntiZapret -> edit.putString("proxy_mode", "antizapret")
+            else -> edit.putString("proxy_mode", "off")
+        }
         check(edit.commit()) { "Proxy settings unavailable" }
         mutableConfiguration.update { it.copy(proxy = proxy) }
     }

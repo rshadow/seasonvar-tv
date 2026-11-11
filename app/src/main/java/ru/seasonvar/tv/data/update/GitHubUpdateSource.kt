@@ -28,6 +28,7 @@ class GitHubUpdateSource internal constructor(
         .certificatePinner(TlsPinSettings.certificatePinner)
         .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(3, TimeUnit.MINUTES).build(),
+    private val configure: (OkHttpClient) -> OkHttpClient = { it },
 ) : UpdateSource {
     override suspend fun latest(): String? = metadata(GitHubReleaseParser.API_URL, missingAllowed = true)
 
@@ -39,7 +40,7 @@ class GitHubUpdateSource internal constructor(
 
     private suspend fun metadata(url: String, missingAllowed: Boolean = false, limit: Int = 1024 * 1024): String? =
         withContext(Dispatchers.IO) {
-            client.newCall(Request.Builder().url(url)
+            configure(client).newCall(Request.Builder().url(url)
                 .header("Accept", "application/vnd.github+json").header("X-GitHub-Api-Version", "2022-11-28")
                 .header("User-Agent", "Seasonvar-TV").build()).awaitResponse().use { response ->
                 if (missingAllowed && response.code == 404) return@withContext null
@@ -65,7 +66,7 @@ class GitHubUpdateSource internal constructor(
             var url = asset.url
             repeat(6) { redirect ->
                 if (!GitHubReleaseParser.allowedDownloadUrl(url)) throw UpdateFormatException()
-                client.newCall(Request.Builder().url(url).header("User-Agent", "Seasonvar-TV").build())
+                configure(client).newCall(Request.Builder().url(url).header("User-Agent", "Seasonvar-TV").build())
                     .awaitResponse().use { response ->
                         if (response.code in setOf(301, 302, 303, 307, 308)) {
                             if (redirect == 5) throw UpdateFormatException()

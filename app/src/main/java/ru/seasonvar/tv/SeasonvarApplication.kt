@@ -26,7 +26,8 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
         scope = sessions::cacheScope, currentScope = sessions::currentCacheScope) }
     val cardData by lazy { ru.seasonvar.tv.data.cache.CardDataCache(htmlCache) }
     internal val listResourcePermits = kotlinx.coroutines.sync.Semaphore(ru.seasonvar.tv.data.images.LIST_RESOURCE_CONCURRENCY)
-    val siteClient by lazy { SiteClient(networkSettings, sessions) }
+    val pac by lazy { ru.seasonvar.tv.data.network.pac.PacCoordinator(this, networkSettings, applicationScope) }
+    val siteClient by lazy { SiteClient(networkSettings, sessions, pac) }
     val account by lazy { ru.seasonvar.tv.data.account.AccountRepository(sessions, siteClient, htmlCache, cardData) }
     val translationCatalog by lazy { ru.seasonvar.tv.data.TranslationCatalogRepository(siteClient) }
     val searchHistory by lazy { ru.seasonvar.tv.data.SearchHistory(ru.seasonvar.tv.data.PreferencesSearchHistoryStore(this)) }
@@ -44,7 +45,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     } }
     val updateInstaller by lazy { ru.seasonvar.tv.data.update.UpdateInstaller(this) }
     val updates by lazy { ru.seasonvar.tv.data.update.UpdateRepository(
-        ru.seasonvar.tv.data.update.GitHubUpdateSource(), File(cacheDir, "updates"), updateInstaller::verify) }
+        ru.seasonvar.tv.data.update.GitHubUpdateSource(configure = pac::githubClient), File(cacheDir, "updates"), updateInstaller::verify) }
     val playbackProgress by lazy { PlaybackProgress(this) }
     val smartContinueCache by lazy { ru.seasonvar.tv.data.smart.PreferencesSmartContinueCache(this) }
     val listFilterPreferences by lazy {
@@ -57,7 +58,28 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val playbackHistory by lazy { ru.seasonvar.tv.data.playback.PlaybackHistoryWriter(applicationScope, account) }
     val homeChannels by lazy { ru.seasonvar.tv.data.home.HomeChannels(this, applicationScope) }
 
-    override fun onCreate() { super.onCreate(); homeChannels.start() }
+    override fun onCreate() {
+        super.onCreate()
+        val process = if (android.os.Build.VERSION.SDK_INT >= 28) getProcessName()
+            else java.io.File("/proc/self/cmdline").readText(Charsets.UTF_8).substringBefore('\u0000')
+        if (process != packageName) {
+            if (android.os.Build.VERSION.SDK_INT >= 28) android.webkit.WebView.setDataDirectorySuffix("pac-parser")
+            return
+        }
+        pac.start()
+        homeChannels.start()
+    }
+
+    suspend fun selectProxy(proxy: ru.seasonvar.tv.data.network.ProxyConfiguration) {
+        if (proxy is ru.seasonvar.tv.data.network.ProxyConfiguration.Pac || proxy == ru.seasonvar.tv.data.network.ProxyConfiguration.AntiZapret)
+            pac.activate(networkSettings.configuration.value.copy(proxy = proxy))
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { networkSettings.setProxy(proxy) }
+    }
+
+    suspend fun prepareNetwork(configuration: ru.seasonvar.tv.data.network.NetworkConfiguration) {
+        pac.prepare(configuration)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { siteClient.prepareNetwork(configuration) }
+    }
 
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this).callFactory(siteClient).build()

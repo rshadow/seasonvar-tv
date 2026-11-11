@@ -3,6 +3,7 @@ package ru.seasonvar.tv.ui.settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import org.junit.After
@@ -16,6 +17,60 @@ import ru.seasonvar.tv.data.settings.ConnectionCheckSettings
 class ConnectionCheckViewModelTest {
     @Before fun mainDispatcher() { Dispatchers.setMain(StandardTestDispatcher()) }
     @After fun resetDispatcher() { Dispatchers.resetMain() }
+
+    @Test fun applying_proxy_cancels_old_checks_and_failed_activation_checks_the_previous_configuration() = runTest {
+        val configuration = MutableStateFlow(NetworkConfiguration())
+        val events = mutableListOf<NetworkConfiguration>()
+        val model = ConnectionCheckViewModel(configuration) { cfg, report ->
+            events += cfg
+            ConnectionTarget.entries.forEach { report(it, ConnectionResult.available) }
+        }
+        model.setVisible(true); runCurrent()
+        val ready = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val applying = launch { assertFalse(model.reconfigure { ready.await(); false }) }
+        runCurrent()
+        assertEquals(1, events.size)
+        assertTrue(model.state.value.checking)
+        model.refresh(); runCurrent()
+        assertEquals(1, events.size)
+        ready.complete(Unit); applying.join(); runCurrent()
+        assertEquals(listOf(configuration.value, configuration.value), events)
+        assertFalse(model.state.value.checking)
+        model.setVisible(false)
+    }
+
+    @Test fun probes_wait_for_network_preparation_and_old_preparations_cannot_start_them() = runTest {
+        val configuration = MutableStateFlow(NetworkConfiguration())
+        val gates = mutableListOf<kotlinx.coroutines.CompletableDeferred<Unit>>()
+        val checked = mutableListOf<NetworkConfiguration>()
+        val changes = MutableStateFlow(0L)
+        val model = ConnectionCheckViewModel(configuration, prepare = {
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>(); gates += gate; gate.await()
+        }, changes = changes) { cfg, report ->
+            checked += cfg
+            ConnectionTarget.entries.forEach { report(it, ConnectionResult.available) }
+        }
+        runCurrent()
+        model.setVisible(true); runCurrent()
+        assertTrue(checked.isEmpty())
+        configuration.value = configuration.value.copy(dnsProvider = DnsProvider.SYSTEM)
+        runCurrent()
+        gates.first().complete(Unit); runCurrent()
+        assertTrue(checked.isEmpty())
+        gates.last().complete(Unit); runCurrent()
+        assertEquals(listOf(configuration.value), checked)
+        changes.value++; runCurrent()
+        assertTrue(model.state.value.checking)
+        assertEquals(1, checked.size)
+        gates.last().complete(Unit); runCurrent()
+        assertEquals(2, checked.size)
+        model.refresh(); runCurrent()
+        advanceTimeBy(ConnectionCheckSettings.CYCLE_TIMEOUT_MILLIS); runCurrent()
+        assertEquals(2, checked.size)
+        assertFalse(model.state.value.checking)
+        assertEquals(ConnectionTarget.entries, model.state.value.failed)
+        model.setVisible(false)
+    }
 
     @Test fun deadline_finishes_every_pending_indicator_and_preserves_completed_results() = runTest {
         lateinit var lateReport: (ConnectionTarget, ConnectionResult) -> Unit

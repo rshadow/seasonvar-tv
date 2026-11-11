@@ -182,7 +182,7 @@
     <string name="bypass_title">Обход блокировок</string>
     <string name="bypass_description">Помогает открыть сайт при сетевых ограничениях. Проверка HTTPS-сертификатов остаётся включённой.</string>
     <string name="network_applies">Настройки сохраняются и применяются к новым запросам страниц и постеров. Список «Сегодня» обновляется при изменении.</string>
-    <string name="network_external_tools_hint">Если настройки не помогают, отключите их и попробуйте внешние инструменты для решения сетевых проблем.</string>
+    <string name="network_external_tools_hint">Если настройки не помогают, отключите их и попробуйте внешние инструменты для решения проблем с подключением.</string>
     <string name="dns_title" translatable="false">DNS</string>
     <string name="dns_setting_title">DNS-сервер</string>
     <string name="dns_description">Определяет адреса сайтов. Можно использовать DNS устройства, Quad9 или Cloudflare с запросами по HTTPS.</string>
@@ -347,7 +347,7 @@
     <string name="history_clearing">Очищаю…</string>
     <string name="history_clear_error">Не удалось очистить историю. Обновите список и попробуйте ещё раз.</string>
     <string name="proxy_title">Прокси</string>
-    <string name="proxy_description">Подключение к сайту, постерам и видео через ваш сервер.</string>
+    <string name="proxy_description">Сервер прокси или автоматический выбор по PAC-файлу.</string>
     <string name="proxy_off">Выключен</string>
     <string name="proxy_socks5" translatable="false">SOCKS5</string>
     <string name="proxy_http" translatable="false">HTTP CONNECT</string>
@@ -377,4 +377,24 @@
     <string name="connection_http_failure">Сервер отклонил запрос</string>
     <string name="connection_content_failure">Неожиданный ответ сервера</string>
     <string name="connection_source_failure">Не удалось получить источник</string>
+    <string name="proxy_antizapret">АнтиЗапрет</string>
+    <string name="proxy_pac">PAC по URL</string>
+    <string name="pac_url">Адрес PAC-файла (HTTPS)</string>
+    <string name="pac_invalid_url">Введите полный HTTPS-адрес PAC-файла без логина и пароля.</string>
+    <string name="pac_enable_failed">Не удалось включить PAC: проверьте файл, подключение и наличие рабочего WebView.</string>
+    <string name="pac_interval">Автообновление: %1$s</string>
+    <string name="pac_interval_title">Обновление PAC-файла</string>
+    <string name="pac_hour">Раз в час</string>
+    <string name="pac_six_hours">Раз в 6 часов</string>
+    <string name="pac_twelve_hours">Раз в 12 часов</string>
+    <string name="pac_day">Раз в сутки</string>
+    <string name="pac_week">Раз в неделю</string>
+    <string name="pac_refresh">Обновить PAC-файл</string>
+    <string name="pac_wait">Обновить через %1$d с</string>
+    <string name="pac_loading">Загружаю PAC-файл…</string>
+    <string name="pac_preparing">Подготавливаю маршруты…</string>
+    <string name="pac_empty">PAC-файл ещё не загружен.</string>
+    <string name="pac_updated">Обновлён: %1$s</string>
+    <string name="pac_failed">Обновление не удалось. Сохранённый файл продолжает работать.</string>
+    <string name="pac_first_failed">Не удалось подготовить PAC-файл.</string>
 </resources>

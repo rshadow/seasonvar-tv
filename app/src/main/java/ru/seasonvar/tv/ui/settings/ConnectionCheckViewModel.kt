@@ -28,6 +28,8 @@ data class ConnectionCheckState(
 
 class ConnectionCheckViewModel internal constructor(
     private val configuration: StateFlow<NetworkConfiguration>,
+    private val prepare: suspend (NetworkConfiguration) -> Unit = {},
+    changes: StateFlow<Long>? = null,
     private val check: suspend (NetworkConfiguration, (ConnectionTarget, ConnectionResult) -> Unit) -> Unit,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ConnectionCheckState())
@@ -36,8 +38,19 @@ class ConnectionCheckViewModel internal constructor(
     private var generation = 0L
     private var job: Job? = null
     private var checkedConfiguration: NetworkConfiguration? = null
+    private var configuring = false
+
+    suspend fun reconfigure(apply: suspend () -> Boolean): Boolean {
+        configuring = true
+        generation++
+        job?.cancel()
+        mutableState.value = ConnectionCheckState()
+        try { return apply() }
+        finally { configuring = false; refresh() }
+    }
 
     init {
+        if (changes != null) viewModelScope.launch { changes.collect { if (visible) refresh() } }
         viewModelScope.launch {
             configuration.collect { if (visible && it != checkedConfiguration) refresh() }
         }
@@ -55,6 +68,7 @@ class ConnectionCheckViewModel internal constructor(
 
     fun refresh() {
         if (!visible) return
+        if (configuring) return
         val current = ++generation
         job?.cancel()
         val selected = configuration.value
@@ -64,6 +78,7 @@ class ConnectionCheckViewModel internal constructor(
             var failure = ConnectionFailure.NETWORK
             try {
                 withTimeout(ConnectionCheckSettings.CYCLE_TIMEOUT_MILLIS) {
+                    prepare(selected)
                     check(selected) { target, result ->
                         if (current == generation && visible) mutableState.value = state.value.copy(
                             results = state.value.results + (target to result))
@@ -87,10 +102,12 @@ class ConnectionCheckViewModel internal constructor(
         })
     }
 
-    class Factory(private val configuration: StateFlow<NetworkConfiguration>) : ViewModelProvider.Factory {
+    class Factory(private val configuration: StateFlow<NetworkConfiguration>,
+        private val pac: ru.seasonvar.tv.data.network.pac.PacCoordinator? = null,
+        private val prepare: suspend (NetworkConfiguration) -> Unit = {}) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
-            return ConnectionCheckViewModel(configuration, ConnectionChecker()::check) as T
+            return ConnectionCheckViewModel(configuration, prepare, pac?.changes, ConnectionChecker(pac = pac)::check) as T
         }
     }
 }

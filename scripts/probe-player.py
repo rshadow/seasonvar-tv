@@ -15,6 +15,7 @@ parser.add_argument("--season-page", required=True)
 parser.add_argument("--output", required=True, type=Path)
 parser.add_argument("--proxy-protocol", choices=("http_connect", "socks5"), default="http_connect")
 parser.add_argument("--proxy-port", type=int)
+parser.add_argument("--proxy-pac", action="store_true")
 parser.add_argument("--proxy-auth", choices=("true", "false"), default="false")
 args = parser.parse_args()
 if not args.device.startswith("emulator-"):
@@ -22,6 +23,8 @@ if not args.device.startswith("emulator-"):
 args.output.mkdir(parents=True, exist_ok=True)
 adb = ["adb", "-s", args.device]
 extra = [] if args.proxy_port is None else ["-e", "proxy-port", str(args.proxy_port), "-e", "proxy-auth", args.proxy_auth, "-e", "proxy-protocol", args.proxy_protocol]
+if args.proxy_pac:
+    extra += ["-e", "proxy-pac", "true"]
 process = subprocess.Popen(adb + ["shell", "am", "instrument", "-w", "-r", "-e", "mode", "player-auto-next",
                                   "-e", "page", args.page, "-e", "season-page", args.season_page, *extra, args.runner], stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT, text=True)
@@ -54,6 +57,8 @@ if fields.get("automatic_season") is not True or fields.get("season_disabled_sta
 if fields.get("settings_restored") is not True or fields.get("season_title_verified") is not True:
     raise SystemExit(1)
 if fields.get("clock_positions_verified") is not True or fields.get("clock_setting_restored") is not True:
+    raise SystemExit(1)
+if args.proxy_pac and fields.get("proxy_settings_restored") is not True:
     raise SystemExit(1)
 if args.proxy_port is not None and (fields.get("proxy_settings_restored") is not True or fields.get("proxy_tls_transports_verified") is not True):
     raise SystemExit(1)

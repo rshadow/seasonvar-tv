@@ -83,6 +83,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.5.1")
+    androidTestImplementation("com.squareup.okhttp3:okhttp-tls:5.5.1")
     testImplementation("org.json:json:20260814")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 

@@ -131,6 +131,13 @@ object PlayerAutoNextProbe {
         try {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
             check(!app.applicationScope.isActive)
+            if (arguments.getString("proxy-pac") == "true") {
+                check(originalProxy != ru.seasonvar.tv.data.network.ProxyConfiguration.Unavailable)
+                val selected = app.networkSettings.configuration.value.copy(proxy = ru.seasonvar.tv.data.network.ProxyConfiguration.AntiZapret)
+                runBlocking { app.pac.activate(selected) }
+                app.networkSettings.setProxy(selected.proxy)
+                proxyChanged = true
+            }
             arguments.getString("proxy-port")?.let { port ->
                 check(originalProxy != ru.seasonvar.tv.data.network.ProxyConfiguration.Unavailable)
                 val authenticated = arguments.getString("proxy-auth") == "true"
