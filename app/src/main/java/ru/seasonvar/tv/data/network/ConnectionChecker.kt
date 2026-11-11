@@ -40,11 +40,12 @@ data class ConnectionResult(val status: ConnectionStatus, val failure: Connectio
 }
 
 class ConnectionChecker internal constructor(
+    private val pac: ru.seasonvar.tv.data.network.pac.PacRouteProvider? = null,
     private val clientFactory: ((NetworkConfiguration) -> OkHttpClient)? = null,
 ) {
     suspend fun check(configuration: NetworkConfiguration, report: (ConnectionTarget, ConnectionResult) -> Unit) {
         val transports = if (clientFactory == null)
-            NetworkClients(Settings.CONNECT_TIMEOUT_MILLIS, Settings.REQUEST_TIMEOUT_MILLIS) else null
+            NetworkClients(Settings.CONNECT_TIMEOUT_MILLIS, Settings.REQUEST_TIMEOUT_MILLIS, pac) else null
         val transport = transports?.forConfiguration(configuration) ?: checkNotNull(clientFactory)(configuration)
         val client = transport.newBuilder().cache(null).cookieJar(SessionCookies())
             .followRedirects(true).followSslRedirects(false).build()

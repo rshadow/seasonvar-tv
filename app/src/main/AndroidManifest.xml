@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.webview" android:required="false" />
     <queries>
         <provider android:authorities="android.media.tv" />
         <intent>
@@ -23,6 +24,7 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@style/Theme.SeasonvarTV">
+        <service android:name=".data.network.pac.PacParserService" android:process=":pac_parser" android:exported="false" />
         <service android:name=".data.home.HomeRefreshJob" android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE" />
         <provider android:name=".data.home.HomePosterProvider" android:authorities="${applicationId}.home-posters"
             android:exported="true" />

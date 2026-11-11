@@ -863,6 +863,7 @@ internal fun ThemeButton(
     checked: Boolean? = null,
     reserveCheckSpace: Boolean = false,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    iconText: String? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     var blockedPress by remember { mutableStateOf(false) }
@@ -937,7 +938,8 @@ internal fun ThemeButton(
                 placeholder = painterResource(icon), error = painterResource(icon),
                 modifier = Modifier.size(d.headerButtonIconSize).clip(RoundedCornerShape(d.buttonCornerRadius)))
             else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(painterResource(icon), contentDescription = text,
+                if (iconText != null) Text(iconText, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                else Icon(painterResource(icon), contentDescription = text,
                     modifier = Modifier.size(d.headerButtonIconSize).then(rotation))
                 if (badgeCount > 0) Box(
                     Modifier.align(Alignment.TopEnd).padding(d.headerButtonBadgeInset)

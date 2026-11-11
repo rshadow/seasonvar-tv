@@ -12,7 +12,7 @@ internal object TlsPinSettings {
     const val SSL_COM_ROOT_ECC = "sha256/oyD01TTXvpfBro3QSZc1vIlcMjrdLTiL/M9mLCPX+Zo="
     const val SSL_COM_ROOT_RSA = "sha256/0cRTd+vc1hjNFlHcLgLCHXUeWqn80bNDH/bs9qMTSPo="
 
-    val certificatePinner: CertificatePinner = CertificatePinner.Builder()
+    private fun basePins() = CertificatePinner.Builder()
         .add("seasonvar.ru", ISRG_ROOT_YR, ISRG_ROOT_YE)
         .add("*.seasonvar.ru", ISRG_ROOT_YR, ISRG_ROOT_YE)
         .add("svstat.net", ISRG_ROOT_YR, ISRG_ROOT_YE)
@@ -23,5 +23,9 @@ internal object TlsPinSettings {
         .add("*.githubusercontent.com", ISRG_ROOT_YR, ISRG_ROOT_YE)
         .add("dns.quad9.net", DIGICERT_GLOBAL_ROOT_G3, DIGICERT_GLOBAL_ROOT_G2)
         .add("cloudflare-dns.com", SSL_COM_ROOT_ECC, SSL_COM_ROOT_RSA)
-        .build()
+
+    val certificatePinner: CertificatePinner = basePins().build()
+
+    val antiZapretCertificatePinner: CertificatePinner = basePins()
+        .add("p.thenewone.lol", ISRG_ROOT_YR, ISRG_ROOT_YE).build()
 }

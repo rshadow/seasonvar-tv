@@ -128,7 +128,7 @@ object ConnectionChecksProbe {
             phase = "live"
             runOnMainSync {
                 model.setVisible(false)
-                model = ConnectionCheckViewModel(configuration, ConnectionChecker()::check)
+                model = ConnectionCheckViewModel(configuration, check = ConnectionChecker()::check)
                 models.put("live", model)
             }
             // Пересоздание композиции запускает проверку реального транспорта с отдельными настройками.

@@ -11,6 +11,7 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.R
@@ -32,6 +33,8 @@ object ProxySettingsProbe {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
             EncryptedSessionStore(targetContext).read()
             result.putBoolean("session_readable", true)
+            val app = targetContext.applicationContext as ru.seasonvar.tv.SeasonvarApplication
+            kotlinx.coroutines.runBlocking { app.applicationScope.coroutineContext[kotlinx.coroutines.Job]?.cancelAndJoin() }
             val settings = NetworkSettings(targetContext, storeName)
             val proxy = mutableStateOf<ProxyConfiguration>(ProxyConfiguration.Disabled)
             var saves = 0
@@ -92,16 +95,18 @@ object ProxySettingsProbe {
                 } } }
                 settle()
                 phase = "open"
-                key(KeyEvent.KEYCODE_DPAD_RIGHT)
+                click(R.string.settings_title)
                 repeat(7) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
                 capture("settings-network")
                 key(KeyEvent.KEYCODE_DPAD_DOWN)
                 capture("settings-connection")
-                key(KeyEvent.KEYCODE_DPAD_UP)
-                key(KeyEvent.KEYCODE_DPAD_DOWN)
                 repeat(3) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
                 key(KeyEvent.KEYCODE_DPAD_CENTER)
                 capture("proxy-open")
+                check(find(uiAutomation.rootInActiveWindow, text(R.string.proxy_host)) == null)
+                check(find(uiAutomation.rootInActiveWindow, text(R.string.proxy_port)) == null)
+                check(find(uiAutomation.rootInActiveWindow, text(R.string.proxy_username)) == null)
+                check(find(uiAutomation.rootInActiveWindow, text(R.string.proxy_password)) == null)
                 ButtonAlignmentChecks.centered(probe, text(R.string.proxy_save))
                 ButtonAlignmentChecks.centered(probe, text(R.string.proxy_cancel))
                 capture("proxy-${protocol.storageId}-off")
@@ -137,6 +142,113 @@ object ProxySettingsProbe {
                 check(NetworkSettings(targetContext, storeName).configuration.value.proxy == ProxyConfiguration.Disabled)
                 result.putBoolean("proxy_fail_closed", true)
             }
+            phase = "pac_modes"
+            val manual = ProxyConfiguration.Server("proxy.example.test", 8080, "fixture", "fixture")
+            settings.setProxy(manual)
+            var commonGeometry: List<android.graphics.Rect>? = null
+            for (type in listOf(3, 4)) {
+                val url = "https://pac-fixture.invalid/run-${SystemClock.uptimeMillis()}.pac"
+                val selected = if (type == 3) ProxyConfiguration.Pac(url) else ProxyConfiguration.AntiZapret
+                val storage = ru.seasonvar.tv.data.network.pac.pacStorage(targetContext, selected)
+                val originalInterval = storage.interval
+                kotlinx.coroutines.runBlocking { app.pac.manager(selected).setInterval(ru.seasonvar.tv.data.settings.PacRefreshInterval.DAY) }
+                try {
+                    runOnMainSync { activity.setContent {} }; settle()
+                    saves = 0
+                    runOnMainSync { proxy.value = ProxyConfiguration.Disabled; activity.setContent { key(type) {
+                        SeasonvarApp(ru.seasonvar.tv.data.PublicFeed.entries.associateWith { ru.seasonvar.tv.ui.catalog.CatalogUiState(loading = false) }, {},
+                            startPage = Section.SETTINGS, imagePrefetchEnabled = false, proxy = proxy.value,
+                            onProxyChange = { withContext(Dispatchers.IO) { settings.setProxy(it) }; saves++; proxy.value = it; true })
+                    } } }
+                    settle()
+                    click(R.string.settings_title)
+                    repeat(11) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                    key(KeyEvent.KEYCODE_DPAD_CENTER)
+                    key(KeyEvent.KEYCODE_DPAD_CENTER)
+                    repeat(type) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                    key(KeyEvent.KEYCODE_DPAD_CENTER)
+                    check(find(uiAutomation.rootInActiveWindow, text(R.string.proxy_host)) == null)
+                    check(find(uiAutomation.rootInActiveWindow, text(R.string.pac_url)) != null)
+                    if (type == 3) fill(R.string.pac_url, url)
+                    else check(find(uiAutomation.rootInActiveWindow, ru.seasonvar.tv.data.settings.PacSettings.ANTIZAPRET_URL) != null)
+                    ButtonAlignmentChecks.centered(probe, text(R.string.proxy_save))
+                    ButtonAlignmentChecks.centered(probe, text(R.string.proxy_cancel))
+                    val intervalLabel = targetContext.getString(R.string.pac_interval, text(R.string.pac_day))
+                    var interval = checkNotNull(find(uiAutomation.rootInActiveWindow, intervalLabel))
+                    while (!interval.isClickable && interval.parent != null) interval = interval.parent
+                    check(interval.performAction(AccessibilityNodeInfo.ACTION_CLICK)); settle()
+                    key(KeyEvent.KEYCODE_DPAD_DOWN)
+                    key(KeyEvent.KEYCODE_DPAD_CENTER)
+                    settle()
+                    val weekLabel = targetContext.getString(R.string.pac_interval, text(R.string.pac_week))
+                    check(find(uiAutomation.rootInActiveWindow, weekLabel) != null)
+                    fun timer(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+                        node ?: return null
+                        if (node.text?.toString()?.matches(Regex("[0-9]{1,2}")) == true) return node
+                        for (i in 0 until node.childCount) timer(node.getChild(i))?.let { return it }
+                        return null
+                    }
+                    fun dated(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+                        node ?: return null
+                        if (node.text?.toString() == text(R.string.pac_empty) || node.text?.toString()?.startsWith(targetContext.getString(R.string.pac_updated, "")) == true) return node
+                        for (i in 0 until node.childCount) dated(node.getChild(i))?.let { return it }
+                        return null
+                    }
+                    fun controlBounds(node: AccessibilityNodeInfo): android.graphics.Rect {
+                        var control = node
+                        while (!control.isClickable && control.parent != null) control = control.parent
+                        return android.graphics.Rect().also(control::getBoundsInScreen)
+                    }
+                    phase = "pac_row"
+                    val reload = if (type == 3) {
+                        check(app.pac.manager(selected).cooldownSeconds() == 0)
+                        check(timer(uiAutomation.rootInActiveWindow) == null)
+                        result.putBoolean("pac_unlimited", true)
+                        checkNotNull(find(uiAutomation.rootInActiveWindow, text(R.string.pac_refresh)))
+                    } else {
+                        if (app.pac.manager(selected).cooldownSeconds() > 0) checkNotNull(timer(uiAutomation.rootInActiveWindow))
+                        else checkNotNull(find(uiAutomation.rootInActiveWindow, text(R.string.pac_refresh)))
+                    }
+                    val periodBounds = controlBounds(checkNotNull(find(uiAutomation.rootInActiveWindow, weekLabel)))
+                    val dateBounds = android.graphics.Rect().also(checkNotNull(dated(uiAutomation.rootInActiveWindow))::getBoundsInScreen)
+                    val refreshBounds = controlBounds(reload)
+                    check(periodBounds.right <= dateBounds.left && dateBounds.right <= refreshBounds.left)
+                    check(kotlin.math.abs(periodBounds.centerY() - refreshBounds.centerY()) <= 2)
+                    check(kotlin.math.abs(periodBounds.centerY() - dateBounds.centerY()) <= 2)
+                    check(refreshBounds.width() == refreshBounds.height())
+                    val geometry = listOf(periodBounds, refreshBounds)
+                    if (commonGeometry == null) commonGeometry = geometry else check(commonGeometry == geometry)
+                    result.putBoolean("pac_compact_row", true)
+                    fun focusedWithin(bounds: android.graphics.Rect) {
+                        fun focused(node: AccessibilityNodeInfo?): Boolean {
+                            node ?: return false
+                            val area = android.graphics.Rect().also(node::getBoundsInScreen)
+                            if (node.isFocused && bounds.contains(area.centerX(), area.centerY())) return true
+                            return (0 until node.childCount).any { focused(node.getChild(it)) }
+                        }
+                        check(focused(uiAutomation.rootInActiveWindow))
+                    }
+                    phase = "pac_focus"
+                    key(KeyEvent.KEYCODE_DPAD_RIGHT); focusedWithin(refreshBounds)
+                    key(KeyEvent.KEYCODE_DPAD_DOWN)
+                    focusedWithin(controlBounds(node(R.string.proxy_cancel)))
+                    key(KeyEvent.KEYCODE_DPAD_UP); focusedWithin(refreshBounds)
+                    key(KeyEvent.KEYCODE_DPAD_LEFT); focusedWithin(periodBounds)
+                    capture(if (type == 3) "proxy-custom-pac" else "proxy-antizapret")
+                    key(KeyEvent.KEYCODE_DPAD_DOWN)
+                    focusedWithin(controlBounds(node(R.string.proxy_save)))
+                    key(KeyEvent.KEYCODE_DPAD_CENTER)
+                    check(proxy.value == selected)
+                    check(settings.savedManualProxy() == manual)
+                } finally {
+                    kotlinx.coroutines.runBlocking { app.pac.manager(selected).setInterval(originalInterval) }
+                }
+            }
+            phase = "pac_preview"
+            PacRowChecks.run(probe, activity, artifacts)
+            result.putBoolean("pac_countdown", true)
+            result.putBoolean("pac_same_layout", true)
+            result.putBoolean("pac_modes", true)
             result.putBoolean("text_centered", true)
             result.putBoolean("fixture_only", true)
             result.putBoolean("script_success", true)

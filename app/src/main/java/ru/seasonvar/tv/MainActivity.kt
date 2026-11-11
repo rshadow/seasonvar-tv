@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
         val translationSettingsModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel.Factory(
             container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java]
         val connectionCheckModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel.Factory(
-            container.networkSettings.configuration))[ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel::class.java]
+            container.networkSettings.configuration, container.pac, container::prepareNetwork))[ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel::class.java]
         val repository = container.repository
         models = PublicFeed.entries.associateWith { feed ->
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed, container.listFilterPreferences, container.account) {
@@ -208,15 +208,15 @@ class MainActivity : ComponentActivity() {
                 },
                 onExit = ::finishAndRemoveTask,
                 proxy = network.proxy,
-                onProxyChange = { proxy ->
+                onProxyChange = { proxy -> connectionCheckModel.reconfigure {
                     val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        runCatching { container.networkSettings.setProxy(proxy) }.isSuccess
+                        runCatching { container.selectProxy(proxy) }.isSuccess
                     }
                     if (saved && proxy != network.proxy) {
                         networkChanged()
                     }
                     saved
-                },
+                } },
                 dnsProvider = network.dnsProvider,
                 onDnsChange = { provider ->
                     if (provider != network.dnsProvider) {

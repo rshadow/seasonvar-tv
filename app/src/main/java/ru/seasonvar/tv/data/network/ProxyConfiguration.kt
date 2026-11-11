@@ -1,6 +1,7 @@
 package ru.seasonvar.tv.data.network
 
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -12,6 +13,14 @@ enum class ProxyProtocol(val storageId: String) {
 sealed interface ProxyConfiguration {
     data object Disabled : ProxyConfiguration
     data object Unavailable : ProxyConfiguration
+    data object AntiZapret : ProxyConfiguration
+    data class Pac(val url: String) : ProxyConfiguration {
+        init {
+            val parsed = url.toHttpUrlOrNull()
+            require(parsed != null && parsed.isHttps && parsed.username.isEmpty() && parsed.password.isEmpty() && parsed.fragment == null)
+        }
+        override fun toString(): String = "ProxyConfiguration.Pac(url=redacted)"
+    }
 
     data class Server(val host: String, val port: Int, val username: String = "", val password: String = "",
         val protocol: ProxyProtocol = ProxyProtocol.HTTP_CONNECT) : ProxyConfiguration {

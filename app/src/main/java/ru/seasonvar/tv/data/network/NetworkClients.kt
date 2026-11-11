@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.network
 
+import ru.seasonvar.tv.data.network.pac.pacTransport
 import okhttp3.Credentials
 import okhttp3.Dns
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -19,6 +20,7 @@ import javax.net.ssl.X509TrustManager
 internal class NetworkClients(
     private val connectTimeoutMillis: Long = 8_000,
     private val requestTimeoutMillis: Long = 35_000,
+    private val pac: ru.seasonvar.tv.data.network.pac.PacRouteProvider? = null,
 ) : AutoCloseable {
     private val directClient = OkHttpClient.Builder()
         .certificatePinner(TlsPinSettings.certificatePinner)
@@ -71,13 +73,16 @@ internal class NetworkClients(
     private val mediaClients = mutableMapOf<NetworkConfiguration, OkHttpClient>()
 
     private var activeProxy: ProxyConfiguration = ProxyConfiguration.Disabled
+    private var pacRevision = -1L
 
     private fun selectProxy(proxy: ProxyConfiguration) {
-        if (activeProxy == proxy) return
+        val revision = pac?.revision ?: 0L
+        if (activeProxy == proxy && pacRevision == revision) return
         (clients.values + mediaClients.values).forEach { it.connectionPool.evictAll() }
         clients.clear()
         mediaClients.clear()
         activeProxy = proxy
+        pacRevision = revision
     }
 
     @Synchronized
@@ -106,6 +111,10 @@ internal class NetworkClients(
             when (val proxy = configuration.proxy) {
                 ProxyConfiguration.Disabled -> Unit
                 ProxyConfiguration.Unavailable -> builder.addInterceptor { throw IOException("Proxy settings unavailable") }
+                ProxyConfiguration.AntiZapret, is ProxyConfiguration.Pac -> {
+                    val provider = pac ?: throw IOException("PAC unavailable")
+                    builder.pacTransport(provider, configuration, dns)
+                }
                 is ProxyConfiguration.Server -> if (proxy.protocol == ProxyProtocol.SOCKS5) {
                     val routes = socks5Routes(proxy, dns)
                     // Адреса маршрутов принадлежат прокси, поэтому объединять HTTP/2-соединения по IP нельзя.

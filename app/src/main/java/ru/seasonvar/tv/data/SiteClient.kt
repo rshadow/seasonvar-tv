@@ -13,8 +13,12 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class SiteClient(private val settings: NetworkSettings, private val sessions: ru.seasonvar.tv.data.account.SessionManager? = null) : HtmlSource, Call.Factory {
-    private val clients = NetworkClients()
+class SiteClient(private val settings: NetworkSettings, private val sessions: ru.seasonvar.tv.data.account.SessionManager? = null,
+    private val pac: ru.seasonvar.tv.data.network.pac.PacRouteProvider? = null) : HtmlSource, Call.Factory {
+    private val clients = NetworkClients(pac = pac)
+    private var lastPacRevision = -1L
+
+    fun prepareNetwork(configuration: ru.seasonvar.tv.data.network.NetworkConfiguration) { clients.forConfiguration(configuration) }
 
     private var lastProxy: ru.seasonvar.tv.data.network.ProxyConfiguration = ru.seasonvar.tv.data.network.ProxyConfiguration.Disabled
     private var lastJar: ru.seasonvar.tv.data.account.SessionCookies? = null
@@ -23,6 +27,7 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     @Synchronized
     private fun client(jar: ru.seasonvar.tv.data.account.SessionCookies?): okhttp3.OkHttpClient {
         val configuration = settings.configuration.value
+        if (lastPacRevision != (pac?.revision ?: 0L)) { sessionClients.clear(); lastPacRevision = pac?.revision ?: 0L }
         if (lastProxy != configuration.proxy) { sessionClients.clear(); lastProxy = configuration.proxy }
         if (jar == null) return clients.forConfiguration(configuration)
         if (lastJar !== jar) { sessionClients.clear(); lastJar = jar }
