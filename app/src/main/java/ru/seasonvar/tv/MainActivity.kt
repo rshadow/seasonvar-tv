@@ -67,6 +67,8 @@ class MainActivity : ComponentActivity() {
             container.updates, BuildConfig.VERSION_NAME))[ru.seasonvar.tv.ui.update.UpdateViewModel::class.java]
         val translationSettingsModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel.Factory(
             container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java]
+        val connectionCheckModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel.Factory(
+            container.networkSettings.configuration))[ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel::class.java]
         val repository = container.repository
         models = PublicFeed.entries.associateWith { feed ->
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed, container.listFilterPreferences, container.account) {
@@ -148,6 +150,7 @@ class MainActivity : ComponentActivity() {
             val search by searchModel.state.collectAsStateWithLifecycle()
             val states = models.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
+            val connectionCheck by connectionCheckModel.state.collectAsStateWithLifecycle()
             val imagePrefetchEnabled by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
@@ -195,6 +198,9 @@ class MainActivity : ComponentActivity() {
                 onSearchVisible = { visible -> if (visible) searchModel.activate() else searchModel.deactivate() },
                 onRefresh = { feed -> models.getValue(feed).refresh() },
                 onFeedVisible = { feed -> models.getValue(feed).activate() },
+                connectionCheck = connectionCheck,
+                onConnectionRefresh = connectionCheckModel::refresh,
+                onConnectionVisible = connectionCheckModel::setVisible,
                 bypassEnabled = network.bypassEnabled,
                 onBypassChange = { enabled ->
                     container.networkSettings.setBypassEnabled(enabled)

@@ -67,4 +67,7 @@
         <item name="android:windowActionModeOverlay">true</item>
     </style>
     <dimen name="seasonvar_player_auto_next_width">320dp</dimen>
+    <color name="seasonvar_status_success">#66BB6A</color>
+    <color name="seasonvar_status_failure">#FF6B6B</color>
+    <color name="seasonvar_status_pending">#A0A0A0</color>
 </resources>

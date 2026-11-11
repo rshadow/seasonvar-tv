@@ -26,6 +26,7 @@ class AccountMarkProbe : Instrumentation() {
 
     override fun onStart() {
         if (mode == "account-premium") { AccountPremiumProbe.run(this); return }
+        if (mode == "connection-checks") { ConnectionChecksProbe.run(this); return }
         if (mode == "proxy-settings") { ProxySettingsProbe.run(this); return }
         if (mode == "tls-pins") { TlsPinningProbe.run(this); return }
         if (probeArguments.getString("mode") == "catalog-layout") { BrowseCatalogLayoutProbe.run(this); return }

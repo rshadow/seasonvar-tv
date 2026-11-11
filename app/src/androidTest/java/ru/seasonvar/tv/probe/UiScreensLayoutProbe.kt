@@ -220,7 +220,7 @@ object UiScreensLayoutProbe {
                     root(Section.SETTINGS)
                     sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
                     settle()
-                    repeat(9) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
+                    repeat(10) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
                     capture("settings-dns-focused")
                     check(control(text(id)) != null)
                     sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)

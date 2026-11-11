@@ -80,6 +80,8 @@ object ProxySettingsProbe {
             }
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
             for (protocol in ProxyProtocol.entries) {
+                runOnMainSync { activity.setContent {} }
+                settle()
                 saves = 0
                 runOnMainSync { proxy.value = ProxyConfiguration.Disabled; activity.setContent { key(protocol) {
                     SeasonvarApp(ru.seasonvar.tv.data.PublicFeed.entries.associateWith { ru.seasonvar.tv.ui.catalog.CatalogUiState(loading = false) }, {}, startPage = Section.SETTINGS, imagePrefetchEnabled = false,
@@ -97,7 +99,7 @@ object ProxySettingsProbe {
                 capture("settings-connection")
                 key(KeyEvent.KEYCODE_DPAD_UP)
                 key(KeyEvent.KEYCODE_DPAD_DOWN)
-                repeat(2) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+                repeat(3) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
                 key(KeyEvent.KEYCODE_DPAD_CENTER)
                 capture("proxy-open")
                 ButtonAlignmentChecks.centered(probe, text(R.string.proxy_save))
