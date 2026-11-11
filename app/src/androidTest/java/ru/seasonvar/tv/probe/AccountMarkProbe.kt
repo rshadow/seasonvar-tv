@@ -28,6 +28,7 @@ class AccountMarkProbe : Instrumentation() {
         if (mode == "pac-no-webview") { PacEngineProbe.run(this, missingWebView = true); return }
         if (mode == "pac-engine") { PacEngineProbe.run(this); return }
         if (mode == "pac-live") { PacLiveProbe.run(this); return }
+        if (mode == "pac-cancellation") { PacCancellationProbe.run(this); return }
         if (mode == "account-premium") { AccountPremiumProbe.run(this); return }
         if (mode == "connection-checks") { ConnectionChecksProbe.run(this); return }
         if (mode == "proxy-settings") { ProxySettingsProbe.run(this); return }

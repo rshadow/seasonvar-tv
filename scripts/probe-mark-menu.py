@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--device", required=True)
 parser.add_argument("--runner", required=True)
 parser.add_argument("--output", required=True, type=Path)
-parser.add_argument("--mode", choices=("pac-live", "pac-engine", "connection-checks", "proxy-settings", "catalog-layout", "mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine", "shared-card-cache", "cache-memory"), default="mark-menu-layout")
+parser.add_argument("--mode", choices=("pac-cancellation", "pac-live", "pac-engine", "connection-checks", "proxy-settings", "catalog-layout", "mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine", "shared-card-cache", "cache-memory"), default="mark-menu-layout")
 args = parser.parse_args()
 if not args.device.startswith("emulator-"):
     parser.error("This probe runs only on an emulator")
@@ -23,7 +23,7 @@ watchdog = threading.Timer(300 if args.mode in ("shared-card-cache", "cache-memo
 watchdog.daemon = True
 watchdog.start()
 fields = {}
-allowed = {"pac_compact_row", "pac_same_layout", "pac_unlimited", "failure_transport_detail", "https_status", "preferred_connected", "failure_transport", "live_https_proxy", "parallel_evaluators_serialized", "normal_video", "first_route_type", "original_pac_prepared", "live_site", "live_posters", "live_video", "live_github", "failure_site", "failure_posters", "failure_video", "pac_modes", "pac_countdown", "parser_process_released", "main_pss_before_kib", "main_pss_after_kib", "dns_and_all_domains", "invalid_pac_rejected", "timeout_releases_parser", "four_modes_preserve_manual_parameters", "live_available", "live_blocked", "live_recovered", "proxy_saved", "proxy_cancelled", "proxy_fail_closed", "session_readable", "memory_measured", "read_only", "native_total_kib", "native_common_kib", "native_private_kib", "poster_kib", "poster_limit_kib", "poster_keys", "live_card_records", "native_shared", "private_cleared", "memory_bounded", "cache_records", "cache_heap_growth_kib", "descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
+allowed = {"main_thread_cancellation", "pac_compact_row", "pac_same_layout", "pac_unlimited", "failure_transport_detail", "https_status", "preferred_connected", "failure_transport", "live_https_proxy", "parallel_evaluators_serialized", "normal_video", "first_route_type", "original_pac_prepared", "live_site", "live_posters", "live_video", "live_github", "failure_site", "failure_posters", "failure_video", "pac_modes", "pac_countdown", "parser_process_released", "main_pss_before_kib", "main_pss_after_kib", "dns_and_all_domains", "invalid_pac_rejected", "timeout_releases_parser", "four_modes_preserve_manual_parameters", "live_available", "live_blocked", "live_recovered", "proxy_saved", "proxy_cancelled", "proxy_fail_closed", "session_readable", "memory_measured", "read_only", "native_total_kib", "native_common_kib", "native_private_kib", "poster_kib", "poster_limit_kib", "poster_keys", "live_card_records", "native_shared", "private_cleared", "memory_bounded", "cache_records", "cache_heap_growth_kib", "descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
            "focus_preserved", "progress_visible", "text_centered", "screens_verified", "dialogs_verified",
            "sort_reset", "filter_reset", "defaults_reset", "refresh_failure_preserved",
            "script_success", "failure_type", "failure_phase", "failure_line", "failure_geometry", "failure_focus", "failure_counts", "artifacts"}
@@ -46,6 +46,8 @@ if isinstance(remote, str) and re.fullmatch(r"/storage/emulated/0/Android/data/r
 (args.output / "result.json").write_text(json.dumps(fields, indent=2))
 print(json.dumps(fields, sort_keys=True))
 checks = ("geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only", "script_success", "artifacts_copied")
+if args.mode == "pac-cancellation":
+    checks = ("main_thread_cancellation", "fixture_only", "script_success")
 if args.mode == "pac-live":
     checks = ("live_https_proxy", "original_pac_prepared", "live_site", "live_posters", "normal_video", "live_github", "read_only", "script_success")
 if args.mode == "pac-engine":

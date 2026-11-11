@@ -547,6 +547,10 @@ player-probe:
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-player.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --page "$(PLAYER_PROBE_PAGE)" --season-page "$(PLAYER_PROBE_SEASON_PAGE)" --output "$(PLAYER_PROBE_OUT)" $(PLAYER_PROBE_ARGS)
 
+.PHONY: pac-cancellation-probe
+pac-cancellation-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=pac-cancellation MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"
+
 .PHONY: ui-dialogs-probe
 ui-dialogs-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=ui-dialogs-layout MARK_MENU_PROBE_OUT="$(UI_SCREENS_PROBE_OUT)"

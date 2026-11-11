@@ -7,6 +7,9 @@ import okhttp3.Protocol
 import ru.seasonvar.tv.data.network.NetworkConfiguration
 import java.io.IOException
 import java.net.*
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.Dispatchers
+import kotlin.coroutines.EmptyCoroutineContext
 import javax.net.SocketFactory
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
@@ -62,6 +65,7 @@ private class PacEndpoints {
 private class PacSocket(private val endpoints: PacEndpoints, private val tls: SSLSocketFactory,
     private val pins: CertificatePinner) : Socket(Proxy.NO_PROXY) {
     private val raw = Socket(Proxy.NO_PROXY)
+    private val closed = AtomicBoolean()
     @Volatile private var secured: SSLSocket? = null
     private val wire: Socket get() = secured ?: raw
 
@@ -75,6 +79,7 @@ private class PacSocket(private val endpoints: PacEndpoints, private val tls: SS
                 raw.soTimeout = if (timeout > 0) timeout else 8000
                 val socket = tls.createSocket(raw, route.host, route.port, true) as SSLSocket
                 secured = socket
+                if (closed.get()) { socket.close(); throw SocketException("PAC socket closed") }
                 socket.sslParameters = socket.sslParameters.apply { endpointIdentificationAlgorithm = "HTTPS" }
                 socket.startHandshake()
                 if (!proxyHostnameVerifier.verify(route.host, socket.session))
@@ -88,7 +93,15 @@ private class PacSocket(private val endpoints: PacEndpoints, private val tls: SS
     override fun bind(address: SocketAddress?) = raw.bind(address)
     override fun getInputStream() = wire.getInputStream()
     override fun getOutputStream() = wire.getOutputStream()
-    override fun close() { try { secured?.close() } finally { raw.close() } }
+    override fun close() {
+        if (!closed.compareAndSet(false, true)) return
+        // Отмена OkHttp может прийти из UI; close_notify Conscrypt требует фонового потока.
+        try { raw.close() } finally {
+            secured?.let { socket -> Dispatchers.IO.dispatch(EmptyCoroutineContext, Runnable {
+                try { socket.close() } catch (_: IOException) { }
+            }) }
+        }
+    }
     override fun getInetAddress(): InetAddress? = raw.inetAddress
     override fun getLocalAddress(): InetAddress = raw.localAddress
     override fun getPort() = raw.port
