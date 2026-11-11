@@ -92,6 +92,19 @@ object PacEngineProbe {
                 check(PacRefreshInterval.fromHours(0) == PacRefreshInterval.DAY)
                 check(PacRefreshInterval.WEEK.millis == 604800000L)
             }
+            runOnMainSync {
+                val web = android.webkit.WebView(targetContext)
+                try {
+                    repeat(2) {
+                        restrictPacWebView(web)
+                        check(web.settings.blockNetworkLoads)
+                        check(!web.settings.allowFileAccess)
+                        check(!web.settings.allowContentAccess)
+                        check(!web.settings.javaScriptEnabled)
+                    }
+                } finally { web.destroy() }
+            }
+            result.putBoolean("webview_policy_enforced", true)
             result.putBoolean("fixture_only", true)
             result.putBoolean("script_success", true)
         } catch (error: Throwable) {

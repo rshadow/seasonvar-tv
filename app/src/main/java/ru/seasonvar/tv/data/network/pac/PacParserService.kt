@@ -84,10 +84,9 @@ class PacParserService : Service() {
         suspendCancellableCoroutine<Unit> { continuation ->
             val web = WebView(this)
             view = web
+            // PAC требует JavaScript; область принятого риска описана в ADR-0148.
             web.settings.javaScriptEnabled = true
-            web.settings.blockNetworkLoads = true
-            web.settings.allowFileAccess = false
-            web.settings.allowContentAccess = false
+            restrictPacWebView(web)
             web.webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String) { if (continuation.isActive) continuation.resume(Unit) }
                 override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
@@ -101,7 +100,9 @@ class PacParserService : Service() {
     }
 
     private suspend fun evaluate(code: String): String = suspendCancellableCoroutine { continuation ->
-        checkNotNull(view).evaluateJavascript(code) { value ->
+        val web = checkNotNull(view)
+        restrictPacWebView(web)
+        web.evaluateJavascript(code) { value ->
             if (continuation.isActive) continuation.resume(JSONTokener(value).nextValue().toString())
         }
     }
@@ -120,6 +121,12 @@ class PacParserService : Service() {
         web?.destroy()
         view = null
     }
+}
+
+internal fun restrictPacWebView(web: WebView) {
+    web.settings.blockNetworkLoads = true
+    web.settings.allowFileAccess = false
+    web.settings.allowContentAccess = false
 }
 
 internal fun java.io.InputStream.readBytesBounded(limit: Int): ByteArray {
