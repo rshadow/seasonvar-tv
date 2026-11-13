@@ -76,6 +76,7 @@ internal fun SeriesDetailsPane(
     onPlay: (PlaybackRequest) -> Unit,
     onActions: ((SeriesEntry) -> Unit)? = null,
     removalDialogOpen: Boolean = false,
+    showActors: Boolean = true,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
@@ -86,7 +87,7 @@ internal fun SeriesDetailsPane(
     ShortMessageEffect(if (state.progressFailure != null) stringResource(R.string.account_progress_error) else null)
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
-    val actors = details?.actors.orEmpty()
+    val actors = if (showActors) details?.actors.orEmpty() else emptyList()
     val actorFocus = remember(actors) { actors.map { FocusRequester() } }
     val actorListState = key(entry.id) { rememberLazyListState() }
     var actorIndex by remember(entry.id) { mutableIntStateOf(0) }
@@ -179,7 +180,7 @@ internal fun SeriesDetailsPane(
                     }
                 }.verticalScroll(scroll).padding(d.focusBorderWidth),
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-                SeriesInformation(state, entry, Modifier.fillMaxWidth(), actorListState, actorFocus,
+                SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
                     actorReturnFocus, menuFocus) { actorIndex = it; onInteraction() }
                 FlowRow(Modifier.fillMaxWidth().bringIntoViewRequester(actions),
                     horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
@@ -354,7 +355,7 @@ internal fun SeasonProgress(state: DetailsUiState, entry: SeriesEntry) {
 }
 
 @Composable
-private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifier: Modifier,
+private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifier: Modifier, showActors: Boolean,
     actorListState: LazyListState, actorFocus: List<FocusRequester>, actorReturnFocus: FocusRequester,
     menuFocus: FocusRequester, onActorFocused: (Int) -> Unit) {
     val d = SeasonvarTheme.dimensions
@@ -384,7 +385,7 @@ private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifie
                 }
             }
         }
-        SeriesActorsRow(details?.actors.orEmpty(), actorListState, actorFocus, actorReturnFocus, menuFocus, onActorFocused)
+        if (showActors) SeriesActorsRow(details?.actors.orEmpty(), actorListState, actorFocus, actorReturnFocus, menuFocus, onActorFocused)
     }
 }
 

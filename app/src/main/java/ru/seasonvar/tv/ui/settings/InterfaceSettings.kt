@@ -72,6 +72,14 @@ internal class InterfaceSettings(context: Context) {
         mutableImagePrefetchEnabled.value = enabled
     }
 
+    private val mutableShowActors = MutableStateFlow(preferences.getBoolean("show_actors", true))
+    val showActors = mutableShowActors.asStateFlow()
+
+    fun setShowActors(enabled: Boolean) {
+        preferences.edit().putBoolean("show_actors", enabled).apply()
+        mutableShowActors.value = enabled
+    }
+
     fun setStartPage(section: Section) {
         require(section in Section.startPages(true))
         preferences.edit().putString("start_page", section.storageId).apply()
