@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -74,6 +76,7 @@ internal fun SeriesDetailsPane(
     onPlay: (PlaybackRequest) -> Unit,
     onActions: ((SeriesEntry) -> Unit)? = null,
     removalDialogOpen: Boolean = false,
+    showActors: Boolean = true,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
@@ -84,6 +87,11 @@ internal fun SeriesDetailsPane(
     ShortMessageEffect(if (state.progressFailure != null) stringResource(R.string.account_progress_error) else null)
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
+    val actors = if (showActors) details?.actors.orEmpty() else emptyList()
+    val actorFocus = remember(actors) { actors.map { FocusRequester() } }
+    val actorListState = key(entry.id) { rememberLazyListState() }
+    var actorIndex by remember(entry.id) { mutableIntStateOf(0) }
+    var actorReturnFocus by remember { mutableStateOf(play) }
     val actionsMenu = remember { FocusRequester() }
     var restoreActions by remember { mutableStateOf(false) }
     val canOpenActions = !preparing && onActions != null
@@ -139,9 +147,24 @@ internal fun SeriesDetailsPane(
     CompositionLocalProvider(LocalBringIntoViewSpec provides VisibleControlsScrollSpec) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val step = with(density) { (maxHeight - d.spacingSection).coerceAtLeast(d.navigationButtonHeight).toPx() }
-            val actionScrolling = Modifier.onPreviewKeyEvent {
+            fun actionScrolling(origin: FocusRequester) = Modifier.onPreviewKeyEvent {
                 if (it.type != KeyEventType.KeyDown) false else when {
-                    it.key == Key.DirectionUp -> { scope.launch { scroll.scrollBy(-step) }; true }
+                    it.key == Key.DirectionUp -> {
+                        onInteraction()
+                        if (actors.isNotEmpty()) {
+                            actorReturnFocus = origin
+                            scope.launch {
+                                scroll.scrollTo(0)
+                                val index = actorIndex.coerceIn(actors.indices)
+                                if (actorListState.layoutInfo.visibleItemsInfo.none { item -> item.index == index }) {
+                                    actorListState.scrollToItem(index)
+                                }
+                                withFrameNanos { }
+                                actorFocus[index].requestFocus()
+                            }
+                        } else scope.launch { scroll.scrollBy(-step) }
+                        true
+                    }
                     it.key == Key.DirectionDown && state.episodes.isNullOrEmpty() -> {
                         scope.launch { scroll.scrollBy(step) }; true
                     }
@@ -157,7 +180,8 @@ internal fun SeriesDetailsPane(
                     }
                 }.verticalScroll(scroll).padding(d.focusBorderWidth),
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-                SeriesInformation(state, entry, Modifier.fillMaxWidth())
+                SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
+                    actorReturnFocus, menuFocus) { actorIndex = it; onInteraction() }
                 FlowRow(Modifier.fillMaxWidth().bringIntoViewRequester(actions),
                     horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
                     verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
@@ -176,7 +200,7 @@ internal fun SeriesDetailsPane(
                             else -> model.playbackRequest()?.let(onPlay)
                         }
                     }, loading = preparing,
-                        modifier = Modifier.height(d.headerButtonSize).then(actionScrolling).focusRequester(play).focusProperties {
+                        modifier = Modifier.height(d.headerButtonSize).then(actionScrolling(play)).focusRequester(play).focusProperties {
                             left = menuFocus; up = FocusRequester.Cancel
                             right = when {
                                 (details?.seasons?.size ?: 0) > 1 -> season
@@ -192,7 +216,7 @@ internal fun SeriesDetailsPane(
                             else entry.season?.let { stringResource(R.string.season_number, it) }
                                 ?: stringResource(R.string.details_season)
                         if (details.seasons.size > 1) ThemeButton(seasonLabel + " ▾",
-                            { show(DetailsDialog.SEASONS, season) }, Modifier.height(d.headerButtonSize).then(actionScrolling)
+                            { show(DetailsDialog.SEASONS, season) }, Modifier.height(d.headerButtonSize).then(actionScrolling(season))
                                 .focusRequester(season).focusProperties {
                                     left = play; up = FocusRequester.Cancel
                                     right = if (details.translations.size > 1) translation else if (canOpenActions) actionsMenu else FocusRequester.Cancel
@@ -204,7 +228,7 @@ internal fun SeriesDetailsPane(
                             val label = state.translation?.let { stringResource(R.string.details_translation, it.label) }
                                 ?: stringResource(R.string.details_choose_translation)
                             if (details.translations.size > 1 || state.translation == null) ThemeButton(label + " ▾",
-                                { show(DetailsDialog.TRANSLATIONS, translation) }, Modifier.height(d.headerButtonSize).then(actionScrolling)
+                                { show(DetailsDialog.TRANSLATIONS, translation) }, Modifier.height(d.headerButtonSize).then(actionScrolling(translation))
                                     .focusRequester(translation).focusProperties {
                                         up = FocusRequester.Cancel
                                         left = if (details.seasons.size > 1) season else play
@@ -220,7 +244,7 @@ internal fun SeriesDetailsPane(
                         onActions?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
                             episodeId = state.episode?.id, episodeLabel = state.episode?.label,
                             translationId = state.translationId, translationLabel = state.translation?.label)))
-                    }, Modifier.then(actionScrolling).focusRequester(actionsMenu).focusProperties {
+                    }, Modifier.then(actionScrolling(actionsMenu)).focusRequester(actionsMenu).focusProperties {
                         up = FocusRequester.Cancel; right = FocusRequester.Cancel
                         left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
@@ -331,7 +355,9 @@ internal fun SeasonProgress(state: DetailsUiState, entry: SeriesEntry) {
 }
 
 @Composable
-private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifier: Modifier) {
+private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifier: Modifier, showActors: Boolean,
+    actorListState: LazyListState, actorFocus: List<FocusRequester>, actorReturnFocus: FocusRequester,
+    menuFocus: FocusRequester, onActorFocused: (Int) -> Unit) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val details = state.details
@@ -357,10 +383,9 @@ private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifie
                 details?.facts?.filterNot { it.first in headlineFacts || it.first == "Оригинал" || isRating(it.first) }?.forEach {
                     Text(it.first + ": " + it.second, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
-                if (!details?.actors.isNullOrEmpty()) Text(stringResource(R.string.details_cast, details.actors.joinToString(", ")),
-                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
             }
         }
+        if (showActors) SeriesActorsRow(details?.actors.orEmpty(), actorListState, actorFocus, actorReturnFocus, menuFocus, onActorFocused)
     }
 }
 

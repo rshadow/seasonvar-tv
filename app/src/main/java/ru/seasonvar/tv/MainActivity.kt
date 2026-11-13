@@ -152,6 +152,7 @@ class MainActivity : ComponentActivity() {
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val connectionCheck by connectionCheckModel.state.collectAsStateWithLifecycle()
             val imagePrefetchEnabled by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
+            val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
@@ -162,6 +163,7 @@ class MainActivity : ComponentActivity() {
                 browseCatalog = browseModel,
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = container.interfaceSettings::setImagePrefetchEnabled,
+                showActors = showActors, onShowActorsChange = container.interfaceSettings::setShowActors,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,
