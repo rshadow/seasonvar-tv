@@ -36,6 +36,7 @@
                 <data android:scheme="seasonvar" android:host="home" android:pathPrefix="/play/" />
             </intent-filter>
         </activity>
+        <activity android:name=".ui.actor.ActorSeriesActivity" android:exported="false" android:screenOrientation="landscape" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.updates"

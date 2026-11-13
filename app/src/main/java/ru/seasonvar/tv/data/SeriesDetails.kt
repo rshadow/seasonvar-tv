@@ -3,7 +3,7 @@ package ru.seasonvar.tv.data
 data class SeasonOption(val id: String, val url: String, val label: String, val number: Int?)
 data class Episode(val id: String, val label: String)
 data class Translation(val id: String, val label: String, val episodes: List<Episode>?)
-data class SeriesActor(val name: String, val photoUrl: String)
+data class SeriesActor(val name: String, val photoUrl: String, val url: String? = null)
 data class SeriesDetails(
     val entry: SeriesEntry,
     val serialId: String,

@@ -30,7 +30,9 @@ class SeriesDetailsParserTest {
         val actors = SeriesDetailsParser.parse(withPhotos, entry).actors
         assertEquals(listOf("Первый актёр", "Второй актёр"), actors.map { it.name })
         assertEquals("https://cdn.svstat.net/a/1/123.jpg", actors.first().photoUrl)
+        assertEquals(ActorPages.url("/actor/Первый"), actors.first().url)
         assertEquals(ActorImages.PLACEHOLDER_URL, actors.last().photoUrl)
+        assertNull(actors.last().url)
     }
 
     @Test fun preserves_cast_without_photos_and_does_not_invent_actors() {

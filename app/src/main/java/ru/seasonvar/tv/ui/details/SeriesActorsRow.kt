@@ -1,6 +1,7 @@
 package ru.seasonvar.tv.ui.details
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
@@ -21,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
@@ -31,6 +33,7 @@ import coil.request.ImageRequest
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.SeriesActor
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.actor.ActorSeriesActivity
 
 @Composable
 internal fun SeriesActorsRow(
@@ -67,7 +70,10 @@ private fun ActorTile(actor: SeriesActor, modifier: Modifier, onFocused: () -> U
             .diskCachePolicy(CachePolicy.ENABLED).build()
     }
     Column(modifier.width(d.actorTileWidth).semantics(mergeDescendants = true) {}
-        .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused() }.focusable(),
+        .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused() }
+        .then(if (actor.url == null) Modifier.focusable() else Modifier.clickable(role = Role.Button) {
+            ActorSeriesActivity.open(context, actor)
+        }),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
         AsyncImage(request, null, Modifier.size(d.actorPhotoSize).clip(RoundedCornerShape(d.buttonCornerRadius))
             .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, RoundedCornerShape(d.buttonCornerRadius)),

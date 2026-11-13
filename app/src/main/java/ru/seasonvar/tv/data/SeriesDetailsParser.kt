@@ -65,7 +65,8 @@ object SeriesDetailsParser {
             serialId, SeasonvarParser.description(doc, entry).paragraphs, facts,
             info.select(".pgs-sinfo-actor a").mapNotNull { actor ->
                 actor.text().takeIf { it.isNotBlank() }?.let { name ->
-                    SeriesActor(name, ActorImages.photoUrl(actor.selectFirst("img[src]")?.absUrl("src").orEmpty()))
+                    SeriesActor(name, ActorImages.photoUrl(actor.selectFirst("img[src]")?.absUrl("src").orEmpty()),
+                        ActorPages.url(actor.attr("href")))
                 }
             }.distinctBy { it.name },
             seasons, translations, default,

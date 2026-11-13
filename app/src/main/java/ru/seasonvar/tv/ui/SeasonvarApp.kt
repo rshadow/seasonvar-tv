@@ -994,7 +994,7 @@ private fun catalogStrings(feed: PublicFeed): CatalogStrings = when (feed) {
 }
 
 @Composable
-private fun CatalogPane(
+internal fun CatalogPane(
     state: CatalogUiState,
     selected: SeriesEntry?,
     listState: LazyListState,
@@ -1029,6 +1029,7 @@ private fun CatalogPane(
     loadDescription: (suspend (SeriesEntry) -> ru.seasonvar.tv.data.SeriesDescription)? = null,
     preparationContext: Any? = null,
     cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
+    actorName: String? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -1055,8 +1056,9 @@ private fun CatalogPane(
     }
     val isToday = feed == PublicFeed.TODAY
     val personal = personalFeed != null || smart
-    val strings = remember(feed, personalFeed, smart, browsing) {
-        if (browsing) CatalogStrings(R.string.browse_catalog_title, R.string.browse_catalog_loading, R.string.browse_catalog_empty)
+    val strings = remember(feed, personalFeed, smart, browsing, actorName) {
+        if (actorName != null) CatalogStrings(R.string.actor_series_title, R.string.actor_series_loading, R.string.actor_series_empty)
+        else if (browsing) CatalogStrings(R.string.browse_catalog_title, R.string.browse_catalog_loading, R.string.browse_catalog_empty)
         else if (smart) CatalogStrings(R.string.smart_continue_title, R.string.resume_loading, R.string.smart_continue_empty)
         else if (personalFeed != null) CatalogStrings(personalTitle(personalFeed), R.string.resume_loading, R.string.resume_empty)
         else if (feed == null) CatalogStrings(R.string.search_title, R.string.search_loading, R.string.search_empty)
@@ -1105,7 +1107,8 @@ private fun CatalogPane(
                     if (metadata.isNotEmpty()) Text(metadata, style = MaterialTheme.typography.bodySmall,
                         color = c.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.widthIn(max = d.menuWidth))
-                } else CatalogHeading(stringResource(strings.title), metadata, Modifier.fillMaxWidth())
+                } else CatalogHeading(if (actorName != null) stringResource(R.string.actor_series_heading, actorName)
+                    else stringResource(strings.title), metadata, Modifier.fillMaxWidth())
             }
             if (historyContent == null) Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 val enterCards = Modifier.onPreviewKeyEvent {
@@ -1150,7 +1153,7 @@ private fun CatalogPane(
                 val message = when {
                     query != null && query.isBlank() -> R.string.search_hint
                     state.loading && !state.loaded -> strings.loading
-                    state.failure == LoadFailure.MARKUP -> if (browsing) R.string.browse_catalog_error else if (personal) R.string.resume_error else if (feed == null) R.string.search_error else R.string.today_markup_error
+                    state.failure == LoadFailure.MARKUP -> if (actorName != null) R.string.actor_series_error else if (browsing) R.string.browse_catalog_error else if (personal) R.string.resume_error else if (feed == null) R.string.search_error else R.string.today_markup_error
                     state.failure == LoadFailure.HTTP -> R.string.today_http_error
                     state.failure != null -> R.string.today_network_error
                     else -> if ((filterState?.activeCount ?: 0) > 0) R.string.filters_empty else strings.empty
@@ -1162,6 +1165,7 @@ private fun CatalogPane(
                     stringResource(if (state.loading && !state.loaded) R.string.today_loading_hint
                         else if (state.failure != null) R.string.today_error_hint
                         else if ((filterState?.activeCount ?: 0) > 0) R.string.filters_empty_hint
+                        else if (actorName != null) R.string.actor_series_empty_hint
                         else if (smart) R.string.smart_continue_empty_hint
                         else if (personalFeed == PersonalFeed.HISTORY) R.string.history_empty_hint
                         else if (personalFeed == PersonalFeed.RESUME) R.string.resume_empty_hint

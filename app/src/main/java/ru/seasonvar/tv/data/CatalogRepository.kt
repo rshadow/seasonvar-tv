@@ -72,6 +72,24 @@ class CatalogRepository(
         SeasonvarParser.search(source.get(url.toString()), query, windowed = true)
     }
 
+    suspend fun cachedActorPage(actorUrl: String): CatalogPage? = withContext(Dispatchers.IO) {
+        val url = requireNotNull(ActorPages.url(actorUrl))
+        val lease = htmlCache.capture()
+        val saved = htmlCache.read(ActorPages.cacheName(url), lease) ?: return@withContext null
+        runCatching { ActorPages.parse(saved.html, url, LocalDate.now(zone), windowed = true) }
+            .getOrNull()?.takeIf { htmlCache.isCurrent(lease) }
+    }
+
+    suspend fun actorPage(actorUrl: String): CatalogPage = withContext(Dispatchers.IO) {
+        val url = requireNotNull(ActorPages.url(actorUrl))
+        val lease = htmlCache.capture()
+        val html = source.get(url)
+        val page = ActorPages.parse(html, url, LocalDate.now(zone), windowed = true)
+        if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("List cache scope changed")
+        htmlCache.save(ActorPages.cacheName(url), html, lease)
+        page
+    }
+
     suspend fun bestFilterOptions(): BestFilterOptions = withContext(Dispatchers.IO) {
         BestFilterParser.options(source.get("https://seasonvar.ru/?mode=top"))
     }
