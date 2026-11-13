@@ -204,7 +204,7 @@
     <string name="details_all_episodes">Все серии</string>
     <string name="details_episodes_empty">Серии пока не добавлены</string>
     <string name="details_episodes_unavailable">Список серий недоступен</string>
-    <string name="details_cast">В ролях: %1$s</string>
+    <string name="details_cast">В ролях</string>
     <string name="details_markup_error">Не удалось прочитать карточку сериала</string>
     <string name="player_title_with_season">%1$s · Сезон %2$d · Серия %3$s</string>
     <string name="player_title">%1$s · Серия %2$s</string>

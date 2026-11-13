@@ -24,6 +24,22 @@ class SeriesDetailsParserTest {
         assertEquals("https://cdn.svstat.net/oblojka/2219.jpg", result.entry.posterUrl)
     }
 
+    @Test fun reads_large_actor_photos_including_hidden_cast_and_missing_images() {
+        val withPhotos = html.replace("<a>Первый актёр</a>",
+            "<a href=\"/actor/Первый\"><img src=\"//cdn.svstat.net/a/s/1/123.jpg\">Первый актёр</a>")
+        val actors = SeriesDetailsParser.parse(withPhotos, entry).actors
+        assertEquals(listOf("Первый актёр", "Второй актёр"), actors.map { it.name })
+        assertEquals("https://cdn.svstat.net/a/1/123.jpg", actors.first().photoUrl)
+        assertEquals(ActorImages.PLACEHOLDER_URL, actors.last().photoUrl)
+    }
+
+    @Test fun preserves_cast_without_photos_and_does_not_invent_actors() {
+        val actors = SeriesDetailsParser.parse(html, entry).actors
+        assertTrue(actors.all { it.photoUrl == ActorImages.PLACEHOLDER_URL })
+        val withoutCast = html.replace(Regex("<div class=\"pgs-sinfo-actor\">.*?</div></div>"), "")
+        assertTrue(SeriesDetailsParser.parse(withoutCast, entry).actors.isEmpty())
+    }
+
     @Test fun reads_translations_and_orders_episodes_by_next_links_instead_of_json_key_order() {
         val result = SeriesDetailsParser.parse(html, entry)
         assertEquals("0", result.defaultTranslationId)

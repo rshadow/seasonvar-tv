@@ -63,7 +63,11 @@ object SeriesDetailsParser {
             entry.copy(originalTitle = original, season = seasons.first { it.id == entry.id }.number,
                 posterUrl = poster.ifBlank { entry.posterUrl }),
             serialId, SeasonvarParser.description(doc, entry).paragraphs, facts,
-            info.select(".pgs-sinfo-actor a").map { it.text() }.filter { it.isNotBlank() },
+            info.select(".pgs-sinfo-actor a").mapNotNull { actor ->
+                actor.text().takeIf { it.isNotBlank() }?.let { name ->
+                    SeriesActor(name, ActorImages.photoUrl(actor.selectFirst("img[src]")?.absUrl("src").orEmpty()))
+                }
+            }.distinctBy { it.name },
             seasons, translations, default,
             doc.selectFirst(".pgs-player-block:not(.error)")?.text()?.takeIf { it.isNotBlank() },
         )
