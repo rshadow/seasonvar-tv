@@ -25,6 +25,7 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        if (mode == "reviews-layout") { ReviewsLayoutProbe.run(this); return }
         if (mode == "pac-no-webview") { PacEngineProbe.run(this, missingWebView = true); return }
         if (mode == "pac-engine") { PacEngineProbe.run(this); return }
         if (mode == "pac-live") { PacLiveProbe.run(this); return }

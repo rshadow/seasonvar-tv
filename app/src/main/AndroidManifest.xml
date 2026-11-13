@@ -37,6 +37,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.actor.ActorSeriesActivity" android:exported="false" android:screenOrientation="landscape" />
+        <activity android:name=".ui.reviews.ReviewsActivity" android:exported="false" android:screenOrientation="landscape" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.updates"

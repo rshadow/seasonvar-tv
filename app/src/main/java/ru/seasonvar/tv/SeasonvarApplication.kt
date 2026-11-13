@@ -33,6 +33,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val searchHistory by lazy { ru.seasonvar.tv.data.SearchHistory(ru.seasonvar.tv.data.PreferencesSearchHistoryStore(this)) }
     val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient,
         responseCache = htmlCache, cardCache = cardData) }
+    val reviews by lazy { ru.seasonvar.tv.data.reviews.ReviewsRepository(htmlCache, siteClient) }
 
     val nextSeasons by lazy { ru.seasonvar.tv.data.playback.NextSeasonResolver(
         load = { repository.details(it, force = true) },

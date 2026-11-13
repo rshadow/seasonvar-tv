@@ -71,6 +71,7 @@ object SeriesDetailsParser {
             }.distinctBy { it.name },
             seasons, translations, default,
             doc.selectFirst(".pgs-player-block:not(.error)")?.text()?.takeIf { it.isNotBlank() },
+            reviewCount = ru.seasonvar.tv.data.reviews.ReviewsParser.count(doc),
         )
     }
 
