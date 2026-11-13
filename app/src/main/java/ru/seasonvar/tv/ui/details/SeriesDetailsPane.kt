@@ -382,9 +382,9 @@ private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifie
                 details?.facts?.filterNot { it.first in headlineFacts || it.first == "Оригинал" || isRating(it.first) }?.forEach {
                     Text(it.first + ": " + it.second, color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
-                SeriesActorsRow(details?.actors.orEmpty(), actorListState, actorFocus, actorReturnFocus, menuFocus, onActorFocused)
             }
         }
+        SeriesActorsRow(details?.actors.orEmpty(), actorListState, actorFocus, actorReturnFocus, menuFocus, onActorFocused)
     }
 }
 
