@@ -405,4 +405,19 @@
     <string name="pac_updated">Обновлён: %1$s</string>
     <string name="pac_failed">Обновление не удалось. Сохранённый файл продолжает работать.</string>
     <string name="pac_first_failed">Не удалось подготовить PAC-файл.</string>
+    <string name="reviews_button">Рецензии · %1$s</string>
+    <string name="reviews_title">Рецензии · %1$s</string>
+    <string name="reviews_author_unknown">Автор не указан</string>
+    <string name="reviews_loading">Загружаю рецензии…</string>
+    <string name="reviews_empty">Рецензий пока нет</string>
+    <string name="reviews_loaded">Загружено: %1$d</string>
+    <string name="reviews_loaded_total">Загружено: %1$d из %2$d</string>
+    <string name="reviews_loading_more">Загружаю остальные…</string>
+    <string name="reviews_network_error">Не удалось загрузить рецензии. Проверьте подключение.</string>
+    <string name="reviews_http_error">Сайт отклонил запрос рецензий.</string>
+    <string name="reviews_markup_error">Не удалось прочитать рецензии с сайта.</string>
+    <string name="reviews_failed">Не удалось загрузить</string>
+    <string name="reviews_refresh">Обновить рецензии</string>
+    <string name="reviews_read">Читать рецензию</string>
+    <string name="reviews_hint">Вправо — читать · Влево — к списку</string>
 </resources>

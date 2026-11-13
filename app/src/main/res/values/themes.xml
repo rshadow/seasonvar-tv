@@ -42,6 +42,10 @@
     <dimen name="seasonvar_actor_photo_size">56dp</dimen>
     <dimen name="seasonvar_actor_tile_width">84dp</dimen>
     <dimen name="seasonvar_actor_name_height">36dp</dimen>
+    <dimen name="seasonvar_reviews_button_width">148dp</dimen>
+    <dimen name="seasonvar_reviews_metadata_height">68dp</dimen>
+    <dimen name="seasonvar_reviews_status_height">44dp</dimen>
+    <integer name="seasonvar_reviews_list_width_percent">34</integer>
     <integer name="seasonvar_preview_poster_max_width_percent">50</integer>
     <dimen name="seasonvar_card_padding">6dp</dimen>
     <dimen name="seasonvar_card_corner_radius">8dp</dimen>

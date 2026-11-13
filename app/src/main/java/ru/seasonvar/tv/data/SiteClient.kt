@@ -51,6 +51,9 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
 
     override suspend fun catalog(filters: CatalogFilters): String = execute(catalogRequest(filters))
 
+    override suspend fun moreReviews(entry: SeriesEntry, cursor: String): String =
+        execute(ru.seasonvar.tv.data.reviews.ReviewsRequest.more(entry, cursor))
+
     override suspend fun sidebar(feed: PublicFeed): String = execute(sidebarRequest(feed))
 
     suspend fun accountGet(url: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =

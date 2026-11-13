@@ -583,6 +583,7 @@ history-clear-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=history-clear-layout MARK_MENU_PROBE_OUT="$(HISTORY_CLEAR_PROBE_OUT)"
 
 .PHONY: details-progress-probe
+.PHONY: reviews-probe
 .PHONY: series-list-probe
 .PHONY: shared-card-cache-probe
 .PHONY: cache-memory-probe
@@ -597,6 +598,11 @@ series-list-probe:
 
 details-progress-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=details-progress-layout MARK_MENU_PROBE_OUT="$(DETAILS_PROGRESS_PROBE_OUT)"
+
+reviews-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=reviews-layout MARK_MENU_PROBE_OUT="$(REVIEWS_PROBE_OUT)"
+
+REVIEWS_PROBE_OUT ?= build/reviews-probe
 
 mark-menu-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for menu verification.' >&2; exit 1;; esac

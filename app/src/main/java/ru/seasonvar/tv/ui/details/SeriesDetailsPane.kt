@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +59,7 @@ import ru.seasonvar.tv.ui.account.accountProgressValue
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.reviews.ReviewsActivity
 
 @OptIn(ExperimentalFoundationApi::class)
 private object VisibleControlsScrollSpec : BringIntoViewSpec
@@ -93,6 +95,9 @@ internal fun SeriesDetailsPane(
     var actorIndex by remember(entry.id) { mutableIntStateOf(0) }
     var actorReturnFocus by remember { mutableStateOf(play) }
     val actionsMenu = remember { FocusRequester() }
+    val reviews = remember { FocusRequester() }
+    val context = LocalContext.current
+    val canOpenReviews = !preparing && details != null
     var restoreActions by remember { mutableStateOf(false) }
     val canOpenActions = !preparing && onActions != null
     val season = remember { FocusRequester() }
@@ -182,73 +187,90 @@ internal fun SeriesDetailsPane(
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                 SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
                     actorReturnFocus, menuFocus) { actorIndex = it; onInteraction() }
-                FlowRow(Modifier.fillMaxWidth().bringIntoViewRequester(actions),
-                    horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
-                    verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                    ThemeButton(stringResource(when {
-                        state.failure != null -> R.string.retry
-                        state.selectionFailure != null -> R.string.details_choose_episode
-                        !preparing && !state.canPlay -> R.string.details_reload
-                        state.resume != null -> R.string.details_continue
-                        else -> R.string.details_watch
-                    }), onClick = {
-                        onInteraction()
-                        when {
-                            state.failure != null -> model.retry()
-                            state.selectionFailure != null -> show(DetailsDialog.EPISODES, play)
-                            !state.canPlay -> model.retry()
-                            else -> model.playbackRequest()?.let(onPlay)
-                        }
-                    }, loading = preparing,
-                        modifier = Modifier.height(d.headerButtonSize).then(actionScrolling(play)).focusRequester(play).focusProperties {
-                            left = menuFocus; up = FocusRequester.Cancel
-                            right = when {
-                                (details?.seasons?.size ?: 0) > 1 -> season
-                                (details?.translations?.size ?: 0) > 1 -> translation
-                                canOpenActions -> actionsMenu
-                                else -> FocusRequester.Cancel
+                Row(Modifier.fillMaxWidth().bringIntoViewRequester(actions),
+                    horizontalArrangement = Arrangement.spacedBy(d.spacingMedium), verticalAlignment = Alignment.Top) {
+                    FlowRow(Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(d.spacingSmall),
+                        verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                        ThemeButton(stringResource(when {
+                            state.failure != null -> R.string.retry
+                            state.selectionFailure != null -> R.string.details_choose_episode
+                            !preparing && !state.canPlay -> R.string.details_reload
+                            state.resume != null -> R.string.details_continue
+                            else -> R.string.details_watch
+                        }), onClick = {
+                            onInteraction()
+                            when {
+                                state.failure != null -> model.retry()
+                                state.selectionFailure != null -> show(DetailsDialog.EPISODES, play)
+                                !state.canPlay -> model.retry()
+                                else -> model.playbackRequest()?.let(onPlay)
                             }
-                            down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
-                        })
-                    if (details != null) {
-                        val currentSeason = details.seasons.firstOrNull { it.id == entry.id }
-                        val seasonLabel = if (currentSeason?.number != null) currentSeason.label
-                            else entry.season?.let { stringResource(R.string.season_number, it) }
-                                ?: stringResource(R.string.details_season)
-                        if (details.seasons.size > 1) ThemeButton(seasonLabel + " ▾",
-                            { show(DetailsDialog.SEASONS, season) }, Modifier.height(d.headerButtonSize).then(actionScrolling(season))
-                                .focusRequester(season).focusProperties {
-                                    left = play; up = FocusRequester.Cancel
-                                    right = if (details.translations.size > 1) translation else if (canOpenActions) actionsMenu else FocusRequester.Cancel
-                                    down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
-                                })
-                        else if (currentSeason?.number != null || entry.season != null) Text(seasonLabel, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
-                            color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                        if (details.translations.isNotEmpty()) {
-                            val label = state.translation?.let { stringResource(R.string.details_translation, it.label) }
-                                ?: stringResource(R.string.details_choose_translation)
-                            if (details.translations.size > 1 || state.translation == null) ThemeButton(label + " ▾",
-                                { show(DetailsDialog.TRANSLATIONS, translation) }, Modifier.height(d.headerButtonSize).then(actionScrolling(translation))
-                                    .focusRequester(translation).focusProperties {
-                                        up = FocusRequester.Cancel
-                                        left = if (details.seasons.size > 1) season else play
-                                        right = if (canOpenActions) actionsMenu else FocusRequester.Cancel
+                        }, loading = preparing,
+                            modifier = Modifier.height(d.headerButtonSize).then(actionScrolling(play)).focusRequester(play).focusProperties {
+                                left = menuFocus; up = FocusRequester.Cancel
+                                right = when {
+                                    (details?.seasons?.size ?: 0) > 1 -> season
+                                    (details?.translations?.size ?: 0) > 1 -> translation
+                                    canOpenActions -> actionsMenu
+                                    canOpenReviews -> reviews
+                                    else -> FocusRequester.Cancel
+                                }
+                                down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                            })
+                        if (details != null) {
+                            val currentSeason = details.seasons.firstOrNull { it.id == entry.id }
+                            val seasonLabel = if (currentSeason?.number != null) currentSeason.label
+                                else entry.season?.let { stringResource(R.string.season_number, it) }
+                                    ?: stringResource(R.string.details_season)
+                            if (details.seasons.size > 1) ThemeButton(seasonLabel + " ▾",
+                                { show(DetailsDialog.SEASONS, season) }, Modifier.height(d.headerButtonSize).then(actionScrolling(season))
+                                    .focusRequester(season).focusProperties {
+                                        left = play; up = FocusRequester.Cancel
+                                        right = if (details.translations.size > 1) translation else if (canOpenActions) actionsMenu else if (canOpenReviews) reviews else FocusRequester.Cancel
                                         down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
                                     })
-                            else Text(label, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
+                            else if (currentSeason?.number != null || entry.season != null) Text(seasonLabel, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
                                 color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                            if (details.translations.isNotEmpty()) {
+                                val label = state.translation?.let { stringResource(R.string.details_translation, it.label) }
+                                    ?: stringResource(R.string.details_choose_translation)
+                                if (details.translations.size > 1 || state.translation == null) ThemeButton(label + " ▾",
+                                    { show(DetailsDialog.TRANSLATIONS, translation) }, Modifier.height(d.headerButtonSize).then(actionScrolling(translation))
+                                        .focusRequester(translation).focusProperties {
+                                            up = FocusRequester.Cancel
+                                            left = if (details.seasons.size > 1) season else play
+                                            right = if (canOpenActions) actionsMenu else if (canOpenReviews) reviews else FocusRequester.Cancel
+                                            down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                                        })
+                                else Text(label, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
+                                    color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
+                        if (canOpenActions) ThemeButton(stringResource(R.string.series_actions_menu), {
+                            onInteraction(); restoreActions = true
+                            onActions?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
+                                episodeId = state.episode?.id, episodeLabel = state.episode?.label,
+                                translationId = state.translationId, translationLabel = state.translation?.label)))
+                        }, Modifier.then(actionScrolling(actionsMenu)).focusRequester(actionsMenu).focusProperties {
+                            up = FocusRequester.Cancel; right = if (canOpenReviews) reviews else FocusRequester.Cancel
+                            left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
+                            down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                        }, icon = R.drawable.ic_more_vert)
                     }
-                    if (canOpenActions) ThemeButton(stringResource(R.string.series_actions_menu), {
-                        onInteraction(); restoreActions = true
-                        onActions?.invoke(entry.copy(initialSelection = ru.seasonvar.tv.data.EntrySelection(
-                            episodeId = state.episode?.id, episodeLabel = state.episode?.label,
-                            translationId = state.translationId, translationLabel = state.translation?.label)))
-                    }, Modifier.then(actionScrolling(actionsMenu)).focusRequester(actionsMenu).focusProperties {
-                        up = FocusRequester.Cancel; right = FocusRequester.Cancel
-                        left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
-                        down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
-                    }, icon = R.drawable.ic_more_vert)
+                ThemeButton(stringResource(R.string.reviews_button, details?.reviewCount?.let { if (it > 999) "999+" else it.toString() } ?: "—"),
+                    { onInteraction(); ReviewsActivity.open(context, entry) },
+                    Modifier.width(d.reviewsButtonWidth).height(d.headerButtonSize).then(actionScrolling(reviews))
+                        .focusRequester(reviews).focusProperties {
+                            up = FocusRequester.Cancel; right = FocusRequester.Cancel
+                            left = when {
+                                canOpenActions -> actionsMenu
+                                (details?.translations?.size ?: 0) > 1 -> translation
+                                (details?.seasons?.size ?: 0) > 1 -> season
+                                else -> play
+                            }
+                            down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                        }, enabled = canOpenReviews)
                 }
                 SeasonProgress(state, entry)
                 EpisodeList(state, model, selectedEpisodeFocus, allEpisodes, menuFocus,
