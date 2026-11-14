@@ -18,6 +18,10 @@ internal class InterfaceSettings(context: Context) {
 
     fun setCatalogLayout(section: Section, layout: CatalogLayout) = layoutPreferences.set(section, layout)
 
+    val actorCatalogLayout = layoutPreferences.actorLayout
+
+    fun setActorCatalogLayout(layout: CatalogLayout) = layoutPreferences.setActorLayout(layout)
+
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 

@@ -105,7 +105,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     var entry by remember { mutableStateOf<SeriesEntry?>(null) }
     val list = rememberLazyListState()
     val grid = rememberLazyGridState()
-    var layout by rememberSaveable { mutableStateOf(CatalogLayout.STRIP) }
+    val layout by container.interfaceSettings.actorCatalogLayout.collectAsStateWithLifecycle()
     val cards = remember { mutableMapOf<String, FocusRequester>() }
     val header = remember { FocusRequester() }
     val refresh = remember { FocusRequester() }
@@ -179,7 +179,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
             onRefresh = { model.refresh() }, onFocused = { selectedKey = it.key },
             onOpen = { selectedKey = it.key; entry = it }, actorName = name, catalogKey = catalogKey,
             cardMetrics = metrics, imagePrefetchEnabled = prefetch, gridState = grid, layout = layout,
-            layoutFocus = header, onLayoutChange = { layout = layout.other() }, onEnterContent = ::focusList,
+            layoutFocus = header, onLayoutChange = { container.interfaceSettings.setActorCatalogLayout(layout.other()) }, onEnterContent = ::focusList,
             allowAccountActions = session.user != null, onActions = { actions.show(it) },
             loadDescription = container.repository::description, cardData = container.repository.cardData,
             preparationContext = session.version to network)
