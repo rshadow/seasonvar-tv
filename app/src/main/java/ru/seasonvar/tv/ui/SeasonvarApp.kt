@@ -1,6 +1,8 @@
 package ru.seasonvar.tv.ui
 
 import android.content.ActivityNotFoundException
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
@@ -91,8 +93,9 @@ import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
-import ru.seasonvar.tv.ui.details.DetailsBackdropLayer
-import ru.seasonvar.tv.ui.details.PosterBackdropSource
+import ru.seasonvar.tv.ui.details.PosterBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropState
+import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import ru.seasonvar.tv.ui.settings.DetailsAppearance
@@ -677,8 +680,8 @@ private fun SeasonvarContent(
 
     BackHandler { navigateBack() }
     val d = SeasonvarTheme.dimensions
-    val backdropSource = remember(detailsSource?.key, detailsOpen) { mutableStateOf<PosterBackdropSource?>(null) }
-    val onBackdropSource = remember(backdropSource) { { source: PosterBackdropSource? -> backdropSource.value = source } }
+    val backdropSource = remember(catalogKey, section, detailsSource?.key, detailsOpen) { PosterBackdropState() }
+    val onBackdropSource = remember(backdropSource) { backdropSource::attach }
     Box(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent {
@@ -692,8 +695,8 @@ private fun SeasonvarContent(
             .background(MaterialTheme.colorScheme.background),
     ) {
         val density = LocalDensity.current
-        if (detailsOpen && detailsAppearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
-            DetailsBackdropLayer(backdropSource,
+        if (detailsAppearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
+            PosterBackdropLayer(backdropSource,
                 with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
                 ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
         }
@@ -810,6 +813,7 @@ private fun SeasonvarContent(
                         state, selected, listState, cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
                         sectionFocus(section), refreshFocus, retryFocus,
                         imagePrefetchEnabled = imagePrefetchEnabled,
+                        onBackdropSource = if (detailsAppearance == DetailsAppearance.BLURRED_POSTER) onBackdropSource else null,
                         loadDescription = loadDescription,
                         cardData = cardData,
                         preparationContext = listOf(accountSession.version, bypassEnabled, dnsProvider, proxy),
@@ -1051,10 +1055,14 @@ internal fun CatalogPane(
     preparationContext: Any? = null,
     cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
     actorName: String? = null,
+    onBackdropSource: PosterBackdropPublisher? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext, cardData)
+    if (BuildConfig.BUILD_TYPE == "profile") LaunchedEffect(catalogKey, layout, onBackdropSource != null) {
+        android.util.Log.i("SeasonvarCatalogProfile", "layout=" + layout.storageId + " backdrop=" + (onBackdropSource != null))
+    }
     val clearState = historyClear?.state?.collectAsStateWithLifecycle()?.value
     val clearFocus = remember { FocusRequester() }
     var clearWasOpen by remember(historyClear) { mutableStateOf(false) }
@@ -1212,7 +1220,8 @@ internal fun CatalogPane(
                 listState, gridState, cards, layoutFocus, menuFocus, cardMetrics, imagePrefetchEnabled,
                 if (layout == CatalogLayout.GRID) Modifier.fillMaxWidth().weight(1f)
                 else Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
-                onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine)
+                onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine,
+                onBackdropSource = onBackdropSource)
         }
     }
     if (filters != null && filterState != null) ru.seasonvar.tv.ui.filters.ListFilterPanel(stringResource(strings.title), filterState, filters)
@@ -1271,6 +1280,7 @@ internal fun SeriesThumbnail(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onPosterLoaded: ((Bitmap) -> Unit)? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -1320,7 +1330,7 @@ internal fun SeriesThumbnail(
     ) {
         val prepared = content()
         if (prepared != null) {
-            Poster(prepared.entry, Modifier.fillMaxWidth().height(metrics.posterHeight))
+            Poster(prepared.entry, Modifier.fillMaxWidth().height(metrics.posterHeight), onBitmap = onPosterLoaded)
             Spacer(Modifier.height(d.spacingSmall))
             Text(prepared.entry.title, modifier = Modifier.height(metrics.titleHeight),
                 style = MaterialTheme.typography.labelMedium, color = c.onSurface,
@@ -1334,7 +1344,7 @@ internal fun SeriesThumbnail(
 
 @Composable
 private fun Poster(entry: SeriesEntry, modifier: Modifier, large: Boolean = false,
-    targetHeightPx: Int? = null, onAspectRatio: ((Float) -> Unit)? = null) {
+    targetHeightPx: Int? = null, onAspectRatio: ((Float) -> Unit)? = null, onBitmap: ((Bitmap) -> Unit)? = null) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val largeUrl = if (large) entry.largePosterUrl else null
     var fallback by remember(entry.posterUrl, largeUrl) { mutableStateOf(false) }
@@ -1363,6 +1373,7 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier, large: Boolean = fals
                 val width = state.result.drawable.intrinsicWidth
                 val height = state.result.drawable.intrinsicHeight
                 if (width > 0 && height > 0) onAspectRatio?.invoke(width.toFloat() / height)
+                (state.result.drawable as? BitmapDrawable)?.bitmap?.let { onBitmap?.invoke(it) }
                 if (BuildConfig.DEBUG && large) android.util.Log.d("SeasonvarPoster",
                     "source=" + state.result.dataSource + " decoded=" + width + "x" + height)
             },

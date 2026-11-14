@@ -586,6 +586,7 @@ history-clear-probe:
 .PHONY: reviews-probe
 .PHONY: poster-backdrop-probe
 .PHONY: profile-details
+.PHONY: profile-list
 .PHONY: profile-release-dev
 .PHONY: series-list-probe
 .PHONY: shared-card-cache-probe
@@ -618,6 +619,14 @@ profile-details:
 DETAILS_APPEARANCE ?= plain
 DETAILS_PROFILE_OUT ?= build/profile-details/$(DETAILS_APPEARANCE)
 DETAILS_PROFILE_ARGS ?=
+
+profile-list:
+	$(ENV) python3 scripts/profile-list.py --device "$(DEVICE)" --mode "$(LIST_APPEARANCE)" --layout "$(LIST_LAYOUT)" --output "$(LIST_PROFILE_OUT)" $(LIST_PROFILE_ARGS)
+
+LIST_APPEARANCE ?= plain
+LIST_LAYOUT ?= strip
+LIST_PROFILE_OUT ?= build/profile-list/$(LIST_APPEARANCE)/$(LIST_LAYOUT)
+LIST_PROFILE_ARGS ?=
 
 PROFILE_RELEASE_APK := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["performance"]["signed_profile_apk"])')
 

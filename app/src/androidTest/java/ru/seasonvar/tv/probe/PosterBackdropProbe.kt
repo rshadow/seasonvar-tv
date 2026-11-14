@@ -18,6 +18,8 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -30,14 +32,20 @@ import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.images.PosterBackdropCache
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
-import ru.seasonvar.tv.ui.details.DetailsBackdropLayer
-import ru.seasonvar.tv.ui.details.PosterBackdropSource
+import ru.seasonvar.tv.ui.details.PosterBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropState
+import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
+import ru.seasonvar.tv.ui.CatalogPane
+import ru.seasonvar.tv.ui.catalog.CatalogLayout
+import ru.seasonvar.tv.ui.catalog.CatalogUiState
+import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
 import ru.seasonvar.tv.ui.settings.*
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.time.LocalDate
 
 object PosterBackdropProbe {
     fun run(probe: Instrumentation) = with(probe) {
@@ -73,11 +81,20 @@ object PosterBackdropProbe {
             return null
         }
         fun node(text: String) = find(uiAutomation.rootInActiveWindow, text)
-        fun button(text: String): AccessibilityNodeInfo {
-            var item = checkNotNull(node(text))
-            while (!item.isClickable && item.parent != null) item = item.parent
-            return item
+        fun clickable(text: String): AccessibilityNodeInfo? {
+            fun findClickable(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+                node ?: return null
+                if (node.text?.toString() == text || node.contentDescription?.toString() == text) {
+                    var item: AccessibilityNodeInfo = node
+                    while (!item.isClickable && item.parent != null) item = item.parent
+                    if (item.isClickable) return item
+                }
+                repeat(node.childCount) { findClickable(node.getChild(it))?.let { found -> return found } }
+                return null
+            }
+            return findClickable(uiAutomation.rootInActiveWindow)
         }
+        fun button(text: String) = checkNotNull(clickable(text))
         fun bounds(text: String) = Rect().also { button(text).getBoundsInScreen(it) }
         fun await(predicate: () -> Boolean) {
             val end = SystemClock.elapsedRealtime() + 5000
@@ -136,11 +153,11 @@ object PosterBackdropProbe {
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
             runOnMainSync { activity!!.setContent { SeasonvarTheme {
                 val d = SeasonvarTheme.dimensions
-                val source = remember { mutableStateOf<PosterBackdropSource?>(null) }
-                val publish = remember { { value: PosterBackdropSource? -> source.value = value } }
+                val source = remember { PosterBackdropState() }
+                val publish = remember(source) { source::attach }
                 val density = LocalDensity.current
                 BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    if (appearance.value == DetailsAppearance.BLURRED_POSTER) DetailsBackdropLayer(source,
+                    if (appearance.value == DetailsAppearance.BLURRED_POSTER) PosterBackdropLayer(source,
                         with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
                         ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
                     Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
@@ -185,7 +202,89 @@ object PosterBackdropProbe {
             await { button(watch).isFocused && bounds(watch) == playBounds }
             check(bounds("Рецензии · 0") == reviewBounds)
             check(capture("03-disabled") == plainPixel)
+            phase = "list"
+            val blue = File(artifacts, "blue.png")
+            Bitmap.createBitmap(320, 480, Bitmap.Config.ARGB_8888).apply {
+                eraseColor(Color.rgb(20, 90, 210))
+                blue.outputStream().use { compress(Bitmap.CompressFormat.PNG, 100, it) }
+                recycle()
+            }
+            val rows = listOf(entry.copy(title = "Первый сериал"),
+                entry.copy(id = "124", url = "/serial-124-Test.html", title = "Второй сериал", posterUrl = blue.toURI().toString()),
+                entry.copy(id = "125", url = "/serial-125-Test.html", title = "Нет постера", posterUrl = File(artifacts, "missing.png").toURI().toString()))
+            val selection = mutableStateOf(rows.first())
+            val layout = mutableStateOf(CatalogLayout.STRIP)
+            val prefetch = mutableStateOf(false)
+            val empty = mutableStateOf(false)
+            val published = PosterBackdropState()
+            val cards = mutableMapOf<String, FocusRequester>()
+            val publish: PosterBackdropPublisher = published::attach
+            runOnMainSync { appearance.value = DetailsAppearance.BLURRED_POSTER; activity!!.setContent { SeasonvarTheme {
+                val d = SeasonvarTheme.dimensions
+                val density = LocalDensity.current
+                val list = rememberLazyListState()
+                val grid = rememberLazyGridState()
+                val header = remember { FocusRequester() }
+                BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                    if (appearance.value == DetailsAppearance.BLURRED_POSTER) PosterBackdropLayer(published,
+                        with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
+                        ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
+                    Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
+                        horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {
+                        Column(Modifier.width(d.menuWidth)) {
+                            androidx.tv.material3.Text("Разделы", color = MaterialTheme.colorScheme.onBackground)
+                        }
+                        BoxWithConstraints(Modifier.weight(1f)) {
+                            CatalogPane(CatalogUiState(date = LocalDate.of(2026, 1, 1), entries = if (empty.value) emptyList() else rows,
+                                loaded = true, loading = false), if (empty.value) null else selection.value,
+                                list, cards, PublicFeed.TODAY, FocusRequester.Cancel, header, FocusRequester.Cancel, {},
+                                onFocused = { selection.value = it }, onOpen = { error("Unexpected playback") },
+                                catalogKey = "backdrop-fixture", cardMetrics = rememberCatalogCardMetrics(maxWidth),
+                                imagePrefetchEnabled = prefetch.value, layout = layout.value, gridState = grid, layoutFocus = header,
+                                onLayoutChange = { layout.value = layout.value.other() },
+                                onBackdropSource = if (appearance.value == DetailsAppearance.BLURRED_POSTER) publish else null)
+                        }
+                    }
+                }
+            } } }
+            fun focusRow(index: Int) {
+                val key = "backdrop-fixture|" + rows[index].key
+                await { cards.containsKey(key) && clickable(rows[index].title) != null }
+                runOnMainSync { cards.getValue(key).requestFocus() }
+                await { selection.value.key == rows[index].key && clickable(rows[index].title)?.isFocused == true }
+            }
+            phase = "list-first"; focusRow(0)
+            await { published.value?.url == rows[0].posterUrl && published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
+            finishFade()
+            val firstListPixel = capture("05-list-first")
+            phase = "list-second"; sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+            await { selection.value.key == rows[1].key && button(rows[1].title).isFocused && published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null }
+            finishFade()
+            check(capture("06-list-second") != firstListPixel)
+            val stripTop = bounds(rows[1].title).top
+            phase = "list-grid"; runOnMainSync { layout.value = CatalogLayout.GRID; prefetch.value = true }
+            await { clickable(rows[1].title) != null && bounds(rows[1].title).top < stripTop }
+            focusRow(1)
+            await { published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null }
+            capture("07-list-grid")
+            focusRow(0); focusRow(1)
+            await { published.value?.url == rows[1].posterUrl && button(rows[1].title).isFocused }
+            phase = "list-missing"; focusRow(2)
+            await { published.value?.url == rows[2].posterUrl && published.value?.bitmap?.value == null && backgroundPixel() == plainPixel }
+            focusRow(1)
+            await { published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
+            phase = "list-disabled"; val selectedBounds = bounds(rows[1].title)
+            runOnMainSync { appearance.value = DetailsAppearance.PLAIN }
+            await { published.value == null && backgroundPixel() == plainPixel && button(rows[1].title).isFocused }
+            check(bounds(rows[1].title) == selectedBounds)
+            runOnMainSync { appearance.value = DetailsAppearance.BLURRED_POSTER }
+            await { published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
+            phase = "list-empty"; runOnMainSync { empty.value = true }
+            await { published.value == null && backgroundPixel() == plainPixel }
+            result.putBoolean("list_background_tracks_selection", true)
+            result.putBoolean("prefetch_toggle", true)
             phase = "setting"
+            runOnMainSync { appearance.value = DetailsAppearance.PLAIN }
             runOnMainSync { activity!!.setContent { SeasonvarTheme {
                 val d = SeasonvarTheme.dimensions
                 val focus = remember { FocusRequester() }
@@ -195,7 +294,7 @@ object PosterBackdropProbe {
                 }
                 LaunchedEffect(Unit) { focus.requestFocus() }
             } } }
-            await { node("Оформление карточки") != null }
+            await { node(targetContext.getString(ru.seasonvar.tv.R.string.details_appearance_title)) != null }
             sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
             await { node("Размытый постер") != null }
             capture("04-options")

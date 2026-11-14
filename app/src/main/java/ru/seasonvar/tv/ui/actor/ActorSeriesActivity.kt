@@ -34,8 +34,8 @@ import ru.seasonvar.tv.ui.account.MarkRemovalViewModel
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.parsedCatalogState
 import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
-import ru.seasonvar.tv.ui.details.DetailsBackdropLayer
-import ru.seasonvar.tv.ui.details.PosterBackdropSource
+import ru.seasonvar.tv.ui.details.PosterBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropState
 import ru.seasonvar.tv.ui.settings.DetailsAppearance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
@@ -173,12 +173,12 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
         actionsWereOpen = removal.visible
     }
     val d = SeasonvarTheme.dimensions
-    val backdropSource = remember(entry?.key) { mutableStateOf<PosterBackdropSource?>(null) }
-    val onBackdropSource = remember(backdropSource) { { source: PosterBackdropSource? -> backdropSource.value = source } }
+    val backdropSource = remember(entry?.key) { PosterBackdropState() }
+    val onBackdropSource = remember(backdropSource) { backdropSource::attach }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val density = LocalDensity.current
-        if (entry != null && appearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
-            DetailsBackdropLayer(backdropSource,
+        if (appearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
+            PosterBackdropLayer(backdropSource,
                 with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
         }
         BoxWithConstraints(Modifier.fillMaxSize().backNavigationKeys(::back, {})
@@ -190,6 +190,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
                 onActions = if (session.user == null) null else ({ actions.show(it) }), removalDialogOpen = removal.visible,
                 showActors = showActors, appearance = appearance, onBackdropSource = onBackdropSource)
             else CatalogPane(state, selected, list, cards, null, FocusRequester.Cancel, refresh, retry,
+                onBackdropSource = if (appearance == DetailsAppearance.BLURRED_POSTER) onBackdropSource else null,
                 onRefresh = { model.refresh() }, onFocused = { selectedKey = it.key },
                 onOpen = { ru.seasonvar.tv.ui.details.DetailsPerformance.opened(); selectedKey = it.key; entry = it }, actorName = name, catalogKey = catalogKey,
                 cardMetrics = metrics, imagePrefetchEnabled = prefetch, gridState = grid, layout = layout,
