@@ -7,6 +7,7 @@
         <item name="seasonvarDialogBackgroundColor">#EE223344</item>
         <item name="seasonvarStatusSuccessColor">#FF123456</item>
         <item name="seasonvarPosterBackgroundEnabled">true</item>
+        <item name="seasonvarPosterFallbackScalePercent">45</item>
         <item name="seasonvarPosterBlurRadius">3</item>
         <item name="seasonvarPosterDimPercent">60</item>
         <item name="seasonvarPosterEdgePercent">20</item>
@@ -19,6 +20,7 @@
         <item name="seasonvarSpacingSmall">9dp</item>
         <item name="seasonvarContentGap">25dp</item>
         <item name="seasonvarIconButtonOutline">true</item>
+        <item name="seasonvarMenuButtonOutline">true</item>
         <item name="seasonvarPlayerBackgroundColor">#FF090807</item>
         <item name="seasonvarPlayerControlsColor">#FFFEDCBA</item>
         <item name="seasonvarPlayerPlayedColor">#FFABCDEF</item>

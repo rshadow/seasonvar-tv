@@ -67,7 +67,7 @@ internal object ButtonAlignmentChecks {
                         ThemeButton("Вернуться назад", {}, Modifier.height(d.navigationButtonHeight))
                     }
                     ThemeButton("Пункт меню", {}, Modifier.width(d.dialogWidth).height(d.navigationButtonHeight),
-                        contentAlignment = Alignment.CenterStart)
+                        contentAlignment = Alignment.CenterStart, showOutline = SeasonvarTheme.menuButtonOutline)
                     ThemeButton("Строка с галочкой", {}, Modifier.width(d.dialogWidth).height(d.navigationButtonHeight), checked = true)
                     ThemeButton("Недоступно", {}, Modifier.width(d.dialogWidth).height(d.navigationButtonHeight), actionEnabled = false)
                     ThemeButton("Загрузка", {}, Modifier.width(d.dialogWidth).height(d.navigationButtonHeight), loading = true)
