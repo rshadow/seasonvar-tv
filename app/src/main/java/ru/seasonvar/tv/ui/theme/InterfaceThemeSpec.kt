@@ -9,7 +9,7 @@ import ru.seasonvar.tv.data.images.PosterBackdropCache
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 
 internal data class PosterBackgroundStyle(val enabled: Boolean, val blurRadius: Int, val dimPercent: Int,
-    val edgePercent: Int, val fadeEdgePercent: Int, val fadeMillis: Int) {
+    val edgePercent: Int, val fadeEdgePercent: Int, val fadeMillis: Int, val fallbackImage: Int = 0) {
     init {
         require(blurRadius in 0..PosterBackdropCache.MAX_EDGE && dimPercent in 0..100)
         require(edgePercent in 0..100 && fadeEdgePercent in 0..50 && fadeMillis >= 0)
@@ -89,7 +89,8 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterDimPercent, R.integer.seasonvar_poster_backdrop_dim_percent),
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterEdgePercent, R.integer.seasonvar_poster_backdrop_edge_percent),
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeEdgePercent, R.integer.seasonvar_poster_backdrop_fade_edge_percent),
-                integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeMillis, R.integer.seasonvar_poster_backdrop_fade_ms)),
+                integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeMillis, R.integer.seasonvar_poster_backdrop_fade_ms),
+                values.getResourceId(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackImage, 0)),
             surface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceColor, R.color.seasonvar_surface),
             inactiveSurface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarInactiveSurfaceColor, R.color.seasonvar_background),
             outline = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceOutlineColor, android.graphics.Color.TRANSPARENT)),

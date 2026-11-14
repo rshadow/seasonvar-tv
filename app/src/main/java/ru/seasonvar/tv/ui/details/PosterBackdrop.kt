@@ -4,7 +4,10 @@ import android.graphics.Bitmap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -12,6 +15,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -20,6 +24,7 @@ import kotlinx.coroutines.DisposableHandle
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
+import ru.seasonvar.tv.data.images.PosterBackdropCache
 import kotlin.math.roundToInt
 
 internal data class PosterBackdropSource(val url: String, val bitmap: State<Bitmap?>)
@@ -40,6 +45,16 @@ internal class PosterBackdropState : State<PosterBackdropSource?> {
 }
 
 @Composable
+internal fun PosterBackdropPage(content: @Composable BoxScope.() -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground)) {
+        val density = LocalDensity.current
+        val source = remember { PosterBackdropState() }
+        PosterBackdropLayer(source, with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
+        content()
+    }
+}
+
+@Composable
 internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f) {
     if (!SeasonvarTheme.posterBackdropEnabled) return
     val poster = source.value
@@ -49,8 +64,12 @@ internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: I
 
 @Composable
 internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: IntSize, menuEnd: Float = 0f) {
-    val cache = (LocalContext.current.applicationContext as SeasonvarApplication).posterBackdrops
+    if (!SeasonvarTheme.posterBackdropEnabled) return
+    val context = LocalContext.current.applicationContext
+    val cache = (context as SeasonvarApplication).posterBackdrops
     val input = source.value
+    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { input == null && it != 0 }
+    val imageKey = fallback?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
     val background = SeasonvarTheme.pageBackground
     val radius = SeasonvarTheme.posterBackdropBlurRadius
     val dim = SeasonvarTheme.posterBackdropDimFraction
@@ -59,20 +78,24 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
     val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius) {
         bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius) }
     }
-    val bitmapState = remember(posterUrl, spec) {
-        mutableStateOf(if (posterUrl != null && spec != null) cache.get(posterUrl, spec) else null)
+    val bitmapState = remember(imageKey, spec) {
+        mutableStateOf(if (imageKey != null && spec != null) cache.get(imageKey, spec) else null)
     }
-    LaunchedEffect(posterUrl, input, spec) {
-        bitmapState.value = if (posterUrl != null && spec != null) cache.get(posterUrl, spec) else null
-        if (posterUrl != null && input != null && spec != null && bitmapState.value == null) {
-            try { bitmapState.value = cache.prepare(posterUrl, input, spec) }
+    LaunchedEffect(imageKey, input, spec) {
+        bitmapState.value = if (imageKey != null && spec != null) cache.get(imageKey, spec) else null
+        if (imageKey != null && spec != null && bitmapState.value == null) {
+            try { bitmapState.value = when {
+                fallback != null -> cache.prepareResource(context, fallback, spec)
+                input != null -> cache.prepare(imageKey, input, spec)
+                else -> null
+            } }
             catch (error: CancellationException) { throw error }
             catch (_: Exception) { bitmapState.value = null }
         }
     }
     val bitmap by bitmapState
     val image = remember(bitmap) { bitmap?.asImageBitmap() }
-    val opacity = key(posterUrl) {
+    val opacity = key(imageKey) {
         animateFloatAsState(if (image == null) 0f else 1f,
             tween(SeasonvarTheme.posterBackdropFadeMillis), label = "posterBackdrop")
     }

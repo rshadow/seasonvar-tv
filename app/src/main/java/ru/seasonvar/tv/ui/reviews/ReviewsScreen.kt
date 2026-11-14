@@ -81,71 +81,73 @@ internal fun ReviewsScreen(title: String, state: ReviewsUiState, onRefresh: (Str
         LoadFailure.MARKUP -> R.string.reviews_markup_error
     }) })
     BackHandler(onBack = onExit)
-    Column(Modifier.fillMaxSize().backNavigationKeys(onExit, {}).background(SeasonvarTheme.pageBackground)
-        .padding(d.screenPaddingHorizontal, d.screenPaddingVertical)
-        .focusRequester(holder).focusProperties { canFocus = holdingFocus }.focusTarget().focusGroup(),
-        verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-            Text(stringResource(R.string.reviews_title, title), Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, color = c.onBackground)
-            ThemeButton(stringResource(R.string.reviews_refresh), { onRefresh(selected?.key) },
-                Modifier.focusRequester(refresh).onPreviewKeyEvent { event ->
-                    if (event.key == Key.DirectionDown && selected != null) {
-                        if (event.type == KeyEventType.KeyDown) scope.launch { focusSelected() }
-                        true
-                    } else false
-                }.focusProperties {
-                    up = FocusRequester.Cancel; right = FocusRequester.Cancel
-                    down = if (selected != null) rows.getOrPut(selected.key) { FocusRequester() } else FocusRequester.Cancel
-                }, icon = R.drawable.ic_reload, loading = state.loading)
-        }
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-            Column(Modifier.weight(d.reviewsListWidthFraction).fillMaxHeight()) {
-                LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list,
-                    contentPadding = PaddingValues(d.focusBorderWidth), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                    itemsIndexed(state.entries, key = { _, review -> review.key }) { index, review ->
-                        val focus = remember(review.key) { rows.getOrPut(review.key) { FocusRequester() } }
-                        DisposableEffect(review.key) { onDispose { rows.remove(review.key) } }
-                        ReviewRow(review, selected?.key == review.key, Modifier.focusRequester(focus).focusProperties {
-                            right = reader; left = FocusRequester.Cancel
-                            if (index == 0) up = refresh
-                            if (index == state.entries.lastIndex) down = if (state.moreFailure != null) retry else FocusRequester.Cancel
-                        }.onFocusChanged { if (it.isFocused) selectedKey = review.key }) { reader.requestFocus() }
-                    }
-                }
-                Row(Modifier.fillMaxWidth().height(d.reviewsStatusHeight), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(when {
-                        state.loading -> R.string.reviews_loading
-                        state.loadingMore -> R.string.reviews_loading_more
-                        failure != null -> R.string.reviews_failed
-                        state.entries.isEmpty() -> R.string.reviews_empty
-                        state.total != null -> R.string.reviews_loaded_total
-                        else -> R.string.reviews_loaded
-                    }, state.entries.size, state.total ?: state.entries.size), Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Box(Modifier.size(d.headerButtonSize)) {
-                        if (state.moreFailure != null) ThemeButton(stringResource(R.string.retry), { onMore(true) },
-                            Modifier.focusRequester(retry).focusProperties {
-                                up = selected?.let { rows[it.key] } ?: refresh; right = if (selected != null) reader else refresh
-                            }, icon = R.drawable.ic_reload)
-                    }
-                }
+    ru.seasonvar.tv.ui.details.PosterBackdropPage {
+        Column(Modifier.fillMaxSize().backNavigationKeys(onExit, {})
+            .padding(d.screenPaddingHorizontal, d.screenPaddingVertical)
+            .focusRequester(holder).focusProperties { canFocus = holdingFocus }.focusTarget().focusGroup(),
+            verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                Text(stringResource(R.string.reviews_title, title), Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, color = c.onBackground)
+                ThemeButton(stringResource(R.string.reviews_refresh), { onRefresh(selected?.key) },
+                    Modifier.focusRequester(refresh).onPreviewKeyEvent { event ->
+                        if (event.key == Key.DirectionDown && selected != null) {
+                            if (event.type == KeyEventType.KeyDown) scope.launch { focusSelected() }
+                            true
+                        } else false
+                    }.focusProperties {
+                        up = FocusRequester.Cancel; right = FocusRequester.Cancel
+                        down = if (selected != null) rows.getOrPut(selected.key) { FocusRequester() } else FocusRequester.Cancel
+                    }, icon = R.drawable.ic_reload, loading = state.loading)
             }
-            Column(Modifier.weight(1f - d.reviewsListWidthFraction).fillMaxHeight()) {
-                Column(Modifier.fillMaxWidth().height(d.reviewsMetadataHeight), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                    Text(selected?.author ?: if (selected != null) stringResource(R.string.reviews_author_unknown) else "",
-                        style = MaterialTheme.typography.titleMedium, color = c.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(selected?.date.orEmpty(), style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                Column(Modifier.weight(d.reviewsListWidthFraction).fillMaxHeight()) {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list,
+                        contentPadding = PaddingValues(d.focusBorderWidth), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                        itemsIndexed(state.entries, key = { _, review -> review.key }) { index, review ->
+                            val focus = remember(review.key) { rows.getOrPut(review.key) { FocusRequester() } }
+                            DisposableEffect(review.key) { onDispose { rows.remove(review.key) } }
+                            ReviewRow(review, selected?.key == review.key, Modifier.focusRequester(focus).focusProperties {
+                                right = reader; left = FocusRequester.Cancel
+                                if (index == 0) up = refresh
+                                if (index == state.entries.lastIndex) down = if (state.moreFailure != null) retry else FocusRequester.Cancel
+                            }.onFocusChanged { if (it.isFocused) selectedKey = review.key }) { reader.requestFocus() }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().height(d.reviewsStatusHeight), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(when {
+                            state.loading -> R.string.reviews_loading
+                            state.loadingMore -> R.string.reviews_loading_more
+                            failure != null -> R.string.reviews_failed
+                            state.entries.isEmpty() -> R.string.reviews_empty
+                            state.total != null -> R.string.reviews_loaded_total
+                            else -> R.string.reviews_loaded
+                        }, state.entries.size, state.total ?: state.entries.size), Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Box(Modifier.size(d.headerButtonSize)) {
+                            if (state.moreFailure != null) ThemeButton(stringResource(R.string.retry), { onMore(true) },
+                                Modifier.focusRequester(retry).focusProperties {
+                                    up = selected?.let { rows[it.key] } ?: refresh; right = if (selected != null) reader else refresh
+                                }, icon = R.drawable.ic_reload)
+                        }
+                    }
                 }
-                key(selected?.key) {
-                    ReviewText(selected, if (state.loading) stringResource(R.string.reviews_loading)
-                        else if (failure != null) stringResource(R.string.reviews_failed) else stringResource(R.string.reviews_empty),
-                        reader, refresh, Modifier.weight(1f)) { scope.launch { focusSelected() } }
+                Column(Modifier.weight(1f - d.reviewsListWidthFraction).fillMaxHeight()) {
+                    Column(Modifier.fillMaxWidth().height(d.reviewsMetadataHeight), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                        Text(selected?.author ?: if (selected != null) stringResource(R.string.reviews_author_unknown) else "",
+                            style = MaterialTheme.typography.titleMedium, color = c.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(selected?.date.orEmpty(), style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    key(selected?.key) {
+                        ReviewText(selected, if (state.loading) stringResource(R.string.reviews_loading)
+                            else if (failure != null) stringResource(R.string.reviews_failed) else stringResource(R.string.reviews_empty),
+                            reader, refresh, Modifier.weight(1f)) { scope.launch { focusSelected() } }
+                    }
+                    Text(stringResource(R.string.reviews_hint), Modifier.height(d.reviewsStatusHeight).wrapContentHeight(),
+                        style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
                 }
-                Text(stringResource(R.string.reviews_hint), Modifier.height(d.reviewsStatusHeight).wrapContentHeight(),
-                    style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
             }
         }
     }

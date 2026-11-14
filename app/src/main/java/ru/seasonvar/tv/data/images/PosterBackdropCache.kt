@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.images
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.LinearGradient
@@ -24,6 +25,20 @@ internal class PosterBackdropCache {
 
     fun get(poster: String, spec: PosterBackdropSpec): Bitmap? = images.get(Key(poster, spec))
     val cachedBytes: Int get() = images.snapshot().values.sumOf { it.allocationByteCount }
+
+    suspend fun prepareResource(context: Context, resource: Int, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
+        val key = resourceKey(context, resource)
+        get(key, spec)?.let { return@withContext it }
+        val drawable = checkNotNull(context.getDrawable(resource))
+        val scale = MAX_EDGE.toFloat() / maxOf(drawable.intrinsicWidth, drawable.intrinsicHeight, 1)
+        val image = Bitmap.createBitmap((drawable.intrinsicWidth * scale).roundToInt().coerceAtLeast(1),
+            (drawable.intrinsicHeight * scale).roundToInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+        try {
+            drawable.setBounds(0, 0, image.width, image.height)
+            drawable.draw(Canvas(image))
+            prepare(key, image, spec)
+        } finally { image.recycle() }
+    }
 
     suspend fun prepare(poster: String, input: Bitmap, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
         require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f && spec.menuEnd in 0f..0.6f && spec.blurRadius >= 0)
@@ -70,6 +85,7 @@ internal class PosterBackdropCache {
     }
 
     companion object {
+        fun resourceKey(context: Context, resource: Int) = "android.resource://${context.packageName}/$resource"
         const val MAX_EDGE = 256
         const val MAX_ENTRIES = 8
         private const val PASSES = 2

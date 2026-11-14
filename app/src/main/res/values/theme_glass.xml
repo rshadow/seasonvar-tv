@@ -6,6 +6,7 @@
 
     <style name="SeasonvarInterfaceTheme.Glass" parent="SeasonvarInterfaceTheme.Classic">
         <item name="seasonvarPosterBackgroundEnabled">true</item>
+        <item name="seasonvarPosterFallbackImage">@drawable/ic_launcher</item>
         <item name="seasonvarPosterBlurRadius">2</item>
         <item name="seasonvarSurfaceColor">@color/seasonvar_glass_surface</item>
         <item name="seasonvarInactiveSurfaceColor">@color/seasonvar_glass_inactive_surface</item>

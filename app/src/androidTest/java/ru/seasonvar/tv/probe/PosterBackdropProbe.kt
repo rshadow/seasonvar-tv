@@ -154,6 +154,9 @@ object PosterBackdropProbe {
                 val prepared = cache.prepare("one", poster, spec)
                 check(prepared.width <= PosterBackdropCache.MAX_EDGE && prepared.height <= PosterBackdropCache.MAX_EDGE)
                 check(cache.prepare("one", poster, spec) === prepared && poster.width == 320 && !poster.isRecycled)
+                val fallback = cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, spec)
+                check(fallback.width == prepared.width && fallback.height == prepared.height)
+                check(cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, spec) === fallback)
                 val sharp = cache.prepare("one", poster, spec.copy(blurRadius = 0))
                 val before = IntArray(prepared.width * prepared.height)
                 val after = IntArray(before.size)
@@ -297,7 +300,8 @@ object PosterBackdropProbe {
             phase = "list-second"; sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
             await { selection.value.key == rows[1].key && button(rows[1].title).isFocused && published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null }
             finishFade()
-            check(capture("06-list-second") != firstListPixel)
+            val secondListPixel = capture("06-list-second")
+            check(secondListPixel != firstListPixel)
             val stripTop = bounds(rows[1].title).top
             phase = "list-grid"; runOnMainSync { layout.value = CatalogLayout.GRID; prefetch.value = true }
             await { clickable(rows[1].title) != null && bounds(rows[1].title).top < stripTop }
@@ -308,7 +312,11 @@ object PosterBackdropProbe {
             focusRow(0); focusRow(1)
             await { published.value?.url == rows[1].posterUrl && button(rows[1].title).isFocused }
             phase = "list-missing"; focusRow(2)
-            await { published.value?.url == rows[2].posterUrl && published.value?.bitmap?.value == null && backgroundPixel() == plainPixel }
+            await { published.value?.url == rows[2].posterUrl && published.value?.bitmap?.value == null &&
+                backgroundPixel() != plainPixel && backgroundPixel() != secondListPixel }
+            finishFade()
+            val fallbackPixel = capture("10-missing-poster-fallback")
+            check(fallbackPixel != plainPixel && button(rows[2].title).isFocused)
             focusRow(1)
             await { published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
             phase = "list-disabled"; val selectedBounds = bounds(rows[1].title)
@@ -331,7 +339,9 @@ object PosterBackdropProbe {
             focusRow(1)
             capture("09-glass-strip")
             phase = "list-empty"; runOnMainSync { empty.value = true }
-            await { published.value == null && backgroundPixel() == plainPixel }
+            await { published.value == null && backgroundPixel() == fallbackPixel }
+            capture("11-empty-fallback")
+            result.putBoolean("fallback_background", true)
             result.putBoolean("list_background_tracks_selection", true)
             result.putBoolean("prefetch_toggle", true)
             phase = "setting"

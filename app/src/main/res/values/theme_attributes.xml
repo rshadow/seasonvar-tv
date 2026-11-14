@@ -2,6 +2,7 @@
 <resources>
     <declare-styleable name="SeasonvarInterfaceTheme">
         <attr name="seasonvarPosterBackgroundEnabled" format="boolean" />
+        <attr name="seasonvarPosterFallbackImage" format="reference" />
         <attr name="seasonvarPosterBlurRadius" format="integer" />
         <attr name="seasonvarPosterDimPercent" format="integer" />
         <attr name="seasonvarSurfaceColor" format="color" />
