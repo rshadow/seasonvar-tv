@@ -10,6 +10,8 @@ import ru.seasonvar.tv.ui.theme.resolveInterfaceTheme
 internal fun checkThemeConfiguration(context: Context) {
     val shipped = loadInterfaceThemes(context)
     shipped.entries.forEach { resolveInterfaceTheme(context, it) }
+    check(resolveInterfaceTheme(context, ru.seasonvar.tv.ui.settings.InterfaceTheme.CLASSIC).poster.fallbackImage == 0)
+    check(resolveInterfaceTheme(context, ru.seasonvar.tv.ui.settings.InterfaceTheme.GLASS).poster.fallbackImage == R.drawable.ic_launcher)
     val configured = loadInterfaceThemes(context, R.xml.theme_config_probe)
     check(configured.default.storageId == "probe")
     check(configured.restore("probe") == configured.default)

@@ -107,6 +107,8 @@ object SeasonvarTheme {
         @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.poster?.enabled ?: false
     val posterBackdropBlurRadius: Int
         @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.poster?.blurRadius ?: 0
+    val posterBackdropFallbackImage: Int
+        @Composable @ReadOnlyComposable get() = appearance.poster.fallbackImage
     val surfaceOutline: Color
         @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.outline ?: Color.Transparent
     val inactiveSurface: Color

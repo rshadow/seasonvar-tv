@@ -8,7 +8,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,14 +45,16 @@ class HomePlaybackActivity : ComponentActivity() {
                 val d = SeasonvarTheme.dimensions
                 val retry = remember { FocusRequester() }
                 BackHandler { finish() }
-                Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(d.spacingLarge),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Text(stringResource(failure ?: R.string.home_play_loading), color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.titleLarge)
-                    if (failure != null) {
-                        Spacer(Modifier.height(d.spacingLarge))
-                        ThemeButton(stringResource(R.string.retry), ::open, Modifier.focusRequester(retry))
-                        LaunchedEffect(failure) { retry.requestFocus() }
+                ru.seasonvar.tv.ui.details.PosterBackdropPage {
+                    Column(Modifier.fillMaxSize().padding(d.spacingLarge),
+                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Text(stringResource(failure ?: R.string.home_play_loading), color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.titleLarge)
+                        if (failure != null) {
+                            Spacer(Modifier.height(d.spacingLarge))
+                            ThemeButton(stringResource(R.string.retry), ::open, Modifier.focusRequester(retry))
+                            LaunchedEffect(failure) { retry.requestFocus() }
+                        }
                     }
                 }
             }
