@@ -22,16 +22,23 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
 import kotlin.math.roundToInt
 
+internal data class PosterBackdropSource(val url: String, val bitmap: State<Bitmap?>)
+
 @Composable
-internal fun PosterBackdrop(posterUrl: String, source: State<Bitmap?>, bounds: IntSize) {
+internal fun DetailsBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f) {
+    source.value?.let { poster -> key(poster.url) { PosterBackdrop(poster.url, poster.bitmap, bounds, menuEnd) } }
+}
+
+@Composable
+internal fun PosterBackdrop(posterUrl: String, source: State<Bitmap?>, bounds: IntSize, menuEnd: Float = 0f) {
     val cache = (LocalContext.current.applicationContext as SeasonvarApplication).posterBackdrops
     val input = source.value
     val background = MaterialTheme.colorScheme.background
     val dim = SeasonvarTheme.posterBackdropDimFraction
     val edge = SeasonvarTheme.posterBackdropEdgeFraction
     val fadeEdge = SeasonvarTheme.posterBackdropFadeEdgeFraction
-    val spec = remember(bounds, background, dim, edge, fadeEdge) {
-        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge) }
+    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd) {
+        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd) }
     }
     val bitmap by produceState<Bitmap?>(spec?.let { cache.get(posterUrl, it) }, posterUrl, input, spec) {
         value = spec?.let { cache.get(posterUrl, it) }

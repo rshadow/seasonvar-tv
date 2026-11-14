@@ -91,6 +91,10 @@ import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
+import ru.seasonvar.tv.ui.details.DetailsBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropSource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import ru.seasonvar.tv.ui.settings.DetailsAppearance
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.data.SeriesEntry
@@ -673,7 +677,9 @@ private fun SeasonvarContent(
 
     BackHandler { navigateBack() }
     val d = SeasonvarTheme.dimensions
-    Row(
+    val backdropSource = remember(detailsSource?.key, detailsOpen) { mutableStateOf<PosterBackdropSource?>(null) }
+    val onBackdropSource = remember(backdropSource) { { source: PosterBackdropSource? -> backdropSource.value = source } }
+    Box(
         Modifier.fillMaxSize()
             .onPreviewKeyEvent {
                 if (it.type == KeyEventType.KeyDown && it.nativeKeyEvent.keyCode !in setOf(
@@ -683,170 +689,177 @@ private fun SeasonvarContent(
                 false
             }
             .backNavigationKeys(::navigateBack, backNavigation::reset)
-            .background(MaterialTheme.colorScheme.background)
-            .padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
-        horizontalArrangement = Arrangement.spacedBy(d.contentGap),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        Column(Modifier.width(d.menuWidth).fillMaxHeight()
-            .onFocusChanged { if (it.hasFocus) menuOwnsInput = true }.focusGroup()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                ThemeButton(stringResource(R.string.search_title), onClick = {
-                    startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
-                }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = sectionFocus(visibleMenuPages.first()); right = browseFocus },
-                    icon = R.drawable.ic_search)
-                ThemeButton(stringResource(R.string.browse_catalog_title), {
-                    startupPending = false; backNavigation.reset(); selectSection(Section.CATALOG)
-                    scope.launch { repeat(2) { withFrameNanos { } }; if (section == Section.CATALOG) browseFiltersFocus.requestFocus() }
-                }, Modifier.focusRequester(browseFocus).focusProperties { left = searchFocus; right = accountFocus; down = sectionFocus(visibleMenuPages.first()) },
-                    icon = R.drawable.ic_catalog, actionEnabled = browseCatalog != null)
-                ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
-                    onClick = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
-                    modifier = Modifier.focusRequester(accountFocus).focusProperties { left = browseFocus; right = FocusRequester.Cancel; down = sectionFocus(visibleMenuPages.first()) },
-                    icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
-            }
-            Spacer(Modifier.height(d.menuHeaderSpacing))
-            Column(
-                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
-            ) {
-                visibleMenuGroups.forEachIndexed { index, (group, sections) ->
-                    key(group) {
-                        Text(
-                            stringResource(menuGroupTitle(group)),
-                            modifier = Modifier.fillMaxWidth()
-                                .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
-                                .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
-                                .semantics { heading() },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        sections.forEach { item ->
-                            key(item) {
-                                val focus = sectionFocus(item)
-                                val label = sectionTitle(item)
-                                ThemeButton(
-                                    stringResource(label),
-                                    onClick = { startupPending = false; backNavigation.reset(); selectSection(item); enterContent() },
-                                    modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
-                                        .bringIntoViewRequester(menuBringIntoView.getValue(item))
-                                        .focusRequester(focus).focusProperties { if (item == visibleMenuPages.first()) up = searchFocus }
-                                        .onFocusChanged {
-                                            if (it.isFocused) selectSection(item)
-                                        }
-                                        .onPreviewKeyEvent {
-                                            if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                                selectSection(item)
-                                                enterContent()
-                                                true
-                                            } else false
-                                        },
-                                    active = section == item,
-                                    contentAlignment = Alignment.CenterStart,
-                                    contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
-                                )
+        val density = LocalDensity.current
+        if (detailsOpen && detailsAppearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
+            DetailsBackdropLayer(backdropSource,
+                with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
+                ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
+        }
+        Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
+            horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {
+            Column(Modifier.width(d.menuWidth).fillMaxHeight()
+                .onFocusChanged { if (it.hasFocus) menuOwnsInput = true }.focusGroup()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                    ThemeButton(stringResource(R.string.search_title), onClick = {
+                        startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
+                    }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = sectionFocus(visibleMenuPages.first()); right = browseFocus },
+                        icon = R.drawable.ic_search)
+                    ThemeButton(stringResource(R.string.browse_catalog_title), {
+                        startupPending = false; backNavigation.reset(); selectSection(Section.CATALOG)
+                        scope.launch { repeat(2) { withFrameNanos { } }; if (section == Section.CATALOG) browseFiltersFocus.requestFocus() }
+                    }, Modifier.focusRequester(browseFocus).focusProperties { left = searchFocus; right = accountFocus; down = sectionFocus(visibleMenuPages.first()) },
+                        icon = R.drawable.ic_catalog, actionEnabled = browseCatalog != null)
+                    ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
+                        onClick = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
+                        modifier = Modifier.focusRequester(accountFocus).focusProperties { left = browseFocus; right = FocusRequester.Cancel; down = sectionFocus(visibleMenuPages.first()) },
+                        icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
+                }
+                Spacer(Modifier.height(d.menuHeaderSpacing))
+                Column(
+                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
+                ) {
+                    visibleMenuGroups.forEachIndexed { index, (group, sections) ->
+                        key(group) {
+                            Text(
+                                stringResource(menuGroupTitle(group)),
+                                modifier = Modifier.fillMaxWidth()
+                                    .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
+                                    .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
+                                    .semantics { heading() },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            sections.forEach { item ->
+                                key(item) {
+                                    val focus = sectionFocus(item)
+                                    val label = sectionTitle(item)
+                                    ThemeButton(
+                                        stringResource(label),
+                                        onClick = { startupPending = false; backNavigation.reset(); selectSection(item); enterContent() },
+                                        modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
+                                            .bringIntoViewRequester(menuBringIntoView.getValue(item))
+                                            .focusRequester(focus).focusProperties { if (item == visibleMenuPages.first()) up = searchFocus }
+                                            .onFocusChanged {
+                                                if (it.isFocused) selectSection(item)
+                                            }
+                                            .onPreviewKeyEvent {
+                                                if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
+                                                    selectSection(item)
+                                                    enterContent()
+                                                    true
+                                                } else false
+                                            },
+                                        active = section == item,
+                                        contentAlignment = Alignment.CenterStart,
+                                        contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-        BoxWithConstraints(
-            Modifier.weight(1f).fillMaxHeight()
-                .focusRequester(contentFocus).focusProperties { canFocus = returningToList }.focusTarget()
-                .onFocusChanged { if (it.hasFocus) menuOwnsInput = false }.focusGroup()
-        ) {
-            val cardMetrics = rememberCatalogCardMetrics(maxWidth, if (browsing) d.browseCatalogMinCardWidth else d.catalogMinCardWidth)
-            if (section == Section.ACCOUNT) {
-                AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
-            } else if (section == Section.SETTINGS) {
-                SettingsPane(
-                    connectionCheck = connectionCheck, onConnectionRefresh = onConnectionRefresh,
-                    onConnectionVisible = onConnectionVisible,
-                    imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
-                    showActors = showActors, onShowActorsChange = onShowActorsChange,
-                    detailsAppearance = detailsAppearance, onDetailsAppearanceChange = onDetailsAppearanceChange,
-                    bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
-                    translationSettingsModel = translationSettingsModel,
-                    menuFocus = settingsFocus,
-                    onBypassChange = onBypassChange,
-                    dnsProvider = dnsProvider,
-                    onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
-                    startPage = startPage, onStartPageChange = onStartPageChange,
-                    hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
-                    autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
-                    autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
-                    playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
-                    signedIn = accountSession.user != null,
-                    onBack = ::navigateBack,
-                    onCloseDialog = { backNavigation.reset(); returnToMenu() },
-                    onInteraction = backNavigation::reset,
-                )
-            } else if (section == Section.ABOUT) {
-                ru.seasonvar.tv.ui.about.AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset, updateModel)
-            } else if (detailsOpen && detailsSource != null && detailsModel != null) {
-                SeriesDetailsPane(
-                    detailsSource!!, detailsModel,
-                    showActors = showActors, appearance = detailsAppearance,
-                    onActions = if (accountSession.user == null) null else ::openSeriesActions,
-                    removalDialogOpen = removalState.visible,
-                    onPlay = onPlay,
-                    menuFocus = sectionFocus(section),
-                    onInteraction = backNavigation::reset,
-                )
-            } else {
-                CatalogPane(
-                    state, selected, listState, cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
-                    sectionFocus(section), refreshFocus, retryFocus,
-                    imagePrefetchEnabled = imagePrefetchEnabled,
-                    loadDescription = loadDescription,
-                    cardData = cardData,
-                    preparationContext = listOf(accountSession.version, bypassEnabled, dnsProvider, proxy),
-                    cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
-                    onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
-                    onEnterContent = ::enterContent,
-                    inlineFilters = if (browsing && browseCatalog != null) ({
-                        ru.seasonvar.tv.ui.catalog.BrowseCatalogFilters(browseState, browseCatalog, accountSession.user != null,
-                            layoutFocus, browseFiltersFocus, refreshFocus, browseFocus, ::enterContent)
-                    }) else null,
-                    browsing = browsing,
-                    query = if (searching) searchState.query else null,
-                    searchHeader = if (searching) { {
-                        SearchControls(
-                            query = searchState.query,
-                            onQuery = { pendingHistoryQuery = null; onSearchQuery(it) },
-                            showHistory = searchState.showHistory,
-                            historyLoading = searchState.historyLoading,
-                            historyFailed = searchState.historyFailed,
-                            onCommit = onSearchRemember,
-                            inputFocus = searchInputFocus,
-                            menuFocus = searchFocus,
-                            editRequest = searchEditRequest,
-                            onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
-                            onResults = { keyboard?.hide(); if (searchState.showHistory) {
-                                if (searchState.recentQueries.isNotEmpty()) searchHistoryFocus.requestFocus()
-                            } else if (state.entries.isNotEmpty()) enterContent() },
-                        )
-                    } } else null,
-                    historyContent = if (searching && searchState.showHistory) ({
-                        if (!searchState.historyLoading) ru.seasonvar.tv.ui.search.SearchHistoryPane(
-                            searchState.recentQueries, searchState.historyClearing, searchHistoryFocus, searchInputFocus, searchFocus,
-                            focusOnShow = searchState.focusHistoryOnShow,
-                            onRecall = { query -> pendingHistoryQuery = query; keyboard?.hide(); onSearchRecall(query) },
-                            onClear = onSearchClearHistory)
-                    }) else null,
-                    onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
-                    smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
-                    filters = if (personalFeed != null) personalFilters[personalFeed]
-                        else if (!browsing && !searching && !smart) publicFilters[activeFeed] else null,
-                    historyClear = if (personalFeed == PersonalFeed.HISTORY) historyClear else null,
-                    onLoadMore = { personalFeed?.let(onPersonalMore) },
-                    onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
-                    onOpen = ::openDetails,
-                    onActions = { entry ->
-                        selectEntry(entry.key)
-                        openSeriesActions(entry)
-                    },
-                )
+            BoxWithConstraints(
+                Modifier.weight(1f).fillMaxHeight()
+                    .focusRequester(contentFocus).focusProperties { canFocus = returningToList }.focusTarget()
+                    .onFocusChanged { if (it.hasFocus) menuOwnsInput = false }.focusGroup()
+            ) {
+                val cardMetrics = rememberCatalogCardMetrics(maxWidth, if (browsing) d.browseCatalogMinCardWidth else d.catalogMinCardWidth)
+                if (section == Section.ACCOUNT) {
+                    AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
+                } else if (section == Section.SETTINGS) {
+                    SettingsPane(
+                        connectionCheck = connectionCheck, onConnectionRefresh = onConnectionRefresh,
+                        onConnectionVisible = onConnectionVisible,
+                        imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
+                        showActors = showActors, onShowActorsChange = onShowActorsChange,
+                        detailsAppearance = detailsAppearance, onDetailsAppearanceChange = onDetailsAppearanceChange,
+                        bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
+                        translationSettingsModel = translationSettingsModel,
+                        menuFocus = settingsFocus,
+                        onBypassChange = onBypassChange,
+                        dnsProvider = dnsProvider,
+                        onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
+                        startPage = startPage, onStartPageChange = onStartPageChange,
+                        hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
+                        autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
+                        autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
+                        playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
+                        signedIn = accountSession.user != null,
+                        onBack = ::navigateBack,
+                        onCloseDialog = { backNavigation.reset(); returnToMenu() },
+                        onInteraction = backNavigation::reset,
+                    )
+                } else if (section == Section.ABOUT) {
+                    ru.seasonvar.tv.ui.about.AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset, updateModel)
+                } else if (detailsOpen && detailsSource != null && detailsModel != null) {
+                    SeriesDetailsPane(
+                        detailsSource!!, detailsModel,
+                        showActors = showActors, appearance = detailsAppearance, onBackdropSource = onBackdropSource,
+                        onActions = if (accountSession.user == null) null else ::openSeriesActions,
+                        removalDialogOpen = removalState.visible,
+                        onPlay = onPlay,
+                        menuFocus = sectionFocus(section),
+                        onInteraction = backNavigation::reset,
+                    )
+                } else {
+                    CatalogPane(
+                        state, selected, listState, cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
+                        sectionFocus(section), refreshFocus, retryFocus,
+                        imagePrefetchEnabled = imagePrefetchEnabled,
+                        loadDescription = loadDescription,
+                        cardData = cardData,
+                        preparationContext = listOf(accountSession.version, bypassEnabled, dnsProvider, proxy),
+                        cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
+                        onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
+                        onEnterContent = ::enterContent,
+                        inlineFilters = if (browsing && browseCatalog != null) ({
+                            ru.seasonvar.tv.ui.catalog.BrowseCatalogFilters(browseState, browseCatalog, accountSession.user != null,
+                                layoutFocus, browseFiltersFocus, refreshFocus, browseFocus, ::enterContent)
+                        }) else null,
+                        browsing = browsing,
+                        query = if (searching) searchState.query else null,
+                        searchHeader = if (searching) { {
+                            SearchControls(
+                                query = searchState.query,
+                                onQuery = { pendingHistoryQuery = null; onSearchQuery(it) },
+                                showHistory = searchState.showHistory,
+                                historyLoading = searchState.historyLoading,
+                                historyFailed = searchState.historyFailed,
+                                onCommit = onSearchRemember,
+                                inputFocus = searchInputFocus,
+                                menuFocus = searchFocus,
+                                editRequest = searchEditRequest,
+                                onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
+                                onResults = { keyboard?.hide(); if (searchState.showHistory) {
+                                    if (searchState.recentQueries.isNotEmpty()) searchHistoryFocus.requestFocus()
+                                } else if (state.entries.isNotEmpty()) enterContent() },
+                            )
+                        } } else null,
+                        historyContent = if (searching && searchState.showHistory) ({
+                            if (!searchState.historyLoading) ru.seasonvar.tv.ui.search.SearchHistoryPane(
+                                searchState.recentQueries, searchState.historyClearing, searchHistoryFocus, searchInputFocus, searchFocus,
+                                focusOnShow = searchState.focusHistoryOnShow,
+                                onRecall = { query -> pendingHistoryQuery = query; keyboard?.hide(); onSearchRecall(query) },
+                                onClear = onSearchClearHistory)
+                        }) else null,
+                        onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
+                        smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
+                        filters = if (personalFeed != null) personalFilters[personalFeed]
+                            else if (!browsing && !searching && !smart) publicFilters[activeFeed] else null,
+                        historyClear = if (personalFeed == PersonalFeed.HISTORY) historyClear else null,
+                        onLoadMore = { personalFeed?.let(onPersonalMore) },
+                        onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
+                        onOpen = ::openDetails,
+                        onActions = { entry ->
+                            selectEntry(entry.key)
+                            openSeriesActions(entry)
+                        },
+                    )
+                }
             }
         }
     }

@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 internal data class PosterBackdropSpec(val width: Int, val height: Int, val background: Int,
-    val dim: Float, val edge: Float, val fadeEdge: Float)
+    val dim: Float, val edge: Float, val fadeEdge: Float, val menuEnd: Float = 0f)
 
 internal class PosterBackdropCache {
     private data class Key(val poster: String, val spec: PosterBackdropSpec)
@@ -26,7 +26,7 @@ internal class PosterBackdropCache {
     val cachedBytes: Int get() = images.snapshot().values.sumOf { it.allocationByteCount }
 
     suspend fun prepare(poster: String, input: Bitmap, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
-        require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f)
+        require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f && spec.menuEnd in 0f..0.6f)
         preparation.withLock {
             val key = Key(poster, spec)
             images.get(key)?.let { return@withLock it }
@@ -56,8 +56,9 @@ internal class PosterBackdropCache {
             fun alpha(value: Float) = (spec.background and 0x00ffffff) or ((value * 255).roundToInt() shl 24)
             canvas.drawColor(alpha(spec.dim))
             val positions = floatArrayOf(0f, spec.fadeEdge, 1f - spec.fadeEdge, 1f)
+            val horizontalPositions = floatArrayOf(0f, minOf(1f - spec.fadeEdge, spec.menuEnd + spec.fadeEdge), 1f - spec.fadeEdge, 1f)
             paint.shader = LinearGradient(0f, 0f, outputWidth.toFloat(), 0f,
-                intArrayOf(spec.background, alpha(spec.edge), alpha(0f), spec.background), positions, Shader.TileMode.CLAMP)
+                intArrayOf(spec.background, alpha(spec.edge), alpha(0f), spec.background), horizontalPositions, Shader.TileMode.CLAMP)
             canvas.drawRect(0f, 0f, outputWidth.toFloat(), outputHeight.toFloat(), paint)
             paint.shader = LinearGradient(0f, 0f, 0f, outputHeight.toFloat(),
                 intArrayOf(spec.background, alpha(0f), alpha(0f), spec.background), positions, Shader.TileMode.CLAMP)
@@ -69,9 +70,9 @@ internal class PosterBackdropCache {
     }
 
     companion object {
-        const val MAX_EDGE = 128
+        const val MAX_EDGE = 256
         const val MAX_ENTRIES = 8
-        private const val RADIUS = 8
-        private const val PASSES = 3
+        private const val RADIUS = 2
+        private const val PASSES = 2
     }
 }

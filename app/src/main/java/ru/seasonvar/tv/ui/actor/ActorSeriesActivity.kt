@@ -34,6 +34,11 @@ import ru.seasonvar.tv.ui.account.MarkRemovalViewModel
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.parsedCatalogState
 import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
+import ru.seasonvar.tv.ui.details.DetailsBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropSource
+import ru.seasonvar.tv.ui.settings.DetailsAppearance
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
@@ -168,22 +173,31 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
         actionsWereOpen = removal.visible
     }
     val d = SeasonvarTheme.dimensions
-    BoxWithConstraints(Modifier.fillMaxSize().backNavigationKeys(::back, {})
-        .background(MaterialTheme.colorScheme.background).padding(d.screenPaddingHorizontal, d.screenPaddingVertical)
-        .focusRequester(holder).focusProperties { canFocus = holdingFocus }.focusTarget().focusGroup()) {
-        val metrics = rememberCatalogCardMetrics(maxWidth)
-        val detailEntry = entry
-        if (detailEntry != null) SeriesDetailsPane(detailEntry, details, FocusRequester.Cancel, {}, onPlay,
-            onActions = if (session.user == null) null else ({ actions.show(it) }), removalDialogOpen = removal.visible,
-            showActors = showActors, appearance = appearance)
-        else CatalogPane(state, selected, list, cards, null, FocusRequester.Cancel, refresh, retry,
-            onRefresh = { model.refresh() }, onFocused = { selectedKey = it.key },
-            onOpen = { ru.seasonvar.tv.ui.details.DetailsPerformance.opened(); selectedKey = it.key; entry = it }, actorName = name, catalogKey = catalogKey,
-            cardMetrics = metrics, imagePrefetchEnabled = prefetch, gridState = grid, layout = layout,
-            layoutFocus = header, onLayoutChange = { container.interfaceSettings.setActorCatalogLayout(layout.other()) }, onEnterContent = ::focusList,
-            allowAccountActions = session.user != null, onActions = { actions.show(it) },
-            loadDescription = container.repository::description, cardData = container.repository.cardData,
-            preparationContext = session.version to network)
+    val backdropSource = remember(entry?.key) { mutableStateOf<PosterBackdropSource?>(null) }
+    val onBackdropSource = remember(backdropSource) { { source: PosterBackdropSource? -> backdropSource.value = source } }
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        val density = LocalDensity.current
+        if (entry != null && appearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
+            DetailsBackdropLayer(backdropSource,
+                with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
+        }
+        BoxWithConstraints(Modifier.fillMaxSize().backNavigationKeys(::back, {})
+            .padding(d.screenPaddingHorizontal, d.screenPaddingVertical)
+            .focusRequester(holder).focusProperties { canFocus = holdingFocus }.focusTarget().focusGroup()) {
+            val metrics = rememberCatalogCardMetrics(maxWidth)
+            val detailEntry = entry
+            if (detailEntry != null) SeriesDetailsPane(detailEntry, details, FocusRequester.Cancel, {}, onPlay,
+                onActions = if (session.user == null) null else ({ actions.show(it) }), removalDialogOpen = removal.visible,
+                showActors = showActors, appearance = appearance, onBackdropSource = onBackdropSource)
+            else CatalogPane(state, selected, list, cards, null, FocusRequester.Cancel, refresh, retry,
+                onRefresh = { model.refresh() }, onFocused = { selectedKey = it.key },
+                onOpen = { ru.seasonvar.tv.ui.details.DetailsPerformance.opened(); selectedKey = it.key; entry = it }, actorName = name, catalogKey = catalogKey,
+                cardMetrics = metrics, imagePrefetchEnabled = prefetch, gridState = grid, layout = layout,
+                layoutFocus = header, onLayoutChange = { container.interfaceSettings.setActorCatalogLayout(layout.other()) }, onEnterContent = ::focusList,
+                allowAccountActions = session.user != null, onActions = { actions.show(it) },
+                loadDescription = container.repository::description, cardData = container.repository.cardData,
+                preparationContext = session.version to network)
+        }
     }
     MarkRemovalDialog(removal, onDismiss = actions::dismiss, onAsk = actions::ask, onConfirm = actions::confirm,
         onInteraction = {}, onRefresh = actions::refreshStatus, onSelectStatus = actions::selectStatus)

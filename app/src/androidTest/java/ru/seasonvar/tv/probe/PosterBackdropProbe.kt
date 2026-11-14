@@ -13,6 +13,7 @@ import android.graphics.Shader
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.Choreographer
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.tv.material3.MaterialTheme
 import kotlinx.coroutines.runBlocking
 import ru.seasonvar.tv.SeasonvarApplication
@@ -27,10 +30,14 @@ import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.images.PosterBackdropCache
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
+import ru.seasonvar.tv.ui.details.DetailsBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropSource
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.settings.*
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 object PosterBackdropProbe {
     fun run(probe: Instrumentation) = with(probe) {
@@ -95,6 +102,21 @@ object PosterBackdropProbe {
             bitmap.recycle()
             return pixel
         }
+        fun finishFade() {
+            val complete = CountDownLatch(1)
+            val duration = targetContext.resources.getInteger(ru.seasonvar.tv.R.integer.seasonvar_poster_backdrop_fade_ms) * 1_000_000L
+            runOnMainSync {
+                val clock = Choreographer.getInstance()
+                clock.postFrameCallback(object : Choreographer.FrameCallback {
+                    var started = 0L
+                    override fun doFrame(time: Long) {
+                        if (started == 0L) started = time
+                        if (time - started >= duration) complete.countDown() else clock.postFrameCallback(this)
+                    }
+                })
+            }
+            check(complete.await(5, TimeUnit.SECONDS))
+        }
         try {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
             runBlocking {
@@ -114,8 +136,23 @@ object PosterBackdropProbe {
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
             runOnMainSync { activity!!.setContent { SeasonvarTheme {
                 val d = SeasonvarTheme.dimensions
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(d.screenPaddingHorizontal, d.screenPaddingVertical)) {
-                    SeriesDetailsPane(entry, model, FocusRequester.Cancel, {}, {}, showActors = false, appearance = appearance.value)
+                val source = remember { mutableStateOf<PosterBackdropSource?>(null) }
+                val publish = remember { { value: PosterBackdropSource? -> source.value = value } }
+                val density = LocalDensity.current
+                BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                    if (appearance.value == DetailsAppearance.BLURRED_POSTER) DetailsBackdropLayer(source,
+                        with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
+                        ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
+                    Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
+                        horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {
+                        Column(Modifier.width(d.menuWidth)) {
+                            androidx.tv.material3.Text("Разделы", color = MaterialTheme.colorScheme.onBackground)
+                        }
+                        Box(Modifier.weight(1f)) {
+                            SeriesDetailsPane(entry, model, FocusRequester.Cancel, {}, {}, showActors = false,
+                                appearance = appearance.value, onBackdropSource = publish)
+                        }
+                    }
                 }
             } } }
             await { node(watch) != null && button(watch).isFocused }
@@ -127,10 +164,22 @@ object PosterBackdropProbe {
             runOnMainSync { appearance.value = DetailsAppearance.BLURRED_POSTER }
             await { app.posterBackdrops.cachedBytes > 0 }
             await { backgroundPixel() != plainPixel }
+            finishFade()
             await { button(watch).isFocused && bounds(watch) == playBounds }
             check(bounds("Рецензии · 0") == reviewBounds)
             val blurredPixel = capture("02-blurred")
             check(blurredPixel != plainPixel)
+            val screen = checkNotNull(uiAutomation.takeScreenshot())
+            val menuPixel = screen.getPixel(screen.width / 8, screen.height / 3)
+            check(menuPixel != plainPixel)
+            val seam = screen.width / 4
+            val beforeSeam = screen.getPixel(seam - 1, screen.height / 4)
+            val afterSeam = screen.getPixel(seam + 1, screen.height / 4)
+            check(kotlin.math.abs(Color.red(beforeSeam) - Color.red(afterSeam)) <= 2)
+            check(kotlin.math.abs(Color.green(beforeSeam) - Color.green(afterSeam)) <= 2)
+            check(kotlin.math.abs(Color.blue(beforeSeam) - Color.blue(afterSeam)) <= 2)
+            screen.recycle()
+            result.putBoolean("background_under_menu", true)
             runOnMainSync { appearance.value = DetailsAppearance.PLAIN }
             await { backgroundPixel() == plainPixel }
             await { button(watch).isFocused && bounds(watch) == playBounds }

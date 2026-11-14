@@ -85,6 +85,7 @@ internal fun SeriesDetailsPane(
     removalDialogOpen: Boolean = false,
     showActors: Boolean = true,
     appearance: DetailsAppearance = DetailsAppearance.PLAIN,
+    onBackdropSource: ((PosterBackdropSource?) -> Unit)? = null,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
@@ -93,6 +94,12 @@ internal fun SeriesDetailsPane(
     val details = state.details
     val preparing = state.loading || state.entry == null
     val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
+    if (appearance == DetailsAppearance.BLURRED_POSTER && onBackdropSource != null) {
+        DisposableEffect(entry.posterUrl, posterImage, onBackdropSource) {
+            onBackdropSource(PosterBackdropSource(entry.posterUrl, posterImage))
+            onDispose { onBackdropSource(null) }
+        }
+    }
     ShortMessageEffect(if (state.progressFailure != null) stringResource(R.string.account_progress_error) else null)
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
@@ -159,7 +166,7 @@ internal fun SeriesDetailsPane(
     val density = LocalDensity.current
     CompositionLocalProvider(LocalBringIntoViewSpec provides VisibleControlsScrollSpec) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            if (appearance == DetailsAppearance.BLURRED_POSTER) key(entry.posterUrl) {
+            if (appearance == DetailsAppearance.BLURRED_POSTER && onBackdropSource == null) key(entry.posterUrl) {
                 PosterBackdrop(entry.posterUrl, posterImage, with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
             }
             val step = with(density) { (maxHeight - d.spacingSection).coerceAtLeast(d.navigationButtonHeight).toPx() }

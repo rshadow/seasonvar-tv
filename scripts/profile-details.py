@@ -70,6 +70,7 @@ def main():
         bounds = [int(value) for value in re.findall(r"\d+", focus.get("bounds", ""))]
         if len(bounds) != 4 or bounds[2] <= bounds[0] or bounds[3] <= bounds[1]:
             raise SystemExit("The source card has no visible bounds")
+        call("shell", "dumpsys", "gfxinfo", APP, "reset")
         call("shell", "input", "keyevent", "KEYCODE_DPAD_CENTER")
         for attempt in range(5):
             root = ui()
@@ -78,7 +79,7 @@ def main():
                 _, value, mode = values[-1]
                 if mode != args.mode:
                     raise SystemExit("The selected appearance does not match --mode")
-                return value / 1000
+                return value / 1000, call("shell", "dumpsys", "gfxinfo", APP, "framestats")
             if attempt < 4 and not details(root):
                 call("shell", "input", "keyevent", "KEYCODE_DPAD_CENTER")
         raise SystemExit("No profile readiness marker for the opened card")
@@ -89,15 +90,19 @@ def main():
         reopen()
     reports = []
     for index in range(args.rounds):
-        ready = reopen()
+        ready, opening = reopen()
+        (args.output / ("opening-frames-" + str(index + 1) + ".txt")).write_text(opening, encoding="utf-8")
         call("shell", "dumpsys", "gfxinfo", APP, "reset")
-        keys = ["DPAD_DOWN"] + ["DPAD_RIGHT"] * 8 + ["DPAD_LEFT"] * 8 + ["PAGE_DOWN", "PAGE_UP"]
+        keys = ["DPAD_DOWN"] + ["DPAD_RIGHT", "DPAD_LEFT"] * 8 + ["PAGE_DOWN", "PAGE_UP"]
         interval = config["details_key_interval_seconds"]
         workload = "; ".join("input keyevent KEYCODE_" + key + "; sleep " + str(interval) for key in keys)
         call("shell", workload)
         raw = call("shell", "dumpsys", "gfxinfo", APP, "framestats")
+        if not details(ui()):
+            raise SystemExit("Navigation left the series card; measurement stopped")
         (args.output / ("frames-" + str(index + 1) + ".txt")).write_text(raw, encoding="utf-8")
         report = frame_statistics(raw)
+        report.update({"opening_" + key: value for key, value in frame_statistics(opening).items()})
         report.update(round=index + 1, ready_ms=round(ready, 2))
         memory = call("shell", "dumpsys", "meminfo", APP)
         for key, pattern in {"pss_kib": r"TOTAL PSS:\s+(\d+)", "java_kib": r"Java Heap:\s+(\d+)",
@@ -107,7 +112,7 @@ def main():
                 report[key] = int(match[1])
         reports.append(report)
         print(json.dumps(report), flush=True)
-    keys = ("ready_ms", "raw_p95_ms", "max_frame_ms", "pss_kib", "java_kib", "native_kib", "graphics_kib")
+    keys = ("ready_ms", "opening_raw_p95_ms", "opening_max_frame_ms", "raw_p95_ms", "max_frame_ms", "pss_kib", "java_kib", "native_kib", "graphics_kib")
     summary = {"mode": args.mode, "opening": "activate_focused_source_card", "rounds": reports,
                "medians": {key: round(statistics.median(r[key] for r in reports if key in r), 2)
                            for key in keys if any(key in r for r in reports)}}

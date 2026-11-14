@@ -47,9 +47,9 @@
     <dimen name="seasonvar_reviews_status_height">44dp</dimen>
     <integer name="seasonvar_reviews_list_width_percent">34</integer>
     <integer name="seasonvar_poster_backdrop_fade_ms">180</integer>
-    <integer name="seasonvar_poster_backdrop_dim_percent">72</integer>
-    <integer name="seasonvar_poster_backdrop_edge_percent">22</integer>
-    <integer name="seasonvar_poster_backdrop_fade_edge_percent">14</integer>
+    <integer name="seasonvar_poster_backdrop_dim_percent">52</integer>
+    <integer name="seasonvar_poster_backdrop_edge_percent">10</integer>
+    <integer name="seasonvar_poster_backdrop_fade_edge_percent">8</integer>
     <integer name="seasonvar_preview_poster_max_width_percent">50</integer>
     <dimen name="seasonvar_card_padding">6dp</dimen>
     <dimen name="seasonvar_card_corner_radius">8dp</dimen>
