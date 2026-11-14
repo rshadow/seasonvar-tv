@@ -22,6 +22,14 @@ internal class InterfaceSettings(context: Context) {
 
     fun setActorCatalogLayout(layout: CatalogLayout) = layoutPreferences.setActorLayout(layout)
 
+    private val mutableDetailsAppearance = MutableStateFlow(DetailsAppearance.fromStorage(preferences.getString("details_appearance", null)))
+    val detailsAppearance = mutableDetailsAppearance.asStateFlow()
+
+    fun setDetailsAppearance(value: DetailsAppearance) {
+        preferences.edit().putString("details_appearance", value.storageId).apply()
+        mutableDetailsAppearance.value = value
+    }
+
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 

@@ -75,6 +75,14 @@ private val LocalDimensions = staticCompositionLocalOf<SeasonvarDimensions> {
 private val SeasonvarTypography = Typography()
 
 object SeasonvarTheme {
+    val posterBackdropFadeMillis: Int
+        @Composable @ReadOnlyComposable get() = integerResource(R.integer.seasonvar_poster_backdrop_fade_ms)
+    val posterBackdropDimFraction: Float
+        @Composable @ReadOnlyComposable get() = integerResource(R.integer.seasonvar_poster_backdrop_dim_percent) / 100f
+    val posterBackdropEdgeFraction: Float
+        @Composable @ReadOnlyComposable get() = integerResource(R.integer.seasonvar_poster_backdrop_edge_percent) / 100f
+    val posterBackdropFadeEdgeFraction: Float
+        @Composable @ReadOnlyComposable get() = integerResource(R.integer.seasonvar_poster_backdrop_fade_edge_percent) / 100f
     val allEpisodesThreshold: Int
         @Composable
         @ReadOnlyComposable

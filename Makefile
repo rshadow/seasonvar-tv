@@ -584,6 +584,9 @@ history-clear-probe:
 
 .PHONY: details-progress-probe
 .PHONY: reviews-probe
+.PHONY: poster-backdrop-probe
+.PHONY: profile-details
+.PHONY: profile-release-dev
 .PHONY: series-list-probe
 .PHONY: shared-card-cache-probe
 .PHONY: cache-memory-probe
@@ -603,6 +606,28 @@ reviews-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=reviews-layout MARK_MENU_PROBE_OUT="$(REVIEWS_PROBE_OUT)"
 
 REVIEWS_PROBE_OUT ?= build/reviews-probe
+
+poster-backdrop-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=poster-backdrop MARK_MENU_PROBE_OUT="$(POSTER_BACKDROP_PROBE_OUT)"
+
+POSTER_BACKDROP_PROBE_OUT ?= build/poster-backdrop-probe
+
+profile-details:
+	$(ENV) python3 scripts/profile-details.py --device "$(DEVICE)" --mode "$(DETAILS_APPEARANCE)" --output "$(DETAILS_PROFILE_OUT)" $(DETAILS_PROFILE_ARGS)
+
+DETAILS_APPEARANCE ?= plain
+DETAILS_PROFILE_OUT ?= build/profile-details/$(DETAILS_APPEARANCE)
+DETAILS_PROFILE_ARGS ?=
+
+PROFILE_RELEASE_APK := $(shell python3 -c 'import json; print(json.load(open("toolchain.lock.json"))["performance"]["signed_profile_apk"])')
+
+profile-release-dev:
+	@commit="$(DEV_COMMIT)"; \
+		if [[ -z "$$commit" ]]; then commit="$$(git rev-parse --short=7 HEAD)"; fi; \
+		[[ "$$commit" =~ ^[0-9a-f]{7,40}$$ ]] || { echo 'Expected a Git commit hash.' >&2; exit 1; }; \
+		$(MAKE) build BUILD_TYPE=profile VERSION_NAME_SUFFIX="-dev$$commit"
+	mkdir -p "$(dir $(PROFILE_RELEASE_APK))"
+	$(ENV) sh -c 'exec java --class-path "$$ANDROID_HOME/$(SIGNER_JAR)" scripts/SignRelease.java app/build/outputs/apk/profile/app-profile.apk "$(PROFILE_RELEASE_APK)"'
 
 mark-menu-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for menu verification.' >&2; exit 1;; esac

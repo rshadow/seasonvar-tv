@@ -97,6 +97,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val marks by container.account.marksRevision.collectAsStateWithLifecycle()
     val prefetch by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
     val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
+    val appearance by container.interfaceSettings.detailsAppearance.collectAsStateWithLifecycle()
     val removal by actions.state.collectAsStateWithLifecycle()
     var previousAccount by remember { mutableLongStateOf(session.version) }
     var selectedKey by rememberSaveable(url) { mutableStateOf<String?>(null) }
@@ -174,10 +175,10 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
         val detailEntry = entry
         if (detailEntry != null) SeriesDetailsPane(detailEntry, details, FocusRequester.Cancel, {}, onPlay,
             onActions = if (session.user == null) null else ({ actions.show(it) }), removalDialogOpen = removal.visible,
-            showActors = showActors)
+            showActors = showActors, appearance = appearance)
         else CatalogPane(state, selected, list, cards, null, FocusRequester.Cancel, refresh, retry,
             onRefresh = { model.refresh() }, onFocused = { selectedKey = it.key },
-            onOpen = { selectedKey = it.key; entry = it }, actorName = name, catalogKey = catalogKey,
+            onOpen = { ru.seasonvar.tv.ui.details.DetailsPerformance.opened(); selectedKey = it.key; entry = it }, actorName = name, catalogKey = catalogKey,
             cardMetrics = metrics, imagePrefetchEnabled = prefetch, gridState = grid, layout = layout,
             layoutFocus = header, onLayoutChange = { container.interfaceSettings.setActorCatalogLayout(layout.other()) }, onEnterContent = ::focusList,
             allowAccountActions = session.user != null, onActions = { actions.show(it) },

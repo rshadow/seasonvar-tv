@@ -91,6 +91,7 @@ import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.BuildConfig
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
+import ru.seasonvar.tv.ui.settings.DetailsAppearance
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.CatalogFilters
@@ -175,6 +176,8 @@ internal fun SeasonvarApp(
     onImagePrefetchChange: (Boolean) -> Unit = {},
     showActors: Boolean = true,
     onShowActorsChange: (Boolean) -> Unit = {},
+    detailsAppearance: DetailsAppearance = DetailsAppearance.PLAIN,
+    onDetailsAppearanceChange: (DetailsAppearance) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -236,6 +239,7 @@ internal fun SeasonvarApp(
             onConnectionVisible = onConnectionVisible,
             imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
             showActors = showActors, onShowActorsChange = onShowActorsChange,
+            detailsAppearance = detailsAppearance, onDetailsAppearanceChange = onDetailsAppearanceChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
@@ -289,6 +293,8 @@ private fun SeasonvarContent(
     onImagePrefetchChange: (Boolean) -> Unit = {},
     showActors: Boolean = true,
     onShowActorsChange: (Boolean) -> Unit = {},
+    detailsAppearance: DetailsAppearance = DetailsAppearance.PLAIN,
+    onDetailsAppearanceChange: (DetailsAppearance) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -629,6 +635,7 @@ private fun SeasonvarContent(
     }
 
     fun openDetails(entry: SeriesEntry) {
+        ru.seasonvar.tv.ui.details.DetailsPerformance.opened()
         pendingHistoryQuery = null
         if (searching) onSearchRemember()
         backNavigation.reset()
@@ -757,6 +764,7 @@ private fun SeasonvarContent(
                     onConnectionVisible = onConnectionVisible,
                     imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
                     showActors = showActors, onShowActorsChange = onShowActorsChange,
+                    detailsAppearance = detailsAppearance, onDetailsAppearanceChange = onDetailsAppearanceChange,
                     bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
                     translationSettingsModel = translationSettingsModel,
                     menuFocus = settingsFocus,
@@ -778,7 +786,7 @@ private fun SeasonvarContent(
             } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                 SeriesDetailsPane(
                     detailsSource!!, detailsModel,
-                    showActors = showActors,
+                    showActors = showActors, appearance = detailsAppearance,
                     onActions = if (accountSession.user == null) null else ::openSeriesActions,
                     removalDialogOpen = removalState.visible,
                     onPlay = onPlay,
@@ -1398,6 +1406,8 @@ private fun SettingsPane(
     onImagePrefetchChange: (Boolean) -> Unit,
     showActors: Boolean,
     onShowActorsChange: (Boolean) -> Unit,
+    detailsAppearance: DetailsAppearance,
+    onDetailsAppearanceChange: (DetailsAppearance) -> Unit,
     autoNextSeasonEnabled: Boolean,
     onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
@@ -1434,6 +1444,7 @@ private fun SettingsPane(
     }
     val bypassFocus = remember { FocusRequester() }
     val translationFocus = remember { FocusRequester() }
+    val appearanceFocus = remember { FocusRequester() }
     val actorsSettingFocus = remember { FocusRequester() }
     var actorsSettingFocused by remember { mutableStateOf(false) }
     val menuVisibilityFocus = remember { FocusRequester() }
@@ -1492,7 +1503,7 @@ private fun SettingsPane(
             menuFocus, homeChannelsFocus, actorsSettingFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(actorsSettingFocus)
-            .focusProperties { left = menuFocus; up = translationFocus; down = autoNextFocus }
+            .focusProperties { left = menuFocus; up = translationFocus; down = appearanceFocus }
             .onFocusChanged { actorsSettingFocused = it.isFocused }
             .border(d.focusBorderWidth, if (actorsSettingFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))
@@ -1506,12 +1517,15 @@ private fun SettingsPane(
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = showActors, onCheckedChange = null)
         }
+        Spacer(Modifier.height(d.spacingMedium))
+        ru.seasonvar.tv.ui.settings.DetailsAppearanceSetting(detailsAppearance, onDetailsAppearanceChange,
+            appearanceFocus, menuFocus, actorsSettingFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.player_settings_title),
             style = MaterialTheme.typography.titleLarge, color = c.onBackground)
         Spacer(Modifier.height(d.spacingMedium))
         Row(Modifier.fillMaxWidth().focusRequester(autoNextFocus)
-            .focusProperties { left = menuFocus; up = actorsSettingFocus; down = autoSeasonFocus }
+            .focusProperties { left = menuFocus; up = appearanceFocus; down = autoSeasonFocus }
             .onFocusChanged { autoNextFocused = it.isFocused }
             .border(d.focusBorderWidth, if (autoNextFocused) c.primary else Color.Transparent,
                 RoundedCornerShape(d.cardCornerRadius))

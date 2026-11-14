@@ -1,5 +1,8 @@
 package ru.seasonvar.tv.ui.details
 
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
@@ -41,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +64,7 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.reviews.ReviewsActivity
+import ru.seasonvar.tv.ui.settings.DetailsAppearance
 
 @OptIn(ExperimentalFoundationApi::class)
 private object VisibleControlsScrollSpec : BringIntoViewSpec
@@ -79,6 +84,7 @@ internal fun SeriesDetailsPane(
     onActions: ((SeriesEntry) -> Unit)? = null,
     removalDialogOpen: Boolean = false,
     showActors: Boolean = true,
+    appearance: DetailsAppearance = DetailsAppearance.PLAIN,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
@@ -86,6 +92,7 @@ internal fun SeriesDetailsPane(
     val entry = state.entry ?: sourceEntry
     val details = state.details
     val preparing = state.loading || state.entry == null
+    val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
     ShortMessageEffect(if (state.progressFailure != null) stringResource(R.string.account_progress_error) else null)
     val selectedEpisodeFocus = remember { FocusRequester() }
     val play = remember { FocusRequester() }
@@ -121,6 +128,7 @@ internal fun SeriesDetailsPane(
                 actions.bringIntoView()
                 play.requestFocus()
                 revealActionsAfterLoad = false
+                DetailsPerformance.ready(appearance)
             }
             descriptionAnchor = null
         }
@@ -151,6 +159,9 @@ internal fun SeriesDetailsPane(
     val density = LocalDensity.current
     CompositionLocalProvider(LocalBringIntoViewSpec provides VisibleControlsScrollSpec) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
+            if (appearance == DetailsAppearance.BLURRED_POSTER) key(entry.posterUrl) {
+                PosterBackdrop(entry.posterUrl, posterImage, with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
+            }
             val step = with(density) { (maxHeight - d.spacingSection).coerceAtLeast(d.navigationButtonHeight).toPx() }
             fun actionScrolling(origin: FocusRequester) = Modifier.onPreviewKeyEvent {
                 if (it.type != KeyEventType.KeyDown) false else when {
@@ -186,7 +197,7 @@ internal fun SeriesDetailsPane(
                 }.verticalScroll(scroll).padding(d.focusBorderWidth),
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                 SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
-                    actorReturnFocus, menuFocus) { actorIndex = it; onInteraction() }
+                    actorReturnFocus, menuFocus, onPosterLoaded = { posterImage.value = it }) { actorIndex = it; onInteraction() }
                 Row(Modifier.fillMaxWidth().bringIntoViewRequester(actions),
                     horizontalArrangement = Arrangement.spacedBy(d.spacingMedium), verticalAlignment = Alignment.Top) {
                     FlowRow(Modifier.weight(1f),
@@ -379,13 +390,14 @@ internal fun SeasonProgress(state: DetailsUiState, entry: SeriesEntry) {
 @Composable
 private fun SeriesInformation(state: DetailsUiState, entry: SeriesEntry, modifier: Modifier, showActors: Boolean,
     actorListState: LazyListState, actorFocus: List<FocusRequester>, actorReturnFocus: FocusRequester,
-    menuFocus: FocusRequester, onActorFocused: (Int) -> Unit) {
+    menuFocus: FocusRequester, onPosterLoaded: (Bitmap) -> Unit, onActorFocused: (Int) -> Unit) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val details = state.details
     Column(modifier, verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
         Row(horizontalArrangement = Arrangement.spacedBy(d.spacingMedium), verticalAlignment = Alignment.Top) {
-            AsyncImage(entry.posterUrl, null, Modifier.width(d.posterWidth).height(d.posterHeight), contentScale = ContentScale.Fit)
+            AsyncImage(entry.posterUrl, null, Modifier.width(d.posterWidth).height(d.posterHeight), contentScale = ContentScale.Fit,
+                onSuccess = { (it.result.drawable as? BitmapDrawable)?.bitmap?.let(onPosterLoaded) })
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 Text(entry.title, color = c.onBackground, style = MaterialTheme.typography.headlineSmall,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)

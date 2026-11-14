@@ -420,4 +420,8 @@
     <string name="reviews_refresh">Обновить рецензии</string>
     <string name="reviews_read">Читать рецензию</string>
     <string name="reviews_hint">Вправо — читать · Влево — к списку</string>
+    <string name="details_appearance_title">Оформление карточки</string>
+    <string name="details_appearance_description">Фон страницы сериала.</string>
+    <string name="details_appearance_plain">Обычное</string>
+    <string name="details_appearance_blurred">Размытый постер</string>
 </resources>
