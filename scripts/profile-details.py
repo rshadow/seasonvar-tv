@@ -36,7 +36,10 @@ def main():
 
     def ui():
         call("shell", "uiautomator", "dump", "/data/local/tmp/seasonvar-details-profile.xml")
-        return ET.fromstring(call("shell", "cat", "/data/local/tmp/seasonvar-details-profile.xml"))
+        root = ET.fromstring(call("shell", "cat", "/data/local/tmp/seasonvar-details-profile.xml"))
+        if not any(n.get("package") == APP for n in root.iter("node")):
+            raise SystemExit("Seasonvar is no longer the active application; measurement stopped")
+        return root
 
     def details(root):
         return any(n.get("text", "").startswith("Рецензии ·") for n in root.iter("node"))
@@ -46,7 +49,10 @@ def main():
         return [(line, int(match.group(1)), match.group(2)) for line in log.splitlines()
                 if (match := re.search(r"ready_us=(\d+) appearance=(\w+)", line))]
 
+    source_label = None
+
     def reopen():
+        nonlocal source_label
         before = markers()
         previous = before[-1][0] if before else None
         call("shell", "input", "keyevent", "KEYCODE_BACK")
@@ -55,13 +61,17 @@ def main():
             raise SystemExit("Back did not return to the source list")
         focus = next((n for n in root.iter("node") if n.get("focused") == "true"), None)
         label = " ".join(n.get("text", "") + n.get("content-desc", "") for n in focus.iter("node")) if focus is not None else ""
-        if focus is None or focus.get("clickable") != "true" or any(x in label for x in ("Показать", "Обновить", "Повторить")):
+        if focus is None or focus.get("clickable") != "true" or any(x in label for x in ("Показать", "Обновить", "Повторить", "Поиск", "Настройки")):
             raise SystemExit("The source series card is not focused")
+        if source_label is None:
+            source_label = label
+        elif source_label != label:
+            raise SystemExit("The focused source card changed; measurement stopped")
         bounds = [int(value) for value in re.findall(r"\d+", focus.get("bounds", ""))]
         if len(bounds) != 4 or bounds[2] <= bounds[0] or bounds[3] <= bounds[1]:
             raise SystemExit("The source card has no visible bounds")
-        call("shell", "input", "tap", str((bounds[0] + bounds[2]) // 2), str((bounds[1] + bounds[3]) // 2))
-        for _ in range(5):
+        call("shell", "input", "keyevent", "KEYCODE_DPAD_CENTER")
+        for attempt in range(5):
             root = ui()
             values = markers()
             if details(root) and values and values[-1][0] != previous:
@@ -69,6 +79,8 @@ def main():
                 if mode != args.mode:
                     raise SystemExit("The selected appearance does not match --mode")
                 return value / 1000
+            if attempt < 4 and not details(root):
+                call("shell", "input", "keyevent", "KEYCODE_DPAD_CENTER")
         raise SystemExit("No profile readiness marker for the opened card")
 
     if not details(ui()):
@@ -96,7 +108,7 @@ def main():
         reports.append(report)
         print(json.dumps(report), flush=True)
     keys = ("ready_ms", "raw_p95_ms", "max_frame_ms", "pss_kib", "java_kib", "native_kib", "graphics_kib")
-    summary = {"mode": args.mode, "opening": "tap_focused_source_card", "rounds": reports,
+    summary = {"mode": args.mode, "opening": "activate_focused_source_card", "rounds": reports,
                "medians": {key: round(statistics.median(r[key] for r in reports if key in r), 2)
                            for key in keys if any(key in r for r in reports)}}
     (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
