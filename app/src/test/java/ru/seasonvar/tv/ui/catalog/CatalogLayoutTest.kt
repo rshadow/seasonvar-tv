@@ -41,6 +41,28 @@ class CatalogLayoutTest {
         assertTrue(saved.isEmpty())
     }
 
+    @Test fun actor_lists_share_one_persistent_layout_independent_of_other_lists() {
+        val saved = mutableMapOf<String, String>()
+        fun preferences() = CatalogLayoutPreferences(saved::get) { key, value -> saved[key] = value }
+        val prefs = preferences()
+        prefs.set(Section.SEARCH, CatalogLayout.GRID)
+        assertEquals(CatalogLayout.STRIP, prefs.actorLayout.value)
+        prefs.setActorLayout(CatalogLayout.GRID)
+        assertEquals(CatalogLayout.GRID, preferences().actorLayout.value)
+        assertEquals(CatalogLayout.STRIP, prefs.layouts.value[Section.TOP])
+        prefs.setActorLayout(CatalogLayout.STRIP)
+        val restored = preferences()
+        assertEquals(CatalogLayout.STRIP, restored.actorLayout.value)
+        assertEquals(CatalogLayout.GRID, restored.layouts.value[Section.SEARCH])
+        assertEquals(CatalogLayout.STRIP, restored.layouts.value[Section.TOP])
+        assertEquals(setOf("catalog_layout.search", "catalog_layout.actor"), saved.keys)
+    }
+
+    @Test fun unknown_saved_actor_layout_falls_back_to_strip() {
+        val prefs = CatalogLayoutPreferences({ "future-layout" }, { _, _ -> error("Unexpected write") })
+        assertEquals(CatalogLayout.STRIP, prefs.actorLayout.value)
+    }
+
     @Test fun incomplete_last_row_stays_inside_the_catalog_on_down_and_right() {
         assertEquals(GridCardEdges(false, true, false, true), catalogGridEdges(6, 7, 5))
         assertEquals(GridCardEdges(false, true, true, false), catalogGridEdges(5, 7, 5))
