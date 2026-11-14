@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <integer name="seasonvar_poster_backdrop_dim_percent">52</integer>
+    <integer name="seasonvar_poster_fallback_scale_percent">100</integer>
     <color name="seasonvar_surface">#980C3D</color>
     <color name="seasonvar_background">#2B2521</color>
     <color name="seasonvar_accent">#F5B50C</color>
@@ -44,6 +45,7 @@
 
     <style name="SeasonvarInterfaceTheme.Classic" parent="">
         <item name="seasonvarPosterBackgroundEnabled">false</item>
+        <item name="seasonvarPosterFallbackScalePercent">@integer/seasonvar_poster_fallback_scale_percent</item>
         <item name="seasonvarPosterBlurRadius">0</item>
         <item name="seasonvarPosterDimPercent">@integer/seasonvar_poster_backdrop_dim_percent</item>
         <item name="seasonvarSurfaceColor">@color/seasonvar_surface</item>

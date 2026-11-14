@@ -16,7 +16,8 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 internal data class PosterBackdropSpec(val width: Int, val height: Int, val background: Int,
-    val dim: Float, val edge: Float, val fadeEdge: Float, val menuEnd: Float = 0f, val blurRadius: Int = 0)
+    val dim: Float, val edge: Float, val fadeEdge: Float, val menuEnd: Float = 0f, val blurRadius: Int = 0,
+    val imageScale: Float = 1f)
 
 internal class PosterBackdropCache {
     private data class Key(val poster: String, val spec: PosterBackdropSpec)
@@ -42,6 +43,7 @@ internal class PosterBackdropCache {
 
     suspend fun prepare(poster: String, input: Bitmap, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
         require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f && spec.menuEnd in 0f..0.6f && spec.blurRadius >= 0)
+        require(spec.imageScale > 0f && spec.imageScale <= 1f)
         preparation.withLock {
             val key = Key(poster, spec)
             images.get(key)?.let { return@withLock it }
@@ -67,7 +69,15 @@ internal class PosterBackdropCache {
             val top = (height - cropHeight) / 2
             val paint = Paint(Paint.FILTER_BITMAP_FLAG)
             canvas.drawColor(spec.background)
-            canvas.drawBitmap(blurredBitmap, Rect(left, top, left + cropWidth, top + cropHeight), Rect(0, 0, outputWidth, outputHeight), paint)
+            if (spec.imageScale == 1f) {
+                canvas.drawBitmap(blurredBitmap, Rect(left, top, left + cropWidth, top + cropHeight), Rect(0, 0, outputWidth, outputHeight), paint)
+            } else {
+                val drawWidth = (width * fit * spec.imageScale).roundToInt().coerceAtLeast(1)
+                val drawHeight = (height * fit * spec.imageScale).roundToInt().coerceAtLeast(1)
+                val x = (outputWidth - drawWidth) / 2
+                val y = (outputHeight - drawHeight) / 2
+                canvas.drawBitmap(blurredBitmap, null, Rect(x, y, x + drawWidth, y + drawHeight), paint)
+            }
             fun alpha(value: Float) = (spec.background and 0x00ffffff) or ((value * 255).roundToInt() shl 24)
             canvas.drawColor(alpha(spec.dim))
             val positions = floatArrayOf(0f, spec.fadeEdge, 1f - spec.fadeEdge, 1f)

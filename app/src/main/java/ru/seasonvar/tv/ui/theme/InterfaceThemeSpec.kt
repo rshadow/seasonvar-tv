@@ -9,10 +9,12 @@ import ru.seasonvar.tv.data.images.PosterBackdropCache
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 
 internal data class PosterBackgroundStyle(val enabled: Boolean, val blurRadius: Int, val dimPercent: Int,
-    val edgePercent: Int, val fadeEdgePercent: Int, val fadeMillis: Int, val fallbackImage: Int = 0) {
+    val edgePercent: Int, val fadeEdgePercent: Int, val fadeMillis: Int, val fallbackImage: Int,
+    val fallbackScalePercent: Int) {
     init {
         require(blurRadius in 0..PosterBackdropCache.MAX_EDGE && dimPercent in 0..100)
         require(edgePercent in 0..100 && fadeEdgePercent in 0..50 && fadeMillis >= 0)
+        require(fallbackScalePercent in 1..100)
     }
 }
 
@@ -64,6 +66,7 @@ internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: Po
     val focusBorderWidth: Dp,
     val outlineWidth: Dp,
     val textButtonOutline: Boolean,
+    val menuButtonOutline: Boolean,
     val iconButtonOutline: Boolean,
     val cardOutline: Boolean,
     val refreshRotationMillis: Int, val spacing: InterfaceSpacing, val player: PlayerAppearance) {
@@ -90,7 +93,8 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterEdgePercent, R.integer.seasonvar_poster_backdrop_edge_percent),
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeEdgePercent, R.integer.seasonvar_poster_backdrop_fade_edge_percent),
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeMillis, R.integer.seasonvar_poster_backdrop_fade_ms),
-                values.getResourceId(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackImage, 0)),
+                values.getResourceId(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackImage, 0),
+                integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackScalePercent, R.integer.seasonvar_poster_fallback_scale_percent)),
             surface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceColor, R.color.seasonvar_surface),
             inactiveSurface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarInactiveSurfaceColor, R.color.seasonvar_background),
             outline = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceOutlineColor, android.graphics.Color.TRANSPARENT)),
@@ -108,6 +112,8 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
             focusBorderWidth = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusBorderWidth, R.dimen.seasonvar_focus_border_width),
             outlineWidth = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceOutlineWidth, R.dimen.seasonvar_surface_outline_width),
             textButtonOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarTextButtonOutline, false),
+            menuButtonOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarMenuButtonOutline,
+                values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarTextButtonOutline, false)),
             iconButtonOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarIconButtonOutline, false),
             cardOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarCardOutline, false),
             refreshRotationMillis = integer(R.styleable.SeasonvarInterfaceTheme_seasonvarRefreshRotationMillis, R.integer.seasonvar_refresh_rotation_duration_ms),

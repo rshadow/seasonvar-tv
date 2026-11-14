@@ -91,6 +91,8 @@ object SeasonvarTheme {
         @Composable @ReadOnlyComposable get() = appearance.player
     val textButtonOutline: Boolean
         @Composable @ReadOnlyComposable get() = appearance.textButtonOutline
+    val menuButtonOutline: Boolean
+        @Composable @ReadOnlyComposable get() = appearance.menuButtonOutline
     val iconButtonOutline: Boolean
         @Composable @ReadOnlyComposable get() = appearance.iconButtonOutline
     val cardOutline: Boolean
@@ -109,6 +111,8 @@ object SeasonvarTheme {
         @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.poster?.blurRadius ?: 0
     val posterBackdropFallbackImage: Int
         @Composable @ReadOnlyComposable get() = appearance.poster.fallbackImage
+    val posterBackdropFallbackScale: Float
+        @Composable @ReadOnlyComposable get() = appearance.poster.fallbackScalePercent / 100f
     val surfaceOutline: Color
         @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.outline ?: Color.Transparent
     val inactiveSurface: Color

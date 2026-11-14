@@ -756,6 +756,7 @@ private fun SeasonvarContent(
                                                 } else false
                                             },
                                         active = section == item,
+                                        showOutline = SeasonvarTheme.menuButtonOutline,
                                         contentAlignment = Alignment.CenterStart,
                                         contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
                                     )
@@ -896,6 +897,7 @@ internal fun ThemeButton(
     reserveCheckSpace: Boolean = false,
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     iconText: String? = null,
+    showOutline: Boolean? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     var blockedPress by remember { mutableStateOf(false) }
@@ -903,7 +905,7 @@ internal fun ThemeButton(
     val c = MaterialTheme.colorScheme
     val d = SeasonvarTheme.dimensions
     val outline = SeasonvarTheme.surfaceOutline
-    val hasOutline = if (icon == null) SeasonvarTheme.textButtonOutline else SeasonvarTheme.iconButtonOutline
+    val hasOutline = showOutline ?: if (icon == null) SeasonvarTheme.textButtonOutline else SeasonvarTheme.iconButtonOutline
     val action = { if (enabled && actionEnabled && !loading) onClick() }
     val loadingDescription = if (loading) loadingLabel ?: stringResource(R.string.today_updating) else null
     val buttonModifier = modifier

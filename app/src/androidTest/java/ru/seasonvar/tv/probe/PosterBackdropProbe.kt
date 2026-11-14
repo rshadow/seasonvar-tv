@@ -33,6 +33,7 @@ import ru.seasonvar.tv.data.images.PosterBackdropCache
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.PosterBackdropLayer
+import ru.seasonvar.tv.ui.details.PosterBackdropPage
 import ru.seasonvar.tv.ui.details.PosterBackdropState
 import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
@@ -115,9 +116,9 @@ object PosterBackdropProbe {
             bitmap.recycle()
             return pixel
         }
-        fun backgroundPixel(): Int {
+        fun backgroundPixel(x: Float = 0.75f, y: Float = 0.25f): Int {
             val bitmap = checkNotNull(uiAutomation.takeScreenshot())
-            val pixel = bitmap.getPixel(bitmap.width * 3 / 4, bitmap.height / 4)
+            val pixel = bitmap.getPixel((bitmap.width * x).toInt(), (bitmap.height * y).toInt())
             bitmap.recycle()
             return pixel
         }
@@ -157,6 +158,29 @@ object PosterBackdropProbe {
                 val fallback = cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, spec)
                 check(fallback.width == prepared.width && fallback.height == prepared.height)
                 check(cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, spec) === fallback)
+                val base = targetContext.getColor(ru.seasonvar.tv.R.color.seasonvar_background)
+                val iconSpec = spec.copy(background = base, dim = 0f, edge = 0f, blurRadius = 0)
+                val iconFull = cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, iconSpec)
+                val scaledSpec = iconSpec.copy(imageScale = 0.33f)
+                val iconSmall = cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, scaledSpec)
+                check(cache.prepareResource(targetContext, ru.seasonvar.tv.R.drawable.ic_launcher, scaledSpec) === iconSmall)
+                check(iconFull !== iconSmall)
+                fun ink(bitmap: Bitmap): Rect {
+                    val bounds = Rect()
+                    for (y in 0 until bitmap.height) for (x in 0 until bitmap.width) {
+                        val pixel = bitmap.getPixel(x, y)
+                        if (kotlin.math.abs(Color.red(pixel) - Color.red(base)) > 8 ||
+                            kotlin.math.abs(Color.green(pixel) - Color.green(base)) > 8 ||
+                            kotlin.math.abs(Color.blue(pixel) - Color.blue(base)) > 8) bounds.union(x, y, x + 1, y + 1)
+                    }
+                    return bounds
+                }
+                val fullBounds = ink(iconFull)
+                val smallBounds = ink(iconSmall)
+                check(smallBounds.width().toFloat() / fullBounds.width() in 0.25f..0.4f)
+                check(smallBounds.height().toFloat() / fullBounds.height() in 0.25f..0.4f)
+                check(kotlin.math.abs(smallBounds.exactCenterX() - iconSmall.width / 2f) < 8f)
+                check(kotlin.math.abs(smallBounds.exactCenterY() - iconSmall.height / 2f) < 8f)
                 val sharp = cache.prepare("one", poster, spec.copy(blurRadius = 0))
                 val before = IntArray(prepared.width * prepared.height)
                 val after = IntArray(before.size)
@@ -207,6 +231,9 @@ object PosterBackdropProbe {
             val playBounds = bounds(watch)
             val reviewBounds = bounds("Рецензии · 0")
             val plainPixel = capture("01-plain")
+            fun plainBackground(pixel: Int) = kotlin.math.abs(Color.red(pixel) - Color.red(plainPixel)) <= 2 &&
+                kotlin.math.abs(Color.green(pixel) - Color.green(plainPixel)) <= 2 &&
+                kotlin.math.abs(Color.blue(pixel) - Color.blue(plainPixel)) <= 2
             phase = "blurred"
             runOnMainSync { appearance.value = InterfaceTheme.GLASS }
             await { app.posterBackdrops.cachedBytes > 0 }
@@ -293,7 +320,9 @@ object PosterBackdropProbe {
                 runOnMainSync { cards.getValue(key).requestFocus() }
                 await { selection.value.key == rows[index].key && clickable(rows[index].title)?.isFocused == true }
             }
-            phase = "list-first"; focusRow(0)
+            phase = "list-first"
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+            focusRow(0)
             await { published.value?.url == rows[0].posterUrl && published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
             finishFade()
             val firstListPixel = capture("05-list-first")
@@ -313,10 +342,10 @@ object PosterBackdropProbe {
             await { published.value?.url == rows[1].posterUrl && button(rows[1].title).isFocused }
             phase = "list-missing"; focusRow(2)
             await { published.value?.url == rows[2].posterUrl && published.value?.bitmap?.value == null &&
-                backgroundPixel() != plainPixel && backgroundPixel() != secondListPixel }
+                plainBackground(backgroundPixel()) && backgroundPixel() != secondListPixel }
             finishFade()
             val fallbackPixel = capture("10-missing-poster-fallback")
-            check(fallbackPixel != plainPixel && button(rows[2].title).isFocused)
+            check(plainBackground(fallbackPixel) && button(rows[2].title).isFocused)
             focusRow(1)
             await { published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
             phase = "list-disabled"; val selectedBounds = bounds(rows[1].title)
@@ -341,6 +370,11 @@ object PosterBackdropProbe {
             phase = "list-empty"; runOnMainSync { empty.value = true }
             await { published.value == null && backgroundPixel() == fallbackPixel }
             capture("11-empty-fallback")
+            phase = "centered-fallback"
+            runOnMainSync { activity!!.setContent { SeasonvarTheme(InterfaceTheme.GLASS) { PosterBackdropPage {} } } }
+            await { !plainBackground(backgroundPixel(0.55f, 0.5f)) && plainBackground(backgroundPixel()) }
+            finishFade()
+            capture("12-centered-fallback")
             result.putBoolean("fallback_background", true)
             result.putBoolean("list_background_tracks_selection", true)
             result.putBoolean("prefetch_toggle", true)

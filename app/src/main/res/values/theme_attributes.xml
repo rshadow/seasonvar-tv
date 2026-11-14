@@ -3,6 +3,7 @@
     <declare-styleable name="SeasonvarInterfaceTheme">
         <attr name="seasonvarPosterBackgroundEnabled" format="boolean" />
         <attr name="seasonvarPosterFallbackImage" format="reference" />
+        <attr name="seasonvarPosterFallbackScalePercent" format="integer" />
         <attr name="seasonvarPosterBlurRadius" format="integer" />
         <attr name="seasonvarPosterDimPercent" format="integer" />
         <attr name="seasonvarSurfaceColor" format="color" />
@@ -37,6 +38,7 @@
         <attr name="seasonvarFocusBorderWidth" format="dimension" />
         <attr name="seasonvarSurfaceOutlineWidth" format="dimension" />
         <attr name="seasonvarTextButtonOutline" format="boolean" />
+        <attr name="seasonvarMenuButtonOutline" format="boolean" />
         <attr name="seasonvarIconButtonOutline" format="boolean" />
         <attr name="seasonvarCardOutline" format="boolean" />
         <attr name="seasonvarRefreshRotationMillis" format="integer" />

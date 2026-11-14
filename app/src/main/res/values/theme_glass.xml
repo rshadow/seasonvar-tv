@@ -7,12 +7,14 @@
     <style name="SeasonvarInterfaceTheme.Glass" parent="SeasonvarInterfaceTheme.Classic">
         <item name="seasonvarPosterBackgroundEnabled">true</item>
         <item name="seasonvarPosterFallbackImage">@drawable/ic_launcher</item>
+        <item name="seasonvarPosterFallbackScalePercent">33</item>
         <item name="seasonvarPosterBlurRadius">2</item>
         <item name="seasonvarSurfaceColor">@color/seasonvar_glass_surface</item>
         <item name="seasonvarInactiveSurfaceColor">@color/seasonvar_glass_inactive_surface</item>
         <item name="seasonvarSurfaceOutlineColor">@color/seasonvar_glass_outline</item>
         <item name="seasonvarDialogBackgroundColor">#FF141921</item>
         <item name="seasonvarTextButtonOutline">true</item>
+        <item name="seasonvarMenuButtonOutline">false</item>
         <item name="seasonvarCardOutline">true</item>
     </style>
 </resources>

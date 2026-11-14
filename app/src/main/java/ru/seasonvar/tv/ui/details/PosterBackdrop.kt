@@ -69,14 +69,15 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
     val cache = (context as SeasonvarApplication).posterBackdrops
     val input = source.value
     val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { input == null && it != 0 }
+    val imageScale = if (fallback != null) SeasonvarTheme.posterBackdropFallbackScale else 1f
     val imageKey = fallback?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
     val background = SeasonvarTheme.pageBackground
     val radius = SeasonvarTheme.posterBackdropBlurRadius
     val dim = SeasonvarTheme.posterBackdropDimFraction
     val edge = SeasonvarTheme.posterBackdropEdgeFraction
     val fadeEdge = SeasonvarTheme.posterBackdropFadeEdgeFraction
-    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius) {
-        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius) }
+    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius, imageScale) {
+        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius, imageScale) }
     }
     val bitmapState = remember(imageKey, spec) {
         mutableStateOf(if (imageKey != null && spec != null) cache.get(imageKey, spec) else null)
