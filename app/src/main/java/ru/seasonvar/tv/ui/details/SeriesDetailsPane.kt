@@ -553,7 +553,7 @@ private fun ChoiceList(options: List<Pair<String, String>>, selected: String?, o
                 .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, RoundedCornerShape(d.buttonCornerRadius))
                 .selectable(item.first == selected, role = Role.RadioButton, onClick = { onSelect(item.first) })
                 .padding(d.spacingSmall), verticalAlignment = Alignment.CenterVertically) {
-                Text(item.second, Modifier.weight(1f), color = c.onBackground, style = MaterialTheme.typography.bodyLarge)
+                Text(item.second, Modifier.weight(1f), color = SeasonvarTheme.textColor(focused, c.onBackground), style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(focused))
                 RadioButton(item.first == selected, onClick = null)
             }
         }

@@ -198,9 +198,56 @@ object PosterBackdropProbe {
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
             phase = "configured-theme"
             val configuredApplied = AtomicReference<Boolean>()
-            runOnMainSync { checkNotNull(activity).setContent { ThemeConfigurationPreview { configuredApplied.set(it) } } }
+            val textPreview = ThemeTextPreviewState()
+            runOnMainSync { checkNotNull(activity).setContent { ThemeConfigurationPreview(textPreview) { configuredApplied.set(it) } } }
             await { configuredApplied.get() != null }
             check(configuredApplied.get() == true)
+            phase = "configured-window-focus"
+            await { activity?.hasWindowFocus() == true && textPreview.buttonBounds.get() != null }
+            phase = "configured-button-focus"
+            await {
+                if (!textPreview.buttonFocused.get()) runOnMainSync { textPreview.buttonFocus.get().requestFocus() }
+                textPreview.buttonFocused.get()
+            }
+            fun textPixels(region: Rect, color: Int, tolerance: Int = 32): Int {
+                val screenshot = checkNotNull(uiAutomation.takeScreenshot())
+                try {
+                    val inner = Rect(region)
+                    val inset = minOf(inner.width() / 8, inner.height() / 4)
+                    inner.inset(inset, inset)
+                    val pixels = IntArray(inner.width() * inner.height())
+                    screenshot.getPixels(pixels, 0, inner.width(), inner.left, inner.top, inner.width(), inner.height())
+                    val counts = pixels.toList().groupingBy { it }.eachCount()
+                    val colors = counts.filterKeys { pixel -> kotlin.math.abs(Color.red(pixel) - Color.red(color)) <= tolerance &&
+                        kotlin.math.abs(Color.green(pixel) - Color.green(color)) <= tolerance &&
+                        kotlin.math.abs(Color.blue(pixel) - Color.blue(color)) <= tolerance }
+                    return colors.values.maxOrNull() ?: 0
+                } finally { screenshot.recycle() }
+            }
+            val focusedBounds = textPreview.buttonBounds.get()
+            phase = "configured-button-color"
+            await {
+                runOnMainSync { textPreview.buttonFocus.get().requestFocus() }
+                val r = textPreview.buttonBounds.get()
+                result.putString("failure_geometry", "${r.left}_${r.top}_${r.width()}_${r.height()}_${textPreview.buttonFocused.get()}_${textPreview.settingFocused.get()}")
+                textPreview.buttonFocused.get() && textPixels(textPreview.buttonBounds.get(), Color.rgb(9, 21, 34)) > 20
+            }
+            result.remove("failure_geometry")
+            val boldInk = textPixels(textPreview.buttonBounds.get(), Color.rgb(9, 21, 34))
+            capture("00-configured-focused-button")
+            phase = "configured-setting-focus"
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+            await { textPreview.settingFocused.get() }
+            phase = "configured-setting-color"
+            // Штатная индикация фокуса слегка тонирует цвет глифов.
+            await { textPixels(textPreview.settingBounds.get(), Color.rgb(128, 216, 255)) > 20 }
+            phase = "configured-regular-color"
+            await { textPixels(textPreview.buttonBounds.get(), Color.rgb(221, 238, 17)) > 20 }
+            val regularInk = textPixels(textPreview.buttonBounds.get(), Color.rgb(221, 238, 17))
+            phase = "configured-weight-and-bounds"
+            check(regularInk > 20 && boldInk > regularInk)
+            check(textPreview.buttonBounds.get().left == focusedBounds.left && textPreview.buttonBounds.get().height() == focusedBounds.height())
+            capture("00-configured-focused-setting")
             phase = "plain"
             var nativeColorsApplied = false
             runOnMainSync { nativeColorsApplied = checkNativePlayerTheme(checkNotNull(activity)) }

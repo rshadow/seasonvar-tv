@@ -83,9 +83,9 @@ internal fun PreferredTranslationsSetting(
         .clickable(role = Role.Button) { onInteraction(); request(preferred); dialog = true }
         .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.preferred_translation_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+            Text(stringResource(R.string.preferred_translation_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(focused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(focused))
             Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.preferred_translation_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            Text(stringResource(R.string.preferred_translation_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(focused))
         }
         Spacer(Modifier.width(d.spacingMedium))
         val summary = when (preferred.size) {
@@ -93,8 +93,8 @@ internal fun PreferredTranslationsSetting(
             1 -> preferred.first()
             else -> stringResource(R.string.preferred_translations_summary, preferred.first(), preferred.size - 1)
         }
-        Text(summary, style = MaterialTheme.typography.bodyLarge, color = c.primary,
-            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = d.posterWidth))
+        Text(summary, style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.primary),
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = d.posterWidth), fontWeight = SeasonvarTheme.textWeight(focused))
     }
     if (dialog && !adding) {
         TranslationPrioritiesDialog(preferred, target,
@@ -307,8 +307,8 @@ private fun AddTranslationDialog(
                         .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, RoundedCornerShape(d.cardCornerRadius))
                         .clickable(role = Role.Button, onClick = { onInteraction(); onSelect(value) })
                         .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
-                        Text(value, style = MaterialTheme.typography.titleLarge, color = c.onBackground,
-                            modifier = Modifier.weight(1f))
+                        Text(value, style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(focused, c.onBackground),
+                            modifier = Modifier.weight(1f), fontWeight = SeasonvarTheme.textWeight(focused))
                     }
                 }
             }

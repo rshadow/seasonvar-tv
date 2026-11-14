@@ -7,6 +7,7 @@
     <color name="seasonvar_accent">#F5B50C</color>
     <color name="seasonvar_on_accent">#2B2521</color>
     <color name="seasonvar_text">#F3F3F3</color>
+    <integer name="seasonvar_focused_text_font_weight">0</integer>
     <color name="seasonvar_secondary_text">#D5D9D9</color>
     <color name="seasonvar_status_success">#66BB6A</color>
     <color name="seasonvar_status_failure">#FF6B6B</color>
@@ -54,6 +55,7 @@
         <item name="seasonvarAccentColor">@color/seasonvar_accent</item>
         <item name="seasonvarOnAccentColor">@color/seasonvar_on_accent</item>
         <item name="seasonvarTextColor">@color/seasonvar_text</item>
+        <item name="seasonvarFocusedTextFontWeight">@integer/seasonvar_focused_text_font_weight</item>
         <item name="seasonvarSecondaryTextColor">@color/seasonvar_secondary_text</item>
         <item name="seasonvarPageBackgroundColor">@color/seasonvar_background</item>
         <item name="seasonvarDialogBackgroundColor">@color/seasonvar_background</item>

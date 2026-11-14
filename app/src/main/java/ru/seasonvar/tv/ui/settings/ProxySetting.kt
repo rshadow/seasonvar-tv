@@ -48,9 +48,9 @@ internal fun ProxySetting(value: ProxyConfiguration, onSave: suspend (ProxyConfi
         .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, RoundedCornerShape(d.cardCornerRadius))
         .clickable(role = Role.Button) { open = true }.padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.proxy_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+            Text(stringResource(R.string.proxy_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(focused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(focused))
             Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.proxy_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+            Text(stringResource(R.string.proxy_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(focused))
         }
         Spacer(Modifier.width(d.spacingMedium))
         Text(stringResource(when (value) {
@@ -59,7 +59,7 @@ internal fun ProxySetting(value: ProxyConfiguration, onSave: suspend (ProxyConfi
             ProxyConfiguration.AntiZapret -> R.string.proxy_antizapret
             is ProxyConfiguration.Pac -> R.string.proxy_pac
             is ProxyConfiguration.Server -> proxyLabel(value.protocol)
-        }), style = MaterialTheme.typography.bodyLarge, color = c.primary)
+        }), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.primary), fontWeight = SeasonvarTheme.textWeight(focused))
     }
     if (open) ProxyDialog(value, onSave, ::close)
 }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.Dp
@@ -83,6 +84,18 @@ private val LocalThemeCatalog = staticCompositionLocalOf<InterfaceThemeCatalog?>
 private val LocalPageBackground = staticCompositionLocalOf { Color.Unspecified }
 
 object SeasonvarTheme {
+    @Composable
+    @ReadOnlyComposable
+    fun textColor(focused: Boolean, normal: Color, filled: Boolean = false): Color {
+        if (!focused) return normal
+        if (filled) return appearance.focusedText
+        return appearance.focusedOutlineText.takeIf { it != Color.Unspecified } ?: normal
+    }
+
+    @Composable
+    @ReadOnlyComposable
+    fun textWeight(focused: Boolean): FontWeight? = if (focused) appearance.focusedTextFontWeight else null
+
     internal val availableThemes: List<InterfaceTheme>
         @Composable @ReadOnlyComposable get() = checkNotNull(LocalThemeCatalog.current).entries
     internal val appearance: InterfaceThemeSpec
