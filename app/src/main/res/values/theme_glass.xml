@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="seasonvar_glass_surface">#66141921</color>
+    <color name="seasonvar_glass_inactive_surface">#40141921</color>
+    <color name="seasonvar_glass_outline">#33FFFFFF</color>
+
+    <style name="SeasonvarInterfaceTheme.Glass" parent="SeasonvarInterfaceTheme.Classic">
+        <item name="seasonvarPosterBackgroundEnabled">true</item>
+        <item name="seasonvarPosterBlurRadius">2</item>
+        <item name="seasonvarSurfaceColor">@color/seasonvar_glass_surface</item>
+        <item name="seasonvarInactiveSurfaceColor">@color/seasonvar_glass_inactive_surface</item>
+        <item name="seasonvarSurfaceOutlineColor">@color/seasonvar_glass_outline</item>
+        <item name="seasonvarDialogBackgroundColor">#FF141921</item>
+        <item name="seasonvarTextButtonOutline">true</item>
+        <item name="seasonvarCardOutline">true</item>
+    </style>
+</resources>

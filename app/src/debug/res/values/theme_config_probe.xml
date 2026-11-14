@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="SeasonvarInterfaceTheme.Probe" parent="SeasonvarInterfaceTheme.Classic">
+        <item name="seasonvarAccentColor">#FF11AA33</item>
+        <item name="seasonvarTextColor">#FFDDEE11</item>
+        <item name="seasonvarPageBackgroundColor">#FF102030</item>
+        <item name="seasonvarDialogBackgroundColor">#EE223344</item>
+        <item name="seasonvarStatusSuccessColor">#FF123456</item>
+        <item name="seasonvarPosterBackgroundEnabled">true</item>
+        <item name="seasonvarPosterBlurRadius">3</item>
+        <item name="seasonvarPosterDimPercent">60</item>
+        <item name="seasonvarPosterEdgePercent">20</item>
+        <item name="seasonvarPosterFadeEdgePercent">15</item>
+        <item name="seasonvarPosterFadeMillis">0</item>
+        <item name="seasonvarRefreshRotationMillis">777</item>
+        <item name="seasonvarButtonCornerRadius">11dp</item>
+        <item name="seasonvarFocusBorderWidth">3dp</item>
+        <item name="seasonvarSurfaceOutlineWidth">0.5dp</item>
+        <item name="seasonvarSpacingSmall">9dp</item>
+        <item name="seasonvarContentGap">25dp</item>
+        <item name="seasonvarIconButtonOutline">true</item>
+        <item name="seasonvarPlayerBackgroundColor">#FF090807</item>
+        <item name="seasonvarPlayerControlsColor">#FFFEDCBA</item>
+        <item name="seasonvarPlayerPlayedColor">#FFABCDEF</item>
+    </style>
+</resources>

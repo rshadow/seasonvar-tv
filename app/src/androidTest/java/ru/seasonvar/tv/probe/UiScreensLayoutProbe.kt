@@ -32,12 +32,13 @@ import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.search.*
 import ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import ru.seasonvar.tv.ui.update.UpdateViewModel
 import java.io.File
 import java.io.IOException
 
 object UiScreensLayoutProbe {
-    fun run(probe: Instrumentation, dialogsOnly: Boolean = false) = with(probe) {
+    internal fun run(probe: Instrumentation, dialogsOnly: Boolean = false, theme: InterfaceTheme = InterfaceTheme.CLASSIC) = with(probe) {
         val result = Bundle()
         val store = ViewModelStore()
         var activity: MarkMenuPreviewActivity? = null
@@ -130,7 +131,7 @@ object UiScreensLayoutProbe {
         }
         fun render(content: @Composable () -> Unit) {
             val current = ++revision
-            main { checkNotNull(activity).setContent { key(current) { SeasonvarTheme {
+            main { checkNotNull(activity).setContent { key(current) { SeasonvarTheme(theme) {
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
             } } } }
             settle()
@@ -216,16 +217,7 @@ object UiScreensLayoutProbe {
             for ((name, id) in listOf("start" to R.string.start_page_title, "menu" to R.string.menu_visibility_title,
                 "channels" to R.string.home_settings_title, "clock" to R.string.player_clock_title, "dns" to R.string.dns_setting_title)) {
                 stage("settings_" + name)
-                if (name == "dns") {
-                    root(Section.SETTINGS)
-                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
-                    settle()
-                    repeat(10) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
-                    capture("settings-dns-focused")
-                    check(control(text(id)) != null)
-                    sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
-                    settle()
-                } else click(text(id))
+                click(text(id))
                 if (name in listOf("menu", "channels")) centered(text(R.string.menu_visibility_done))
                 if (name == "dns") {
                     check(control(text(R.string.dns_system)) != null)

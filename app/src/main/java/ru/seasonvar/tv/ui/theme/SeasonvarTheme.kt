@@ -5,7 +5,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.res.colorResource
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.Dp
@@ -13,6 +15,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
+import ru.seasonvar.tv.ui.settings.InterfaceThemeCatalog
+import ru.seasonvar.tv.ui.settings.loadInterfaceThemes
 
 @Immutable
 data class SeasonvarDimensions(
@@ -73,8 +78,52 @@ private val LocalDimensions = staticCompositionLocalOf<SeasonvarDimensions> {
 }
 
 private val SeasonvarTypography = Typography()
+private val LocalInterfaceTheme = staticCompositionLocalOf<InterfaceThemeSpec?> { null }
+private val LocalThemeCatalog = staticCompositionLocalOf<InterfaceThemeCatalog?> { null }
+private val LocalPageBackground = staticCompositionLocalOf { Color.Unspecified }
 
 object SeasonvarTheme {
+    internal val availableThemes: List<InterfaceTheme>
+        @Composable @ReadOnlyComposable get() = checkNotNull(LocalThemeCatalog.current).entries
+    internal val appearance: InterfaceThemeSpec
+        @Composable @ReadOnlyComposable get() = checkNotNull(LocalInterfaceTheme.current)
+    internal val playerAppearance: PlayerAppearance
+        @Composable @ReadOnlyComposable get() = appearance.player
+    val textButtonOutline: Boolean
+        @Composable @ReadOnlyComposable get() = appearance.textButtonOutline
+    val iconButtonOutline: Boolean
+        @Composable @ReadOnlyComposable get() = appearance.iconButtonOutline
+    val cardOutline: Boolean
+        @Composable @ReadOnlyComposable get() = appearance.cardOutline
+    val statusSuccess: Color
+        @Composable @ReadOnlyComposable get() = appearance.statusSuccess
+    val statusFailure: Color
+        @Composable @ReadOnlyComposable get() = appearance.statusFailure
+    val statusPending: Color
+        @Composable @ReadOnlyComposable get() = appearance.statusPending
+    internal val interfaceTheme: InterfaceTheme
+        @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.theme ?: InterfaceTheme.CLASSIC
+    val posterBackdropEnabled: Boolean
+        @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.poster?.enabled ?: false
+    val posterBackdropBlurRadius: Int
+        @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.poster?.blurRadius ?: 0
+    val surfaceOutline: Color
+        @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.outline ?: Color.Transparent
+    val inactiveSurface: Color
+        @Composable @ReadOnlyComposable get() = LocalInterfaceTheme.current?.inactiveSurface ?: MaterialTheme.colorScheme.background
+    val surfaceOutlineWidth: Dp
+        @Composable @ReadOnlyComposable get() = appearance.outlineWidth
+    val pageBackground: Color
+        @Composable @ReadOnlyComposable get() = LocalPageBackground.current.takeIf { it != Color.Unspecified }
+            ?: MaterialTheme.colorScheme.background
+    val posterBackdropFadeMillis: Int
+        @Composable @ReadOnlyComposable get() = appearance.poster.fadeMillis
+    val posterBackdropDimFraction: Float
+        @Composable @ReadOnlyComposable get() = (LocalInterfaceTheme.current?.poster?.dimPercent ?: integerResource(R.integer.seasonvar_poster_backdrop_dim_percent)) / 100f
+    val posterBackdropEdgeFraction: Float
+        @Composable @ReadOnlyComposable get() = appearance.poster.edgePercent / 100f
+    val posterBackdropFadeEdgeFraction: Float
+        @Composable @ReadOnlyComposable get() = appearance.poster.fadeEdgePercent / 100f
     val allEpisodesThreshold: Int
         @Composable
         @ReadOnlyComposable
@@ -83,7 +132,7 @@ object SeasonvarTheme {
     val refreshRotationDurationMillis: Int
         @Composable
         @ReadOnlyComposable
-        get() = integerResource(R.integer.seasonvar_refresh_rotation_duration_ms)
+        get() = appearance.refreshRotationMillis
 
     val dimensions: SeasonvarDimensions
         @Composable
@@ -92,40 +141,44 @@ object SeasonvarTheme {
 }
 
 @Composable
-fun SeasonvarTheme(content: @Composable () -> Unit) {
+internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLASSIC, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val catalog = remember(context.resources) { loadInterfaceThemes(context) }
+    val appearance = remember(context, interfaceTheme) { resolveInterfaceTheme(context, interfaceTheme) }
+    val pageBackground = appearance.pageBackground
     val colors = darkColorScheme(
-        primary = colorResource(R.color.seasonvar_accent),
-        onPrimary = colorResource(R.color.seasonvar_on_accent),
-        background = colorResource(R.color.seasonvar_background),
-        onBackground = colorResource(R.color.seasonvar_text),
-        surface = colorResource(R.color.seasonvar_surface),
-        onSurface = colorResource(R.color.seasonvar_text),
-        onSurfaceVariant = colorResource(R.color.seasonvar_secondary_text),
+        primary = appearance.primary,
+        onPrimary = appearance.onPrimary,
+        background = appearance.dialogBackground,
+        onBackground = appearance.text,
+        surface = appearance.surface,
+        onSurface = appearance.text,
+        onSurfaceVariant = appearance.secondaryText,
     )
     val dimensions = SeasonvarDimensions(
-        screenPaddingHorizontal = dimensionResource(R.dimen.seasonvar_screen_padding_horizontal),
-        screenPaddingVertical = dimensionResource(R.dimen.seasonvar_screen_padding_vertical),
-        spacingSmall = dimensionResource(R.dimen.seasonvar_spacing_small),
-        spacingMedium = dimensionResource(R.dimen.seasonvar_spacing_medium),
-        spacingLarge = dimensionResource(R.dimen.seasonvar_spacing_large),
-        spacingExtraLarge = dimensionResource(R.dimen.seasonvar_spacing_extra_large),
-        spacingSection = dimensionResource(R.dimen.seasonvar_spacing_section),
+        screenPaddingHorizontal = appearance.spacing.screenPaddingHorizontal,
+        screenPaddingVertical = appearance.spacing.screenPaddingVertical,
+        spacingSmall = appearance.spacing.spacingSmall,
+        spacingMedium = appearance.spacing.spacingMedium,
+        spacingLarge = appearance.spacing.spacingLarge,
+        spacingExtraLarge = appearance.spacing.spacingExtraLarge,
+        spacingSection = appearance.spacing.spacingSection,
         buttonWidth = dimensionResource(R.dimen.seasonvar_button_width),
         buttonHeight = dimensionResource(R.dimen.seasonvar_button_height),
-        buttonCornerRadius = dimensionResource(R.dimen.seasonvar_button_corner_radius),
+        buttonCornerRadius = appearance.buttonCornerRadius,
         menuWidth = dimensionResource(R.dimen.seasonvar_menu_width),
-        menuItemPaddingHorizontal = dimensionResource(R.dimen.seasonvar_menu_item_padding_horizontal),
+        menuItemPaddingHorizontal = appearance.spacing.menuItemPaddingHorizontal,
         menuItemHeight = dimensionResource(R.dimen.seasonvar_menu_item_height),
-        menuItemSpacing = dimensionResource(R.dimen.seasonvar_menu_item_spacing),
-        menuHeaderSpacing = dimensionResource(R.dimen.seasonvar_menu_header_spacing),
+        menuItemSpacing = appearance.spacing.menuItemSpacing,
+        menuHeaderSpacing = appearance.spacing.menuHeaderSpacing,
         navigationButtonHeight = dimensionResource(R.dimen.seasonvar_navigation_button_height),
-        contentGap = dimensionResource(R.dimen.seasonvar_content_gap),
+        contentGap = appearance.spacing.contentGap,
         headerButtonSize = dimensionResource(R.dimen.seasonvar_header_button_size),
         headerButtonBadgeSize = dimensionResource(R.dimen.seasonvar_header_button_badge_size),
-        headerButtonBadgeInset = dimensionResource(R.dimen.seasonvar_header_button_badge_inset),
+        headerButtonBadgeInset = appearance.spacing.headerButtonBadgeInset,
         filterPanelWidth = dimensionResource(R.dimen.seasonvar_filter_panel_width),
         playerAutoNextWidth = dimensionResource(R.dimen.seasonvar_player_auto_next_width),
-        playerClockPaddingVertical = dimensionResource(R.dimen.seasonvar_player_clock_padding_vertical),
+        playerClockPaddingVertical = appearance.spacing.playerClockPaddingVertical,
         headerButtonIconSize = dimensionResource(R.dimen.seasonvar_header_button_icon_size),
         accountAvatarSize = dimensionResource(R.dimen.seasonvar_account_avatar_size),
         catalogMinCardWidth = dimensionResource(R.dimen.seasonvar_catalog_min_card_width),
@@ -140,14 +193,14 @@ fun SeasonvarTheme(content: @Composable () -> Unit) {
         reviewsStatusHeight = dimensionResource(R.dimen.seasonvar_reviews_status_height),
         reviewsListWidthFraction = integerResource(R.integer.seasonvar_reviews_list_width_percent) / 100f,
         previewPosterMaxWidthFraction = integerResource(R.integer.seasonvar_preview_poster_max_width_percent) / 100f,
-        cardPadding = dimensionResource(R.dimen.seasonvar_card_padding),
-        cardCornerRadius = dimensionResource(R.dimen.seasonvar_card_corner_radius),
-        focusBorderWidth = dimensionResource(R.dimen.seasonvar_focus_border_width),
-        badgePaddingHorizontal = dimensionResource(R.dimen.seasonvar_badge_padding_horizontal),
+        cardPadding = appearance.spacing.cardPadding,
+        cardCornerRadius = appearance.cardCornerRadius,
+        focusBorderWidth = appearance.focusBorderWidth,
+        badgePaddingHorizontal = appearance.spacing.badgePaddingHorizontal,
         badgeHeight = dimensionResource(R.dimen.seasonvar_badge_height),
         watchBadgeSize = dimensionResource(R.dimen.seasonvar_watch_badge_size),
         watchBadgeIconSize = dimensionResource(R.dimen.seasonvar_watch_badge_icon_size),
-        watchBadgeInset = dimensionResource(R.dimen.seasonvar_watch_badge_inset),
+        watchBadgeInset = appearance.spacing.watchBadgeInset,
         badgeTextOffsetHorizontal = dimensionResource(R.dimen.seasonvar_badge_text_offset_horizontal),
         badgeTextOffsetVertical = dimensionResource(R.dimen.seasonvar_badge_text_offset_vertical),
         dialogWidth = dimensionResource(R.dimen.seasonvar_dialog_width),
@@ -155,7 +208,8 @@ fun SeasonvarTheme(content: @Composable () -> Unit) {
         episodeWidth = dimensionResource(R.dimen.seasonvar_episode_width),
     )
 
-    CompositionLocalProvider(LocalDimensions provides dimensions) {
+    CompositionLocalProvider(LocalDimensions provides dimensions, LocalInterfaceTheme provides appearance,
+        LocalPageBackground provides pageBackground, LocalThemeCatalog provides catalog) {
         MaterialTheme(
             colorScheme = colors,
             typography = SeasonvarTypography,

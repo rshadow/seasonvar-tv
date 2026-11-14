@@ -3,9 +3,9 @@
 import argparse
 import json
 from pathlib import Path
-import re
 import subprocess
 import time
+from frame_statistics import frame_statistics
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = "ru.seasonvar.tv"
@@ -53,32 +53,7 @@ def main():
             time.sleep(0.5)
             raw = call("shell", "dumpsys", "gfxinfo", APP, "framestats")
             (args.output / ("frames-" + str(index + 1) + ".txt")).write_text(raw)
-            report = {"round": index + 1, "sampled": args.sample}
-            for label, pattern in {
-                "frames": r"Total frames rendered: (\d+)",
-                "janky": r"Janky frames: (\d+)",
-                "p50_ms": r"50th percentile: (\d+)ms",
-                "p90_ms": r"90th percentile: (\d+)ms",
-                "p99_ms": r"99th percentile: (\d+)ms",
-            }.items():
-                match = re.search(pattern, raw)
-                if match:
-                    report[label] = int(match[1])
-            durations = []
-            columns = None
-            for line in raw.splitlines():
-                if line.startswith("Flags,") and "IntendedVsync" in line:
-                    columns = line.split(",")
-                elif columns and line[:1].isdigit():
-                    values = dict(zip(columns, line.split(",")))
-                    if values.get("Flags") == "0":
-                        start, end = int(values["IntendedVsync"]), int(values["FrameCompleted"])
-                        if start > 0 and end > start:
-                            durations.append((end - start) / 1_000_000)
-            if durations:
-                report["frame_stats_count"] = len(durations)
-                report["max_frame_ms"] = round(max(durations), 1)
-                report["frames_over_100ms"] = sum(x > 100 for x in durations)
+            report = {"round": index + 1, "sampled": args.sample, **frame_statistics(raw)}
             reports.append(report)
             print(json.dumps(report), flush=True)
     finally:

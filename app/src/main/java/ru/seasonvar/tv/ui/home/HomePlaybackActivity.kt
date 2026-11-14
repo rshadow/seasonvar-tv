@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -38,8 +39,10 @@ class HomePlaybackActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         launched = savedInstanceState?.getBoolean("launched") == true
+        val container = application as SeasonvarApplication
         setContent {
-            SeasonvarTheme {
+            val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme) {
                 val d = SeasonvarTheme.dimensions
                 val retry = remember { FocusRequester() }
                 BackHandler { finish() }

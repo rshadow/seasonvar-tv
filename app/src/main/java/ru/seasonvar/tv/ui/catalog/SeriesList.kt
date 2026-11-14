@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.ui.catalog
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,6 +27,8 @@ import ru.seasonvar.tv.data.SeriesDescription
 import ru.seasonvar.tv.data.images.prefetchImage
 import ru.seasonvar.tv.data.images.prefetchPageSize
 import ru.seasonvar.tv.ui.SeriesThumbnail
+import ru.seasonvar.tv.ui.details.PosterBackdropSource
+import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
 @Composable
@@ -36,6 +39,7 @@ internal fun SeriesList(
     prefetchEnabled: Boolean, modifier: Modifier,
     onFocused: (SeriesEntry) -> Unit, onOpen: (SeriesEntry) -> Unit, onActions: ((SeriesEntry) -> Unit)?,
     engine: SeriesListEngine = rememberSeriesListEngine(),
+    onBackdropSource: PosterBackdropPublisher? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -79,7 +83,8 @@ internal fun SeriesList(
             itemsIndexed(entries, key = { _, entry -> catalogKey + "|" + entry.key }, contentType = { _, _ -> "series" }) { index, entry ->
                 SeriesListCard(entry, index, entries.size, catalogKey, layout, cards, engine,
                     headerFocus, menuFocus, metrics, onFocused, onOpen, onActions,
-                    columns = { gridState.layoutInfo.maxSpan.coerceAtLeast(1) })
+                    columns = { gridState.layoutInfo.maxSpan.coerceAtLeast(1) },
+                    selected = entry.key == selectedKey, onBackdropSource = onBackdropSource)
             }
         }
     } else {
@@ -87,7 +92,8 @@ internal fun SeriesList(
             horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
             itemsIndexed(entries, key = { _, entry -> catalogKey + "|" + entry.key }, contentType = { _, _ -> "series" }) { index, entry ->
                 SeriesListCard(entry, index, entries.size, catalogKey, layout, cards, engine,
-                    headerFocus, menuFocus, metrics, onFocused, onOpen, onActions, columns = { metrics.columns })
+                    headerFocus, menuFocus, metrics, onFocused, onOpen, onActions, columns = { metrics.columns },
+                    selected = entry.key == selectedKey, onBackdropSource = onBackdropSource)
             }
         }
     }
@@ -123,7 +129,8 @@ internal fun rememberSeriesListEngine(loadDescription: (suspend (SeriesEntry) ->
 private fun SeriesListCard(entry: SeriesEntry, index: Int, count: Int, catalogKey: String, layout: CatalogLayout,
     cards: MutableMap<String, FocusRequester>, engine: SeriesListEngine, headerFocus: FocusRequester,
     menuFocus: FocusRequester, metrics: CatalogCardMetrics, onFocused: (SeriesEntry) -> Unit,
-    onOpen: (SeriesEntry) -> Unit, onActions: ((SeriesEntry) -> Unit)?, columns: () -> Int) {
+    onOpen: (SeriesEntry) -> Unit, onActions: ((SeriesEntry) -> Unit)?, columns: () -> Int,
+    selected: Boolean, onBackdropSource: PosterBackdropPublisher?) {
     val key = catalogKey + "|" + entry.key
     val requester = remember(key, cards) { cards[key] ?: FocusRequester() }
     DisposableEffect(key, cards, requester) {
@@ -131,12 +138,20 @@ private fun SeriesListCard(entry: SeriesEntry, index: Int, count: Int, catalogKe
         onDispose { if (cards[key] === requester) cards.remove(key) }
     }
     val grid = layout == CatalogLayout.GRID
+    val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
+    if (selected && onBackdropSource != null) {
+        DisposableEffect(entry.posterUrl, posterImage, onBackdropSource) {
+            val handle = onBackdropSource(PosterBackdropSource(entry.posterUrl, posterImage))
+            onDispose { handle.dispose() }
+        }
+    }
     SeriesThumbnail(entry, requester, if (grid) FocusRequester.Default else headerFocus, metrics,
         if (!grid && index == 0) menuFocus else null,
         right = if (!grid && index == count - 1) FocusRequester.Cancel else FocusRequester.Default,
         content = { engine.content(key, entry) },
         onFocused = { onFocused(entry) }, onClick = { onOpen(entry) },
         onLongClick = onActions?.let { { it(entry) } },
+        onPosterLoaded = { posterImage.value = it },
         modifier = if (!grid) Modifier else Modifier.focusProperties {
             val edges = catalogGridEdges(index, count, columns())
             up = if (edges.top) headerFocus else FocusRequester.Default

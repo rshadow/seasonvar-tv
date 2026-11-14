@@ -30,7 +30,8 @@ class ReviewsActivity : ComponentActivity() {
         val container = application as SeasonvarApplication
         val model = ViewModelProvider(this, ReviewsViewModel.Factory(container.reviews, entry))[ReviewsViewModel::class.java]
         setContent {
-            SeasonvarTheme {
+            val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme) {
                 val state by model.state.collectAsStateWithLifecycle()
                 val account by container.account.session.collectAsStateWithLifecycle()
                 val network by container.networkSettings.configuration.collectAsStateWithLifecycle()

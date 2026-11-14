@@ -23,10 +23,11 @@ import ru.seasonvar.tv.data.account.AccountListStatus
 import ru.seasonvar.tv.ui.account.*
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 
 object MarkMenuLayoutProbe {
-    fun run(probe: Instrumentation) = with(probe) {
+    internal fun run(probe: Instrumentation, theme: InterfaceTheme = InterfaceTheme.CLASSIC) = with(probe) {
         val result = Bundle()
         var activity: MarkMenuPreviewActivity? = null
         var phase = "start"
@@ -83,7 +84,7 @@ object MarkMenuLayoutProbe {
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
             main {
                 activity!!.setContent {
-                    SeasonvarTheme {
+                    SeasonvarTheme(theme) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                             MarkRemovalDialog(state.value,
                                 onDismiss = { state.value = state.value.copy(visible = false) },

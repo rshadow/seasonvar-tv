@@ -1,40 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="seasonvar_player_background">#000000</color>
-    <color name="seasonvar_player_clock_background">#99000000</color>
-    <dimen name="seasonvar_player_clock_padding_vertical">4dp</dimen>
-    <color name="seasonvar_accent">#F5B50C</color>
-    <color name="seasonvar_on_accent">#2B2521</color>
-    <color name="seasonvar_background">#2B2521</color>
-    <color name="seasonvar_surface">#980C3D</color>
-    <color name="seasonvar_text">#F3F3F3</color>
-    <color name="seasonvar_secondary_text">#D5D9D9</color>
 
-    <dimen name="seasonvar_screen_padding_horizontal">36dp</dimen>
-    <dimen name="seasonvar_screen_padding_vertical">28dp</dimen>
-    <dimen name="seasonvar_spacing_small">8dp</dimen>
-    <dimen name="seasonvar_spacing_medium">20dp</dimen>
-    <dimen name="seasonvar_spacing_large">24dp</dimen>
-    <dimen name="seasonvar_spacing_extra_large">32dp</dimen>
-    <dimen name="seasonvar_spacing_section">40dp</dimen>
     <dimen name="seasonvar_button_width">320dp</dimen>
     <dimen name="seasonvar_button_height">64dp</dimen>
 
-    <dimen name="seasonvar_button_corner_radius">5dp</dimen>
     <dimen name="seasonvar_menu_width">176dp</dimen>
-    <dimen name="seasonvar_menu_item_padding_horizontal">12dp</dimen>
     <dimen name="seasonvar_menu_item_height">40dp</dimen>
-    <dimen name="seasonvar_menu_item_spacing">4dp</dimen>
-    <dimen name="seasonvar_menu_header_spacing">24dp</dimen>
     <dimen name="seasonvar_navigation_button_height">52dp</dimen>
-    <dimen name="seasonvar_content_gap">24dp</dimen>
     <dimen name="seasonvar_header_button_size">44dp</dimen>
     <dimen name="seasonvar_header_button_badge_size">16dp</dimen>
-    <dimen name="seasonvar_header_button_badge_inset">2dp</dimen>
     <dimen name="seasonvar_filter_panel_width">420dp</dimen>
     <dimen name="seasonvar_header_button_icon_size">24dp</dimen>
     <dimen name="seasonvar_account_avatar_size">128dp</dimen>
-    <integer name="seasonvar_refresh_rotation_duration_ms">1000</integer>
     <dimen name="seasonvar_catalog_min_card_width">128dp</dimen>
     <dimen name="seasonvar_browse_catalog_min_card_width">88dp</dimen>
     <dimen name="seasonvar_poster_width">120dp</dimen>
@@ -47,14 +24,9 @@
     <dimen name="seasonvar_reviews_status_height">44dp</dimen>
     <integer name="seasonvar_reviews_list_width_percent">34</integer>
     <integer name="seasonvar_preview_poster_max_width_percent">50</integer>
-    <dimen name="seasonvar_card_padding">6dp</dimen>
-    <dimen name="seasonvar_card_corner_radius">8dp</dimen>
-    <dimen name="seasonvar_focus_border_width">2dp</dimen>
-    <dimen name="seasonvar_badge_padding_horizontal">8dp</dimen>
     <dimen name="seasonvar_badge_height">20dp</dimen>
     <dimen name="seasonvar_watch_badge_size">28dp</dimen>
     <dimen name="seasonvar_watch_badge_icon_size">18dp</dimen>
-    <dimen name="seasonvar_watch_badge_inset">6dp</dimen>
     <dimen name="seasonvar_badge_text_offset_horizontal">-0.5sp</dimen>
     <dimen name="seasonvar_badge_text_offset_vertical">-0.5sp</dimen>
     <dimen name="seasonvar_dialog_width">720dp</dimen>
@@ -74,7 +46,4 @@
         <item name="android:windowActionModeOverlay">true</item>
     </style>
     <dimen name="seasonvar_player_auto_next_width">320dp</dimen>
-    <color name="seasonvar_status_success">#66BB6A</color>
-    <color name="seasonvar_status_failure">#FF6B6B</color>
-    <color name="seasonvar_status_pending">#A0A0A0</color>
 </resources>

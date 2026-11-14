@@ -1730,6 +1730,13 @@
   "performance": {
     "build_type": "profile",
     "navigation_rounds": 3,
+    "details_rounds": 5,
+    "list_rounds": 3,
+    "list_warmup_rounds": 2,
+    "list_key_interval_seconds": 0.12,
+    "signed_profile_apk": "build/profile-release/seasonvar-tv-profile.apk",
+    "details_warmup_opens": 2,
+    "details_key_interval_seconds": 0.12,
     "navigation_key_interval_seconds": 0.2,
     "method_sample_interval_us": 1000
   },

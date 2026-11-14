@@ -420,4 +420,8 @@
     <string name="reviews_refresh">Обновить рецензии</string>
     <string name="reviews_read">Читать рецензию</string>
     <string name="reviews_hint">Вправо — читать · Влево — к списку</string>
+    <string name="interface_theme_title">Тема оформления</string>
+    <string name="interface_theme_description">Цвета, прозрачность и фон списков и карточек.</string>
+    <string name="interface_theme_classic">Классическая</string>
+    <string name="interface_theme_glass">Стекло</string>
 </resources>
