@@ -148,10 +148,10 @@ internal fun FilterRow(title: String, value: String?, modifier: Modifier, select
         .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = if (selected == null) 1 else 2,
-            overflow = TextOverflow.Ellipsis, color = c.onBackground)
+            overflow = TextOverflow.Ellipsis, color = SeasonvarTheme.textColor(focused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(focused))
         if (checkboxChecked != null) Checkbox(checkboxChecked, onCheckedChange = null)
         else if (selected != null) RadioButton(selected, onClick = null)
         else Text(value.orEmpty(), Modifier.widthIn(max = d.filterPanelWidth / 2), style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, color = c.onSurfaceVariant)
+            maxLines = 1, overflow = TextOverflow.Ellipsis, color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(focused))
     }
 }

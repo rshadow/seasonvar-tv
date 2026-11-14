@@ -2,6 +2,7 @@ package ru.seasonvar.tv.ui.theme
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ru.seasonvar.tv.R
@@ -55,6 +56,9 @@ internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: Po
     val primary: Color,
     val onPrimary: Color,
     val text: Color,
+    val focusedText: Color,
+    val focusedOutlineText: Color,
+    val focusedTextFontWeight: FontWeight?,
     val secondaryText: Color,
     val pageBackground: Color,
     val dialogBackground: Color,
@@ -72,6 +76,7 @@ internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: Po
     val refreshRotationMillis: Int, val spacing: InterfaceSpacing, val player: PlayerAppearance) {
     init {
         require(pageBackground.alpha == 1f && primary.alpha == 1f && onPrimary.alpha > 0f && text.alpha > 0f && secondaryText.alpha > 0f)
+        require(focusedText.alpha > 0f && (focusedOutlineText == Color.Unspecified || focusedOutlineText.alpha > 0f))
         require(refreshRotationMillis > 0 && focusBorderWidth.value > 0f)
         require(listOf(buttonCornerRadius, cardCornerRadius, focusBorderWidth, outlineWidth).all { it.value >= 0f })
     }
@@ -101,6 +106,12 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
             primary = color(R.styleable.SeasonvarInterfaceTheme_seasonvarAccentColor, R.color.seasonvar_accent),
             onPrimary = color(R.styleable.SeasonvarInterfaceTheme_seasonvarOnAccentColor, R.color.seasonvar_on_accent),
             text = color(R.styleable.SeasonvarInterfaceTheme_seasonvarTextColor, R.color.seasonvar_text),
+            focusedText = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusedTextColor,
+                values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarOnAccentColor, context.getColor(R.color.seasonvar_on_accent)))),
+            focusedOutlineText = if (values.hasValue(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusedOutlineTextColor))
+                Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusedOutlineTextColor, 0)) else Color.Unspecified,
+            focusedTextFontWeight = integer(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusedTextFontWeight,
+                R.integer.seasonvar_focused_text_font_weight).also { require(it in 0..1000) }.takeIf { it != 0 }?.let(::FontWeight),
             secondaryText = color(R.styleable.SeasonvarInterfaceTheme_seasonvarSecondaryTextColor, R.color.seasonvar_secondary_text),
             pageBackground = color(R.styleable.SeasonvarInterfaceTheme_seasonvarPageBackgroundColor, R.color.seasonvar_background),
             dialogBackground = color(R.styleable.SeasonvarInterfaceTheme_seasonvarDialogBackgroundColor, R.color.seasonvar_background),

@@ -1,11 +1,38 @@
 package ru.seasonvar.tv.probe
 
 import android.content.Context
+import android.graphics.Rect
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.ui.ThemeButton
+import ru.seasonvar.tv.ui.settings.InterfaceThemeSetting
 import ru.seasonvar.tv.ui.settings.loadInterfaceThemes
+import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.theme.resolveInterfaceTheme
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.roundToInt
+
+internal class ThemeTextPreviewState {
+    val buttonFocused = AtomicBoolean(false)
+    val settingFocused = AtomicBoolean(false)
+    val buttonBounds = AtomicReference<Rect>()
+    val settingBounds = AtomicReference<Rect>()
+    val buttonFocus = AtomicReference<FocusRequester>()
+}
 
 internal fun checkThemeConfiguration(context: Context) {
     val shipped = loadInterfaceThemes(context)
@@ -21,6 +48,8 @@ internal fun checkThemeConfiguration(context: Context) {
     check(configured.restore("probe") == configured.default)
     val spec = resolveInterfaceTheme(context, configured.default)
     check(spec.primary == Color(0xFF11AA33) && spec.text == Color(0xFFDDEE11))
+    check(spec.focusedText == Color(0xFF091522) && spec.focusedOutlineText == Color(0xFF80D8FF))
+    check(spec.focusedTextFontWeight == androidx.compose.ui.text.font.FontWeight.Bold)
     check(spec.pageBackground == Color(0xFF102030) && spec.dialogBackground == Color(0xEE223344))
     check(spec.statusSuccess == Color(0xFF123456))
     check(spec.poster.enabled && spec.poster.blurRadius == 3 && spec.poster.dimPercent == 60)
@@ -46,7 +75,7 @@ internal fun checkNativePlayerTheme(context: Context): Boolean {
 }
 
 @androidx.compose.runtime.Composable
-internal fun ThemeConfigurationPreview(onReady: (Boolean) -> Unit) {
+internal fun ThemeConfigurationPreview(preview: ThemeTextPreviewState, onReady: (Boolean) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val configured = androidx.compose.runtime.remember(context) { loadInterfaceThemes(context, R.xml.theme_config_probe) }
     ru.seasonvar.tv.ui.theme.SeasonvarTheme(configured.default) {
@@ -62,6 +91,32 @@ internal fun ThemeConfigurationPreview(onReady: (Boolean) -> Unit) {
             ru.seasonvar.tv.ui.theme.SeasonvarTheme.posterBackdropFadeMillis == 0 &&
             ru.seasonvar.tv.ui.theme.SeasonvarTheme.refreshRotationDurationMillis == 777 &&
             ru.seasonvar.tv.ui.theme.SeasonvarTheme.iconButtonOutline
-        androidx.compose.runtime.SideEffect { onReady(applied) }
+        val button = remember { FocusRequester() }
+        val setting = remember { FocusRequester() }
+        val inputMode = androidx.compose.ui.platform.LocalInputModeManager.current
+        Column(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground).padding(dimensions.spacingLarge),
+            verticalArrangement = Arrangement.spacedBy(dimensions.spacingMedium)) {
+            androidx.tv.material3.Text("Обычный текст", color = colors.onBackground)
+            ThemeButton("Текст в фокусе", {}, Modifier.focusRequester(button).onFocusChanged {
+                preview.buttonFocused.set(it.isFocused)
+            }.onGloballyPositioned {
+                val r = it.boundsInWindow()
+                preview.buttonBounds.set(Rect(r.left.roundToInt(), r.top.roundToInt(), r.right.roundToInt(), r.bottom.roundToInt()))
+            }.focusProperties {
+                down = setting; up = FocusRequester.Cancel; left = FocusRequester.Cancel; right = FocusRequester.Cancel
+            })
+            Box(Modifier.onFocusChanged { preview.settingFocused.set(it.hasFocus) }.focusGroup().onGloballyPositioned {
+                val r = it.boundsInWindow()
+                preview.settingBounds.set(Rect(r.left.roundToInt(), r.top.roundToInt(), r.right.roundToInt(), r.bottom.roundToInt()))
+            }) {
+                InterfaceThemeSetting(configured.default, {}, setting, FocusRequester.Cancel, button,
+                    FocusRequester.Cancel, {}, {}, {})
+            }
+        }
+        LaunchedEffect(Unit) {
+            inputMode.requestInputMode(androidx.compose.ui.input.InputMode.Keyboard)
+            button.requestFocus()
+        }
+        androidx.compose.runtime.SideEffect { preview.buttonFocus.set(button); onReady(applied) }
     }
 }

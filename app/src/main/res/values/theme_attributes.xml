@@ -12,6 +12,9 @@
         <attr name="seasonvarAccentColor" format="color" />
         <attr name="seasonvarOnAccentColor" format="color" />
         <attr name="seasonvarTextColor" format="color" />
+        <attr name="seasonvarFocusedTextColor" format="color" />
+        <attr name="seasonvarFocusedOutlineTextColor" format="color" />
+        <attr name="seasonvarFocusedTextFontWeight" format="integer" />
         <attr name="seasonvarSecondaryTextColor" format="color" />
         <attr name="seasonvarPageBackgroundColor" format="color" />
         <attr name="seasonvarDialogBackgroundColor" format="color" />

@@ -15,6 +15,9 @@
         <item name="seasonvarPosterDimPercent">65</item>
         <item name="seasonvarAccentColor">#FF80CBC4</item>
         <item name="seasonvarOnAccentColor">#FF102020</item>
+        <item name="seasonvarFocusedTextColor">#FF102020</item>
+        <item name="seasonvarFocusedOutlineTextColor">#FF80CBC4</item>
+        <item name="seasonvarFocusedTextFontWeight">700</item>
         <item name="seasonvarSurfaceColor">#66102020</item>
         <item name="seasonvarDialogBackgroundColor">#FF102020</item>
         <item name="seasonvarSpacingSmall">8dp</item>
@@ -55,6 +58,7 @@
 Все имена начинаются с `seasonvar`; точные имена и типы перечислены в `theme_attributes.xml`.
 
 - Палитра: акцент и текст на нём, основной и второстепенный текст, поверхности, фон страницы, подложка диалога, цвета успеха, ошибки и проверки.
+- Текст в фокусе: `FocusedTextColor` — на залитой кнопке, `FocusedOutlineTextColor` — на фоне без заливки. Первый по умолчанию использует `OnAccentColor`, второй при отсутствии значения сохраняет цвет элемента. `FocusedTextFontWeight`: 0 сохраняет исходное начертание, 400 — обычное, 700 — жирное; допустимы значения 1–1000. Во встроенных темах сохранено значение 0. Правила общие для кнопок, меню, строк настроек и выбора, карточек, актёров и списка рецензий. Размеры текста, шрифты и стиль читаемого текста рецензии не меняются.
 - Рамки: `TextButtonOutline`, `MenuButtonOutline`, `IconButtonOutline`, `CardOutline`, `SurfaceOutlineColor`, `SurfaceOutlineWidth`, `FocusBorderWidth`. В «Стекле» рамки иконок и бокового меню выключены. Если `MenuButtonOutline` не задан, меню использует `TextButtonOutline`.
 - Скругления: `ButtonCornerRadius`, `CardCornerRadius`.
 - Интервалы: внешние поля страницы, `SpacingSmall/Medium/Large/ExtraLarge/Section`, промежутки и отступы меню, контента, карточек и меток, внутренний вертикальный отступ часов. Габариты кнопок, карточек, постеров, диалогов и фотографий остаются общими.
@@ -62,7 +66,7 @@
 - Анимации: `PosterFadeMillis` допускает 0 для мгновенного показа; `RefreshRotationMillis` задаёт положительную длительность оборота индикатора. Отдельных размытий под кнопками нет.
 - Плеер: `PlayerBackgroundColor`, `PlayerClockBackgroundColor`, `PlayerControlsColor`, `PlayerPlayedColor`, `PlayerBufferedColor`, `PlayerUnplayedColor`. Размеры, шрифты, шаг перемотки и поведение плеера остаются общими.
 
-Цвета допускают альфа-канал `#AARRGGBB`. Фон страницы, видеофон и акцент должны быть непрозрачными. Толщина рамки фокуса положительна; отступы и скругления неотрицательны. Для диалогов предпочтительна непрозрачная подложка: иначе через текст может просвечивать содержимое нижнего экрана. Размеры текста и шрифты темой не меняются.
+Цвета допускают альфа-канал `#AARRGGBB`. Фон страницы, видеофон и акцент должны быть непрозрачными. Толщина рамки фокуса положительна; отступы и скругления неотрицательны. Для диалогов предпочтительна непрозрачная подложка: иначе через текст может просвечивать содержимое нижнего экрана. Размеры текста и семейства шрифтов темой не меняются.
 
 ## Проверить изменение
 

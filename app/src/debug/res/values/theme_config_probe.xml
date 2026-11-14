@@ -3,6 +3,9 @@
     <style name="SeasonvarInterfaceTheme.Probe" parent="SeasonvarInterfaceTheme.Classic">
         <item name="seasonvarAccentColor">#FF11AA33</item>
         <item name="seasonvarTextColor">#FFDDEE11</item>
+        <item name="seasonvarFocusedTextColor">#FF091522</item>
+        <item name="seasonvarFocusedOutlineTextColor">#FF80D8FF</item>
+        <item name="seasonvarFocusedTextFontWeight">700</item>
         <item name="seasonvarPageBackgroundColor">#FF102030</item>
         <item name="seasonvarDialogBackgroundColor">#EE223344</item>
         <item name="seasonvarStatusSuccessColor">#FF123456</item>

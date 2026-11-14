@@ -80,7 +80,7 @@ private fun ActorTile(actor: SeriesActor, modifier: Modifier, onFocused: () -> U
             contentScale = ContentScale.Crop, placeholder = painterResource(R.drawable.actor_placeholder),
             error = painterResource(R.drawable.actor_placeholder))
         Text(actor.name, Modifier.fillMaxWidth().height(d.actorNameHeight),
-            style = MaterialTheme.typography.bodySmall, color = if (focused) c.primary else c.onSurfaceVariant,
-            textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            style = MaterialTheme.typography.bodySmall, color = SeasonvarTheme.textColor(focused, if (focused) c.primary else c.onSurfaceVariant),
+            textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight(focused))
     }
 }

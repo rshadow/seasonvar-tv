@@ -954,6 +954,8 @@ internal fun ThemeButton(
             scale = scale,
             colors = colors,
         ) {
+            val textColor = SeasonvarTheme.textColor(focused, if (actionEnabled) c.onSurface else c.onSurfaceVariant, filled = true)
+            val textWeight = SeasonvarTheme.textWeight(focused)
             val rotation = if (loading) {
                 val transition = rememberInfiniteTransition(label = "refresh")
                 val angle = transition.animateFloat(
@@ -977,7 +979,8 @@ internal fun ThemeButton(
                 placeholder = painterResource(icon), error = painterResource(icon),
                 modifier = Modifier.size(d.headerButtonIconSize).clip(RoundedCornerShape(d.buttonCornerRadius)))
             else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (iconText != null) Text(iconText, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                if (iconText != null) Text(iconText, style = MaterialTheme.typography.labelLarge,
+                    color = textColor, fontWeight = textWeight, maxLines = 1)
                 else Icon(painterResource(icon), contentDescription = text,
                     modifier = Modifier.size(d.headerButtonIconSize).then(rotation))
                 if (badgeCount > 0) Box(
@@ -996,15 +999,17 @@ internal fun ThemeButton(
         Button(onClick = action, enabled = enabled,
             modifier = buttonModifier.width(IntrinsicSize.Max).height(IntrinsicSize.Min),
             shape = shape, scale = scale, colors = colors, contentPadding = contentPadding) {
+            val textColor = SeasonvarTheme.textColor(focused, if (actionEnabled) c.onSurface else c.onSurfaceVariant, filled = true)
+            val textWeight = SeasonvarTheme.textWeight(focused)
             if (checked != null || reserveCheckSpace) Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                 Box(Modifier.size(d.headerButtonIconSize), contentAlignment = Alignment.Center) {
                     if (checked == true) Icon(painterResource(R.drawable.ic_check), contentDescription = null,
                         modifier = Modifier.size(d.headerButtonIconSize))
                 }
-                Text(text, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(text, Modifier.weight(1f), color = textColor, fontWeight = textWeight, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else Box(Modifier.fillMaxSize(), contentAlignment = contentAlignment) {
-                Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(text, color = textColor, fontWeight = textWeight, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -1344,11 +1349,11 @@ internal fun SeriesThumbnail(
             Poster(prepared.entry, Modifier.fillMaxWidth().height(metrics.posterHeight), onBitmap = onPosterLoaded)
             Spacer(Modifier.height(d.spacingSmall))
             Text(prepared.entry.title, modifier = Modifier.height(metrics.titleHeight),
-                style = MaterialTheme.typography.labelMedium, color = c.onSurface,
-                minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                style = MaterialTheme.typography.labelMedium, color = SeasonvarTheme.textColor(focused, c.onSurface),
+                minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight(focused))
             Text(prepared.subtitle, modifier = Modifier.height(metrics.subtitleHeight),
-                style = MaterialTheme.typography.labelSmall, color = c.onSurface,
-                minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                style = MaterialTheme.typography.labelSmall, color = SeasonvarTheme.textColor(focused, c.onSurface),
+                minLines = 1, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight(focused))
         }
     }
 }
@@ -1517,15 +1522,15 @@ private fun SettingsPane(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.start_page_title), color = c.onBackground,
-                    style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.start_page_title), color = SeasonvarTheme.textColor(startFocused, c.onBackground),
+                    style = MaterialTheme.typography.titleLarge, fontWeight = SeasonvarTheme.textWeight(startFocused))
                 Spacer(Modifier.height(d.spacingSmall))
-                Text(stringResource(R.string.start_page_description), color = c.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.start_page_description), color = SeasonvarTheme.textColor(startFocused, c.onSurfaceVariant),
+                    style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(startFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
-            Text(stringResource(sectionTitle(startPage.availableAtStart(signedIn, hiddenSections))), color = c.primary,
-                style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(sectionTitle(startPage.availableAtStart(signedIn, hiddenSections))), color = SeasonvarTheme.textColor(startFocused, c.primary),
+                style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(startFocused))
         }
         Spacer(Modifier.height(d.spacingMedium))
         ru.seasonvar.tv.ui.settings.MenuVisibilitySetting(hiddenSections, onSectionVisibilityChange,
@@ -1545,9 +1550,9 @@ private fun SettingsPane(
             .toggleable(showActors, role = Role.Checkbox, onValueChange = { onInteraction(); onShowActorsChange(it) })
             .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.show_actors_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Text(stringResource(R.string.show_actors_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(actorsSettingFocused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(actorsSettingFocused))
                 Spacer(Modifier.height(d.spacingSmall))
-                Text(stringResource(R.string.show_actors_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                Text(stringResource(R.string.show_actors_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(actorsSettingFocused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(actorsSettingFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = showActors, onCheckedChange = null)
@@ -1567,10 +1572,10 @@ private fun SettingsPane(
             .toggleable(autoNextEnabled, role = Role.Checkbox, onValueChange = { onInteraction(); onAutoNextChange(it) })
             .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.auto_next_setting_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Text(stringResource(R.string.auto_next_setting_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(autoNextFocused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(autoNextFocused))
                 Spacer(Modifier.height(d.spacingSmall))
                 Text(stringResource(R.string.auto_next_setting_description),
-                    style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                    style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(autoNextFocused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(autoNextFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = autoNextEnabled, onCheckedChange = null)
@@ -1584,10 +1589,10 @@ private fun SettingsPane(
             .toggleable(autoNextSeasonEnabled, role = Role.Checkbox, onValueChange = { onInteraction(); onAutoNextSeasonChange(it) })
             .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.auto_next_season_setting_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Text(stringResource(R.string.auto_next_season_setting_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(autoSeasonFocused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(autoSeasonFocused))
                 Spacer(Modifier.height(d.spacingSmall))
                 Text(stringResource(R.string.auto_next_season_setting_description),
-                    style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                    style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(autoSeasonFocused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(autoSeasonFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = autoNextSeasonEnabled, onCheckedChange = null)
@@ -1601,12 +1606,12 @@ private fun SettingsPane(
             .clickable(role = Role.Button, onClick = { onInteraction(); clockDialogOpen = true })
             .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.player_clock_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Text(stringResource(R.string.player_clock_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(clockFocused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(clockFocused))
                 Spacer(Modifier.height(d.spacingSmall))
-                Text(stringResource(R.string.player_clock_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                Text(stringResource(R.string.player_clock_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(clockFocused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(clockFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
-            Text(stringResource(playerClockLabel(playerClockPosition)), style = MaterialTheme.typography.bodyLarge, color = c.primary)
+            Text(stringResource(playerClockLabel(playerClockPosition)), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(clockFocused, c.primary), fontWeight = SeasonvarTheme.textWeight(clockFocused))
         }
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.network_title),
@@ -1620,9 +1625,9 @@ private fun SettingsPane(
             .toggleable(imagePrefetchEnabled, role = Role.Checkbox, onValueChange = { onInteraction(); onImagePrefetchChange(it) })
             .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.image_prefetch_title), style = MaterialTheme.typography.titleLarge, color = c.onBackground)
+                Text(stringResource(R.string.image_prefetch_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(prefetchFocused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(prefetchFocused))
                 Spacer(Modifier.height(d.spacingSmall))
-                Text(stringResource(R.string.image_prefetch_description), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                Text(stringResource(R.string.image_prefetch_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(prefetchFocused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(prefetchFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = imagePrefetchEnabled, onCheckedChange = null)
@@ -1648,11 +1653,11 @@ private fun SettingsPane(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.bypass_title), color = c.onBackground,
-                    style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.bypass_title), color = SeasonvarTheme.textColor(focused, c.onBackground),
+                    style = MaterialTheme.typography.titleLarge, fontWeight = SeasonvarTheme.textWeight(focused))
                 Spacer(Modifier.height(d.spacingSmall))
-                Text(stringResource(R.string.bypass_description), color = c.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.bypass_description), color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant),
+                    style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(focused))
             }
             Spacer(Modifier.width(d.spacingMedium))
             Checkbox(checked = bypassEnabled, onCheckedChange = null)
@@ -1673,15 +1678,15 @@ private fun SettingsPane(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.dns_setting_title), color = c.onBackground,
-                    style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.dns_setting_title), color = SeasonvarTheme.textColor(dnsFocused, c.onBackground),
+                    style = MaterialTheme.typography.titleLarge, fontWeight = SeasonvarTheme.textWeight(dnsFocused))
                 Spacer(Modifier.height(d.spacingSmall))
-                Text(stringResource(R.string.dns_description), color = c.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.dns_description), color = SeasonvarTheme.textColor(dnsFocused, c.onSurfaceVariant),
+                    style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(dnsFocused))
             }
             Spacer(Modifier.width(d.spacingMedium))
-            Text(stringResource(dnsLabel(dnsProvider)), color = c.primary,
-                style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(dnsLabel(dnsProvider)), color = SeasonvarTheme.textColor(dnsFocused, c.primary),
+                style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(dnsFocused))
         }
         Spacer(Modifier.height(d.spacingLarge))
         ru.seasonvar.tv.ui.settings.ProxySetting(proxy, onProxyChange, proxyFocus, dnsFocus, menuFocus)
@@ -1779,8 +1784,8 @@ internal fun <T> SettingsChoiceDialog(
                                 .padding(d.spacingMedium),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(stringResource(label(provider)), color = c.onBackground,
-                                style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                            Text(stringResource(label(provider)), color = SeasonvarTheme.textColor(focused, c.onBackground),
+                                style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), fontWeight = SeasonvarTheme.textWeight(focused))
                             Spacer(Modifier.width(d.spacingMedium))
                             RadioButton(selected = selected == provider, onClick = null)
                         }
