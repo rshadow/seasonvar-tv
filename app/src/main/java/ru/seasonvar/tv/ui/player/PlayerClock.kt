@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -60,7 +59,7 @@ internal fun PlayerClock(position: PlayerClockPosition, modifier: Modifier = Mod
     val description = stringResource(R.string.player_clock_accessibility, time)
     Text(time, style = MaterialTheme.typography.titleMedium, fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground, maxLines = 1,
-            modifier = modifier.background(colorResource(R.color.seasonvar_player_clock_background), RoundedCornerShape(d.buttonCornerRadius))
+            modifier = modifier.background(SeasonvarTheme.playerAppearance.clockBackground, RoundedCornerShape(d.buttonCornerRadius))
                 .padding(horizontal = d.spacingSmall, vertical = d.playerClockPaddingVertical)
                 .semantics { contentDescription = description })
 }

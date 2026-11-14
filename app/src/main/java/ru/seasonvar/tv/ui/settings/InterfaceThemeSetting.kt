@@ -20,7 +20,7 @@ import ru.seasonvar.tv.ui.SettingsChoiceDialog
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
 @Composable
-internal fun DetailsAppearanceSetting(value: DetailsAppearance, onChange: (DetailsAppearance) -> Unit,
+internal fun InterfaceThemeSetting(value: InterfaceTheme, onChange: (InterfaceTheme) -> Unit,
     focus: FocusRequester, menu: FocusRequester, previous: FocusRequester, next: FocusRequester,
     onBack: () -> Unit, onClose: () -> Unit, onInteraction: () -> Unit) {
     val d = SeasonvarTheme.dimensions
@@ -34,20 +34,15 @@ internal fun DetailsAppearanceSetting(value: DetailsAppearance, onChange: (Detai
         .clickable(role = Role.Button) { onInteraction(); open = true }.padding(d.spacingMedium),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.details_appearance_title), color = c.onBackground, style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.interface_theme_title), color = c.onBackground, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.details_appearance_description), color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.interface_theme_description), color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
         }
-        Text(stringResource(appearanceLabel(value)), color = c.primary, style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(value.label), color = c.primary, style = MaterialTheme.typography.bodyLarge)
     }
-    if (open) SettingsChoiceDialog(R.string.details_appearance_title, DetailsAppearance.entries, value, ::appearanceLabel,
+    if (open) SettingsChoiceDialog(R.string.interface_theme_title, SeasonvarTheme.availableThemes, value, { it.label },
         onSelect = {
             onChange(it); open = false
             scope.launch { repeat(2) { withFrameNanos { } }; focus.requestFocus() }
         }, onClose = { open = false; onClose() }, onBack = { open = false; onBack() }, onInteraction = onInteraction)
-}
-
-private fun appearanceLabel(value: DetailsAppearance): Int = when (value) {
-    DetailsAppearance.PLAIN -> R.string.details_appearance_plain
-    DetailsAppearance.BLURRED_POSTER -> R.string.details_appearance_blurred
 }

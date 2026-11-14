@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 internal data class PosterBackdropSpec(val width: Int, val height: Int, val background: Int,
-    val dim: Float, val edge: Float, val fadeEdge: Float, val menuEnd: Float = 0f)
+    val dim: Float, val edge: Float, val fadeEdge: Float, val menuEnd: Float = 0f, val blurRadius: Int = 0)
 
 internal class PosterBackdropCache {
     private data class Key(val poster: String, val spec: PosterBackdropSpec)
@@ -26,7 +26,7 @@ internal class PosterBackdropCache {
     val cachedBytes: Int get() = images.snapshot().values.sumOf { it.allocationByteCount }
 
     suspend fun prepare(poster: String, input: Bitmap, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
-        require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f && spec.menuEnd in 0f..0.6f)
+        require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f && spec.menuEnd in 0f..0.6f && spec.blurRadius >= 0)
         preparation.withLock {
             val key = Key(poster, spec)
             images.get(key)?.let { return@withLock it }
@@ -38,7 +38,7 @@ internal class PosterBackdropCache {
             val small = Bitmap.createScaledBitmap(source, width, height, true)
             val pixels = IntArray(width * height)
             small.getPixels(pixels, 0, width, 0, 0, width, height)
-            val blurred = blurPosterPixels(pixels, width, height, RADIUS, PASSES)
+            val blurred = if (spec.blurRadius == 0) pixels else blurPosterPixels(pixels, width, height, spec.blurRadius, PASSES)
             val blurredBitmap = Bitmap.createBitmap(blurred, width, height, Bitmap.Config.ARGB_8888)
             val outputScale = minOf(1f, MAX_EDGE.toFloat() / maxOf(spec.width, spec.height))
             val outputWidth = (spec.width * outputScale).roundToInt().coerceAtLeast(1)
@@ -72,7 +72,6 @@ internal class PosterBackdropCache {
     companion object {
         const val MAX_EDGE = 256
         const val MAX_ENTRIES = 8
-        private const val RADIUS = 2
         private const val PASSES = 2
     }
 }

@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.tv.material3.MaterialTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DisposableHandle
 import ru.seasonvar.tv.SeasonvarApplication
@@ -42,6 +41,7 @@ internal class PosterBackdropState : State<PosterBackdropSource?> {
 
 @Composable
 internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f) {
+    if (!SeasonvarTheme.posterBackdropEnabled) return
     val poster = source.value
     val empty = remember { mutableStateOf<Bitmap?>(null) }
     PosterBackdrop(poster?.url, poster?.bitmap ?: empty, bounds, menuEnd)
@@ -51,12 +51,13 @@ internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: I
 internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: IntSize, menuEnd: Float = 0f) {
     val cache = (LocalContext.current.applicationContext as SeasonvarApplication).posterBackdrops
     val input = source.value
-    val background = MaterialTheme.colorScheme.background
+    val background = SeasonvarTheme.pageBackground
+    val radius = SeasonvarTheme.posterBackdropBlurRadius
     val dim = SeasonvarTheme.posterBackdropDimFraction
     val edge = SeasonvarTheme.posterBackdropEdgeFraction
     val fadeEdge = SeasonvarTheme.posterBackdropFadeEdgeFraction
-    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd) {
-        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd) }
+    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius) {
+        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius) }
     }
     val bitmapState = remember(posterUrl, spec) {
         mutableStateOf(if (posterUrl != null && spec != null) cache.get(posterUrl, spec) else null)

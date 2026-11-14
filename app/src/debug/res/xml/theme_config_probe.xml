@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<themes defaultTheme="probe">
+    <theme id="probe" label="@string/interface_theme_classic" style="@style/SeasonvarInterfaceTheme.Probe" />
+</themes>

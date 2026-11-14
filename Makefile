@@ -98,6 +98,7 @@ help:
 		'make cache-memory-probe     Measure native card cache and poster memory in emulator' \
 		'make details-progress-probe Verify stable progress layout across loading states offline' \
 		'make status-probe           Verify live list status changes and restore the original mark (emulator)' \
+		'make theme-config-probe     Verify registered theme XML, parameters and controls in emulator' \
 		'make player-probe           Verify video, clocks, autoplay and controls in emulator; inspect frames' \
 		'make history-probe          Record Naruto episode one through the emulator player; inspect frames' \
 		'make ui-screens-probe       Inspect screens and dialogs using local fixtures' \
@@ -612,6 +613,7 @@ poster-backdrop-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=poster-backdrop MARK_MENU_PROBE_OUT="$(POSTER_BACKDROP_PROBE_OUT)"
 
 POSTER_BACKDROP_PROBE_OUT ?= build/poster-backdrop-probe
+PROBE_THEME ?= plain
 
 profile-details:
 	$(ENV) python3 scripts/profile-details.py --device "$(DEVICE)" --mode "$(DETAILS_APPEARANCE)" --output "$(DETAILS_PROFILE_OUT)" $(DETAILS_PROFILE_ARGS)
@@ -645,7 +647,7 @@ mark-menu-probe:
 	$(GRADLE) :app:assembleDebugAndroidTest
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
-	$(ENV) python3 scripts/probe-mark-menu.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --mode "$(LAYOUT_PROBE_MODE)" --output "$(MARK_MENU_PROBE_OUT)"
+	$(ENV) python3 scripts/probe-mark-menu.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --mode "$(LAYOUT_PROBE_MODE)" --theme "$(PROBE_THEME)" --output "$(MARK_MENU_PROBE_OUT)"
 
 smart-continue-probe:
 	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Use an emulator for smart-list verification.' >&2; exit 1;; esac
@@ -655,3 +657,9 @@ smart-continue-probe:
 	$(ADB) install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 	$(ADB) shell am force-stop "$(APP_ID)"
 	$(ENV) python3 scripts/probe-account-mark.py --device "$(DEVICE)" --runner "$(APP_ID).test/$(ACCOUNT_MARK_RUNNER)" --mode smart-inspect --target-season "$(SMART_PROBE_SEASON)"
+
+.PHONY: theme-config-probe
+theme-config-probe:
+	$(MAKE) poster-backdrop-probe POSTER_BACKDROP_PROBE_OUT="$(THEME_CONFIG_PROBE_OUT)"
+
+THEME_CONFIG_PROBE_OUT ?= build/theme-config-probe

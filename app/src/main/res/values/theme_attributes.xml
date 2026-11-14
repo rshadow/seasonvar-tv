@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SeasonvarInterfaceTheme">
+        <attr name="seasonvarPosterBackgroundEnabled" format="boolean" />
+        <attr name="seasonvarPosterBlurRadius" format="integer" />
+        <attr name="seasonvarPosterDimPercent" format="integer" />
+        <attr name="seasonvarSurfaceColor" format="color" />
+        <attr name="seasonvarInactiveSurfaceColor" format="color" />
+        <attr name="seasonvarSurfaceOutlineColor" format="color" />
+        <attr name="seasonvarAccentColor" format="color" />
+        <attr name="seasonvarOnAccentColor" format="color" />
+        <attr name="seasonvarTextColor" format="color" />
+        <attr name="seasonvarSecondaryTextColor" format="color" />
+        <attr name="seasonvarPageBackgroundColor" format="color" />
+        <attr name="seasonvarDialogBackgroundColor" format="color" />
+        <attr name="seasonvarStatusSuccessColor" format="color" />
+        <attr name="seasonvarStatusFailureColor" format="color" />
+        <attr name="seasonvarStatusPendingColor" format="color" />
+        <attr name="seasonvarScreenPaddingHorizontal" format="dimension" />
+        <attr name="seasonvarScreenPaddingVertical" format="dimension" />
+        <attr name="seasonvarSpacingSmall" format="dimension" />
+        <attr name="seasonvarSpacingMedium" format="dimension" />
+        <attr name="seasonvarSpacingLarge" format="dimension" />
+        <attr name="seasonvarSpacingExtraLarge" format="dimension" />
+        <attr name="seasonvarSpacingSection" format="dimension" />
+        <attr name="seasonvarMenuItemPaddingHorizontal" format="dimension" />
+        <attr name="seasonvarMenuItemSpacing" format="dimension" />
+        <attr name="seasonvarMenuHeaderSpacing" format="dimension" />
+        <attr name="seasonvarContentGap" format="dimension" />
+        <attr name="seasonvarCardPadding" format="dimension" />
+        <attr name="seasonvarBadgePaddingHorizontal" format="dimension" />
+        <attr name="seasonvarHeaderButtonBadgeInset" format="dimension" />
+        <attr name="seasonvarWatchBadgeInset" format="dimension" />
+        <attr name="seasonvarButtonCornerRadius" format="dimension" />
+        <attr name="seasonvarCardCornerRadius" format="dimension" />
+        <attr name="seasonvarFocusBorderWidth" format="dimension" />
+        <attr name="seasonvarSurfaceOutlineWidth" format="dimension" />
+        <attr name="seasonvarTextButtonOutline" format="boolean" />
+        <attr name="seasonvarIconButtonOutline" format="boolean" />
+        <attr name="seasonvarCardOutline" format="boolean" />
+        <attr name="seasonvarRefreshRotationMillis" format="integer" />
+        <attr name="seasonvarPosterEdgePercent" format="integer" />
+        <attr name="seasonvarPosterFadeEdgePercent" format="integer" />
+        <attr name="seasonvarPosterFadeMillis" format="integer" />
+        <attr name="seasonvarPlayerBackgroundColor" format="color" />
+        <attr name="seasonvarPlayerClockBackgroundColor" format="color" />
+        <attr name="seasonvarPlayerControlsColor" format="color" />
+        <attr name="seasonvarPlayerPlayedColor" format="color" />
+        <attr name="seasonvarPlayerBufferedColor" format="color" />
+        <attr name="seasonvarPlayerUnplayedColor" format="color" />
+        <attr name="seasonvarPlayerClockPaddingVertical" format="dimension" />
+    </declare-styleable>
+    <item type="id" name="seasonvar_player_appearance" />
+</resources>

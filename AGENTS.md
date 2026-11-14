@@ -61,7 +61,7 @@
 
 - Пункты настроек оформлять по [ADR-0015](docs/adr/0015-settings-item-format.md): название и пояснение слева, галочка или выбранное значение справа, одна точка фокуса на строку. Опции выбирать в диалоге с радиокнопками.
 
-- Общую палитру, интервалы и размеры компонентов хранить в [themes.xml](app/src/main/res/values/themes.xml); в Compose использовать MaterialTheme и [SeasonvarTheme](app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt) согласно [ADR-0008](docs/adr/0008-centralized-ui-theme.md). Новые экраны не должны дублировать эти значения.
+- Визуальные параметры и интервалы хранить в отдельных [XML-файлах тем](docs/themes.md), реестр — в `res/xml/interface_themes.xml` по [ADR-0161](docs/adr/0161-resource-defined-interface-themes.md). Общие размеры компонентов и параметры поведения хранить в [themes.xml](app/src/main/res/values/themes.xml); в Compose использовать MaterialTheme и [SeasonvarTheme](app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt) согласно [ADR-0008](docs/adr/0008-centralized-ui-theme.md). Новые экраны не должны дублировать эти значения.
 
 - Все основные действия доступны с D-pad, OK и «Назад». Сенсорный экран и мышь не должны быть обязательными.
 - У каждого интерактивного элемента есть заметный фокус и предсказуемый переход к соседним элементам.

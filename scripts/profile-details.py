@@ -16,7 +16,7 @@ def main():
     config = json.loads((ROOT / "toolchain.lock.json").read_text())["performance"]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True)
-    parser.add_argument("--mode", choices=("plain", "blurred_poster"), required=True,
+    parser.add_argument("--mode", required=True,
                         help="Select this appearance in Settings and open a series card before running")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--rounds", type=int, default=config["details_rounds"])

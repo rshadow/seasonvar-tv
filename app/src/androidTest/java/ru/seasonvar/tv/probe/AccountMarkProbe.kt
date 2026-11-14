@@ -12,6 +12,7 @@ import org.jsoup.Jsoup
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.data.account.AccountParser
 import ru.seasonvar.tv.data.account.PlaybackMarkParser
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 
 /** Explicit live probe; no personal fields or session values are returned to adb. */
 class AccountMarkProbe : Instrumentation() {
@@ -25,8 +26,11 @@ class AccountMarkProbe : Instrumentation() {
     }
 
     override fun onStart() {
+        val themes = ru.seasonvar.tv.ui.settings.loadInterfaceThemes(targetContext)
+        val requestedTheme = probeArguments.getString("theme")
+        val theme = if (requestedTheme == null) themes.default else requireNotNull(themes.entries.firstOrNull { it.storageId == requestedTheme })
         if (mode == "poster-backdrop") { PosterBackdropProbe.run(this); return }
-        if (mode == "reviews-layout") { ReviewsLayoutProbe.run(this); return }
+        if (mode == "reviews-layout") { ReviewsLayoutProbe.run(this, theme); return }
         if (mode == "pac-no-webview") { PacEngineProbe.run(this, missingWebView = true); return }
         if (mode == "pac-engine") { PacEngineProbe.run(this); return }
         if (mode == "pac-live") { PacLiveProbe.run(this); return }
@@ -41,9 +45,9 @@ class AccountMarkProbe : Instrumentation() {
         if (mode == "series-list-engine") { SeriesListEngineProbe.run(this); return }
         if (mode == "shared-card-cache") { SeriesListEngineProbe.run(this, sharedCache = true); return }
         if (mode == "cache-memory") { CacheMemoryProbe.run(this); return }
-        if (mode == "ui-dialogs-layout") { UiScreensLayoutProbe.run(this, dialogsOnly = true); return }
-        if (mode == "ui-screens-layout") { UiScreensLayoutProbe.run(this); return }
-        if (mode == "history-clear-layout") { HistoryClearLayoutProbe.run(this); return }
+        if (mode == "ui-dialogs-layout") { UiScreensLayoutProbe.run(this, dialogsOnly = true, theme = theme); return }
+        if (mode == "ui-screens-layout") { UiScreensLayoutProbe.run(this, theme = theme); return }
+        if (mode == "history-clear-layout") { HistoryClearLayoutProbe.run(this, theme = theme); return }
         if (mode == "history-filters-live") { HistoryFiltersLiveProbe.run(this); return }
         if (mode == "public-filters-live") { PublicFiltersLiveProbe.run(this); return }
         if (mode == "best-filters-live") { BestFiltersLiveProbe.run(this); return }
@@ -52,7 +56,7 @@ class AccountMarkProbe : Instrumentation() {
         if (mode == "home-channels") { HomeChannelProbe.run(this); return }
         if (mode == "smart-inspect") { SmartContinueLiveProbe.run(this, probeArguments); return }
         if (mode == "mark-menu-layout") {
-            MarkMenuLayoutProbe.run(this)
+            MarkMenuLayoutProbe.run(this, theme)
             return
         }
         if (mode == "history-playback") { HistoryPlaybackProbe.run(this); return }

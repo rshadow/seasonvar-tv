@@ -98,7 +98,7 @@ import ru.seasonvar.tv.ui.details.PosterBackdropState
 import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
-import ru.seasonvar.tv.ui.settings.DetailsAppearance
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.CatalogFilters
@@ -183,8 +183,8 @@ internal fun SeasonvarApp(
     onImagePrefetchChange: (Boolean) -> Unit = {},
     showActors: Boolean = true,
     onShowActorsChange: (Boolean) -> Unit = {},
-    detailsAppearance: DetailsAppearance = DetailsAppearance.PLAIN,
-    onDetailsAppearanceChange: (DetailsAppearance) -> Unit = {},
+    interfaceTheme: InterfaceTheme = SeasonvarTheme.interfaceTheme,
+    onInterfaceThemeChange: (InterfaceTheme) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -225,7 +225,7 @@ internal fun SeasonvarApp(
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
 ) {
-    SeasonvarTheme {
+    SeasonvarTheme(interfaceTheme) {
         SeasonvarContent(
             states = states,
             onRefresh = onRefresh,
@@ -246,7 +246,7 @@ internal fun SeasonvarApp(
             onConnectionVisible = onConnectionVisible,
             imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
             showActors = showActors, onShowActorsChange = onShowActorsChange,
-            detailsAppearance = detailsAppearance, onDetailsAppearanceChange = onDetailsAppearanceChange,
+            interfaceTheme = interfaceTheme, onInterfaceThemeChange = onInterfaceThemeChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
@@ -300,8 +300,8 @@ private fun SeasonvarContent(
     onImagePrefetchChange: (Boolean) -> Unit = {},
     showActors: Boolean = true,
     onShowActorsChange: (Boolean) -> Unit = {},
-    detailsAppearance: DetailsAppearance = DetailsAppearance.PLAIN,
-    onDetailsAppearanceChange: (DetailsAppearance) -> Unit = {},
+    interfaceTheme: InterfaceTheme = SeasonvarTheme.interfaceTheme,
+    onInterfaceThemeChange: (InterfaceTheme) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -692,10 +692,10 @@ private fun SeasonvarContent(
                 false
             }
             .backNavigationKeys(::navigateBack, backNavigation::reset)
-            .background(MaterialTheme.colorScheme.background),
+            .background(SeasonvarTheme.pageBackground),
     ) {
         val density = LocalDensity.current
-        if (detailsAppearance == DetailsAppearance.BLURRED_POSTER) BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (SeasonvarTheme.posterBackdropEnabled) BoxWithConstraints(Modifier.fillMaxSize()) {
             PosterBackdropLayer(backdropSource,
                 with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
                 ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
@@ -779,7 +779,7 @@ private fun SeasonvarContent(
                         onConnectionVisible = onConnectionVisible,
                         imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
                         showActors = showActors, onShowActorsChange = onShowActorsChange,
-                        detailsAppearance = detailsAppearance, onDetailsAppearanceChange = onDetailsAppearanceChange,
+                        interfaceTheme = interfaceTheme, onInterfaceThemeChange = onInterfaceThemeChange,
                         bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
                         translationSettingsModel = translationSettingsModel,
                         menuFocus = settingsFocus,
@@ -801,7 +801,7 @@ private fun SeasonvarContent(
                 } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                     SeriesDetailsPane(
                         detailsSource!!, detailsModel,
-                        showActors = showActors, appearance = detailsAppearance, onBackdropSource = onBackdropSource,
+                        showActors = showActors, onBackdropSource = onBackdropSource,
                         onActions = if (accountSession.user == null) null else ::openSeriesActions,
                         removalDialogOpen = removalState.visible,
                         onPlay = onPlay,
@@ -813,7 +813,7 @@ private fun SeasonvarContent(
                         state, selected, listState, cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
                         sectionFocus(section), refreshFocus, retryFocus,
                         imagePrefetchEnabled = imagePrefetchEnabled,
-                        onBackdropSource = if (detailsAppearance == DetailsAppearance.BLURRED_POSTER) onBackdropSource else null,
+                        onBackdropSource = onBackdropSource,
                         loadDescription = loadDescription,
                         cardData = cardData,
                         preparationContext = listOf(accountSession.version, bypassEnabled, dnsProvider, proxy),
@@ -902,9 +902,14 @@ internal fun ThemeButton(
     val focus = remember { FocusRequester() }
     val c = MaterialTheme.colorScheme
     val d = SeasonvarTheme.dimensions
+    val outline = SeasonvarTheme.surfaceOutline
+    val hasOutline = if (icon == null) SeasonvarTheme.textButtonOutline else SeasonvarTheme.iconButtonOutline
     val action = { if (enabled && actionEnabled && !loading) onClick() }
     val loadingDescription = if (loading) loadingLabel ?: stringResource(R.string.today_updating) else null
-    val buttonModifier = modifier.focusRequester(focus).focusProperties { canFocus = enabled }
+    val buttonModifier = modifier
+        .then(if (hasOutline && !focused && outline != Color.Transparent) Modifier.border(SeasonvarTheme.surfaceOutlineWidth,
+            if (actionEnabled) outline else outline.copy(alpha = outline.alpha / 2), RoundedCornerShape(d.buttonCornerRadius)) else Modifier)
+        .focusRequester(focus).focusProperties { canFocus = enabled }
         .onFocusChanged { focused = it.isFocused; if (!it.isFocused) blockedPress = false }
         .then(if (!actionEnabled || blockedPress) Modifier.onPreviewKeyEvent { event ->
             if (event.key !in setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.Spacebar)) false
@@ -931,7 +936,7 @@ internal fun ThemeButton(
             !actionEnabled -> Color.Transparent
             icon != null -> Color.Transparent
             active -> c.surface
-            else -> c.background
+            else -> SeasonvarTheme.inactiveSurface
         },
         contentColor = if (focused) c.onPrimary else if (!actionEnabled) c.onSurfaceVariant else c.onSurface,
         focusedContainerColor = c.primary,
@@ -1060,8 +1065,10 @@ internal fun CatalogPane(
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext, cardData)
-    if (BuildConfig.BUILD_TYPE == "profile") LaunchedEffect(catalogKey, layout, onBackdropSource != null) {
-        android.util.Log.i("SeasonvarCatalogProfile", "layout=" + layout.storageId + " backdrop=" + (onBackdropSource != null))
+    val backdropPublisher = if (SeasonvarTheme.posterBackdropEnabled) onBackdropSource else null
+    val theme = SeasonvarTheme.interfaceTheme
+    if (BuildConfig.BUILD_TYPE == "profile") LaunchedEffect(catalogKey, layout, backdropPublisher != null, theme) {
+        android.util.Log.i("SeasonvarCatalogProfile", "layout=" + layout.storageId + " backdrop=" + (backdropPublisher != null) + " theme=" + theme.storageId)
     }
     val clearState = historyClear?.state?.collectAsStateWithLifecycle()?.value
     val clearFocus = remember { FocusRequester() }
@@ -1221,7 +1228,7 @@ internal fun CatalogPane(
                 if (layout == CatalogLayout.GRID) Modifier.fillMaxWidth().weight(1f)
                 else Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
                 onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine,
-                onBackdropSource = onBackdropSource)
+                onBackdropSource = backdropPublisher)
         }
     }
     if (filters != null && filterState != null) ru.seasonvar.tv.ui.filters.ListFilterPanel(stringResource(strings.title), filterState, filters)
@@ -1292,6 +1299,8 @@ internal fun SeriesThumbnail(
     DisposableEffect(Unit) { onDispose { holdJob?.cancel(); activation.cancel() } }
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(d.cardCornerRadius)
+    val outline = if (SeasonvarTheme.cardOutline) SeasonvarTheme.surfaceOutline else Color.Transparent
+    val borderWidth = if (!focused && outline != Color.Transparent) SeasonvarTheme.surfaceOutlineWidth else d.focusBorderWidth
     Column(
         modifier.size(metrics.width, metrics.height)
             .focusRequester(requester)
@@ -1322,7 +1331,7 @@ internal fun SeriesThumbnail(
                     true
                 }
             }
-            .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, shape)
+            .border(borderWidth, if (focused) c.primary else outline, shape)
             .background(c.surface, shape)
             .combinedClickable(role = Role.Button, onClick = onClick, onLongClick = onLongClick,
                 onLongClickLabel = if (onLongClick != null) stringResource(R.string.mark_actions_title) else null)
@@ -1430,8 +1439,8 @@ private fun SettingsPane(
     onImagePrefetchChange: (Boolean) -> Unit,
     showActors: Boolean,
     onShowActorsChange: (Boolean) -> Unit,
-    detailsAppearance: DetailsAppearance,
-    onDetailsAppearanceChange: (DetailsAppearance) -> Unit,
+    interfaceTheme: InterfaceTheme,
+    onInterfaceThemeChange: (InterfaceTheme) -> Unit,
     autoNextSeasonEnabled: Boolean,
     onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
@@ -1542,7 +1551,7 @@ private fun SettingsPane(
             Checkbox(checked = showActors, onCheckedChange = null)
         }
         Spacer(Modifier.height(d.spacingMedium))
-        ru.seasonvar.tv.ui.settings.DetailsAppearanceSetting(detailsAppearance, onDetailsAppearanceChange,
+        ru.seasonvar.tv.ui.settings.InterfaceThemeSetting(interfaceTheme, onInterfaceThemeChange,
             appearanceFocus, menuFocus, actorsSettingFocus, autoNextFocus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         Text(stringResource(R.string.player_settings_title),

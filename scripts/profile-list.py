@@ -16,7 +16,7 @@ def main():
     config = json.loads((ROOT / "toolchain.lock.json").read_text())["performance"]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True)
-    parser.add_argument("--mode", choices=("plain", "blurred_poster"), required=True)
+    parser.add_argument("--mode", required=True)
     parser.add_argument("--layout", choices=("strip", "grid"), required=True)
     parser.add_argument("--rounds", type=int, default=config["list_rounds"])
     parser.add_argument("--output", type=Path, required=True)
@@ -46,8 +46,8 @@ def main():
         if len(bounds) != 4 or len(screen) != 4 or bounds[3] - bounds[1] < (screen[3] - screen[1]) * 0.15:
             raise SystemExit("Navigation left the thumbnails; measurement stopped")
         log = call("logcat", "-d", "-s", "SeasonvarCatalogProfile:I", "*:S")
-        markers = re.findall(r"layout=(strip|grid) backdrop=(true|false)", log)
-        if not markers or markers[-1] != (args.layout, str(args.mode == "blurred_poster").lower()):
+        markers = re.findall(r"layout=(strip|grid) backdrop=(true|false) theme=(\w+)", log)
+        if not markers or (markers[-1][0], markers[-1][2]) != (args.layout, args.mode):
             raise SystemExit("The active layout or appearance does not match the requested measurement")
         return tuple((n.get("text", ""), n.get("content-desc", "")) for n in focus.iter("node"))
 

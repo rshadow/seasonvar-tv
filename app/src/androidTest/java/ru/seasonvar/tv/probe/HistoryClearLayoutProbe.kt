@@ -20,10 +20,11 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.ui.account.*
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 
 object HistoryClearLayoutProbe {
-    fun run(probe: Instrumentation) = with(probe) {
+    internal fun run(probe: Instrumentation, theme: InterfaceTheme = InterfaceTheme.CLASSIC) = with(probe) {
         val result = Bundle()
         var activity: MarkMenuPreviewActivity? = null
         var phase = "start"
@@ -71,8 +72,8 @@ object HistoryClearLayoutProbe {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
             stage("button_alignment")
-            ButtonAlignmentChecks.preview(probe, activity, artifacts)
-            main { activity.setContent { SeasonvarTheme {
+            ButtonAlignmentChecks.preview(probe, activity, artifacts, theme)
+            main { activity.setContent { SeasonvarTheme(theme) {
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { HistoryClearDialog(controller) }
             } } }
             stage("cancel_default")

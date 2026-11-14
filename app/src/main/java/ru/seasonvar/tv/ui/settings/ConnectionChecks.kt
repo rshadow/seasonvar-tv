@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -64,11 +63,11 @@ internal fun ConnectionChecks(
                     ConnectionStatus.CHECKING -> R.drawable.ic_reload
                     ConnectionStatus.FAILED -> R.drawable.ic_connection_failed
                 }), contentDescription = null, Modifier.size(d.headerButtonIconSize),
-                    tint = colorResource(when (result.status) {
-                        ConnectionStatus.AVAILABLE -> R.color.seasonvar_status_success
-                        ConnectionStatus.CHECKING -> R.color.seasonvar_status_pending
-                        ConnectionStatus.FAILED -> R.color.seasonvar_status_failure
-                    }))
+                    tint = when (result.status) {
+                        ConnectionStatus.AVAILABLE -> SeasonvarTheme.statusSuccess
+                        ConnectionStatus.CHECKING -> SeasonvarTheme.statusPending
+                        ConnectionStatus.FAILED -> SeasonvarTheme.statusFailure
+                    })
                 Text(stringResource(target.label()), color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodyLarge)
             }

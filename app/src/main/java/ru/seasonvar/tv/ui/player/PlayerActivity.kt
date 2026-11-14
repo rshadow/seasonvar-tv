@@ -22,7 +22,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
@@ -121,7 +120,9 @@ class PlayerActivity : ComponentActivity() {
             }
         }
         setContent {
-            SeasonvarTheme {
+            val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme) {
+                val appearance = SeasonvarTheme.playerAppearance
                 val d = SeasonvarTheme.dimensions
                 val markSync by container.accountMarks.state.collectAsStateWithLifecycle()
                 val accountSession by container.account.session.collectAsStateWithLifecycle()
@@ -137,7 +138,7 @@ class PlayerActivity : ComponentActivity() {
                 val retry = remember { FocusRequester() }
                 val surface = remember { FocusRequester() }
                 val cancelNext = remember { FocusRequester() }
-                Box(Modifier.fillMaxSize().background(colorResource(R.color.seasonvar_player_background))
+                Box(Modifier.fillMaxSize().background(appearance.background)
                     .focusRequester(surface).onPreviewKeyEvent { handlePlaybackKey(it.nativeKeyEvent) }.focusable()) {
                     AndroidView(factory = { context ->
                         object : PlayerView(context) {
@@ -168,6 +169,7 @@ class PlayerActivity : ComponentActivity() {
                             view = this
                         }
                     }, update = { native ->
+                        applyPlayerAppearance(native, appearance)
                         if (native.player !== controlsPlayer) {
                             native.player = controlsPlayer
                             if (controlsPlayer != null) native.requestFocus()

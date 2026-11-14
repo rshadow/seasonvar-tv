@@ -22,12 +22,14 @@ internal class InterfaceSettings(context: Context) {
 
     fun setActorCatalogLayout(layout: CatalogLayout) = layoutPreferences.setActorLayout(layout)
 
-    private val mutableDetailsAppearance = MutableStateFlow(DetailsAppearance.fromStorage(preferences.getString("details_appearance", null)))
-    val detailsAppearance = mutableDetailsAppearance.asStateFlow()
+    val themes = loadInterfaceThemes(context)
+    private val mutableInterfaceTheme = MutableStateFlow(themes.restore(preferences.getString("details_appearance", null)))
+    val interfaceTheme = mutableInterfaceTheme.asStateFlow()
 
-    fun setDetailsAppearance(value: DetailsAppearance) {
+    fun setInterfaceTheme(value: InterfaceTheme) {
+        require(value in themes.entries)
         preferences.edit().putString("details_appearance", value.storageId).apply()
-        mutableDetailsAppearance.value = value
+        mutableInterfaceTheme.value = value
     }
 
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<themes defaultTheme="plain">
+    <theme id="plain" label="@string/interface_theme_classic" style="@style/SeasonvarInterfaceTheme.Classic" />
+    <theme id="glass" label="@string/interface_theme_glass" style="@style/SeasonvarInterfaceTheme.Glass" />
+</themes>

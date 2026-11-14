@@ -42,9 +42,11 @@ import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
 import ru.seasonvar.tv.ui.settings.*
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.resolveInterfaceTheme
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import java.time.LocalDate
 
 object PosterBackdropProbe {
@@ -53,8 +55,8 @@ object PosterBackdropProbe {
         var activity: MarkMenuPreviewActivity? = null
         val app = targetContext.applicationContext as SeasonvarApplication
         val watch = targetContext.getString(ru.seasonvar.tv.R.string.details_watch)
-        val original = app.interfaceSettings.detailsAppearance.value
-        val appearance = mutableStateOf(DetailsAppearance.PLAIN)
+        val original = app.interfaceSettings.interfaceTheme.value
+        val appearance = mutableStateOf(InterfaceTheme.CLASSIC)
         val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("poster-backdrop-probe")), "run-" + System.currentTimeMillis())
         check(artifacts.isDirectory || artifacts.mkdirs())
         val poster = Bitmap.createBitmap(320, 480, Bitmap.Config.ARGB_8888)
@@ -136,12 +138,28 @@ object PosterBackdropProbe {
         }
         try {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
+            checkThemeConfiguration(targetContext)
+            val classic = resolveInterfaceTheme(targetContext, InterfaceTheme.CLASSIC)
+            val glass = resolveInterfaceTheme(targetContext, InterfaceTheme.GLASS)
+            check(!classic.poster.enabled && classic.poster.blurRadius == 0)
+            check(classic.surface == androidx.compose.ui.graphics.Color(targetContext.getColor(ru.seasonvar.tv.R.color.seasonvar_surface)))
+            check(classic.inactiveSurface == androidx.compose.ui.graphics.Color(targetContext.getColor(ru.seasonvar.tv.R.color.seasonvar_background)))
+            check(classic.outline.alpha == 0f)
+            check(glass.poster.enabled && glass.poster.blurRadius > 0)
+            check(glass.surface.alpha < 1f && glass.inactiveSurface.alpha < 1f && glass.outline.alpha > 0f)
+            result.putBoolean("theme_contract", true)
             runBlocking {
                 val cache = PosterBackdropCache()
-                val spec = PosterBackdropSpec(1920, 1080, Color.rgb(43, 37, 33), 0.72f, 0.22f, 0.14f)
+                val spec = PosterBackdropSpec(1920, 1080, Color.rgb(43, 37, 33), 0.72f, 0.22f, 0.14f, blurRadius = 2)
                 val prepared = cache.prepare("one", poster, spec)
                 check(prepared.width <= PosterBackdropCache.MAX_EDGE && prepared.height <= PosterBackdropCache.MAX_EDGE)
                 check(cache.prepare("one", poster, spec) === prepared && poster.width == 320 && !poster.isRecycled)
+                val sharp = cache.prepare("one", poster, spec.copy(blurRadius = 0))
+                val before = IntArray(prepared.width * prepared.height)
+                val after = IntArray(before.size)
+                prepared.getPixels(before, 0, prepared.width, 0, 0, prepared.width, prepared.height)
+                sharp.getPixels(after, 0, sharp.width, 0, 0, sharp.width, sharp.height)
+                check(!before.contentEquals(after))
                 val hardware = checkNotNull(poster.copy(Bitmap.Config.HARDWARE, false))
                 check(cache.prepare("hardware", hardware, spec).config == Bitmap.Config.ARGB_8888 && !hardware.isRecycled)
                 repeat(PosterBackdropCache.MAX_ENTRIES + 1) { cache.prepare("item-$it", poster, spec) }
@@ -151,13 +169,22 @@ object PosterBackdropProbe {
             }
             phase = "plain"
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
-            runOnMainSync { activity!!.setContent { SeasonvarTheme {
+            phase = "configured-theme"
+            val configuredApplied = AtomicReference<Boolean>()
+            runOnMainSync { checkNotNull(activity).setContent { ThemeConfigurationPreview { configuredApplied.set(it) } } }
+            await { configuredApplied.get() != null }
+            check(configuredApplied.get() == true)
+            phase = "plain"
+            var nativeColorsApplied = false
+            runOnMainSync { nativeColorsApplied = checkNativePlayerTheme(checkNotNull(activity)) }
+            check(nativeColorsApplied)
+            runOnMainSync { activity!!.setContent { SeasonvarTheme(appearance.value) {
                 val d = SeasonvarTheme.dimensions
                 val source = remember { PosterBackdropState() }
                 val publish = remember(source) { source::attach }
                 val density = LocalDensity.current
-                BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    if (appearance.value == DetailsAppearance.BLURRED_POSTER) PosterBackdropLayer(source,
+                BoxWithConstraints(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground)) {
+                    if (SeasonvarTheme.posterBackdropEnabled) PosterBackdropLayer(source,
                         with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
                         ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
                     Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
@@ -167,7 +194,7 @@ object PosterBackdropProbe {
                         }
                         Box(Modifier.weight(1f)) {
                             SeriesDetailsPane(entry, model, FocusRequester.Cancel, {}, {}, showActors = false,
-                                appearance = appearance.value, onBackdropSource = publish)
+                                onBackdropSource = publish)
                         }
                     }
                 }
@@ -178,7 +205,7 @@ object PosterBackdropProbe {
             val reviewBounds = bounds("Рецензии · 0")
             val plainPixel = capture("01-plain")
             phase = "blurred"
-            runOnMainSync { appearance.value = DetailsAppearance.BLURRED_POSTER }
+            runOnMainSync { appearance.value = InterfaceTheme.GLASS }
             await { app.posterBackdrops.cachedBytes > 0 }
             await { backgroundPixel() != plainPixel }
             finishFade()
@@ -197,7 +224,7 @@ object PosterBackdropProbe {
             check(kotlin.math.abs(Color.blue(beforeSeam) - Color.blue(afterSeam)) <= 2)
             screen.recycle()
             result.putBoolean("background_under_menu", true)
-            runOnMainSync { appearance.value = DetailsAppearance.PLAIN }
+            runOnMainSync { appearance.value = InterfaceTheme.CLASSIC }
             await { backgroundPixel() == plainPixel }
             await { button(watch).isFocused && bounds(watch) == playBounds }
             check(bounds("Рецензии · 0") == reviewBounds)
@@ -217,16 +244,26 @@ object PosterBackdropProbe {
             val prefetch = mutableStateOf(false)
             val empty = mutableStateOf(false)
             val published = PosterBackdropState()
+            val renderedTheme = AtomicReference<InterfaceTheme>()
+            val renderedSurface = AtomicReference<androidx.compose.ui.graphics.Color>()
+            val renderedBackground = AtomicReference<androidx.compose.ui.graphics.Color>()
             val cards = mutableMapOf<String, FocusRequester>()
             val publish: PosterBackdropPublisher = published::attach
-            runOnMainSync { appearance.value = DetailsAppearance.BLURRED_POSTER; activity!!.setContent { SeasonvarTheme {
+            runOnMainSync { appearance.value = InterfaceTheme.GLASS; activity!!.setContent { SeasonvarTheme(appearance.value) {
+                val activeTheme = SeasonvarTheme.interfaceTheme
+                val activeSurface = MaterialTheme.colorScheme.surface
+                val activeBackground = MaterialTheme.colorScheme.background
+                SideEffect {
+                    renderedTheme.set(activeTheme); renderedSurface.set(activeSurface)
+                    renderedBackground.set(activeBackground)
+                }
                 val d = SeasonvarTheme.dimensions
                 val density = LocalDensity.current
                 val list = rememberLazyListState()
                 val grid = rememberLazyGridState()
                 val header = remember { FocusRequester() }
-                BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    if (appearance.value == DetailsAppearance.BLURRED_POSTER) PosterBackdropLayer(published,
+                BoxWithConstraints(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground)) {
+                    if (SeasonvarTheme.posterBackdropEnabled) PosterBackdropLayer(published,
                         with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
                         ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
                     Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
@@ -242,7 +279,7 @@ object PosterBackdropProbe {
                                 catalogKey = "backdrop-fixture", cardMetrics = rememberCatalogCardMetrics(maxWidth),
                                 imagePrefetchEnabled = prefetch.value, layout = layout.value, gridState = grid, layoutFocus = header,
                                 onLayoutChange = { layout.value = layout.value.other() },
-                                onBackdropSource = if (appearance.value == DetailsAppearance.BLURRED_POSTER) publish else null)
+                                onBackdropSource = publish)
                         }
                     }
                 }
@@ -264,6 +301,7 @@ object PosterBackdropProbe {
             val stripTop = bounds(rows[1].title).top
             phase = "list-grid"; runOnMainSync { layout.value = CatalogLayout.GRID; prefetch.value = true }
             await { clickable(rows[1].title) != null && bounds(rows[1].title).top < stripTop }
+            uiAutomation.waitForIdle(300, 3000)
             focusRow(1)
             await { published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null }
             capture("07-list-grid")
@@ -274,33 +312,51 @@ object PosterBackdropProbe {
             focusRow(1)
             await { published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
             phase = "list-disabled"; val selectedBounds = bounds(rows[1].title)
-            runOnMainSync { appearance.value = DetailsAppearance.PLAIN }
+            runOnMainSync { appearance.value = InterfaceTheme.CLASSIC }
             await { published.value == null && backgroundPixel() == plainPixel && button(rows[1].title).isFocused }
             check(bounds(rows[1].title) == selectedBounds)
-            runOnMainSync { appearance.value = DetailsAppearance.BLURRED_POSTER }
+            runOnMainSync { appearance.value = InterfaceTheme.GLASS }
             await { published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null && backgroundPixel() != plainPixel }
+            phase = "glass"
+            runOnMainSync { appearance.value = InterfaceTheme.GLASS }
+            await { renderedTheme.get() == InterfaceTheme.GLASS && renderedSurface.get() == glass.surface &&
+                published.value?.bitmap?.value != null && clickable(rows[1].title)?.isFocused == true }
+            check(renderedBackground.get().alpha == 1f)
+            finishFade()
+            check(bounds(rows[1].title) == selectedBounds)
+            capture("08-glass-grid")
+            runOnMainSync { layout.value = CatalogLayout.STRIP }
+            await { clickable(rows[1].title) != null && bounds(rows[1].title).top >= stripTop }
+            uiAutomation.waitForIdle(300, 3000)
+            focusRow(1)
+            capture("09-glass-strip")
             phase = "list-empty"; runOnMainSync { empty.value = true }
             await { published.value == null && backgroundPixel() == plainPixel }
             result.putBoolean("list_background_tracks_selection", true)
             result.putBoolean("prefetch_toggle", true)
             phase = "setting"
-            runOnMainSync { appearance.value = DetailsAppearance.PLAIN }
-            runOnMainSync { activity!!.setContent { SeasonvarTheme {
+            runOnMainSync { appearance.value = InterfaceTheme.CLASSIC }
+            runOnMainSync { activity!!.setContent { SeasonvarTheme(appearance.value) {
                 val d = SeasonvarTheme.dimensions
                 val focus = remember { FocusRequester() }
-                Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(d.spacingLarge)) {
-                    DetailsAppearanceSetting(appearance.value, { appearance.value = it; app.interfaceSettings.setDetailsAppearance(it) },
+                Column(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground).padding(d.spacingLarge)) {
+                    InterfaceThemeSetting(appearance.value, { appearance.value = it; app.interfaceSettings.setInterfaceTheme(it) },
                         focus, FocusRequester.Cancel, FocusRequester.Cancel, FocusRequester.Cancel, {}, {}, {})
                 }
                 LaunchedEffect(Unit) { focus.requestFocus() }
             } } }
-            await { node(targetContext.getString(ru.seasonvar.tv.R.string.details_appearance_title)) != null }
+            await { node(targetContext.getString(ru.seasonvar.tv.R.string.interface_theme_title)) != null }
             sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
-            await { node("Размытый постер") != null }
+            await { node(targetContext.getString(ru.seasonvar.tv.R.string.interface_theme_glass)) != null }
             capture("04-options")
             sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
-            await { appearance.value == DetailsAppearance.BLURRED_POSTER }
-            check(InterfaceSettings(targetContext).detailsAppearance.value == DetailsAppearance.BLURRED_POSTER)
+            await { appearance.value == InterfaceTheme.GLASS }
+            check(InterfaceSettings(targetContext).interfaceTheme.value == InterfaceTheme.GLASS)
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+            await { node(targetContext.getString(ru.seasonvar.tv.R.string.interface_theme_glass)) != null }
+            capture("10-theme-choices")
+            sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            check(InterfaceSettings(targetContext).interfaceTheme.value == InterfaceTheme.GLASS)
             result.putBoolean("geometry_stable", true)
             result.putBoolean("focus_preserved", true)
             result.putBoolean("memory_bounded", true)
@@ -313,7 +369,7 @@ object PosterBackdropProbe {
             result.putString("failure_phase", phase)
             result.putString("failure_line", error.stackTrace.firstOrNull { it.fileName == "PosterBackdropProbe.kt" }?.lineNumber.toString())
         } finally {
-            runOnMainSync { app.interfaceSettings.setDetailsAppearance(original); activity?.finish(); model.close() }
+            runOnMainSync { app.interfaceSettings.setInterfaceTheme(original); activity?.finish(); model.close() }
             result.putString("artifacts", artifacts.absolutePath)
             finish(Activity.RESULT_OK, result)
         }

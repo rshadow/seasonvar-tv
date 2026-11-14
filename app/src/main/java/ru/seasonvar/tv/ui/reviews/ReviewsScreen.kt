@@ -81,7 +81,7 @@ internal fun ReviewsScreen(title: String, state: ReviewsUiState, onRefresh: (Str
         LoadFailure.MARKUP -> R.string.reviews_markup_error
     }) })
     BackHandler(onBack = onExit)
-    Column(Modifier.fillMaxSize().backNavigationKeys(onExit, {}).background(c.background)
+    Column(Modifier.fillMaxSize().backNavigationKeys(onExit, {}).background(SeasonvarTheme.pageBackground)
         .padding(d.screenPaddingHorizontal, d.screenPaddingVertical)
         .focusRequester(holder).focusProperties { canFocus = holdingFocus }.focusTarget().focusGroup(),
         verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {

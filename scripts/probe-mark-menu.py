@@ -12,18 +12,19 @@ parser.add_argument("--device", required=True)
 parser.add_argument("--runner", required=True)
 parser.add_argument("--output", required=True, type=Path)
 parser.add_argument("--mode", choices=("poster-backdrop", "reviews-layout", "pac-cancellation", "pac-live", "pac-engine", "connection-checks", "proxy-settings", "catalog-layout", "mark-menu-layout", "details-progress-layout", "history-clear-layout", "ui-screens-layout", "ui-dialogs-layout", "series-list-engine", "shared-card-cache", "cache-memory"), default="mark-menu-layout")
+parser.add_argument("--theme", default="plain")
 args = parser.parse_args()
 if not args.device.startswith("emulator-"):
     parser.error("This probe runs only on an emulator")
 args.output.mkdir(parents=True, exist_ok=True)
 adb = ["adb", "-s", args.device]
-process = subprocess.Popen(adb + ["shell", "am", "instrument", "-w", "-r", "-e", "mode", args.mode, args.runner],
+process = subprocess.Popen(adb + ["shell", "am", "instrument", "-w", "-r", "-e", "mode", args.mode, "-e", "theme", args.theme, args.runner],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 watchdog = threading.Timer(300 if args.mode in ("shared-card-cache", "cache-memory") else 180, process.kill)
 watchdog.daemon = True
 watchdog.start()
 fields = {}
-allowed = {"list_background_tracks_selection", "background_under_menu", "backdrop_cache_bytes", "reader_scroll", "webview_policy_enforced", "main_thread_cancellation", "pac_compact_row", "pac_same_layout", "pac_unlimited", "failure_transport_detail", "https_status", "preferred_connected", "failure_transport", "live_https_proxy", "parallel_evaluators_serialized", "normal_video", "first_route_type", "original_pac_prepared", "live_site", "live_posters", "live_video", "live_github", "failure_site", "failure_posters", "failure_video", "pac_modes", "pac_countdown", "parser_process_released", "main_pss_before_kib", "main_pss_after_kib", "dns_and_all_domains", "invalid_pac_rejected", "timeout_releases_parser", "four_modes_preserve_manual_parameters", "live_available", "live_blocked", "live_recovered", "proxy_saved", "proxy_cancelled", "proxy_fail_closed", "session_readable", "memory_measured", "read_only", "native_total_kib", "native_common_kib", "native_private_kib", "poster_kib", "poster_limit_kib", "poster_keys", "live_card_records", "native_shared", "private_cleared", "memory_bounded", "cache_records", "cache_heap_growth_kib", "descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
+allowed = {"theme_contract", "list_background_tracks_selection", "background_under_menu", "backdrop_cache_bytes", "reader_scroll", "webview_policy_enforced", "main_thread_cancellation", "pac_compact_row", "pac_same_layout", "pac_unlimited", "failure_transport_detail", "https_status", "preferred_connected", "failure_transport", "live_https_proxy", "parallel_evaluators_serialized", "normal_video", "first_route_type", "original_pac_prepared", "live_site", "live_posters", "live_video", "live_github", "failure_site", "failure_posters", "failure_video", "pac_modes", "pac_countdown", "parser_process_released", "main_pss_before_kib", "main_pss_after_kib", "dns_and_all_domains", "invalid_pac_rejected", "timeout_releases_parser", "four_modes_preserve_manual_parameters", "live_available", "live_blocked", "live_recovered", "proxy_saved", "proxy_cancelled", "proxy_fail_closed", "session_readable", "memory_measured", "read_only", "native_total_kib", "native_common_kib", "native_private_kib", "poster_kib", "poster_limit_kib", "poster_keys", "live_card_records", "native_shared", "private_cleared", "memory_bounded", "cache_records", "cache_heap_growth_kib", "descriptions_prefetched", "append_bounded", "window_bounded", "prefetch_toggle", "geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only",
            "focus_preserved", "progress_visible", "text_centered", "screens_verified", "dialogs_verified",
            "sort_reset", "filter_reset", "defaults_reset", "refresh_failure_preserved",
            "script_success", "failure_type", "failure_phase", "failure_line", "failure_geometry", "failure_focus", "failure_counts", "artifacts"}
@@ -47,7 +48,7 @@ if isinstance(remote, str) and re.fullmatch(r"/storage/emulated/0/Android/data/r
 print(json.dumps(fields, sort_keys=True))
 checks = ("geometry_stable", "refresh_focus_preserved", "save_focus_preserved", "blocked_actions", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "poster-backdrop":
-    checks = ("list_background_tracks_selection", "prefetch_toggle", "background_under_menu", "geometry_stable", "focus_preserved", "memory_bounded", "fixture_only", "script_success", "artifacts_copied")
+    checks = ("theme_contract", "list_background_tracks_selection", "prefetch_toggle", "background_under_menu", "geometry_stable", "focus_preserved", "memory_bounded", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "reviews-layout":
     checks = ("geometry_stable", "focus_preserved", "reader_scroll", "append_bounded", "fixture_only", "script_success", "artifacts_copied")
 if args.mode == "pac-cancellation":

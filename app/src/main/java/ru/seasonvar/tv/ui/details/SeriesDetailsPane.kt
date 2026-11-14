@@ -64,7 +64,6 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.reviews.ReviewsActivity
-import ru.seasonvar.tv.ui.settings.DetailsAppearance
 
 @OptIn(ExperimentalFoundationApi::class)
 private object VisibleControlsScrollSpec : BringIntoViewSpec
@@ -84,9 +83,10 @@ internal fun SeriesDetailsPane(
     onActions: ((SeriesEntry) -> Unit)? = null,
     removalDialogOpen: Boolean = false,
     showActors: Boolean = true,
-    appearance: DetailsAppearance = DetailsAppearance.PLAIN,
     onBackdropSource: PosterBackdropPublisher? = null,
 ) {
+    val appearance = SeasonvarTheme.interfaceTheme
+    val backdropEnabled = SeasonvarTheme.posterBackdropEnabled
     val state by model.state.collectAsStateWithLifecycle()
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -94,7 +94,7 @@ internal fun SeriesDetailsPane(
     val details = state.details
     val preparing = state.loading || state.entry == null
     val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
-    if (appearance == DetailsAppearance.BLURRED_POSTER && onBackdropSource != null) {
+    if (backdropEnabled && onBackdropSource != null) {
         DisposableEffect(entry.posterUrl, posterImage, onBackdropSource) {
             val handle = onBackdropSource(PosterBackdropSource(entry.posterUrl, posterImage))
             onDispose { handle.dispose() }
@@ -166,7 +166,7 @@ internal fun SeriesDetailsPane(
     val density = LocalDensity.current
     CompositionLocalProvider(LocalBringIntoViewSpec provides VisibleControlsScrollSpec) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            if (appearance == DetailsAppearance.BLURRED_POSTER && onBackdropSource == null) {
+            if (backdropEnabled && onBackdropSource == null) {
                 PosterBackdrop(entry.posterUrl, posterImage, with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
             }
             val step = with(density) { (maxHeight - d.spacingSection).coerceAtLeast(d.navigationButtonHeight).toPx() }

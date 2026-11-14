@@ -17,10 +17,11 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.reviews.ReviewsScreen
 import ru.seasonvar.tv.ui.reviews.ReviewsUiState
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 
 object ReviewsLayoutProbe {
-    fun run(probe: Instrumentation) = with(probe) {
+    internal fun run(probe: Instrumentation, theme: InterfaceTheme = InterfaceTheme.CLASSIC) = with(probe) {
         val result = Bundle()
         var activity: MarkMenuPreviewActivity? = null
         val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("reviews-probe")), "run-" + System.currentTimeMillis())
@@ -82,7 +83,7 @@ object ReviewsLayoutProbe {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
             activity = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MarkMenuPreviewActivity
-            runOnMainSync { activity!!.setContent { SeasonvarTheme {
+            runOnMainSync { activity!!.setContent { SeasonvarTheme(theme) {
                 ReviewsScreen("Тестовый сериал", state.value, { state.value = state.value.copy(loading = true) }, {}, {})
             } } }
             phase = "loading"

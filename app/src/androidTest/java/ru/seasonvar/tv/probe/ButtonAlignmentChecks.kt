@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 import kotlin.math.abs
 
@@ -50,9 +51,10 @@ internal object ButtonAlignmentChecks {
         check(abs(button.exactCenterY() - text.centerY()) <= 3f) { "Vertical text alignment" }
     }
 
-    fun preview(probe: Instrumentation, activity: MarkMenuPreviewActivity, artifacts: File) = with(probe) {
+    internal fun preview(probe: Instrumentation, activity: MarkMenuPreviewActivity, artifacts: File,
+        theme: InterfaceTheme = InterfaceTheme.CLASSIC) = with(probe) {
         runOnMainSync {
-            activity.setContent { SeasonvarTheme {
+            activity.setContent { SeasonvarTheme(theme) {
                 val d = SeasonvarTheme.dimensions
                 Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(d.spacingLarge),
                     verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
