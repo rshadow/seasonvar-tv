@@ -997,7 +997,7 @@ internal fun ThemeButton(
         }
     } else {
         Button(onClick = action, enabled = enabled,
-            modifier = buttonModifier.width(IntrinsicSize.Max).height(IntrinsicSize.Min),
+            modifier = buttonModifier.buttonContentSize(),
             shape = shape, scale = scale, colors = colors, contentPadding = contentPadding) {
             val textColor = SeasonvarTheme.buttonTextColor({ focused }, if (actionEnabled) c.onSurface else c.onSurfaceVariant)
             val textWeight = SeasonvarTheme.textWeight { focused }

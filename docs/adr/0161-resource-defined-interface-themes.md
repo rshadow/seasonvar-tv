@@ -1,5 +1,7 @@
 # ADR-0161: темы и их параметры в ресурсах
 
+Переиспользование готовой палитры и размеров уточнено в [ADR-0168](0168-remember-theme-parameters.md).
+
 Статус: принято. Дата: 2026-11-14. Развивает [ADR-0159](0159-interface-theme-presets.md) и [ADR-0160](0160-classic-and-glass-themes.md), уточняет размещение ресурсов из [ADR-0008](0008-centralized-ui-theme.md).
 
 Начертание текста в фокусе расширено в [ADR-0165](0165-focused-text-appearance.md).

@@ -7,11 +7,14 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
@@ -173,70 +176,79 @@ object SeasonvarTheme {
 @Composable
 internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLASSIC, content: @Composable () -> Unit) {
     val context = LocalContext.current
-    val catalog = remember(context.resources) { loadInterfaceThemes(context) }
-    val appearance = remember(context, interfaceTheme) { resolveInterfaceTheme(context, interfaceTheme) }
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val resources = LocalResources.current
+    val catalog = remember(context, configuration) { loadInterfaceThemes(context) }
+    val appearance = remember(context, configuration, interfaceTheme) { resolveInterfaceTheme(context, interfaceTheme) }
     val pageBackground = appearance.pageBackground
-    val colors = darkColorScheme(
-        primary = appearance.primary,
-        onPrimary = appearance.onPrimary,
-        background = appearance.dialogBackground,
-        onBackground = appearance.text,
-        surface = appearance.surface,
-        onSurface = appearance.text,
-        onSurfaceVariant = appearance.secondaryText,
-    )
-    val dimensions = SeasonvarDimensions(
-        screenPaddingHorizontal = appearance.spacing.screenPaddingHorizontal,
-        screenPaddingVertical = appearance.spacing.screenPaddingVertical,
-        spacingSmall = appearance.spacing.spacingSmall,
-        spacingMedium = appearance.spacing.spacingMedium,
-        spacingLarge = appearance.spacing.spacingLarge,
-        spacingExtraLarge = appearance.spacing.spacingExtraLarge,
-        spacingSection = appearance.spacing.spacingSection,
-        buttonWidth = dimensionResource(R.dimen.seasonvar_button_width),
-        buttonHeight = dimensionResource(R.dimen.seasonvar_button_height),
-        buttonCornerRadius = appearance.buttonCornerRadius,
-        menuWidth = dimensionResource(R.dimen.seasonvar_menu_width),
-        menuItemPaddingHorizontal = appearance.spacing.menuItemPaddingHorizontal,
-        menuItemHeight = dimensionResource(R.dimen.seasonvar_menu_item_height),
-        menuItemSpacing = appearance.spacing.menuItemSpacing,
-        menuHeaderSpacing = appearance.spacing.menuHeaderSpacing,
-        navigationButtonHeight = dimensionResource(R.dimen.seasonvar_navigation_button_height),
-        contentGap = appearance.spacing.contentGap,
-        headerButtonSize = dimensionResource(R.dimen.seasonvar_header_button_size),
-        headerButtonBadgeSize = dimensionResource(R.dimen.seasonvar_header_button_badge_size),
-        headerButtonBadgeInset = appearance.spacing.headerButtonBadgeInset,
-        filterPanelWidth = dimensionResource(R.dimen.seasonvar_filter_panel_width),
-        playerAutoNextWidth = dimensionResource(R.dimen.seasonvar_player_auto_next_width),
-        playerClockPaddingVertical = appearance.spacing.playerClockPaddingVertical,
-        headerButtonIconSize = dimensionResource(R.dimen.seasonvar_header_button_icon_size),
-        accountAvatarSize = dimensionResource(R.dimen.seasonvar_account_avatar_size),
-        catalogMinCardWidth = dimensionResource(R.dimen.seasonvar_catalog_min_card_width),
-        browseCatalogMinCardWidth = dimensionResource(R.dimen.seasonvar_browse_catalog_min_card_width),
-        posterWidth = dimensionResource(R.dimen.seasonvar_poster_width),
-        posterHeight = dimensionResource(R.dimen.seasonvar_poster_height),
-        actorPhotoSize = dimensionResource(R.dimen.seasonvar_actor_photo_size),
-        actorTileWidth = dimensionResource(R.dimen.seasonvar_actor_tile_width),
-        actorNameHeight = dimensionResource(R.dimen.seasonvar_actor_name_height),
-        reviewsButtonWidth = dimensionResource(R.dimen.seasonvar_reviews_button_width),
-        reviewsMetadataHeight = dimensionResource(R.dimen.seasonvar_reviews_metadata_height),
-        reviewsStatusHeight = dimensionResource(R.dimen.seasonvar_reviews_status_height),
-        reviewsListWidthFraction = integerResource(R.integer.seasonvar_reviews_list_width_percent) / 100f,
-        previewPosterMaxWidthFraction = integerResource(R.integer.seasonvar_preview_poster_max_width_percent) / 100f,
-        cardPadding = appearance.spacing.cardPadding,
-        cardCornerRadius = appearance.cardCornerRadius,
-        focusBorderWidth = appearance.focusBorderWidth,
-        badgePaddingHorizontal = appearance.spacing.badgePaddingHorizontal,
-        badgeHeight = dimensionResource(R.dimen.seasonvar_badge_height),
-        watchBadgeSize = dimensionResource(R.dimen.seasonvar_watch_badge_size),
-        watchBadgeIconSize = dimensionResource(R.dimen.seasonvar_watch_badge_icon_size),
-        watchBadgeInset = appearance.spacing.watchBadgeInset,
-        badgeTextOffsetHorizontal = dimensionResource(R.dimen.seasonvar_badge_text_offset_horizontal),
-        badgeTextOffsetVertical = dimensionResource(R.dimen.seasonvar_badge_text_offset_vertical),
-        dialogWidth = dimensionResource(R.dimen.seasonvar_dialog_width),
-        dialogHeight = dimensionResource(R.dimen.seasonvar_dialog_height),
-        episodeWidth = dimensionResource(R.dimen.seasonvar_episode_width),
-    )
+    val colors = remember(appearance) {
+        darkColorScheme(
+            primary = appearance.primary,
+            onPrimary = appearance.onPrimary,
+            background = appearance.dialogBackground,
+            onBackground = appearance.text,
+            surface = appearance.surface,
+            onSurface = appearance.text,
+            onSurfaceVariant = appearance.secondaryText,
+        )
+    }
+    val dimensions = remember(appearance, resources, configuration, density) {
+        fun dimension(id: Int): Dp = (resources.getDimension(id) / density.density).dp
+        fun integer(id: Int): Int = resources.getInteger(id)
+        SeasonvarDimensions(
+            screenPaddingHorizontal = appearance.spacing.screenPaddingHorizontal,
+            screenPaddingVertical = appearance.spacing.screenPaddingVertical,
+            spacingSmall = appearance.spacing.spacingSmall,
+            spacingMedium = appearance.spacing.spacingMedium,
+            spacingLarge = appearance.spacing.spacingLarge,
+            spacingExtraLarge = appearance.spacing.spacingExtraLarge,
+            spacingSection = appearance.spacing.spacingSection,
+            buttonWidth = dimension(R.dimen.seasonvar_button_width),
+            buttonHeight = dimension(R.dimen.seasonvar_button_height),
+            buttonCornerRadius = appearance.buttonCornerRadius,
+            menuWidth = dimension(R.dimen.seasonvar_menu_width),
+            menuItemPaddingHorizontal = appearance.spacing.menuItemPaddingHorizontal,
+            menuItemHeight = dimension(R.dimen.seasonvar_menu_item_height),
+            menuItemSpacing = appearance.spacing.menuItemSpacing,
+            menuHeaderSpacing = appearance.spacing.menuHeaderSpacing,
+            navigationButtonHeight = dimension(R.dimen.seasonvar_navigation_button_height),
+            contentGap = appearance.spacing.contentGap,
+            headerButtonSize = dimension(R.dimen.seasonvar_header_button_size),
+            headerButtonBadgeSize = dimension(R.dimen.seasonvar_header_button_badge_size),
+            headerButtonBadgeInset = appearance.spacing.headerButtonBadgeInset,
+            filterPanelWidth = dimension(R.dimen.seasonvar_filter_panel_width),
+            playerAutoNextWidth = dimension(R.dimen.seasonvar_player_auto_next_width),
+            playerClockPaddingVertical = appearance.spacing.playerClockPaddingVertical,
+            headerButtonIconSize = dimension(R.dimen.seasonvar_header_button_icon_size),
+            accountAvatarSize = dimension(R.dimen.seasonvar_account_avatar_size),
+            catalogMinCardWidth = dimension(R.dimen.seasonvar_catalog_min_card_width),
+            browseCatalogMinCardWidth = dimension(R.dimen.seasonvar_browse_catalog_min_card_width),
+            posterWidth = dimension(R.dimen.seasonvar_poster_width),
+            posterHeight = dimension(R.dimen.seasonvar_poster_height),
+            actorPhotoSize = dimension(R.dimen.seasonvar_actor_photo_size),
+            actorTileWidth = dimension(R.dimen.seasonvar_actor_tile_width),
+            actorNameHeight = dimension(R.dimen.seasonvar_actor_name_height),
+            reviewsButtonWidth = dimension(R.dimen.seasonvar_reviews_button_width),
+            reviewsMetadataHeight = dimension(R.dimen.seasonvar_reviews_metadata_height),
+            reviewsStatusHeight = dimension(R.dimen.seasonvar_reviews_status_height),
+            reviewsListWidthFraction = integer(R.integer.seasonvar_reviews_list_width_percent) / 100f,
+            previewPosterMaxWidthFraction = integer(R.integer.seasonvar_preview_poster_max_width_percent) / 100f,
+            cardPadding = appearance.spacing.cardPadding,
+            cardCornerRadius = appearance.cardCornerRadius,
+            focusBorderWidth = appearance.focusBorderWidth,
+            badgePaddingHorizontal = appearance.spacing.badgePaddingHorizontal,
+            badgeHeight = dimension(R.dimen.seasonvar_badge_height),
+            watchBadgeSize = dimension(R.dimen.seasonvar_watch_badge_size),
+            watchBadgeIconSize = dimension(R.dimen.seasonvar_watch_badge_icon_size),
+            watchBadgeInset = appearance.spacing.watchBadgeInset,
+            badgeTextOffsetHorizontal = dimension(R.dimen.seasonvar_badge_text_offset_horizontal),
+            badgeTextOffsetVertical = dimension(R.dimen.seasonvar_badge_text_offset_vertical),
+            dialogWidth = dimension(R.dimen.seasonvar_dialog_width),
+            dialogHeight = dimension(R.dimen.seasonvar_dialog_height),
+            episodeWidth = dimension(R.dimen.seasonvar_episode_width),
+        )
+    }
 
     CompositionLocalProvider(LocalDimensions provides dimensions, LocalInterfaceTheme provides appearance,
         LocalPageBackground provides pageBackground, LocalThemeCatalog provides catalog) {
