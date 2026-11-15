@@ -75,13 +75,13 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
         .clickable(role = Role.Button) { onInteraction(); open = true }
         .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.home_settings_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(focused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(focused))
+            Text(stringResource(R.string.home_settings_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor({ focused }, c.onBackground), fontWeight = SeasonvarTheme.textWeight { focused })
             Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.home_settings_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(focused))
+            Text(stringResource(R.string.home_settings_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor({ focused }, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight { focused })
         }
         Spacer(Modifier.width(d.spacingMedium))
         Text(if (launcherSettings) stringResource(R.string.home_settings_external_value)
-            else stringResource(R.string.home_settings_count, enabled.size), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.primary), fontWeight = SeasonvarTheme.textWeight(focused))
+            else stringResource(R.string.home_settings_count, enabled.size), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor({ focused }, c.primary), fontWeight = SeasonvarTheme.textWeight { focused })
     }
     if (open) {
         val choices = remember { HomeChannel.entries.associateWith { FocusRequester() } }
@@ -139,9 +139,9 @@ internal fun HomeChannelsSetting(focus: FocusRequester, menuFocus: FocusRequeste
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(homeChannelTitle(channel)), style = MaterialTheme.typography.titleLarge,
-                                color = SeasonvarTheme.textColor(rowFocused, if (channel in available) c.onBackground else c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(rowFocused))
+                                color = SeasonvarTheme.textColor({ rowFocused }, if (channel in available) c.onBackground else c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight { rowFocused })
                             if (channel.personal && account.user == null) Text(stringResource(R.string.home_login_required),
-                                style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(rowFocused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(rowFocused))
+                                style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor({ rowFocused }, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight { rowFocused })
                         }
                         Checkbox(!launcherSettings && channel in enabled, onCheckedChange = null, enabled = channel in available)
                     }

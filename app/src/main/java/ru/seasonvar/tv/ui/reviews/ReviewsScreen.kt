@@ -164,9 +164,9 @@ private fun ReviewRow(review: SeriesReview, selected: Boolean, modifier: Modifie
         .border(d.focusBorderWidth, if (selected) c.primary else c.surface, shape)
         .clickable(role = Role.Button, onClick = onRead).padding(d.spacingSmall), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
         Text(review.author ?: stringResource(R.string.reviews_author_unknown), style = MaterialTheme.typography.titleSmall,
-            color = SeasonvarTheme.textColor(focused, if (focused) c.onPrimary else c.onSurface, filled = true), maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight(focused))
+            color = SeasonvarTheme.textColor({ focused }, c.onSurface, filled = true), maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight { focused })
         Text(review.text.replace('\n', ' '), style = MaterialTheme.typography.bodySmall,
-            color = SeasonvarTheme.textColor(focused, if (focused) c.onPrimary else c.onSurfaceVariant, filled = true), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight(focused))
+            color = SeasonvarTheme.textColor({ focused }, c.onSurfaceVariant, filled = true), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = SeasonvarTheme.textWeight { focused })
     }
 }
 

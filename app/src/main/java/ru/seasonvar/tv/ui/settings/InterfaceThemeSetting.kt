@@ -34,11 +34,11 @@ internal fun InterfaceThemeSetting(value: InterfaceTheme, onChange: (InterfaceTh
         .clickable(role = Role.Button) { onInteraction(); open = true }.padding(d.spacingMedium),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.interface_theme_title), color = SeasonvarTheme.textColor(focused, c.onBackground), style = MaterialTheme.typography.titleLarge, fontWeight = SeasonvarTheme.textWeight(focused))
+            Text(stringResource(R.string.interface_theme_title), color = SeasonvarTheme.textColor({ focused }, c.onBackground), style = MaterialTheme.typography.titleLarge, fontWeight = SeasonvarTheme.textWeight { focused })
             Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.interface_theme_description), color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(focused))
+            Text(stringResource(R.string.interface_theme_description), color = SeasonvarTheme.textColor({ focused }, c.onSurfaceVariant), style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight { focused })
         }
-        Text(stringResource(value.label), color = SeasonvarTheme.textColor(focused, c.primary), style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight(focused))
+        Text(stringResource(value.label), color = SeasonvarTheme.textColor({ focused }, c.primary), style = MaterialTheme.typography.bodyLarge, fontWeight = SeasonvarTheme.textWeight { focused })
     }
     if (open) SettingsChoiceDialog(R.string.interface_theme_title, SeasonvarTheme.availableThemes, value, { it.label },
         onSelect = {

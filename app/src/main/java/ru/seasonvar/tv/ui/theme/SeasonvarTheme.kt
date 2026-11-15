@@ -86,15 +86,26 @@ private val LocalPageBackground = staticCompositionLocalOf { Color.Unspecified }
 object SeasonvarTheme {
     @Composable
     @ReadOnlyComposable
-    fun textColor(focused: Boolean, normal: Color, filled: Boolean = false): Color {
-        if (!focused) return normal
-        if (filled) return appearance.focusedText
-        return appearance.focusedOutlineText.takeIf { it != Color.Unspecified } ?: normal
+    fun textColor(focused: () -> Boolean, normal: Color, filled: Boolean = false): Color {
+        val color = if (filled) appearance.focusedText else appearance.focusedOutlineText
+        if (color == Color.Unspecified || color == normal) return normal
+        return if (focused()) color else normal
     }
 
     @Composable
     @ReadOnlyComposable
-    fun textWeight(focused: Boolean): FontWeight? = if (focused) appearance.focusedTextFontWeight else null
+    fun buttonTextColor(focused: () -> Boolean, normal: Color): Color {
+        val color = appearance.focusedText
+        if (color == appearance.onPrimary) return Color.Unspecified
+        return if (focused()) color else normal
+    }
+
+    @Composable
+    @ReadOnlyComposable
+    fun textWeight(focused: () -> Boolean): FontWeight? {
+        val weight = appearance.focusedTextFontWeight ?: return null
+        return if (focused()) weight else null
+    }
 
     internal val availableThemes: List<InterfaceTheme>
         @Composable @ReadOnlyComposable get() = checkNotNull(LocalThemeCatalog.current).entries

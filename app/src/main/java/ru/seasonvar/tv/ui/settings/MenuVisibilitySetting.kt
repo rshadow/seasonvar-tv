@@ -57,13 +57,13 @@ internal fun MenuVisibilitySetting(
         .clickable(role = Role.Button) { onInteraction(); open = true }
         .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.menu_visibility_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(focused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(focused))
+            Text(stringResource(R.string.menu_visibility_title), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor({ focused }, c.onBackground), fontWeight = SeasonvarTheme.textWeight { focused })
             Spacer(Modifier.height(d.spacingSmall))
-            Text(stringResource(R.string.menu_visibility_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(focused))
+            Text(stringResource(R.string.menu_visibility_description), style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor({ focused }, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight { focused })
         }
         Spacer(Modifier.width(d.spacingMedium))
         Text(stringResource(R.string.menu_visibility_count, Section.startPages(true, hiddenSections).size, Section.startPages(true).size),
-            style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.primary), fontWeight = SeasonvarTheme.textWeight(focused))
+            style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor({ focused }, c.primary), fontWeight = SeasonvarTheme.textWeight { focused })
     }
     if (open) {
         MenuVisibilityDialog(hiddenSections, onVisibilityChange,
@@ -119,9 +119,9 @@ private fun MenuVisibilityDialog(
                                     onValueChange = { onInteraction(); onVisibilityChange(section, it) })
                                 .padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(stringResource(sectionTitle(section)), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor(focused, c.onBackground), fontWeight = SeasonvarTheme.textWeight(focused))
+                                    Text(stringResource(sectionTitle(section)), style = MaterialTheme.typography.titleLarge, color = SeasonvarTheme.textColor({ focused }, c.onBackground), fontWeight = SeasonvarTheme.textWeight { focused })
                                     if (!section.canHide) Text(stringResource(R.string.menu_visibility_settings_required),
-                                        style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor(focused, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight(focused))
+                                        style = MaterialTheme.typography.bodyLarge, color = SeasonvarTheme.textColor({ focused }, c.onSurfaceVariant), fontWeight = SeasonvarTheme.textWeight { focused })
                                 }
                                 Spacer(Modifier.width(d.spacingMedium))
                                 Checkbox(checked = visible, enabled = section.canHide, onCheckedChange = null)
