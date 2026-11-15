@@ -2,7 +2,7 @@
 
 Дата: 2026-11-01
 
-Статус: Принято; возврат из описания уточнён в [ADR-0014](0014-restore-list-focus-after-details.md), действия в «О программе» — в [ADR-0052](0052-about-github-link.md).
+Статус: Принято; интервал выхода уточнён в [ADR-0172](0172-double-back-exit.md); возврат из описания уточнён в [ADR-0014](0014-restore-list-focus-after-details.md), действия в «О программе» — в [ADR-0052](0052-about-github-link.md).
 
 ## Контекст
 

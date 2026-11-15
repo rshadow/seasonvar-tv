@@ -40,6 +40,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -432,6 +434,8 @@ private fun SeasonvarContent(
     val cards = remember { mutableMapOf<String, FocusRequester>() }
     val scope = rememberCoroutineScope()
     val backNavigation = remember { BackNavigation() }
+    val context = LocalContext.current
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { backNavigation.reset() }
     val inputModeManager = LocalInputModeManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val imeVisible = WindowInsets.isImeVisible
@@ -678,11 +682,14 @@ private fun SeasonvarContent(
             backNavigation.reset()
             return
         }
-        val exit = backNavigation.shouldExit(SystemClock.uptimeMillis())
+        val fromMenu = menuOwnsInput && !detailsOpen
+        val exit = backNavigation.shouldExit(SystemClock.uptimeMillis(), fromMenu)
         if (BuildConfig.DEBUG) android.util.Log.d("SeasonvarInput", "back section=" + section + " exit=" + exit)
         if (exit) onExit()
-        else if (detailsOpen) closeDetails()
-        else returnToMenu()
+        else {
+            if (fromMenu) showShortMessage(context, R.string.back_again_to_exit)
+            if (detailsOpen) closeDetails() else returnToMenu()
+        }
     }
 
     BackHandler { navigateBack() }
