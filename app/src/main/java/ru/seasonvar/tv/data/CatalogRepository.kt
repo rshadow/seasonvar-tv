@@ -43,6 +43,7 @@ class CatalogRepository(
                 PublicFeed.ANNOUNCEMENTS -> source.get("https://seasonvar.ru/?mode=soon")
                 PublicFeed.UPDATES, PublicFeed.TOP, PublicFeed.NEWEST -> source.sidebar(feed)
             }
+            currentCoroutineContext().ensureActive()
             val parsed = parse(html, day, feed)
             if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("List cache scope changed")
             htmlCache.save(cacheName(feed), html, lease)
@@ -84,6 +85,7 @@ class CatalogRepository(
         val url = requireNotNull(ActorPages.url(actorUrl))
         val lease = htmlCache.capture()
         val html = source.get(url)
+        currentCoroutineContext().ensureActive()
         val page = ActorPages.parse(html, url, LocalDate.now(zone), windowed = true)
         if (!htmlCache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException("List cache scope changed")
         htmlCache.save(ActorPages.cacheName(url), html, lease)

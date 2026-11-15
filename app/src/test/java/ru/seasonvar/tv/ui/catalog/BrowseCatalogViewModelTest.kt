@@ -56,6 +56,20 @@ class BrowseCatalogViewModelTest {
         assertEquals(2, source.posts)
     }
 
+    @Test fun visited_catalog_refreshes_in_background_without_resetting_filters_or_rows() = runBlocking {
+        val source = Source(); val model = model(source)
+        model.refreshIfStarted(); assertEquals(0, source.posts)
+        model.activate(); ready(model); model.choose("sort", "name"); model.apply(); ready(model)
+        val rows = model.state.value.page.entries
+        source.gate = CompletableDeferred()
+        model.cancelForNetworkChange(); model.refreshIfStarted()
+        assertSame(rows, model.state.value.page.entries)
+        assertEquals("name", model.state.value.applied["sort"])
+        source.gate!!.complete(Unit); ready(model)
+        assertEquals(3, source.posts)
+        model.activate(); assertEquals(3, source.posts)
+    }
+
     @Test fun reset_applies_immediately_and_successful_values_survive_model_recreation() = runBlocking {
         val source = Source(); val model = model(source)
         model.activate(); ready(model)

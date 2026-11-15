@@ -42,6 +42,21 @@ class SmartContinueViewModelTest {
         model.setVisible(true); runCurrent()
         assertEquals(2, calls); assertEquals(listOf(other, entry), model.state.value.entries)
     }
+
+    @Test fun network_refresh_updates_visited_continue_in_background_without_erasing_cards() = runTest(dispatcher) {
+        var calls = 0; val gate = CompletableDeferred<Unit>()
+        val model = model(Cache()) {
+            calls++; if (calls > 1) gate.await()
+            SmartContinuePage(listOf(entry.copy(title = calls.toString())), emptySet(), false)
+        }
+        runCurrent(); model.refreshIfStarted(); runCurrent(); assertEquals(0, calls)
+        model.setVisible(true); runCurrent(); model.setVisible(false)
+        val rows = model.state.value.entries
+        model.cancelForNetworkChange(); model.refreshIfStarted(); runCurrent()
+        assertEquals(2, calls); assertSame(rows, model.state.value.entries)
+        gate.complete(Unit); runCurrent()
+        assertEquals("2", model.state.value.entries.single().title)
+    }
     @Test fun cache_is_visible_while_network_loads_and_error_does_not_erase_it() = runTest(dispatcher) {
         val gate = CompletableDeferred<SmartContinuePage>();val cache = Cache(listOf(entry))
         val model = model(cache) { gate.await() };runCurrent();model.setVisible(true);runCurrent()

@@ -45,6 +45,28 @@ class SearchViewModelTest {
         assertEquals(1, calls.size)
     }
 
+    @Test fun network_change_refreshes_the_last_query_while_hidden_and_preserves_cards_until_ready() = runTest(dispatcher) {
+        var calls = 0
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val model = model { calls++; if (calls > 1) gate.await(); listOf(entry(calls.toString())) }
+        model.queryChanged("test"); model.submit(); runCurrent()
+        val rows = model.state.value.results.entries
+        model.deactivate(); model.cancelForNetworkChange(); model.networkChanged(); runCurrent()
+        assertEquals(2, calls); assertSame(rows, model.state.value.results.entries)
+        gate.complete(Unit); runCurrent()
+        assertEquals("2", model.state.value.results.entries.single().id)
+        model.activate(); runCurrent(); assertEquals(2, calls)
+    }
+
+    @Test fun network_change_does_not_start_an_unused_or_erased_search() = runTest(dispatcher) {
+        var calls = 0
+        val model = model { calls++; emptyList() }
+        model.networkChanged(); runCurrent(); assertEquals(0, calls)
+        model.queryChanged("test"); model.submit(); runCurrent(); assertEquals(1, calls)
+        model.queryChanged(""); model.deactivate(); model.networkChanged(); runCurrent()
+        assertEquals(1, calls)
+    }
+
     @Test fun obsolete_response_cannot_replace_new_query_even_if_transport_finishes_after_cancellation() = runTest(dispatcher) {
         val model = model {
             if (it == "old") withContext(NonCancellable) { delay(1000) }

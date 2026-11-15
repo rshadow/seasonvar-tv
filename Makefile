@@ -94,6 +94,7 @@ help:
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
 		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
 		'make card-marks-probe       Verify shared season marks without account writes or list reloads' \
+		'make list-refresh-probe     Verify background refresh, visibility, focus and request dispatch' \
 		'make series-list-probe      Verify shared renderer on 33,000 offline entries in emulator' \
 		'make shared-card-cache-probe Verify cross-list card reuse, logout and configured cache capacity' \
 		'make cache-memory-probe     Measure native card cache and poster memory in emulator' \
@@ -670,3 +671,9 @@ card-marks-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=card-marks MARK_MENU_PROBE_OUT="$(CARD_MARKS_PROBE_OUT)"
 
 CARD_MARKS_PROBE_OUT ?= build/card-marks-probe
+
+.PHONY: list-refresh-probe
+list-refresh-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=list-refresh MARK_MENU_PROBE_OUT="$(LIST_REFRESH_PROBE_OUT)"
+
+LIST_REFRESH_PROBE_OUT ?= build/list-refresh-probe

@@ -26,6 +26,7 @@ class SmartContinueViewModel internal constructor(
     val state = mutableState.asStateFlow()
     private var refreshJob: Job? = null
     private var visible = false
+    private var started = false
     private var dirty = true
     private var owner: String? = null
     private var ownerVersion = -1L
@@ -68,6 +69,12 @@ class SmartContinueViewModel internal constructor(
         mutableState.value = CatalogUiState(loading = false, loaded = true)
         markOwner(session.value.user)?.let { expectedOwner -> viewModelScope.launch { cache.clear(expectedOwner) } }
     }
+    fun cancelForNetworkChange() {
+        refreshJob?.cancel()
+        dirty = true
+        mutableState.value = state.value.copy(loading = false)
+    }
+    fun refreshIfStarted() { if (started) refresh() }
     fun refresh() {
         if (session.value.user == null) return
         val expectedOwner = markOwner(session.value.user) ?: run {
@@ -75,6 +82,7 @@ class SmartContinueViewModel internal constructor(
             return
         }
         val version = session.value.version
+        started = true
         refreshJob?.cancel()
         mutableState.value = state.value.copy(loading = true, failure = null)
         refreshJob = viewModelScope.launch {

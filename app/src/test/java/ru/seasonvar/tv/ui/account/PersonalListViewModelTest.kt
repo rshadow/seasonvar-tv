@@ -43,6 +43,21 @@ class PersonalListViewModelTest {
         assertEquals(listOf("1"), model.state.value.entries.map { it.id })
     }
 
+    @Test fun connection_refresh_keeps_visited_lists_warm_without_loading_unvisited_lists() = runTest(dispatcher) {
+        var calls = 0; var coldCalls = 0
+        val gate = CompletableDeferred<Unit>()
+        val visited = model("visited") { calls++; if (calls > 1) gate.await(); AccountPage(user, listOf(entry(calls.toString()))) }
+        val cold = model("cold") { coldCalls++; AccountPage(user, emptyList()) }
+        runCurrent(); visited.activate(); runCurrent()
+        val rows = visited.state.value.entries
+        visited.cancelForNetworkChange(); cold.cancelForNetworkChange()
+        visited.refreshIfStarted(); cold.refreshIfStarted(); runCurrent()
+        assertEquals(2, calls); assertEquals(0, coldCalls); assertSame(rows, visited.state.value.entries)
+        gate.complete(Unit); runCurrent()
+        assertEquals("2", visited.state.value.entries.single().id)
+        visited.activate(); runCurrent(); assertEquals(2, calls)
+    }
+
     @Test fun a_late_private_disk_snapshot_cannot_restore_a_list_after_logout() = runTest(dispatcher) {
         var requests = 0
         val model = PersonalListViewModel(session, { requests++; AccountPage(user, listOf(entry("2"))) },

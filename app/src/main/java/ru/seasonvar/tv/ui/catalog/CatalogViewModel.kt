@@ -71,11 +71,14 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         if (filterSource != null) { refreshBest(); return }
         started = true
         refreshJob?.cancel()
+        val expected = ++generation
         val day = LocalDate.now()
         val previous = mutableState.value.takeIf { it.date == day && it.loaded }
         mutableState.value = previous?.copy(loading = true, failure = null) ?: CatalogUiState(date = day)
         refreshJob = viewModelScope.launch {
             val cached = if (previous == null) repository.cached(day, feed) else null
+            ensureActive()
+            if (generation != expected) return@launch
             mutableState.value = CatalogUiState(
                 date = day,
                 entries = previous?.entries ?: cached?.entries.orEmpty(),
@@ -84,12 +87,16 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
             )
             try {
                 val page = repository.load(day, feed)
+                ensureActive()
+                if (generation != expected) return@launch
                 mutableState.value = CatalogUiState(
                     date = day, entries = page.entries, loading = false, loaded = true,
                 )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                ensureActive()
+                if (generation != expected) return@launch
                 val failure = when (e) {
                     is MarkupChangedException -> LoadFailure.MARKUP
                     is SiteHttpException -> LoadFailure.HTTP
@@ -146,9 +153,11 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         if (reload) refresh()
     }
 
-    fun networkChanged() {
-        if (!started) return
-        refresh()
+    fun cancelForNetworkChange() {
+        generation++
+        refreshJob?.cancel()
+        filterController?.dismiss()
+        mutableState.value = state.value.copy(loading = false)
     }
 
     fun refreshIfStarted() {
