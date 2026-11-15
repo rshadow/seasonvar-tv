@@ -11,6 +11,38 @@ class ActorPagesTest {
     private val url = ActorPages.url("/actor/Тестовый актёр")!!
     private val day = LocalDate.of(2026, 11, 13)
 
+    @Test fun accepts_series_without_the_optional_actor_profile_using_the_exact_query_heading() {
+        val response = javaClass.getResource("/actor-series-without-profile.html")!!.readText()
+        val actorUrl = ActorPages.url("/actor/Пётр Преговски")!!
+        val page = ActorPages.parse(response, actorUrl, day)
+        assertEquals(listOf("51266"), page.entries.map { it.id })
+        assertEquals("Предупреждения", page.entries.single().title)
+        assertEquals("https://seasonvar.ru/serial-51266-Preduprezhdeniya.html", page.entries.single().url)
+    }
+
+    @Test fun accepts_explicit_empty_results_without_an_actor_profile() = runBlocking {
+        val response = javaClass.getResource("/actor-series-empty.html")!!.readText()
+        for (windowed in listOf(false, true)) {
+            val page = ActorPages.parse(response, url, day, windowed)
+            try { assertTrue(page.entries.isEmpty()) }
+            finally { (page.entries as? ParsedSeriesEntries)?.window?.close() }
+        }
+    }
+
+    @Test fun missing_profiles_do_not_hide_wrong_actor_pages_or_broken_results() {
+        val empty = javaClass.getResource("/actor-series-empty.html")!!.readText()
+        val full = javaClass.getResource("/actor-series-without-profile.html")!!.readText()
+        for ((invalid, actorUrl) in listOf(empty.replace("Тестовый актёр", "Другой актёр") to url,
+            empty.replace("</b> 0", "</b> 1") to url, empty.replace("class=\"pgs-msg\"", "class=\"unknown\"") to url,
+            empty.replace("pgs-search-actor-wrap", "unknown") to url,
+            full.replace("pgs-search-info", "unknown") to ActorPages.url("/actor/Пётр Преговски")!!)) {
+            try {
+                ActorPages.parse(invalid, actorUrl, day)
+                fail("Expected markup rejection")
+            } catch (_: MarkupChangedException) { }
+        }
+    }
+
     @Test fun preserves_server_order_exact_season_links_names_and_descriptions() {
         val page = ActorPages.parse(html, url, day)
         assertEquals(listOf("123", "456"), page.entries.map { it.id })

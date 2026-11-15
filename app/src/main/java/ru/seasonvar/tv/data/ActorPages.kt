@@ -20,9 +20,20 @@ object ActorPages {
     fun parse(html: String, actorUrl: String, day: LocalDate, windowed: Boolean = false): CatalogPage {
         val requested = url(actorUrl) ?: throw MarkupChangedException()
         val doc = Jsoup.parse(html, requested)
-        val actor = doc.selectFirst(".pgs-search-actor[href]") ?: throw MarkupChangedException()
-        if (url(actor.attr("href")) != requested) throw MarkupChangedException()
-        val entries = doc.select(".pgs-search-wrap").asSequence().map { item ->
+        val search = doc.selectFirst(".pgs-search") ?: doc
+        val actor = search.selectFirst(".pgs-search-actor[href]")
+        val items = search.select(".pgs-search-wrap")
+        if (actor != null) {
+            if (url(actor.attr("href")) != requested) throw MarkupChangedException()
+        } else {
+            val heading = search.selectFirst(".pgs-search-title") ?: throw MarkupChangedException()
+            val name = requested.toHttpUrl().pathSegments[1]
+            if (heading.selectFirst("b")?.text() != "Найдено по запросу «$name»:") throw MarkupChangedException()
+            if (search.selectFirst(".pgs-search-actor-wrap") == null) throw MarkupChangedException()
+            if (items.isEmpty() && (heading.ownText().trim() != "0" ||
+                search.selectFirst(".pgs-msg")?.text() != "Сожалеем, по вашему запросу ничего не найдено")) throw MarkupChangedException()
+        }
+        val entries = items.asSequence().map { item ->
             val info = item.selectFirst(".pgs-search-info") ?: throw MarkupChangedException()
             val links = info.select("a[href]")
             val title = links.firstOrNull()?.text()?.takeIf { it.isNotBlank() } ?: throw MarkupChangedException()
