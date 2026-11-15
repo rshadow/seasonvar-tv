@@ -43,7 +43,7 @@ data class DescriptionState(
 class CatalogViewModel(private val repository: CatalogRepository, private val feed: PublicFeed,
     preferences: ListFilterPreferences = ListFilterPreferences(), account: ru.seasonvar.tv.data.account.AccountRepository? = null,
     private val accountOwner: () -> String? = { null }) : ViewModel() {
-    private val mutableState = MutableStateFlow(CatalogUiState(loading = feed == PublicFeed.TODAY))
+    private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
     init { ru.seasonvar.tv.ui.catalog.manageListParsing(viewModelScope, state) { it.entries } }
     private var refreshJob: Job? = null
@@ -60,8 +60,6 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
             mutableState.value = CatalogUiState(date = page.date, entries = page.entries, loading = false, loaded = true)
         }, context = accountOwner) }
     val filters: ListFiltersController? get() = filterController
-
-    init { if (feed == PublicFeed.TODAY) refresh() }
 
     fun activate() {
         if (!started) refresh() else refreshIfDateChanged()

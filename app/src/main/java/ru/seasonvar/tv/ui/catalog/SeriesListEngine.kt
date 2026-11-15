@@ -90,6 +90,8 @@ internal class SeriesListEngine(
     private fun descriptionKey(entry: SeriesEntry) = entry.id + "|" + entry.url
 
     fun update(input: SeriesListInput) {
+        val observer = SeriesListPlanningDiagnostics.current()
+        observer?.update(work?.isActive == true)
         work?.cancel()
         val version = ++generation
         if (catalogKey != input.catalogKey) {
@@ -103,9 +105,21 @@ internal class SeriesListEngine(
         }
         val known = knownIndices
         work = scope.launch {
-            val plan = withContext(dispatcher) { plan(input, known) }
+            val plan = withContext(dispatcher) {
+                if (observer == null) plan(input, known)
+                else {
+                    val cpu = android.os.Debug.threadCpuTimeNanos()
+                    val wall = System.nanoTime()
+                    plan(input, known).also {
+                        val elapsed = System.nanoTime() - wall
+                        val usedCpu = android.os.Debug.threadCpuTimeNanos() - cpu
+                        observer.planned(usedCpu, elapsed, it.slots.size, it.images.size)
+                    }
+                }
+            }
             ensureActive()
             if (version != generation) return@launch
+            val applyCpu = if (observer != null) android.os.Debug.threadCpuTimeNanos() else 0L
             window = plan.window
             retainData(plan.slots.mapTo(hashSetOf()) { it.entry.id })
             knownIndices = plan.slots.associate { it.entry.key to it.index }
@@ -119,6 +133,7 @@ internal class SeriesListEngine(
             }
             updateResources(plan, input.selectedKey)
             cards.update(desired.values.filter { prepared[it.slot.key]?.source != it.slot.entry })
+            observer?.applied(android.os.Debug.threadCpuTimeNanos() - applyCpu)
         }
     }
 

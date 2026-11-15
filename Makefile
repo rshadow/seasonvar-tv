@@ -89,6 +89,10 @@ help:
 		'make build-profile          Build an optimized profileable APK' \
 		'make run-profile DEVICE=... Install and launch the profile build' \
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
+		'make profile-container      Measure hidden-list updates in an isolated profile fixture' \
+		'make profile-planner        Measure window planning while holding D-pad' \
+		'make profile-catalog-lookup Compare key searches at deep catalog positions' \
+		'make profile-startup        Measure real cold launches in the emulator' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
@@ -205,6 +209,35 @@ build-profile:
 
 profile-navigation:
 	python3 scripts/profile-navigation.py --device "$(DEVICE)" --output "$(PROFILE_OUT)" $(PROFILE_ARGS)
+
+.PHONY: profile-container
+CONTAINER_PROFILE_OUT ?= build/profile-container
+CONTAINER_PROFILE_ARGS ?=
+profile-container: build-profile
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Container fixture requires an emulator.' >&2; exit 1 ;; esac
+	$(ENV) adb devices -l
+	$(MAKE) install-apk DEVICE="$(DEVICE)" APK="$(CURDIR)/app/build/outputs/apk/profile/app-profile.apk"
+	python3 scripts/profile-container.py --device "$(DEVICE)" --output "$(CONTAINER_PROFILE_OUT)" $(CONTAINER_PROFILE_ARGS)
+
+.PHONY: profile-planner
+PLANNER_PROFILE_OUT ?= build/profile-planner
+PLANNER_PROFILE_ARGS ?= --trace-mode off
+profile-planner:
+	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(PLANNER_PROFILE_OUT)" CONTAINER_PROFILE_ARGS="--planner $(PLANNER_PROFILE_ARGS)"
+
+.PHONY: profile-catalog-lookup
+CATALOG_LOOKUP_OUT ?= build/profile-catalog-lookup
+profile-catalog-lookup:
+	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(CATALOG_LOOKUP_OUT)" CONTAINER_PROFILE_ARGS="--lookup --theme plain --trace-mode off --samples 12 --rounds 3"
+
+.PHONY: profile-startup
+STARTUP_PROFILE_OUT ?= build/profile-startup
+STARTUP_PROFILE_ARGS ?=
+profile-startup: build-profile
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Startup probe requires an emulator.' >&2; exit 1 ;; esac
+	$(ENV) adb devices -l
+	$(MAKE) install-apk DEVICE="$(DEVICE)" APK="$(CURDIR)/app/build/outputs/apk/profile/app-profile.apk"
+	python3 scripts/profile-startup.py --device "$(DEVICE)" --output "$(STARTUP_PROFILE_OUT)" $(STARTUP_PROFILE_ARGS)
 
 run-profile:
 	$(MAKE) run BUILD_TYPE=$(PROFILE_BUILD_TYPE)

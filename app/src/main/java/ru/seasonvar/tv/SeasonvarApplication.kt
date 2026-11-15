@@ -10,6 +10,8 @@ import ru.seasonvar.tv.data.CatalogRepository
 import ru.seasonvar.tv.data.network.NetworkSettings
 import java.io.File
 import kotlinx.coroutines.flow.combine
+import ru.seasonvar.tv.diagnostics.startupMark
+import ru.seasonvar.tv.diagnostics.startupMeasure
 
 class SeasonvarApplication : Application(), ImageLoaderFactory {
     internal val applicationScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
@@ -79,6 +81,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val homeChannels by lazy { ru.seasonvar.tv.data.home.HomeChannels(this, applicationScope) }
 
     override fun onCreate() {
+        startupMark("application_on_create")
         super.onCreate()
         val process = if (android.os.Build.VERSION.SDK_INT >= 28) getProcessName()
             else java.io.File("/proc/self/cmdline").readText(Charsets.UTF_8).substringBefore('\u0000')
@@ -86,8 +89,9 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
             if (android.os.Build.VERSION.SDK_INT >= 28) android.webkit.WebView.setDataDirectorySuffix("pac-parser")
             return
         }
-        pac.start()
-        homeChannels.start()
+        startupMeasure("application_pac_start") { pac.start() }
+        startupMeasure("application_channels_start") { homeChannels.start() }
+        startupMark("application_created")
     }
 
     suspend fun selectProxy(proxy: ru.seasonvar.tv.data.network.ProxyConfiguration) {

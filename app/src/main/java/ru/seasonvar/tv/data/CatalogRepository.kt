@@ -36,6 +36,8 @@ class CatalogRepository(
 
     suspend fun load(day: LocalDate, feed: PublicFeed = PublicFeed.TODAY): CatalogPage =
         withContext(Dispatchers.IO) {
+            if (ru.seasonvar.tv.BuildConfig.BUILD_TYPE == "profile")
+                ru.seasonvar.tv.diagnostics.StartupDiagnostics.request(feed.name)
             val lease = htmlCache.capture()
             val html = when (feed) {
                 PublicFeed.TODAY -> source.get("https://seasonvar.ru/")
