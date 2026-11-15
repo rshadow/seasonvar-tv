@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <profileable android:shell="true" />
+        <receiver android:name="ru.seasonvar.tv.probe.StartupReportReceiver" android:exported="true" />
+        <activity android:name="ru.seasonvar.tv.probe.ContainerProfileActivity"
+            android:exported="true" android:process=":container_profile"
+            android:screenOrientation="landscape" />
     </application>
 </manifest>

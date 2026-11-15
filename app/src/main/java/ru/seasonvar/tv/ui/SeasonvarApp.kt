@@ -353,8 +353,10 @@ private fun SeasonvarContent(
     }
     val visibleMenuPages = remember(visibleMenuGroups) { visibleMenuGroups.flatMap { it.second } }
     var startupPending by rememberSaveable { mutableStateOf(true) }
+    val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy, hiddenSections)
     var menuOwnsInput by remember { mutableStateOf(true) }
     var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
+    val waitingForStartPage = startupPending && section != startupTarget
     val browsing = section == Section.CATALOG
     val browseState = browseCatalog?.state?.collectAsStateWithLifecycle()?.value ?: ru.seasonvar.tv.ui.catalog.BrowseCatalogState()
     val browseConditions = remember(browseState.applied) { CatalogFilters.defaults.mapValues { browseState.applied[it.key] } }
@@ -366,7 +368,7 @@ private fun SeasonvarContent(
     val searching = section == Section.SEARCH
     val personalFeed = section.personalFeed
     val catalogKey = if (browsing) "CATALOG" else if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
-    val sourceState = if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
+    val sourceState = if (waitingForStartPage) CatalogUiState() else if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
     val selectedKey = if (browsing) browseSelectedKey else selectedKeys[catalogKey]
     val activeFilters = (if (personalFeed != null) personalFilters[personalFeed] else publicFilters[activeFeed])
         ?.state?.collectAsStateWithLifecycle()?.value?.values
@@ -375,7 +377,7 @@ private fun SeasonvarContent(
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
     ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(section.takeIf {
-        !detailsOpen && (it.publicFeed != null || it.personalFeed != null ||
+        !waitingForStartPage && !detailsOpen && (it.publicFeed != null || it.personalFeed != null ||
             it == Section.CATALOG || it == Section.SEARCH || it == Section.SMART_CONTINUE)
     }, onListVisibilityChange)
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
@@ -463,7 +465,6 @@ private fun SeasonvarContent(
         val feed = item.publicFeed
         if (feed != null) {
             activeFeed = feed
-            onFeedVisible(feed)
         }
     }
 
@@ -484,6 +485,14 @@ private fun SeasonvarContent(
         Section.ABOUT -> aboutFocus
     }
 
+    val publicActivation = remember { object { var feed: PublicFeed? = null } }
+    SideEffect {
+        val feed = section.publicFeed.takeUnless { waitingForStartPage }
+        if (publicActivation.feed != feed) {
+            publicActivation.feed = feed
+            feed?.let(onFeedVisible)
+        }
+    }
     LaunchedEffect(browsing) { if (browsing) browseCatalog?.activate() }
     DisposableEffect(smart) {
         onSmartVisible(smart)
@@ -508,7 +517,9 @@ private fun SeasonvarContent(
             selectEntry(if (origin != null) removalNeighbor(origin.keys, state.entries.map { it.key }, origin.selected) else selected?.key)
         }
     }
-    val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy, hiddenSections)
+    if (BuildConfig.BUILD_TYPE == "profile" && ru.seasonvar.tv.diagnostics.StartupDiagnostics.active) SideEffect {
+        ru.seasonvar.tv.diagnostics.StartupDiagnostics.observe(initialStartPage, startupTarget, section, state, accountState.busy)
+    }
     LaunchedEffect(startupTarget) {
         if (!startupPending) return@LaunchedEffect
         val target = startupTarget ?: Section.TODAY.availableAtStart(accountSession.user != null, hiddenSections)
@@ -517,6 +528,8 @@ private fun SeasonvarContent(
         if (startupPending && section == target) {
             if (startupTarget != null) startupPending = false
             sectionFocus(target).requestFocus()
+            if (BuildConfig.BUILD_TYPE == "profile" && startupTarget != null)
+                ru.seasonvar.tv.diagnostics.StartupDiagnostics.targetFocused(target)
         }
     }
     LaunchedEffect(Unit) {
@@ -717,7 +730,10 @@ private fun SeasonvarContent(
         Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
             horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {
             Column(Modifier.width(d.menuWidth).fillMaxHeight()
-                .onFocusChanged { if (it.hasFocus) menuOwnsInput = true }.focusGroup()) {
+                .onFocusChanged { if (it.hasFocus) {
+                    menuOwnsInput = true
+                    ru.seasonvar.tv.diagnostics.startupMark("first_menu_focus")
+                } }.focusGroup()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                     ThemeButton(stringResource(R.string.search_title), onClick = {
                         startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++

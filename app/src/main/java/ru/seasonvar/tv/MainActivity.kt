@@ -26,6 +26,8 @@ import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.navigation.traceBackKey
 import ru.seasonvar.tv.ui.catalog.CatalogViewModel
 import ru.seasonvar.tv.ui.search.SearchViewModel
+import ru.seasonvar.tv.diagnostics.startupMark
+import ru.seasonvar.tv.diagnostics.startupMeasure
 
 class MainActivity : ComponentActivity() {
     private lateinit var updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel
@@ -54,7 +56,11 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        startupMark("activity_on_create")
         super.onCreate(savedInstanceState)
+        val startupProbe = BuildConfig.BUILD_TYPE == "profile" &&
+            intent.getStringExtra("startup_probe_run")?.matches(Regex("[a-z0-9-]{1,80}")) == true
+        if (BuildConfig.BUILD_TYPE == "profile") ru.seasonvar.tv.diagnostics.StartupDiagnostics.configure(startupProbe)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -62,30 +68,30 @@ class MainActivity : ComponentActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         val container = application as SeasonvarApplication
-        updateModel = ViewModelProvider(this, ru.seasonvar.tv.ui.update.UpdateViewModel.Factory(
-            container.updates, BuildConfig.VERSION_NAME))[ru.seasonvar.tv.ui.update.UpdateViewModel::class.java]
-        val translationSettingsModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel.Factory(
-            container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java]
-        val connectionCheckModel = ViewModelProvider(this, ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel.Factory(
-            container.networkSettings.configuration, container.pac, container::prepareNetwork))[ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel::class.java]
-        val repository = container.repository
-        models = PublicFeed.entries.associateWith { feed ->
+        updateModel = startupMeasure("model_update") { ViewModelProvider(this, ru.seasonvar.tv.ui.update.UpdateViewModel.Factory(
+            container.updates, BuildConfig.VERSION_NAME))[ru.seasonvar.tv.ui.update.UpdateViewModel::class.java] }
+        val translationSettingsModel = startupMeasure("model_translations") { ViewModelProvider(this, ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel.Factory(
+            container.translationCatalog, container.interfaceSettings))[ru.seasonvar.tv.ui.settings.TranslationSettingsViewModel::class.java] }
+        val connectionCheckModel = startupMeasure("model_connection_checks") { ViewModelProvider(this, ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel.Factory(
+            container.networkSettings.configuration, container.pac, container::prepareNetwork))[ru.seasonvar.tv.ui.settings.ConnectionCheckViewModel::class.java] }
+        val repository = startupMeasure("repository") { container.repository }
+        models = startupMeasure("models_public") { PublicFeed.entries.associateWith { feed ->
             ViewModelProvider(this, CatalogViewModel.Factory(repository, feed, container.listFilterPreferences, container.account) {
                 ru.seasonvar.tv.data.playback.markOwner(container.account.session.value.user)
             })
                 .get("catalog-" + feed.name, CatalogViewModel::class.java)
-        }
-        browseModel = ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel.Factory(
+        } }
+        browseModel = startupMeasure("model_catalog") { ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel.Factory(
             repository, container.listFilterPreferences, container.account) {
                 ru.seasonvar.tv.data.playback.markOwner(container.account.session.value.user)
-            })[ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel::class.java]
-        val accountModel = ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java]
-        personalModels = PersonalFeed.entries.associateWith { feed ->
+            })[ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel::class.java] }
+        val accountModel = startupMeasure("model_account") { ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java] }
+        personalModels = startupMeasure("models_personal") { PersonalFeed.entries.associateWith { feed ->
             ViewModelProvider(this, PersonalListViewModel.Factory(container.account, feed, container.listFilterPreferences))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
-        }
-        smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
-            container.account, container.smartContinueCache, container.smartContinue))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
+        } }
+        smartModel = startupMeasure("model_continue") { ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
+            container.account, container.smartContinueCache, container.smartContinue))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java] }
         val historyClearModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.HistoryClearViewModel.Factory(
             container.account,
             onStarted = { personalModels.getValue(PersonalFeed.HISTORY).invalidate() },
@@ -101,9 +107,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java]
-        detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
-            preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
+        searchModel = startupMeasure("model_search") { ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java] }
+        detailsModel = startupMeasure("model_details") { ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
+            preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java] }
         listRefresh = ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Factory(
             container.networkSettings.configuration.value, container::prepareNetwork, buildMap {
                 models.forEach { (feed, model) -> put(ru.seasonvar.tv.ui.navigation.Section.entries.first { it.publicFeed == feed },
@@ -119,6 +125,18 @@ class MainActivity : ComponentActivity() {
             }))[ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator::class.java]
         val removalModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.MarkRemovalViewModel.Factory(
             container.account, container.accountMarks, onRemoved = {}))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
+        val probeStart = if (startupProbe) intent.getStringExtra("startup_probe_start")
+            ?.let { ru.seasonvar.tv.ui.navigation.Section.fromStorage(it) } else null
+        startupMark("models_created")
+        if (startupProbe) window.decorView.viewTreeObserver.addOnDrawListener(object : android.view.ViewTreeObserver.OnDrawListener {
+            private var captured = false
+            override fun onDraw() {
+                if (captured) return
+                captured = true
+                startupMark("first_on_draw")
+                window.decorView.post { window.decorView.viewTreeObserver.removeOnDrawListener(this) }
+            }
+        })
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
@@ -161,7 +179,7 @@ class MainActivity : ComponentActivity() {
                 showActors = showActors, onShowActorsChange = container.interfaceSettings::setShowActors,
                 interfaceTheme = interfaceTheme, onInterfaceThemeChange = container.interfaceSettings::setInterfaceTheme,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
-                startPage = startPage, onStartPageChange = container.interfaceSettings::setStartPage,
+                startPage = probeStart ?: startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
