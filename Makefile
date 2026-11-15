@@ -93,6 +93,7 @@ help:
 		'make lint                   Run Android Lint' \
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
 		'make mark-menu-probe        Verify stable mark-menu layout and focus offline in emulator' \
+		'make card-marks-probe       Verify shared season marks without account writes or list reloads' \
 		'make series-list-probe      Verify shared renderer on 33,000 offline entries in emulator' \
 		'make shared-card-cache-probe Verify cross-list card reuse, logout and configured cache capacity' \
 		'make cache-memory-probe     Measure native card cache and poster memory in emulator' \
@@ -663,3 +664,9 @@ theme-config-probe:
 	$(MAKE) poster-backdrop-probe POSTER_BACKDROP_PROBE_OUT="$(THEME_CONFIG_PROBE_OUT)"
 
 THEME_CONFIG_PROBE_OUT ?= build/theme-config-probe
+
+.PHONY: card-marks-probe
+card-marks-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=card-marks MARK_MENU_PROBE_OUT="$(CARD_MARKS_PROBE_OUT)"
+
+CARD_MARKS_PROBE_OUT ?= build/card-marks-probe

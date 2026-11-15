@@ -21,6 +21,7 @@ class ListParsingWindow private constructor(
     private val mutex = Mutex()
     private val closed = AtomicBoolean(false)
     private val excludedSeasons = HashSet<String>()
+    private val localVersions = mutableMapOf<String, Long>()
     private val mutableState = MutableStateFlow(ListParseState(emptyList(), true))
     val state = mutableState.asStateFlow()
 
@@ -59,10 +60,15 @@ class ListParsingWindow private constructor(
 
     private fun dispose() { cursor = null; release?.invoke(); release = null }
 
-    suspend fun excludeSeason(id: String) = withContext(Dispatchers.IO) {
+    suspend fun excludeSeason(id: String, revision: Long = 0) = changeSeason(id, null, revision)
+    suspend fun prependSeason(entry: SeriesEntry, revision: Long = 0) = changeSeason(entry.id, entry, revision)
+
+    private suspend fun changeSeason(id: String, entry: SeriesEntry?, revision: Long) = withContext(Dispatchers.IO) {
         mutex.withLock {
+            if (closed.get() || revision < (localVersions[id] ?: 0)) return@withLock
+            localVersions[id] = revision
             excludedSeasons.add(id)
-            mutableState.value = state.value.copy(entries = state.value.entries.filterNot { it.id == id })
+            mutableState.value = state.value.copy(entries = listOfNotNull(entry) + state.value.entries.filterNot { it.id == id })
         }
     }
 

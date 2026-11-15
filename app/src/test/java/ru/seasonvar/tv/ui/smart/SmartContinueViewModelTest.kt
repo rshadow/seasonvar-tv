@@ -92,4 +92,19 @@ class SmartContinueViewModelTest {
         assertTrue(model.state.value.entries.isEmpty()); assertNull(cache.rows)
     }
 
+    @Test fun local_position_updates_continue_without_a_reload_and_negative_status_removes_it() = runTest(dispatcher) {
+        var calls = 0
+        val model = model(Cache()) { calls++; SmartContinuePage(listOf(entry), emptySet(), false) }
+        runCurrent(); model.setVisible(true); runCurrent()
+        val point = PlaybackMark(entry.id, entry.url, "3", "0", 90)
+        model.markChanged(ru.seasonvar.tv.data.cache.CardMarkChange(entry, PlaybackMarkSnapshot(mark = point), 1), null)
+        runCurrent()
+        assertEquals(1, calls)
+        assertEquals(entry.key, model.state.value.entries.single().key)
+        assertEquals("3", model.state.value.entries.single().initialSelection.episodeLabel)
+        assertEquals(90_000L, model.state.value.entries.single().initialSelection.positionMillis)
+        model.markChanged(ru.seasonvar.tv.data.cache.CardMarkChange(entry, PlaybackMarkSnapshot(status = -2), 2), null)
+        runCurrent(); assertTrue(model.state.value.entries.isEmpty()); assertEquals(1, calls)
+    }
+
 }

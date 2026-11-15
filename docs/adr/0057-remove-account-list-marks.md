@@ -4,6 +4,9 @@
 
 Статус: Принято
 
+Проверка успешного POST и локальное применение результата пересмотрены в [ADR-0169](0169-local-shared-card-marks.md).
+
+
 Состав меню и подсказка об удержании уточнены в [ADR-0081](0081-account-list-status-actions.md) и [ADR-0087](0087-flat-long-press-actions.md). Подтверждение и протокол удаления сохраняются.
 
 Дополняет [ADR-0034](0034-resume-current-markup.md), [ADR-0041](0041-shared-catalog-entry.md) и [ADR-0056](0056-automatic-account-playback-marks.md).

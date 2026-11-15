@@ -1419,7 +1419,7 @@ private fun Poster(entry: SeriesEntry, modifier: Modifier, large: Boolean = fals
                 )
             }
         }
-        if (entry.isWatching) {
+        if (ru.seasonvar.tv.ui.account.currentCardEntry(entry).isWatching) {
             Box(
                 modifier = Modifier.align(Alignment.TopStart)
                     .padding(start = d.watchBadgeInset,

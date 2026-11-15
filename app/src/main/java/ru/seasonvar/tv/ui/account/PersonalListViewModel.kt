@@ -236,6 +236,38 @@ class PersonalListViewModel internal constructor(
         mutableState.value = state.value.copy(entries = entries)
     }
 
+    fun markChanged(feed: PersonalFeed, change: ru.seasonvar.tv.data.cache.CardMarkChange): Job? {
+        if (feed == PersonalFeed.HISTORY || change.scope?.owner?.let { it != session.value.user?.id } == true) return null
+        val current = state.value
+        if (!current.loaded) {
+            if (current.loading) invalidate() else dirty = true
+            return null
+        }
+        val parsed = (current.entries as? ParsedSeriesEntries)?.window
+        val rows = parsed?.state?.value?.entries ?: current.entries
+        val existing = rows.firstOrNull { it.id == change.entry.id }
+        val belongs = change.belongsTo(feed, existing ?: change.entry)
+        if (belongs == true && existing != null && !current.loading && !mutableFilters.value.applying) return null
+        if (belongs == null) { invalidate(); return null }
+        val filtered = mutableFilters.value.fields.any { mutableFilters.value.values[it.id] != it.defaultValue }
+        val insert = belongs && existing == null && !filtered && change.entry.title.isNotBlank()
+        if (belongs && !insert && existing == null) { invalidate(); return null }
+        generation++
+        refreshJob?.cancel(); moreJob?.cancel(); filterApplyJob?.cancel()
+        mutableFilters.value = mutableFilters.value.copy(applying = false)
+        val added = change.apply(change.entry).copy(sourceKey = "local-mark:" + change.entry.id)
+        val update = if (parsed != null) viewModelScope.launch {
+            if (insert) parsed.prependSeason(added, change.revision) else if (!belongs) parsed.excludeSeason(change.entry.id, change.revision)
+        } else {
+            val entries = if (insert) listOf(added) + rows else if (!belongs) rows.filterNot { it.id == change.entry.id } else rows
+            mutableState.value = current.copy(entries = entries, loading = false, loadingMore = false)
+            null
+        }
+        if (parsed != null && (current.loading || current.loadingMore))
+            mutableState.value = current.copy(loading = false, loadingMore = false)
+        return update
+    }
+
     class Factory(private val account: AccountRepository, private val feed: PersonalFeed,
         private val preferences: ListFilterPreferences = ListFilterPreferences()) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -44,6 +44,8 @@ class SeriesDetailsViewModel(
     private val loadAccountProgress: suspend (SeriesDetails) -> AccountProgress? = { null },
     private val loadAccountMark: suspend (SeriesEntry) -> ru.seasonvar.tv.data.account.AccountListMark? = { null },
     private val preferredTranslations: () -> List<String> = { emptyList() },
+    private val currentEntry: (SeriesEntry) -> SeriesEntry = { it },
+    private val hasConfirmedMark: (String) -> Boolean = { false },
     private val load: suspend (SeriesEntry) -> SeriesDetails,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DetailsUiState())
@@ -55,7 +57,7 @@ class SeriesDetailsViewModel(
     private var savedResume: ResumePoint? = null
     private var selectionIntent = EntrySelection()
 
-    fun open(entry: SeriesEntry) = fetch(entry)
+    fun open(entry: SeriesEntry) = fetch(currentEntry(entry))
     fun retry() {
         val current = state.value
         current.entry?.let { entry ->
@@ -92,8 +94,10 @@ class SeriesDetailsViewModel(
                 mutableState.value = DetailsUiState(details.entry, details,
                     translationId = selected.translationId, episodeId = selected.episodeId,
                     seasonResume = savedResume, selectionFailure = selected.failure, progressLoading = true)
-                refreshAccountProgress(details)
-                refreshAccountMark(details.entry)
+                if (force || !hasConfirmedMark(details.entry.id)) {
+                    refreshAccountProgress(details)
+                    refreshAccountMark(details.entry)
+                } else mutableState.value = state.value.copy(progressLoading = false)
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
                 ensureActive()
@@ -223,8 +227,10 @@ class SeriesDetailsViewModel(
         val current = state.value
         val id = current.entry?.id ?: return
         if (current.details == null) return
-        refreshAccountProgress(current.details)
-        refreshAccountMark(current.entry)
+        if (!hasConfirmedMark(id)) {
+            refreshAccountProgress(current.details)
+            refreshAccountMark(current.entry)
+        }
         resumeJob?.cancel()
         resumeJob = viewModelScope.launch {
             val point = loadResume(id)
@@ -260,6 +266,7 @@ class SeriesDetailsViewModel(
                 }
             @Suppress("UNCHECKED_CAST")
             return SeriesDetailsViewModel(loadResume = progress::read, preferredTranslations = preferredTranslations,
+                currentEntry = repository::currentEntry, hasConfirmedMark = { (repository.cardMark(it)?.revision ?: 0) > 0 },
                 reload = { loadDetails(it, true) },
                 loadAccountMark = { entry -> account?.listMark(ru.seasonvar.tv.data.account.AccountListMark(entry.id, entry.url)) },
                 loadAccountProgress = { details -> account?.progressSnapshot()?.let { snapshot ->

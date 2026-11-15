@@ -222,7 +222,6 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     private fun invalidateMarksCache(seasonId: String) {
         htmlCache?.invalidate("personal-")
         htmlCache?.invalidate("series-$seasonId.html")
-        cardData?.clearPrivate(cancelLoads = false)
     }
 
     internal suspend fun seasonPage(entry: ru.seasonvar.tv.data.SeriesEntry): String = authenticatedHtml(entry.url)
@@ -248,17 +247,19 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             return html
         }
         val before = PlaybackMarkParser.snapshot(read(), mark.seasonId, mark.pageUrl)
-        if (automatic && markSupersedes(before, mark)) return@withLock null
+        if (automatic && markSupersedes(before, mark)) {
+            acceptCurrentMark(mark.seasonId, before)
+            return@withLock null
+        }
         currentCoroutineContext().ensureActive()
         val response = transport.saveMark(mark, jar)
         currentCoroutineContext().ensureActive()
         if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
         try { PlaybackMarkParser.requireSuccess(response) }
         catch (error: MarkSaveRejectedException) { read(); throw error }
-        val confirmed = PlaybackMarkParser.parse(read(), mark.seasonId, mark.pageUrl)
-        if (confirmed != mark) throw MarkVerificationException()
-        invalidateMarksCache(mark.seasonId)
-        mutableMarksRevision.value++
+        val entry = cardData?.knownEntry(mark.seasonId) ?: ru.seasonvar.tv.data.SeriesEntry(
+            mark.seasonId, mark.pageUrl, "", null, "", "")
+        publishMark(entry, PlaybackMarkSnapshot(mark = mark))
         mark
     } }
 
@@ -284,7 +285,10 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         }
         val beforeHtml = read()
         val before = PlaybackMarkParser.snapshot(beforeHtml, target.seasonId, target.pageUrl)
-        if (AccountListStatus.from(before) == status) return@withLock before
+        if (AccountListStatus.from(before) == status) {
+            acceptCurrentMark(entry.id, before)
+            return@withLock before
+        }
         val watching = if (status == AccountListStatus.WATCHING) AccountStatusChange.watchingMark(
             ru.seasonvar.tv.data.SeriesDetailsParser.parse(beforeHtml, entry), entry.initialSelection) else null
         val response = transport.saveStatus(AccountStatusChange(target, status, watching), jar)
@@ -292,10 +296,8 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
         try { PlaybackMarkParser.requireSuccess(response) }
         catch (error: MarkSaveRejectedException) { read(); throw error }
-        val after = PlaybackMarkParser.snapshot(read(), target.seasonId, target.pageUrl)
-        if (AccountListStatus.from(after) != status || watching != null && after.mark != watching) throw MarkVerificationException()
-        invalidateMarksCache(target.seasonId)
-        mutableMarksRevision.value++
+        val after = PlaybackMarkSnapshot(mark = watching, status = status.code)
+        publishMark(entry, after)
         after
     } }
 
@@ -327,12 +329,23 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
             try { PlaybackMarkParser.requireSuccess(response) }
             catch (error: MarkSaveRejectedException) { read(); throw error }
-            val after = read()
-            if (after.mark != null || after.status != null) throw MarkVerificationException()
         }
-        invalidateMarksCache(target.seasonId)
-        mutableMarksRevision.value++
+        val entry = cardData?.knownEntry(target.seasonId) ?: ru.seasonvar.tv.data.SeriesEntry(
+            target.seasonId, target.pageUrl, "", null, "", "")
+        publishMark(entry, PlaybackMarkSnapshot())
     } }
+
+    private fun acceptCurrentMark(id: String, snapshot: PlaybackMarkSnapshot) {
+        val previous = cardData?.mark(id) ?: return
+        if (previous.snapshot != snapshot) publishMark(cardData.knownEntry(id) ?: previous.entry, snapshot)
+    }
+
+    private fun publishMark(entry: ru.seasonvar.tv.data.SeriesEntry, snapshot: PlaybackMarkSnapshot) {
+        invalidateMarksCache(entry.id)
+        val revision = marksRevision.value + 1
+        cardData?.applyMark(entry, snapshot, revision)
+        mutableMarksRevision.value = revision
+    }
 
     private suspend fun authenticatedHtml(url: String): String {
         val expected = session.value

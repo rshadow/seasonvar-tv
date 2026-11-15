@@ -71,18 +71,20 @@ class PlaybackMarkRepositoryTest {
         return repository
     }
 
-    @Test fun saving_is_confirmed_by_a_fresh_authenticated_page_after_the_post() = runBlocking {
+    @Test fun saving_publishes_after_success_without_an_additional_page_read() = runBlocking {
         val transport = Transport()
         val repository = loggedIn(transport)
         assertEquals(point, repository.savePlaybackMark(point))
-        assertEquals(listOf("GET $page", "POST mark", "GET $page"), transport.calls)
+        assertEquals(listOf("GET $page", "POST mark"), transport.calls)
         assertEquals(listOf(point), transport.writes)
     }
 
-    @Test fun success_response_without_persisted_state_is_not_reported_as_saved() = runBlocking {
+    @Test fun success_response_is_authoritative_without_readback() = runBlocking {
         val transport = Transport().apply { persist = false }
         val repository = loggedIn(transport)
-        try { repository.savePlaybackMark(point); fail() } catch (_: MarkVerificationException) { }
+        assertEquals(point, repository.savePlaybackMark(point))
+        assertEquals(1L, repository.marksRevision.value)
+        assertEquals(listOf("GET $page", "POST mark"), transport.calls)
     }
 
     @Test fun rejected_response_does_not_report_success_even_if_the_page_changed() = runBlocking {
@@ -106,14 +108,14 @@ class PlaybackMarkRepositoryTest {
         assertTrue(transport.calls.isEmpty())
     }
 
-    @Test fun session_expiry_after_the_post_clears_identity_and_does_not_claim_success() = runBlocking {
-        for (response in listOf("""{"msg":"success"}""", """{"msg":"error"}""")) {
-            val transport = Transport().apply { this.response = response; expireAfterWrite = true }
-            val repository = loggedIn(transport)
-            try { repository.savePlaybackMark(point); fail() } catch (_: SessionExpiredException) { }
-            assertNull(repository.session.value.user)
-            assertTrue(repository.session.value.expired)
-        }
+    @Test fun expiry_after_success_is_detected_on_the_next_authenticated_read() = runBlocking {
+        val transport = Transport().apply { expireAfterWrite = true }
+        val repository = loggedIn(transport)
+        assertEquals(point, repository.savePlaybackMark(point))
+        assertEquals(1L, repository.marksRevision.value)
+        try { repository.listStatus(AccountListMark("123", page)); fail() } catch (_: SessionExpiredException) { }
+        assertNull(repository.session.value.user)
+        assertTrue(repository.session.value.expired)
     }
 
     @Test fun automatic_updates_do_not_downgrade_later_episodes_or_completed_marks() = runBlocking {
@@ -132,7 +134,7 @@ class PlaybackMarkRepositoryTest {
         }
     }
 
-    @Test fun automatic_completion_replaces_timed_point_and_notifies_after_verification() = runBlocking {
+    @Test fun automatic_completion_replaces_timed_point_and_notifies_after_success() = runBlocking {
         val transport = Transport().apply { saved = point }
         val repository = loggedIn(transport)
         assertEquals(0L, repository.marksRevision.value)
@@ -153,11 +155,11 @@ class PlaybackMarkRepositoryTest {
         }
     }
 
-    @Test fun removing_a_mark_requires_post_success_and_authenticated_empty_readback() = runBlocking {
+    @Test fun removing_a_mark_requires_post_success_without_readback() = runBlocking {
         val transport = Transport().apply { saved = point }
         val repository = loggedIn(transport)
         repository.removeListMark(AccountListMark("123", page), repository.session.value.version)
-        assertEquals(listOf("GET $page", "POST remove", "GET $page"), transport.calls)
+        assertEquals(listOf("GET $page", "POST remove"), transport.calls)
         assertNull(transport.saved)
         assertEquals(1L, repository.marksRevision.value)
     }
@@ -179,21 +181,21 @@ class PlaybackMarkRepositoryTest {
         }
     }
 
-    @Test fun deletion_without_persistence_or_valid_success_is_not_confirmed() = runBlocking {
-        for (persist in listOf(false, true)) {
+    @Test fun deletion_uses_the_success_response_and_rejects_errors() = runBlocking {
+        for (accepted in listOf(false, true)) {
             val transport = Transport().apply {
-                saved = point
-                this.persist = persist
-                if (persist) response = "{\"msg\":\"error\"}"
+                saved = point; persist = false
+                if (!accepted) response = "{\"msg\":\"error\"}"
             }
             val repository = loggedIn(transport)
-            try { repository.removeListMark(AccountListMark("123", page), repository.session.value.version); fail() }
-            catch (error: Exception) { assertTrue(error is MarkVerificationException || error is MarkSaveRejectedException) }
-            assertEquals(0L, repository.marksRevision.value)
+            if (accepted) repository.removeListMark(AccountListMark("123", page), repository.session.value.version)
+            else try { repository.removeListMark(AccountListMark("123", page), repository.session.value.version); fail() }
+                catch (_: MarkSaveRejectedException) { }
+            assertEquals(if (accepted) 1L else 0L, repository.marksRevision.value)
         }
     }
 
-    @Test fun deletion_rejects_stale_owner_and_invalid_or_expired_readback() = runBlocking {
+    @Test fun deletion_rejects_stale_owner_and_expired_authorization_before_write() = runBlocking {
         val transport = Transport().apply { saved = point }
         val repository = loggedIn(transport)
         val owner = repository.session.value.version
@@ -201,7 +203,7 @@ class PlaybackMarkRepositoryTest {
         transport.calls.clear()
         try { repository.removeListMark(AccountListMark("123", page), owner); fail() } catch (_: CancellationException) { }
         assertTrue(transport.calls.isEmpty())
-        transport.expireAfterWrite = true
+        transport.expired = true
         try { repository.removeListMark(AccountListMark("123", page), repository.session.value.version); fail() }
         catch (_: SessionExpiredException) { }
         assertTrue(repository.session.value.expired)
@@ -221,13 +223,13 @@ class PlaybackMarkRepositoryTest {
         }
     }
     private val entry get() = ru.seasonvar.tv.data.SeriesEntry("123", page, "Тест", 1, "", "")
-    @Test fun each_status_is_verified_after_post_and_same_status_is_idempotent() = runBlocking {
+    @Test fun each_status_publishes_after_success_and_same_status_is_idempotent() = runBlocking {
         val transport = Transport(); val repository = loggedIn(transport)
         for (status in AccountListStatus.entries) {
             transport.calls.clear()
             val saved = repository.setListStatus(entry, status, repository.session.value.version)
             assertEquals(status, AccountListStatus.from(saved))
-            assertEquals(listOf("GET $page", "POST status", "GET $page"), transport.calls)
+            assertEquals(listOf("GET $page", "POST status"), transport.calls)
             transport.calls.clear(); repository.setListStatus(entry, status, repository.session.value.version)
             assertEquals(listOf("GET $page"), transport.calls)
         }
@@ -248,18 +250,18 @@ class PlaybackMarkRepositoryTest {
             AccountListStatus.WATCHING, repository.session.value.version)
         assertEquals("0", fallback.mark!!.translationId); assertEquals("3", fallback.mark.episode)
     }
-    @Test fun status_write_requires_persisted_state_and_a_matching_owner() = runBlocking {
+    @Test fun status_write_uses_success_response_and_requires_a_matching_owner() = runBlocking {
         val transport = Transport().apply { persist = false }; val repository = loggedIn(transport)
-        try { repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version); fail() }
-        catch (_: MarkVerificationException) { }
-        assertEquals(0L, repository.marksRevision.value)
+        val result = repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version)
+        assertEquals(AccountListStatus.WATCHED, AccountListStatus.from(result))
+        assertEquals(1L, repository.marksRevision.value)
         transport.calls.clear()
         try { repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version + 1); fail() }
         catch (_: CancellationException) { }
         assertTrue(transport.calls.isEmpty())
     }
     @Test fun expired_status_write_cannot_claim_success_or_change_revision() = runBlocking {
-        val transport = Transport().apply { expireAfterWrite = true }; val repository = loggedIn(transport)
+        val transport = Transport(); val repository = loggedIn(transport); transport.expired = true
         try { repository.setListStatus(entry, AccountListStatus.WATCHED, repository.session.value.version); fail() }
         catch (_: SessionExpiredException) { }
         assertTrue(repository.session.value.expired); assertEquals(0L, repository.marksRevision.value)

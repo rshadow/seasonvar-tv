@@ -53,6 +53,15 @@ class SmartContinueViewModel internal constructor(
         refreshJob?.cancel()
         if (visible) refresh() else mutableState.value = state.value.copy(loading = false)
     }
+    fun markChanged(change: ru.seasonvar.tv.data.cache.CardMarkChange, details: SeriesDetails?) {
+        dirty = true
+        refreshJob?.cancel()
+        val current = state.value
+        val entries = current.entries.mapNotNull { entry ->
+            if (entry.id == change.entry.id) change.continuation(entry, details) else entry
+        }
+        mutableState.value = current.copy(entries = entries, loading = false)
+    }
     fun historyCleared() {
         refreshJob?.cancel()
         dirty = false
