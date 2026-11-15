@@ -3,7 +3,11 @@ package ru.seasonvar.tv.ui.navigation
 internal class BackNavigation {
     private var lastPress: Long? = null
 
-    fun shouldExit(now: Long): Boolean {
+    fun shouldExit(now: Long, fromMenu: Boolean): Boolean {
+        if (!fromMenu) {
+            reset()
+            return false
+        }
         val previous = lastPress
         if (previous != null && now - previous in 0..DOUBLE_PRESS_MILLIS) {
             reset()
@@ -18,6 +22,6 @@ internal class BackNavigation {
     }
 
     companion object {
-        const val DOUBLE_PRESS_MILLIS = 500L
+        const val DOUBLE_PRESS_MILLIS = 2000L
     }
 }

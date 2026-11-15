@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="back_again_to_exit">Нажмите «Назад» ещё раз для выхода</string>
     <string name="browse_catalog_title">Каталог</string>
     <string name="catalog_country_exclude">Исключить выбранную страну</string>
     <string name="catalog_origin">Производство</string>
