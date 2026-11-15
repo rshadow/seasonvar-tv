@@ -248,6 +248,22 @@ object PosterBackdropProbe {
             check(regularInk > 20 && boldInk > regularInk)
             check(textPreview.buttonBounds.get().left == focusedBounds.left && textPreview.buttonBounds.get().height() == focusedBounds.height())
             capture("00-configured-focused-setting")
+            phase = "text-focus-dependencies"
+            val configured = ru.seasonvar.tv.ui.settings.loadInterfaceThemes(targetContext, ru.seasonvar.tv.R.xml.theme_config_probe).default
+            for (theme in listOf(InterfaceTheme.CLASSIC, InterfaceTheme.GLASS, configured)) {
+                val state = ThemeTextFocusState()
+                runOnMainSync { activity!!.setContent { ThemeTextFocusPreview(theme, state) } }
+                await { state.renderedFocus.get() == false && state.compositions.get() > 0 }
+                val initial = state.compositions.get()
+                runOnMainSync { state.focused.value = true }
+                await { state.renderedFocus.get() == true }
+                if (theme == configured) check(state.compositions.get() > initial)
+                else check(state.compositions.get() == initial)
+                runOnMainSync { state.focused.value = false }
+                await { state.renderedFocus.get() == false }
+                if (theme != configured) check(state.compositions.get() == initial)
+            }
+            result.putBoolean("text_focus_dependencies", true)
             phase = "plain"
             var nativeColorsApplied = false
             runOnMainSync { nativeColorsApplied = checkNativePlayerTheme(checkNotNull(activity)) }
