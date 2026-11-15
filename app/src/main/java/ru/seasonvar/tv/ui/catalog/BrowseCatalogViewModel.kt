@@ -113,6 +113,11 @@ class BrowseCatalogViewModel(
 
     fun refreshIfStarted() { if (started) refresh() }
 
+    fun cancelForNetworkChange() {
+        job?.cancel(); generation++
+        mutableState.value = state.value.copy(page = state.value.page.copy(loading = false))
+    }
+
     class Factory(private val repository: CatalogRepository, private val preferences: ListFilterPreferences,
         private val account: AccountRepository, private val owner: () -> String?) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -37,6 +37,7 @@ class SearchViewModel(
     init { ru.seasonvar.tv.ui.catalog.manageListParsing(viewModelScope, state) { it.results.entries } }
     private var searchJob: Job? = null
     private var active = false
+    private var started = false
     private var touchedDuringVisit = false
     private var historyDirty = false
     private var historyGeneration = 0L
@@ -113,6 +114,7 @@ class SearchViewModel(
         searchJob?.cancel()
         touchedDuringVisit = true
         historyDirty = query.isNotBlank()
+        if (query.isBlank()) started = false
         mutableState.value = state.value.copy(query = query, results = CatalogUiState(loading = query.isNotBlank()),
             showHistory = query.isBlank() && state.value.recentQueries.isNotEmpty(), focusHistoryOnShow = false)
         request(debounce = true)
@@ -138,15 +140,19 @@ class SearchViewModel(
     }
 
     fun networkChanged() {
-        if (active) {
-            request(debounce = false)
-        }
+        if (started) request(debounce = false, background = true)
     }
 
-    private fun request(debounce: Boolean) {
+    fun cancelForNetworkChange() {
+        searchJob?.cancel()
+        mutableState.value = state.value.copy(results = state.value.results.copy(loading = false))
+    }
+
+    private fun request(debounce: Boolean, background: Boolean = false) {
         searchJob?.cancel()
         val query = mutableState.value.query.trim()
-        if (query.isEmpty() || !active || state.value.showHistory) return
+        if (query.isEmpty() || !background && (!active || state.value.showHistory)) return
+        started = true
         mutableState.value = mutableState.value.copy(results = mutableState.value.results.copy(loading = true, failure = null))
         searchJob = viewModelScope.launch {
             try {

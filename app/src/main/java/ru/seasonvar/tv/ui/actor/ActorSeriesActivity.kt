@@ -63,7 +63,9 @@ class ActorSeriesActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         val container = application as SeasonvarApplication
-        val model = ViewModelProvider(this, ActorSeriesViewModel.Factory(container.repository, url))[ActorSeriesViewModel::class.java]
+        val model = ViewModelProvider(this, ActorSeriesViewModel.Factory(container.repository, url) {
+            container.prepareNetwork(container.networkSettings.configuration.value)
+        })[ActorSeriesViewModel::class.java]
         details = ViewModelProvider(this, SeriesDetailsViewModel.Factory(container.repository, container.playbackProgress,
             container.account, { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
         val actions = ViewModelProvider(this, MarkRemovalViewModel.Factory(container.account, container.accountMarks,
@@ -106,6 +108,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val state = parsedCatalogState(base, selectedKey, url to session.version)
     val selected = state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
     var entry by remember { mutableStateOf<SeriesEntry?>(null) }
+    ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(url.takeIf { entry == null }) { model.setVisible(it != null) }
     val list = rememberLazyListState()
     val grid = rememberLazyGridState()
     val layout by container.interfaceSettings.actorCatalogLayout.collectAsStateWithLifecycle()

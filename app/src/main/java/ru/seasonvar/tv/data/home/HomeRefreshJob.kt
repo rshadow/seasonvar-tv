@@ -15,7 +15,7 @@ class HomeRefreshJob : JobService() {
                 home.refresh()
                 home.failure.value
             }
-            catch (cancelled: CancellationException) { throw cancelled }
+            catch (cancelled: CancellationException) { currentCoroutineContext().ensureActive(); true }
             catch (_: Exception) { true }
             jobFinished(params, retry)
         }

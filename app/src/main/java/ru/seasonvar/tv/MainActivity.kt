@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private var visiblePersonalFeed: PersonalFeed? = null
     private var historyRevision = 0L
     private var markRevision = 0L
+    private lateinit var listRefresh: ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator
 
     private val playbackLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) result.data?.let { data ->
@@ -46,13 +47,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun networkChanged() {
-        smartModel.invalidate()
-        models.values.forEach { it.networkChanged() }
-        browseModel.refreshIfStarted()
-        searchModel.networkChanged()
-        personalModels.values.forEach { it.refreshIfActive() }
-        models.values.forEach { it.refreshIfStarted() }
-        searchModel.marksChanged()
+        val container = application as SeasonvarApplication
+        container.account.invalidateSharedReads()
+        container.smartContinue.invalidateIfChanged()
+        listRefresh.networkChanged(container.networkSettings.configuration.value)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,8 +85,7 @@ class MainActivity : ComponentActivity() {
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
-            container.account, container.smartContinueCache,
-            { container.interfaceSettings.preferredTranslations.value }))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
+            container.account, container.smartContinueCache, container.smartContinue))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
         val historyClearModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.HistoryClearViewModel.Factory(
             container.account,
             onStarted = { personalModels.getValue(PersonalFeed.HISTORY).invalidate() },
@@ -107,6 +104,19 @@ class MainActivity : ComponentActivity() {
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
             preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
+        listRefresh = ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Factory(
+            container.networkSettings.configuration.value, container::prepareNetwork, buildMap {
+                models.forEach { (feed, model) -> put(ru.seasonvar.tv.ui.navigation.Section.entries.first { it.publicFeed == feed },
+                    ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(model::cancelForNetworkChange, model::refreshIfStarted)) }
+                personalModels.forEach { (feed, model) -> put(ru.seasonvar.tv.ui.navigation.Section.entries.first { it.personalFeed == feed },
+                    ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(model::cancelForNetworkChange, model::refreshIfStarted)) }
+                put(ru.seasonvar.tv.ui.navigation.Section.CATALOG, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(
+                    browseModel::cancelForNetworkChange, browseModel::refreshIfStarted))
+                put(ru.seasonvar.tv.ui.navigation.Section.SEARCH, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(
+                    searchModel::cancelForNetworkChange, searchModel::networkChanged))
+                put(ru.seasonvar.tv.ui.navigation.Section.SMART_CONTINUE, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(
+                    smartModel::cancelForNetworkChange, smartModel::refreshIfStarted))
+            }))[ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator::class.java]
         val removalModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.MarkRemovalViewModel.Factory(
             container.account, container.accountMarks, onRemoved = {}))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
         setContent {
@@ -186,6 +196,10 @@ class MainActivity : ComponentActivity() {
                 onSearchVisible = { visible -> if (visible) searchModel.activate() else searchModel.deactivate() },
                 onRefresh = { feed -> models.getValue(feed).refresh() },
                 onFeedVisible = { feed -> models.getValue(feed).activate() },
+                onListVisibilityChange = { section ->
+                    listRefresh.setVisible(section)
+                    container.continueForeground = section == ru.seasonvar.tv.ui.navigation.Section.SMART_CONTINUE
+                },
                 connectionCheck = connectionCheck,
                 onConnectionRefresh = connectionCheckModel::refresh,
                 onConnectionVisible = connectionCheckModel::setVisible,

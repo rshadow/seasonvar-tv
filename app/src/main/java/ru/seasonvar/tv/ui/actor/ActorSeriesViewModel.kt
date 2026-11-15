@@ -20,10 +20,14 @@ import ru.seasonvar.tv.ui.catalog.manageListParsing
 class ActorSeriesViewModel(
     private val cached: suspend () -> CatalogPage?,
     private val load: suspend () -> CatalogPage,
+    private val prepare: suspend () -> Unit = {},
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState())
     val state = mutableState.asStateFlow()
     private var job: Job? = null
+    var isVisible = false
+        private set
+    fun setVisible(value: Boolean) { isVisible = value }
     init { manageListParsing(viewModelScope, state) { it.entries } }
 
     fun refresh(clear: Boolean = false) {
@@ -36,6 +40,8 @@ class ActorSeriesViewModel(
                     mutableState.value = CatalogUiState(date = it.date, entries = it.entries,
                         loaded = true, loading = true, cached = true)
                 }
+                prepare()
+                ensureActive()
                 val page = load()
                 ensureActive()
                 mutableState.value = CatalogUiState(date = page.date, entries = page.entries, loading = false, loaded = true)
@@ -51,11 +57,12 @@ class ActorSeriesViewModel(
         }
     }
 
-    class Factory(private val repository: CatalogRepository, private val url: String) : ViewModelProvider.Factory {
+    class Factory(private val repository: CatalogRepository, private val url: String,
+        private val prepare: suspend () -> Unit = {}) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(ActorSeriesViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return ActorSeriesViewModel({ repository.cachedActorPage(url) }, { repository.actorPage(url) }) as T
+            return ActorSeriesViewModel({ repository.cachedActorPage(url) }, { repository.actorPage(url) }, prepare) as T
         }
     }
 }

@@ -93,7 +93,7 @@ def main():
         ready, opening = reopen()
         (args.output / ("opening-frames-" + str(index + 1) + ".txt")).write_text(opening, encoding="utf-8")
         call("shell", "dumpsys", "gfxinfo", APP, "reset")
-        keys = ["DPAD_DOWN"] + ["DPAD_RIGHT", "DPAD_LEFT"] * 8 + ["PAGE_DOWN", "PAGE_UP"]
+        keys = ["DPAD_DOWN"] + ["DPAD_RIGHT", "DPAD_LEFT"] * config["details_navigation_pairs"] + ["PAGE_DOWN", "PAGE_UP"]
         interval = config["details_key_interval_seconds"]
         workload = "; ".join("input keyevent KEYCODE_" + key + "; sleep " + str(interval) for key in keys)
         call("shell", workload)

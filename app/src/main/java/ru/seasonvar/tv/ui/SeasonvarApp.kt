@@ -163,6 +163,7 @@ internal fun SeasonvarApp(
     cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
     browseCatalog: ru.seasonvar.tv.ui.catalog.BrowseCatalogController? = null,
     onFeedVisible: (PublicFeed) -> Unit = {},
+    onListVisibilityChange: ((Section?) -> Unit)? = null,
     searchState: SearchUiState = SearchUiState(),
     onSearchQuery: (String) -> Unit = {},
     onSearchSubmit: () -> Unit = {},
@@ -233,6 +234,7 @@ internal fun SeasonvarApp(
             cardData = cardData,
             browseCatalog = browseCatalog,
             onFeedVisible = onFeedVisible,
+            onListVisibilityChange = onListVisibilityChange,
             searchState = searchState,
             onSearchQuery = onSearchQuery,
             onSearchSubmit = onSearchSubmit,
@@ -280,6 +282,7 @@ private fun SeasonvarContent(
     cardData: ru.seasonvar.tv.data.cache.CardDataCache?,
     browseCatalog: ru.seasonvar.tv.ui.catalog.BrowseCatalogController? = null,
     onFeedVisible: (PublicFeed) -> Unit = {},
+    onListVisibilityChange: ((Section?) -> Unit)? = null,
     searchState: SearchUiState = SearchUiState(),
     onSearchQuery: (String) -> Unit = {},
     onSearchSubmit: () -> Unit = {},
@@ -369,6 +372,10 @@ private fun SeasonvarContent(
         Triple(catalogKey, if (browsing) browseState.applied.values else activeFilters, accountSession.version))
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
+    ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(section.takeIf {
+        !detailsOpen && (it.publicFeed != null || it.personalFeed != null ||
+            it == Section.CATALOG || it == Section.SEARCH || it == Section.SMART_CONTINUE)
+    }, onListVisibilityChange)
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
     var removalOrigin by remember { mutableStateOf<RemovalFocusOrigin?>(null) }
     var removalWasVisible by remember { mutableStateOf(false) }

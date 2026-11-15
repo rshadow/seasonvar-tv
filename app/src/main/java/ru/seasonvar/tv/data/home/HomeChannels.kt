@@ -44,7 +44,7 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
                 app.interfaceSettings.preferredTranslations, requests) { _, _, _, _ -> Unit }
                 .collectLatest {
                     try { schedule(); refresh() }
-                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (cancelled: CancellationException) { currentCoroutineContext().ensureActive() }
                     catch (error: Exception) {
                         mutableFailure.value = true
                         Log.w("SeasonvarHome", "refresh_failed reason=" + error.javaClass.simpleName)
@@ -85,6 +85,11 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
         if (needsAccount) restoreAccountIfNeeded()
         val session = app.account.session.value
         val owner = session.user?.id
+        val marks = app.account.marksRevision.value
+        val history = app.account.historyRevision.value
+        val historyReset = app.account.historyReset.value
+        val connection = app.account.readGeneration
+        val voices = app.interfaceSettings.preferredTranslations.value
         HomeChannel.entries.filter { it.personal }.forEach { channel ->
             if (owner == null || publisherCardOwnerChanged(channel, owner)) publisher.clear(channel)
         }
@@ -97,7 +102,7 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
                 try {
                     val entries = when (channel) {
                         HomeChannel.CONTINUE -> {
-                            val page = SmartContinueRepository(app.account, { app.interfaceSettings.preferredTranslations.value }).load()
+                            val page = app.smartContinue.load()
                             if (page.incomplete) throw page.failure ?: java.io.IOException("Incomplete feed")
                             page.entries
                         }
@@ -105,7 +110,10 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
                         HomeChannel.NEWEST -> app.repository.load(LocalDate.now(), PublicFeed.NEWEST).entries
                     }
                     ensureActive()
-                    fun valid() = selectedChannels() == enabled && app.account.session.value == session
+                    fun valid() = selectedChannels() == enabled && app.account.session.value == session &&
+                        app.account.marksRevision.value == marks && app.account.historyRevision.value == history &&
+                        app.account.historyReset.value == historyReset && app.account.readGeneration == connection &&
+                        app.interfaceSettings.preferredTranslations.value == voices
                     if (!valid()) throw CancellationException()
                     publisher.publish(channel, entries, owner, ::valid)
                 } catch (cancelled: CancellationException) { throw cancelled }

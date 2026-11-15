@@ -23,6 +23,16 @@ class ActorSeriesViewModelTest {
     private fun page(id: String) = CatalogPage(LocalDate.of(2026, 11, 13), listOf(
         SeriesEntry(id, "https://seasonvar.ru/serial-$id-test.html", id, null, "", "")))
 
+    @Test fun visibility_is_independent_of_loading_and_cached_rows_precede_network_preparation() = runTest(dispatcher) {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>(); var calls = 0
+        val model = ActorSeriesViewModel({ page("1") }, { calls++; page("2") }, { gate.await() })
+        model.setVisible(true); model.refresh(); runCurrent()
+        assertTrue(model.isVisible); assertEquals("1", model.state.value.entries.single().id)
+        model.setVisible(false); gate.complete(Unit); runCurrent()
+        assertFalse(model.isVisible); assertEquals(1, calls)
+        assertEquals("2", model.state.value.entries.single().id)
+    }
+
     @Test fun shows_cached_data_while_refreshing_then_replaces_it_with_the_server_response() = runTest(dispatcher) {
         val model = ActorSeriesViewModel({ page("1") }, { delay(1000); page("2") })
         model.refresh(); runCurrent()

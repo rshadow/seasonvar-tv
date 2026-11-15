@@ -18,8 +18,9 @@ object AccountProgressParser {
         return if (total > 0 && marked in 0..total) ProgressCounter(marked, total) else null
     }
     fun snapshot(html: String): AccountProgressSnapshot {
-        val entries = AccountParser.personalList(html, PersonalFeed.RESUME).entries +
-            AccountParser.personalList(html, PersonalFeed.WATCHED).entries
+        return AccountParser.snapshot(html).progress
+    }
+    internal fun snapshot(entries: List<SeriesEntry>): AccountProgressSnapshot {
         val counters = entries.groupBy { it.id }.mapNotNull { (id, rows) ->
             rows.mapNotNull { it.accountProgress?.episodes?.counter }.distinct().singleOrNull()?.let { id to it }
         }.toMap()

@@ -37,7 +37,7 @@ class PersonalListViewModel internal constructor(
     private var nextPage: String? = null
     private val visitedPages = mutableSetOf<String>()
     private var version = -1L
-    private var active = false
+    private var started = false
     private var dirty = false
     private var generation = 0L
     private var filterOptionsJob: Job? = null
@@ -76,10 +76,10 @@ class PersonalListViewModel internal constructor(
             mutableFilters.value = initialFilters(markOwner(session.user))
             nextPage = null; visitedPages.clear()
             mutableState.value = CatalogUiState(loading = false)
-            if (active && session.user != null) refresh()
+            if (started && session.user != null) refresh()
         }
     } } }
-    fun activate() { active = true; if ((dirty || !state.value.loaded) && !state.value.loading) refresh() }
+    fun activate() { started = true; if ((dirty || !state.value.loaded) && !state.value.loading) refresh() }
     fun invalidate() {
         dirty = true
         generation++
@@ -87,7 +87,11 @@ class PersonalListViewModel internal constructor(
         nextPage = null; visitedPages.clear()
         mutableState.value = state.value.copy(loading = false, loadingMore = false, moreFailure = null, hasMore = false)
     }
-    fun refreshIfActive() { if (active) refresh() }
+    fun refreshIfStarted() { if (started) refresh() }
+    fun cancelForNetworkChange() {
+        dismissFilters()
+        invalidate()
+    }
     fun historyCleared() {
         invalidate()
         dirty = false
