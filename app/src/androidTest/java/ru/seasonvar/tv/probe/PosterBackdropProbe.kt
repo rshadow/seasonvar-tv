@@ -264,6 +264,23 @@ object PosterBackdropProbe {
                 if (theme != configured) check(state.compositions.get() == initial)
             }
             result.putBoolean("text_focus_dependencies", true)
+            phase = "theme-parameter-cache"
+            val parameters = ThemeParameterState()
+            runOnMainSync { activity!!.setContent { ThemeParameterPreview(parameters) } }
+            await { parameters.snapshot.get() != null }
+            val initialDimensions = parameters.snapshot.get().dimensions
+            runOnMainSync { parameters.refresh.value = true }
+            await { parameters.snapshot.get().refresh }
+            check(parameters.snapshot.get().dimensions === initialDimensions)
+            runOnMainSync { parameters.density.value = 3f }
+            await { parameters.snapshot.get().density == 3f }
+            check(parameters.snapshot.get().dimensions !== initialDimensions)
+            val expectedButtonWidth = targetContext.resources.getDimension(ru.seasonvar.tv.R.dimen.seasonvar_button_width) / 3f
+            check(kotlin.math.abs(parameters.snapshot.get().dimensions.buttonWidth.value - expectedButtonWidth) < 0.01f)
+            runOnMainSync { parameters.theme.value = configured }
+            await { parameters.snapshot.get().theme == configured }
+            check(parameters.snapshot.get().dimensions.buttonCornerRadius.value == 11f)
+            result.putBoolean("theme_parameters_cached", true)
             phase = "plain"
             var nativeColorsApplied = false
             runOnMainSync { nativeColorsApplied = checkNativePlayerTheme(checkNotNull(activity)) }
@@ -396,7 +413,9 @@ object PosterBackdropProbe {
             check(secondListPixel != firstListPixel)
             val stripTop = bounds(rows[1].title).top
             phase = "list-grid"; runOnMainSync { layout.value = CatalogLayout.GRID; prefetch.value = true }
-            await { clickable(rows[1].title) != null && bounds(rows[1].title).top < stripTop }
+            await { clickable(rows[1].title)?.let { item ->
+                Rect().also(item::getBoundsInScreen).top < stripTop
+            } == true }
             uiAutomation.waitForIdle(300, 3000)
             focusRow(1)
             await { published.value?.url == rows[1].posterUrl && published.value?.bitmap?.value != null }
