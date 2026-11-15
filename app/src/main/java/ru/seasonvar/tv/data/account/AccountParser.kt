@@ -30,7 +30,7 @@ object AccountParser {
             }
         }
     }
-    private fun user(doc: Document): AccountUser? {
+    internal fun user(doc: Document): AccountUser? {
         val header = doc.selectFirst(".headblock-menu") ?: throw MarkupChangedException()
         val links = header.select("a[href]").mapNotNull { a ->
             val url = a.absUrl("href").toHttpUrlOrNull()?.takeIf { siteOrigin(it) } ?: return@mapNotNull null
@@ -76,58 +76,70 @@ object AccountParser {
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         val user = user(doc) ?: throw SessionExpiredException()
         if (doc.selectFirst(".pgs-marks") == null) throw MarkupChangedException()
-        return AccountPage(user, entries(doc, feed, windowed))
+        return snapshot(doc, user).page(feed, windowed)
     }
 
     fun filteredPersonalList(html: String, expectedUser: AccountUser, feed: PersonalFeed, windowed: Boolean = false): AccountPage {
-        require(feed != PersonalFeed.HISTORY)
+        return filteredSnapshot(html, expectedUser).page(feed, windowed)
+    }
+
+    internal fun filteredSnapshot(html: String, expectedUser: AccountUser): ResumeSnapshot {
         val doc = Jsoup.parse(html, "https://seasonvar.ru/")
         if (doc.selectFirst(".headblock-menu") != null && user(doc)?.id != expectedUser.id) throw SessionExpiredException()
         val tabs = doc.select("[data-tabr]")
         if (tabs.size != 4 || tabs.map { it.attr("data-tabr") }.toSet() !=
             setOf("marks-new", "marks-nonew", "marks-want", "marks-watched")) throw MarkupChangedException()
-        return AccountPage(expectedUser, entries(doc, feed, windowed))
+        return snapshot(doc, expectedUser)
     }
 
-    private fun entries(doc: Document, feed: PersonalFeed, windowed: Boolean): List<SeriesEntry> {
-        val tabs = doc.select(feed.tabs.joinToString(", ") { "[data-tabr=$it]" })
-        if (tabs.size != feed.tabs.size && (feed != PersonalFeed.RESUME || tabs.isNotEmpty())) {
-            throw MarkupChangedException()
-        }
-        val entries = if (tabs.isNotEmpty()) {
-            tabs.asSequence().flatMap { tab -> tab.select(".pgs-marks-el").asSequence().mapIndexed { index, row ->
-                val anchor = row.selectFirst("a[href*=serial-]") ?: throw MarkupChangedException()
-                val url = SeasonvarParser.pageUrl(anchor.attr("href").substringBefore('#')) ?: throw MarkupChangedException()
-                val id = seasonId(url)
+    internal fun snapshot(html: String): ResumeSnapshot {
+        val doc = Jsoup.parse(html, "https://seasonvar.ru/")
+        val user = user(doc) ?: throw SessionExpiredException()
+        if (doc.selectFirst(".pgs-marks") == null) throw MarkupChangedException()
+        return snapshot(doc, user)
+    }
+
+    private fun snapshot(doc: Document, user: AccountUser): ResumeSnapshot {
+        val groups = doc.select("[data-tabr]").groupBy { it.attr("data-tabr") }
+        val tabs = groups.mapValues { (tab, elements) ->
+            elements.flatMap { it.select(".pgs-marks-el") }.mapIndexed { index, row ->
+                val anchor = row.selectFirst("a[href*=serial-]")
+                val href = anchor?.absUrl("href")
                 val removeId = row.selectFirst("[data-click=mark-remove][data-id]")?.attr("data-id")
-                if (removeId != null && removeId != id) throw MarkupChangedException()
                 val name = row.selectFirst(".pgs-marks-name")?.text()?.trim().orEmpty()
-                if (name.isBlank()) throw MarkupChangedException()
-                val season = row.selectFirst(".pgs-marks-seas")?.text()?.let { Regex("[0-9]+").find(it)?.value?.toIntOrNull() }
-                    ?: seasonNumber(name)
+                val seasonText = row.selectFirst(".pgs-marks-seas")?.text()
                 val current = row.selectFirst(".pgs-marks-current")?.text()?.trim().orEmpty()
-                val message = row.selectFirst(".pgs-marks-mess")?.text()?.trim()
-                    ?.takeUnless(seasonMessage::matches).orEmpty()
-                val counter = AccountProgressParser.episodes(current)
-                val complete = tab.attr("data-tabr") == "marks-watched" || (counter != null && counter.marked == counter.total)
-                val accountMark = if (current.isNotBlank() || message.isNotBlank() || complete) AccountMark(current, message, complete) else null
-                val progress = counter?.let { AccountProgress(episodes = SeasonEpisodeProgress(id, it)) }
-                val mark = row.attr("data-marksel").takeIf { it.matches(Regex("[0-9]+")) } ?: "$id:$index"
-                SeriesEntry(id, url, title(name), season, "", "https://cdn.svstat.net/oblojka/$id.jpg",
-                    sourceKey = "resume:" + tab.attr("data-tabr") + ":" + mark, accountMark = accountMark, accountProgress = progress, initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")), accountListMark = AccountListMark(id, url))
-            } }
-        } else {
-            doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.asSequence()?.map { anchor ->
-                val url = SeasonvarParser.pageUrl(anchor.attr("href").substringBefore('#')) ?: throw MarkupChangedException()
+                val message = row.selectFirst(".pgs-marks-mess")?.text()?.trim()?.takeUnless(seasonMessage::matches).orEmpty()
+                val markId = row.attr("data-marksel")
+                lazy {
+                    val url = href?.let { SeasonvarParser.pageUrl(it.substringBefore('#')) } ?: throw MarkupChangedException()
+                    val id = seasonId(url)
+                    if (removeId != null && removeId != id || name.isBlank()) throw MarkupChangedException()
+                    val season = seasonText?.let { Regex("[0-9]+").find(it)?.value?.toIntOrNull() } ?: seasonNumber(name)
+                    val counter = AccountProgressParser.episodes(current)
+                    val complete = tab == "marks-watched" || (counter != null && counter.marked == counter.total)
+                    val mark = markId.takeIf { it.matches(Regex("[0-9]+")) } ?: "$id:$index"
+                    SeriesEntry(id, url, title(name), season, "", "https://cdn.svstat.net/oblojka/$id.jpg",
+                        sourceKey = "resume:$tab:$mark",
+                        accountMark = if (current.isNotBlank() || message.isNotBlank() || complete) AccountMark(current, message, complete) else null,
+                        accountProgress = counter?.let { AccountProgress(episodes = SeasonEpisodeProgress(id, it)) },
+                        initialSelection = EntrySelectionParser.markLink(href), accountListMark = AccountListMark(id, url))
+                }
+            }
+        }
+        val legacy = doc.selectFirst(".pgs-marks-bn")?.select("a[href*=serial-]")?.map { anchor ->
+            val href = anchor.absUrl("href")
+            val name = anchor.selectFirst(".pgs-marks-name")?.text() ?: anchor.text()
+            lazy {
+                val url = SeasonvarParser.pageUrl(href.substringBefore('#')) ?: throw MarkupChangedException()
                 val id = seasonId(url)
-                val name = anchor.selectFirst(".pgs-marks-name")?.text() ?: anchor.text()
                 if (name.isBlank()) throw MarkupChangedException()
                 SeriesEntry(id, url, title(name), seasonNumber(name), "", "https://cdn.svstat.net/oblojka/$id.jpg",
-                    initialSelection = EntrySelectionParser.markLink(anchor.absUrl("href")), accountListMark = AccountListMark(id, url))
-            }?.distinctBy { it.url }.orEmpty()
-        }
-        val seen = HashSet<String>()
-        return entries.onEach { if (!seen.add(it.key)) throw MarkupChangedException() }.parseEntries(windowed)
+                    initialSelection = EntrySelectionParser.markLink(href), accountListMark = AccountListMark(id, url))
+            }
+        }.orEmpty()
+        return ResumeSnapshot(user, tabs, legacy, runCatching { PersonalFilterParser.options(doc) },
+            groups.filterValues { it.size != 1 }.keys)
     }
     private fun seasonId(url: String) = Regex("/serial-([0-9]+)").find(url)?.groupValues?.get(1) ?: throw MarkupChangedException()
     private fun seasonNumber(name: String) = Regex("\\((\\d+)\\s*сезон\\)", RegexOption.IGNORE_CASE).find(name)?.groupValues?.get(1)?.toIntOrNull()

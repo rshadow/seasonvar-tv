@@ -9,6 +9,7 @@ import ru.seasonvar.tv.data.SiteClient
 import ru.seasonvar.tv.data.CatalogRepository
 import ru.seasonvar.tv.data.network.NetworkSettings
 import java.io.File
+import kotlinx.coroutines.flow.combine
 
 class SeasonvarApplication : Application(), ImageLoaderFactory {
     internal val applicationScope by lazy { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
@@ -49,7 +50,24 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val updates by lazy { ru.seasonvar.tv.data.update.UpdateRepository(
         ru.seasonvar.tv.data.update.GitHubUpdateSource(configure = pac::githubClient), File(cacheDir, "updates"), updateInstaller::verify) }
     val playbackProgress by lazy { PlaybackProgress(this) }
+    @Volatile internal var continueForeground = false
     val smartContinueCache by lazy { ru.seasonvar.tv.data.smart.PreferencesSmartContinueCache(this) }
+    val smartContinue by lazy {
+        lateinit var shared: ru.seasonvar.tv.data.smart.SharedSmartContinueSource
+        val calculator = ru.seasonvar.tv.data.smart.SmartContinueRepository(account, repository,
+            { interfaceSettings.preferredTranslations.value }, { shared.foreground && continueForeground })
+        shared = ru.seasonvar.tv.data.smart.SharedSmartContinueSource({
+            val session = account.session.value
+            ru.seasonvar.tv.data.smart.SmartContinueKey(session.user?.id, session.version,
+                account.marksRevision.value, account.historyRevision.value, account.readGeneration,
+                interfaceSettings.preferredTranslations.value.toList(), account.historyReset.value)
+        }, calculator, applicationScope,
+            combine(account.session, account.marksRevision, account.historyRevision,
+                interfaceSettings.preferredTranslations) { _, _, _, _ -> Unit },
+            prepare = { prepareNetwork(networkSettings.configuration.value) })
+        shared
+    }
+
     val listFilterPreferences by lazy {
         val store = getSharedPreferences("list-filters", MODE_PRIVATE)
         ru.seasonvar.tv.ui.filters.ListFilterPreferences(

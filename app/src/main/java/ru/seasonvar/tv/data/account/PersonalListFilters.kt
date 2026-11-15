@@ -23,7 +23,9 @@ data class FilteredPersonalPage(val page: AccountPage, val options: PersonalFilt
 
 object PersonalFilterParser {
     fun options(html: String): PersonalFilterOptions {
-        val doc = Jsoup.parse(html)
+        return options(Jsoup.parse(html))
+    }
+    internal fun options(doc: org.jsoup.nodes.Document): PersonalFilterOptions {
         fun choices(name: String): List<FilterOption> {
             val select = doc.select("select[name=$name]").singleOrNull() ?: throw MarkupChangedException()
             val rows = select.select("option[value]").map {

@@ -47,7 +47,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun networkChanged() {
-        listRefresh.networkChanged((application as SeasonvarApplication).networkSettings.configuration.value)
+        val container = application as SeasonvarApplication
+        container.account.invalidateSharedReads()
+        container.smartContinue.invalidateIfChanged()
+        listRefresh.networkChanged(container.networkSettings.configuration.value)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,8 +85,7 @@ class MainActivity : ComponentActivity() {
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)
         }
         smartModel = ViewModelProvider(this, ru.seasonvar.tv.ui.smart.SmartContinueViewModel.Factory(
-            container.account, container.smartContinueCache,
-            { container.interfaceSettings.preferredTranslations.value }))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
+            container.account, container.smartContinueCache, container.smartContinue))[ru.seasonvar.tv.ui.smart.SmartContinueViewModel::class.java]
         val historyClearModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.HistoryClearViewModel.Factory(
             container.account,
             onStarted = { personalModels.getValue(PersonalFeed.HISTORY).invalidate() },
@@ -194,7 +196,10 @@ class MainActivity : ComponentActivity() {
                 onSearchVisible = { visible -> if (visible) searchModel.activate() else searchModel.deactivate() },
                 onRefresh = { feed -> models.getValue(feed).refresh() },
                 onFeedVisible = { feed -> models.getValue(feed).activate() },
-                onListVisibilityChange = listRefresh::setVisible,
+                onListVisibilityChange = { section ->
+                    listRefresh.setVisible(section)
+                    container.continueForeground = section == ru.seasonvar.tv.ui.navigation.Section.SMART_CONTINUE
+                },
                 connectionCheck = connectionCheck,
                 onConnectionRefresh = connectionCheckModel::refresh,
                 onConnectionVisible = connectionCheckModel::setVisible,

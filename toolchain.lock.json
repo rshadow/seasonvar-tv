@@ -1731,6 +1731,7 @@
     "build_type": "profile",
     "navigation_rounds": 3,
     "details_rounds": 5,
+    "details_navigation_pairs": 4,
     "list_rounds": 3,
     "list_warmup_rounds": 2,
     "list_key_interval_seconds": 0.12,

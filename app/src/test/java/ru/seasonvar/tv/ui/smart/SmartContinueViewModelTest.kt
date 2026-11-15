@@ -57,6 +57,18 @@ class SmartContinueViewModelTest {
         gate.complete(Unit); runCurrent()
         assertEquals("2", model.state.value.entries.single().title)
     }
+    @Test fun a_superseded_shared_request_clears_loading_and_can_be_started_again() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SmartContinuePage>(); var calls = 0
+        val model = model(Cache(listOf(entry))) {
+            calls++; if (calls == 1) gate.await() else SmartContinuePage(listOf(entry), emptySet(), false)
+        }
+        runCurrent(); model.setVisible(true); runCurrent(); assertTrue(model.state.value.loading)
+        gate.cancel(); runCurrent()
+        assertFalse(model.state.value.loading); assertEquals(listOf(entry), model.state.value.entries)
+        model.setVisible(false); model.setVisible(true); runCurrent()
+        assertEquals(2, calls); assertTrue(model.state.value.loaded); assertFalse(model.state.value.loading)
+    }
+
     @Test fun cache_is_visible_while_network_loads_and_error_does_not_erase_it() = runTest(dispatcher) {
         val gate = CompletableDeferred<SmartContinuePage>();val cache = Cache(listOf(entry))
         val model = model(cache) { gate.await() };runCurrent();model.setVisible(true);runCurrent()

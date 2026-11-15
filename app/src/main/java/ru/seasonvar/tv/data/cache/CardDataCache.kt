@@ -14,6 +14,8 @@ data class CardPrivateData(
     val mark: AccountMark?,
     val progress: AccountProgress?,
     val listMark: ru.seasonvar.tv.data.account.AccountListMark?,
+    val snapshot: PlaybackMarkSnapshot? = null,
+    val pageOwner: String? = null,
 )
 
 data class CardData(
@@ -132,6 +134,9 @@ class CardDataCache(
                         doc = Jsoup.parse(response.html, entry.url)
                         SeasonvarParser.description(doc, entry)
                     }
+                    val pageOwner = runCatching { ru.seasonvar.tv.data.account.AccountParser.user(doc)?.id }.getOrNull()
+                    if (lease.scope?.private == true && doc.selectFirst(".headblock-menu") != null && pageOwner != lease.scope.owner)
+                        throw ru.seasonvar.tv.data.account.SessionExpiredException()
                     val details = runCatching { SeriesDetailsParser.parse(doc, entry) }.getOrNull()
                     val serverMark = if ((!response.fromDisk || previousMark == null) && lease.scope?.private == true)
                         runCatching { ru.seasonvar.tv.data.account.PlaybackMarkParser.snapshot(doc, entry.id, entry.url) }.getOrNull()
@@ -139,7 +144,8 @@ class CardDataCache(
                     val commonDetails = details?.copy(entry = commonEntry(details.entry), defaultTranslationId = null,
                         playbackUnavailableReason = null)
                     val privateData = CardPrivateData(lease.scope, details?.defaultTranslationId,
-                        details?.playbackUnavailableReason, entry.accountMark, entry.accountProgress, entry.accountListMark)
+                        details?.playbackUnavailableReason, entry.accountMark, entry.accountProgress, entry.accountListMark,
+                        serverMark, pageOwner)
                     val parsed = CardData(description, commonDetails, response.savedAt, privateData)
                     currentCoroutineContext().ensureActive()
                     if (!htmlCache.isCurrent(lease)) throw CancellationException("Card cache scope changed")

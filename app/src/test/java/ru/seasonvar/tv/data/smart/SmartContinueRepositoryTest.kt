@@ -193,6 +193,37 @@ class SmartContinueRepositoryTest {
         assertEquals(8, requests.size); assertEquals(8, requests.toSet().size)
     }
 
+    @Test fun background_continue_reserves_capacity_for_foreground_work() = runTest(timeout = 10.seconds) {
+        val seeds = (1..2).map { i -> season((100 + i).toString(), 1, null, serial = (1000 + i).toString(),
+            choices = listOf(option((100 + i).toString(), 1), option((200 + i).toString(), 2))) }
+        val targets = seeds.mapIndexed { i, old -> season((201 + i).toString(), 2, "1", 20,
+            serial = old.details.serialId, choices = old.details.seasons) }
+        val pages = (seeds + targets).associateBy { it.details.entry.id }
+        val active = AtomicInteger(); val peak = AtomicInteger()
+        val seedCount = AtomicInteger(); val targetCount = AtomicInteger()
+        val seedGate = CompletableDeferred<Unit>(); val targetGate = CompletableDeferred<Unit>()
+        val requests = ConcurrentLinkedQueue<String>()
+        val repository = SmartContinueRepository({ targets.map { it.details.entry } }, { entry ->
+            requests += entry.id
+            peak.accumulateAndGet(active.incrementAndGet(), ::maxOf)
+            try {
+                if (entry.id.toInt() < 200) {
+                    if (seedCount.incrementAndGet() == 2) seedGate.complete(Unit)
+                    seedGate.await()
+                } else {
+                    if (targetCount.incrementAndGet() == 2) targetGate.complete(Unit)
+                    targetGate.await()
+                }
+                pages.getValue(entry.id)
+            } finally { active.decrementAndGet() }
+        }, loadHistoryPage = history(*seeds.reversed().map { it.details.entry }.toTypedArray()), foreground = { false })
+        val result = repository.load()
+        assertFalse(result.incomplete)
+        assertEquals(targets.reversed().map { it.details.entry.id }, result.entries.map { it.id })
+        assertEquals(2, peak.get()); assertEquals(0, active.get())
+        assertEquals(4, requests.size); assertEquals(4, requests.toSet().size)
+    }
+
     @Test fun duplicate_history_and_next_season_share_the_same_in_flight_page_request() = runTest {
         val old = season("30", 3, "2")
         val next = season("40", 4, null)

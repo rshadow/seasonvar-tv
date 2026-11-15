@@ -190,6 +190,17 @@ class CatalogRepository(
 
     fun cardMark(id: String) = cardData.mark(id)
 
+    internal suspend fun markedSeason(entry: SeriesEntry, owner: String): ru.seasonvar.tv.data.smart.MarkedSeason = withContext(Dispatchers.IO) {
+        val lease = htmlCache.capture()
+        val data = loadCard(entry, force = true, lease = lease, needDetails = true)
+        val private = data.privateData ?: throw kotlinx.coroutines.CancellationException()
+        if (!htmlCache.isCurrent(lease) || private.scope != lease.scope) throw kotlinx.coroutines.CancellationException()
+        if (private.pageOwner != owner) throw ru.seasonvar.tv.data.account.SessionExpiredException()
+        val snapshot = private.snapshot ?: throw MarkupChangedException()
+        ru.seasonvar.tv.data.smart.MarkedSeason(cardData.contextual(data, entry) ?: throw MarkupChangedException(),
+            cardData.mark(entry.id)?.snapshot ?: snapshot)
+    }
+
     suspend fun description(entry: SeriesEntry): SeriesDescription = withContext(Dispatchers.IO) {
         cachedDescription(entry) ?: loadCard(entry, force = false).description
     }

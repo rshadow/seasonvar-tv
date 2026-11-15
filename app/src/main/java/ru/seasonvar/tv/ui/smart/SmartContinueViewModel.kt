@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.data.playback.markOwner
@@ -21,6 +23,7 @@ class SmartContinueViewModel internal constructor(
     private val session: StateFlow<AccountSession>,
     private val load: suspend () -> SmartContinuePage,
     private val cache: SmartContinueCache,
+    private val shared: SharedSmartContinueSource? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(CatalogUiState(loading = false))
     val state = mutableState.asStateFlow()
@@ -86,12 +89,12 @@ class SmartContinueViewModel internal constructor(
         refreshJob?.cancel()
         mutableState.value = state.value.copy(loading = true, failure = null)
         refreshJob = viewModelScope.launch {
-            val cached = if (state.value.loaded) state.value.entries else cache.read(expectedOwner)
+            val cached = if (state.value.loaded) state.value.entries else shared?.cached(expectedOwner) ?: cache.read(expectedOwner)
             ensureActive()
             if (session.value.version != version) return@launch
             mutableState.value = state.value.copy(entries = cached.orEmpty(), loaded = cached != null, cached = cached != null)
             try {
-                val page = load()
+                val page = shared?.load(foreground = visible) ?: load()
                 ensureActive()
                 if (session.value.version != version) return@launch
                 val merged = if (!page.incomplete) page.entries else page.entries + cached.orEmpty().filter {
@@ -103,7 +106,13 @@ class SmartContinueViewModel internal constructor(
                 dirty = page.incomplete
                 mutableState.value = CatalogUiState(entries = merged, loading = false, loaded = true,
                     cached = page.incomplete, failure = page.failure?.let(::failure) ?: if (page.incomplete) LoadFailure.MARKUP else null)
-            } catch (e: CancellationException) { throw e }
+            } catch (e: CancellationException) {
+                if (currentCoroutineContext().isActive && session.value.version == version) {
+                    dirty = true
+                    mutableState.value = state.value.copy(loading = false)
+                }
+                throw e
+            }
             catch (e: Exception) {
                 ensureActive()
                 if (session.value.version == version) mutableState.value = state.value.copy(loading = false,
@@ -117,12 +126,11 @@ class SmartContinueViewModel internal constructor(
         else -> LoadFailure.MARKUP
     }
     class Factory(private val account: AccountRepository,
-        private val cache: SmartContinueCache, private val preferences: () -> List<String>) : ViewModelProvider.Factory {
+        private val cache: SmartContinueCache, private val source: SharedSmartContinueSource) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SmartContinueViewModel::class.java))
-            val repository = SmartContinueRepository(account, preferences)
             @Suppress("UNCHECKED_CAST")
-            return SmartContinueViewModel(account.session, repository::load, cache) as T
+            return SmartContinueViewModel(account.session, { source.load() }, cache, source) as T
         }
     }
 }

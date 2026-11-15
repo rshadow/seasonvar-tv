@@ -23,7 +23,17 @@ class SmartContinueRepository(
     private val loadSeason: suspend (SeriesEntry) -> MarkedSeason,
     private val preferences: () -> List<String> = { emptyList() },
     private val loadHistoryPage: suspend (String?) -> AccountPage? = { null },
+    private val foreground: () -> Boolean = { true },
 ) {
+    private val permits = Semaphore(ru.seasonvar.tv.data.settings.CacheSettings.CONTINUE_RESOURCE_CONCURRENCY)
+    private val background = Semaphore(ru.seasonvar.tv.data.settings.CacheSettings.CONTINUE_BACKGROUND_CONCURRENCY)
+    private suspend fun <T> limited(block: suspend () -> T): T = if (foreground()) permits.withPermit { block() }
+        else background.withPermit { permits.withPermit { block() } }
+
+    constructor(account: ru.seasonvar.tv.data.account.AccountRepository, catalog: CatalogRepository,
+        preferences: () -> List<String>, foreground: () -> Boolean = { true }) : this(
+        { account.resume().entries }, { account.markedSeason(it, catalog) }, preferences,
+        { next -> account.personalList(ru.seasonvar.tv.data.account.PersonalFeed.HISTORY, next) }, foreground)
     constructor(account: ru.seasonvar.tv.data.account.AccountRepository, preferences: () -> List<String>) : this(
         { account.resume().entries },
         { entry ->
@@ -35,9 +45,8 @@ class SmartContinueRepository(
     )
 
     suspend fun load(): SmartContinuePage = withContext(Dispatchers.Default) {
-        val permits = Semaphore(4)
-        val marksJob = async { permits.withPermit { loadMarks().distinctBy { it.id } } }
-        var historyJob = async { permits.withPermit { loadHistoryPage(null) } }
+        val marksJob = async { limited { loadMarks().distinctBy { it.id } } }
+        var historyJob = async { limited { loadHistoryPage(null) } }
         val marks = marksJob.await()
         if (marks.isEmpty()) {
             historyJob.cancel()
@@ -48,7 +57,7 @@ class SmartContinueRepository(
         val pages = mutableMapOf<String, Deferred<Result<MarkedSeason>>>()
         suspend fun page(entry: SeriesEntry): MarkedSeason {
             val job = pagesMutex.withLock {
-                pages.getOrPut(entry.id) { async { attempt { permits.withPermit { loadSeason(entry) } } } }
+                pages.getOrPut(entry.id) { async { attempt { limited { loadSeason(entry) } } } }
             }
             return job.await().getOrThrow()
         }
@@ -69,7 +78,7 @@ class SmartContinueRepository(
             val next = historyPage.nextPage
             if (next != null) {
                 if (!visitedPages.add(next)) throw MarkupChangedException()
-                historyJob = async { permits.withPermit { loadHistoryPage(next) } }
+                historyJob = async { limited { loadHistoryPage(next) } }
             }
             for (seed in historyPage.entries) if (queued.add(seed.id)) jobs += async {
                 var metadata: SeriesDetails? = null
