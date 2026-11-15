@@ -184,6 +184,10 @@ class CatalogRepository(
         CatalogPage(LocalDate.now(), BrowseCatalogParser.entries(reader))
     }
 
+    fun currentEntry(entry: SeriesEntry): SeriesEntry = cardData.entry(entry)
+
+    fun cardMark(id: String) = cardData.mark(id)
+
     suspend fun description(entry: SeriesEntry): SeriesDescription = withContext(Dispatchers.IO) {
         cachedDescription(entry) ?: loadCard(entry, force = false).description
     }

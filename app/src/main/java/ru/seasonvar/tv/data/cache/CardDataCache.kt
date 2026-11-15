@@ -1,6 +1,8 @@
 package ru.seasonvar.tv.data.cache
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+import ru.seasonvar.tv.data.account.PlaybackMarkSnapshot
 import org.jsoup.Jsoup
 import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.settings.CacheSettings
@@ -30,14 +32,19 @@ class CardDataCache(
     private data class LoadKey(val season: String, val lease: CacheLease, val force: Boolean)
     private class Flight(val job: Deferred<CardData>, var readers: Int = 0)
     private val monitor = Any()
-    private val values = LinkedHashMap<String, CardData>(16, 0.75f, true)
+    private class Record(var data: CardData? = null) {
+        val mark = MutableStateFlow<CardMarkChange?>(null)
+        val hasLocalChange get() = (mark.value?.revision ?: 0) > 0
+    }
+    private val values = LinkedHashMap<String, Record>(16, 0.75f, true)
     private val flights = mutableMapOf<LoadKey, Flight>()
     private val pins = mutableMapOf<Any, Set<String>>()
     private val workerScope = CoroutineScope(workers.coroutineContext + SupervisorJob(workers.coroutineContext[Job]))
     private var privateRevision = 0L
+    private var dataCount = 0
     init { require(capacity > 0) }
 
-    val size get() = synchronized(monitor) { values.size }
+    val size get() = synchronized(monitor) { dataCount }
     fun description(id: String): SeriesDescription? = synchronized(monitor) { fresh(id)?.description }
 
     fun details(entry: SeriesEntry, lease: CacheLease): SeriesDetails? = synchronized(monitor) {
@@ -47,14 +54,56 @@ class CardDataCache(
         contextual(value, entry)
     }
 
+    fun knownDetails(id: String): SeriesDetails? = synchronized(monitor) { fresh(id)?.details }
+    fun knownEntry(id: String): SeriesEntry? = knownDetails(id)?.entry
+
+    fun mark(id: String): CardMarkChange? = synchronized(monitor) {
+        values[id]?.mark?.value?.takeIf { htmlCache.isCurrent(CacheLease(it.scope, 0)) }
+    }
+
+    fun observeMark(id: String): Flow<CardMarkChange?> = flow {
+        val owner = Any()
+        val state = synchronized(monitor) {
+            pins[owner] = setOf(id)
+            values.getOrPut(id) { Record() }.mark.also { evict() }
+        }
+        try { emitAll(state.map { change -> change?.takeIf { htmlCache.isCurrent(CacheLease(it.scope, 0)) } }.distinctUntilChanged()) }
+        finally { retain(owner, emptySet()) }
+    }
+
+    fun applyMark(entry: SeriesEntry, snapshot: PlaybackMarkSnapshot, revision: Long): CardMarkChange {
+        val lease = htmlCache.capture()
+        return synchronized(monitor) {
+            val record = values.getOrPut(entry.id) { Record() }
+            val change = CardMarkChange(commonEntry(entry).copy(previewDescription = null), snapshot, revision, lease.scope,
+                episodeTotal(record.data?.details, snapshot))
+            record.mark.value = change
+            evict()
+            change
+        }
+    }
+
+    fun changesSince(revision: Long): List<CardMarkChange> = synchronized(monitor) {
+        values.values.mapNotNull { it.mark.value?.takeIf { mark -> mark.revision > revision && htmlCache.isCurrent(CacheLease(mark.scope, 0)) } }.sortedBy { it.revision }
+    }
+
     fun retain(owner: Any, ids: Set<String>) = synchronized(monitor) {
-        if (ids.isEmpty()) pins.remove(owner) else pins[owner] = ids
+        val previous = if (ids.isEmpty()) pins.remove(owner) else pins.put(owner, ids)
+        for (id in previous.orEmpty() - ids) {
+            val record = values[id]
+            if (record?.data == null && record?.hasLocalChange != true && pins.values.none { id in it }) values.remove(id)
+        }
         evict()
     }
 
     fun clearPrivate(cancelLoads: Boolean = true) = synchronized(monitor) {
         privateRevision++
-        for ((id, value) in values.toMap()) values[id] = value.copy(privateData = null)
+        for (record in values.values) {
+            record.data = record.data?.copy(privateData = null)
+            record.mark.value = null
+        }
+        val held = pins.values.flatten().toSet()
+        values.entries.removeAll { it.value.data == null && it.key !in held }
         if (cancelLoads) for ((key, flight) in flights.toMap()) if (key.lease.scope?.private == true) {
             flights.remove(key); flight.job.cancel()
         }
@@ -70,6 +119,7 @@ class CardDataCache(
             }?.let { return it }
             flights.getOrPut(key) {
                 val version = privateRevision
+                val previousMark = values[entry.id]?.mark?.value
                 Flight(workerScope.async(start = CoroutineStart.LAZY) {
                     var response = fetch(false)
                     currentCoroutineContext().ensureActive()
@@ -83,6 +133,9 @@ class CardDataCache(
                         SeasonvarParser.description(doc, entry)
                     }
                     val details = runCatching { SeriesDetailsParser.parse(doc, entry) }.getOrNull()
+                    val serverMark = if ((!response.fromDisk || previousMark == null) && lease.scope?.private == true)
+                        runCatching { ru.seasonvar.tv.data.account.PlaybackMarkParser.snapshot(doc, entry.id, entry.url) }.getOrNull()
+                        else null
                     val commonDetails = details?.copy(entry = commonEntry(details.entry), defaultTranslationId = null,
                         playbackUnavailableReason = null)
                     val privateData = CardPrivateData(lease.scope, details?.defaultTranslationId,
@@ -95,7 +148,14 @@ class CardDataCache(
                         if (!htmlCache.isCurrent(lease)) throw CancellationException("Card cache scope changed")
                         val result = parsed.copy(details = parsed.details ?: fresh(entry.id)?.details,
                             privateData = parsed.privateData.takeIf { privateRevision == version })
-                        if (lease.scope != null) { values[entry.id] = result; evict() }
+                        if (lease.scope != null) {
+                            val record = values.getOrPut(entry.id) { Record() }
+                            if (record.data == null) dataCount++
+                            record.data = result
+                            if (serverMark != null && privateRevision == version && record.mark.value === previousMark)
+                                record.mark.value = CardMarkChange(commonEntry(entry).copy(previewDescription = null), serverMark, previousMark?.revision ?: 0, lease.scope, episodeTotal(details, serverMark))
+                            evict()
+                        }
                         result
                     }
                 })
@@ -115,39 +175,57 @@ class CardDataCache(
     fun contextual(value: CardData, entry: SeriesEntry): SeriesDetails? {
         val details = value.details ?: return null
         val private = value.privateData
-        return details.copy(entry = entry.copy(
+        val contextual = entry.copy(
             originalTitle = details.entry.originalTitle ?: entry.originalTitle,
             season = details.entry.season ?: entry.season,
             posterUrl = details.entry.posterUrl.ifBlank { entry.posterUrl },
             accountMark = entry.accountMark ?: private?.mark,
             accountProgress = entry.accountProgress ?: private?.progress,
             accountListMark = entry.accountListMark ?: private?.listMark,
-        ), defaultTranslationId = private?.defaultTranslationId,
+        )
+        return details.copy(entry = mark(entry.id)?.apply(contextual, details) ?: contextual,
+            defaultTranslationId = private?.defaultTranslationId,
             playbackUnavailableReason = private?.playbackUnavailableReason)
     }
 
     fun entry(entry: SeriesEntry): SeriesEntry {
         val lease = htmlCache.capture()
         return synchronized(monitor) {
-            val value = fresh(entry.id) ?: return@synchronized entry
-            contextual(value.copy(privateData = value.privateData?.takeIf { it.scope == lease.scope }), entry)?.entry ?: entry
+            val value = fresh(entry.id)
+            val contextual = value?.let { contextual(it.copy(privateData = it.privateData?.takeIf { data -> data.scope == lease.scope }), entry)?.entry } ?: entry
+            mark(entry.id)?.apply(contextual, value?.details) ?: contextual
         }
     }
 
     private fun fresh(id: String): CardData? {
-        val value = values[id] ?: return null
-        if (now() - value.savedAt !in 0 until HtmlResponseCache.DAY) { values.remove(id); return null }
+        val record = values[id] ?: return null
+        val value = record.data ?: return null
+        if (now() - value.savedAt !in 0 until HtmlResponseCache.DAY) {
+            record.data = null
+            dataCount--
+            if (!record.hasLocalChange && pins.values.none { id in it }) values.remove(id)
+            return null
+        }
         return value
     }
 
     private fun evict() {
-        if (values.size <= capacity) return
+        if (dataCount <= capacity) return
         val held = pins.values.flatten().toSet()
         val iterator = values.entries.iterator()
-        while (values.size > capacity && iterator.hasNext()) {
-            if (iterator.next().key !in held) iterator.remove()
+        while (dataCount > capacity && iterator.hasNext()) {
+            val record = iterator.next()
+            if (record.key !in held && record.value.data != null) {
+                record.value.data = null
+                dataCount--
+                if (!record.value.hasLocalChange) iterator.remove()
+            }
         }
     }
+
+    private fun episodeTotal(details: SeriesDetails?, snapshot: PlaybackMarkSnapshot): Int? =
+        (details?.translations?.firstOrNull { it.id == snapshot.mark?.translationId }?.episodes?.size
+            ?: details?.translations?.firstOrNull { it.id == "0" }?.episodes?.size)?.takeIf { it > 0 }
 
     private fun commonEntry(entry: SeriesEntry) = entry.copy(update = "", sourceKey = null, accountMark = null,
         accountProgress = null, historyVisitedAt = null, initialSelection = EntrySelection(), accountListMark = null,

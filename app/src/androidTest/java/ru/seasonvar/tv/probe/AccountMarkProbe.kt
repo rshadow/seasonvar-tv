@@ -29,6 +29,7 @@ class AccountMarkProbe : Instrumentation() {
         val themes = ru.seasonvar.tv.ui.settings.loadInterfaceThemes(targetContext)
         val requestedTheme = probeArguments.getString("theme")
         val theme = if (requestedTheme == null) themes.default else requireNotNull(themes.entries.firstOrNull { it.storageId == requestedTheme })
+        if (mode == "card-marks") { CardMarkStateProbe.run(this, theme); return }
         if (mode == "poster-backdrop") { PosterBackdropProbe.run(this); return }
         if (mode == "reviews-layout") { ReviewsLayoutProbe.run(this, theme); return }
         if (mode == "pac-no-webview") { PacEngineProbe.run(this, missingWebView = true); return }

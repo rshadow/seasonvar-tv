@@ -4,6 +4,8 @@
 
 Статус: Принято
 
+Проверка успешной записи и обновление интерфейса пересмотрены в [ADR-0169](0169-local-shared-card-marks.md): `msg=success` без read-back, общая отметка сезона вместо массового обновления списков.
+
 Дополняет локальное продолжение из [ADR-0031](0031-native-playback.md) и [ADR-0055](0055-native-local-progress-without-browser-automark.md).
 
 ## Контекст

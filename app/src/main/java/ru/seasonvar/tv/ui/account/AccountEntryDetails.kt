@@ -8,7 +8,8 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.SeriesEntry
 
 @Composable
-internal fun accountProgressValue(entry: SeriesEntry, compact: Boolean = false): String? {
+internal fun accountProgressValue(source: SeriesEntry, compact: Boolean = false): String? {
+    val entry = currentCardEntry(source)
     val seasons = entry.accountProgress?.seasons?.let {
         stringResource(if (compact) R.string.details_progress_season else R.string.account_progress_seasons, it.marked, it.total)
     }
@@ -23,7 +24,10 @@ internal fun accountProgressValue(entry: SeriesEntry, compact: Boolean = false):
 }
 
 @Composable
-internal fun AccountEntryDetails(entry: SeriesEntry, includeProgress: Boolean = true) {
+internal fun AccountEntryDetails(source: SeriesEntry, includeProgress: Boolean = true) {
+    if (source.accountMark == null && source.accountProgress == null && source.historyVisitedAt == null) return
+    val change = cardMarkState(source)
+    val entry = change?.apply(source) ?: source
     val mark = entry.accountMark
     val history = if (entry.historyVisitedAt != null) listOfNotNull(
         entry.initialSelection.episodeLabel?.let { stringResource(R.string.episode_number, it) },
@@ -35,6 +39,6 @@ internal fun AccountEntryDetails(entry: SeriesEntry, includeProgress: Boolean = 
         mark?.status?.takeIf { it.isNotBlank() },
         history.takeIf { it.isNotBlank() }?.let { stringResource(R.string.history_visited_at, it) },
     ).joinToString(" · ")
-    if (text.isNotBlank()) Text(text,
+    if (text.isNotBlank() || source.accountMark?.status?.isNotBlank() == true) Text(text.ifBlank { " " },
         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

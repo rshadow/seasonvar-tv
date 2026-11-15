@@ -445,4 +445,19 @@ class SeriesDetailsViewModelTest {
         }
     }
 
+    @Test fun shared_mark_selection_is_used_on_open_and_confirmed_marks_do_not_reload_progress() = runTest(dispatcher) {
+        var reads = 0
+        val source = entry().copy(sourceKey = "resume:marks-new:1", initialSelection = EntrySelection(episodeLabel = "1"))
+        val model = SeriesDetailsViewModel(loadAccountProgress = { reads++; null }, loadAccountMark = { reads++; null },
+            currentEntry = { it.copy(initialSelection = EntrySelection(episodeLabel = "2", translationId = "0", positionMillis = 90_000)) },
+            hasConfirmedMark = { true }) { details(it) }
+        model.open(source); advanceUntilIdle()
+        assertEquals("2_seriya", model.state.value.episodeId)
+        assertEquals(source.key, model.state.value.entry?.key)
+        assertEquals(90_000L, model.playbackRequest()?.resumePositionMillis)
+        model.refreshResume(); advanceUntilIdle()
+        assertEquals(0, reads)
+        assertFalse(model.state.value.progressLoading)
+    }
+
 }

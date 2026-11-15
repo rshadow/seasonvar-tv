@@ -33,7 +33,6 @@ data class PlaybackMark(
 }
 
 class MarkSaveRejectedException : Exception("Seasonvar rejected the mark")
-class MarkVerificationException : Exception("Saved mark was not confirmed")
 
 data class PlaybackMarkSnapshot(val mark: PlaybackMark? = null, val status: Int? = null)
 
@@ -43,8 +42,10 @@ object PlaybackMarkParser {
 
     fun parse(html: String, seasonId: String, pageUrl: String): PlaybackMark? = snapshot(html, seasonId, pageUrl).mark
 
-    fun snapshot(html: String, seasonId: String, pageUrl: String): PlaybackMarkSnapshot {
-        val doc = Jsoup.parse(html, pageUrl)
+    fun snapshot(html: String, seasonId: String, pageUrl: String): PlaybackMarkSnapshot =
+        snapshot(Jsoup.parse(html, pageUrl), seasonId, pageUrl)
+
+    internal fun snapshot(doc: org.jsoup.nodes.Document, seasonId: String, pageUrl: String): PlaybackMarkSnapshot {
         if (doc.selectFirst(".pgs-sinfo[data-id-season]")?.attr("data-id-season") != seasonId) {
             throw MarkupChangedException()
         }

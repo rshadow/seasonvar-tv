@@ -13,7 +13,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.data.account.AccountUser
-import ru.seasonvar.tv.data.account.MarkVerificationException
+import ru.seasonvar.tv.data.account.MarkSaveRejectedException
 import ru.seasonvar.tv.data.account.PlaybackMark
 import java.io.IOException
 
@@ -137,7 +137,7 @@ class AccountMarkWriterTest {
         var calls = 0
         var fail = true
         val writer = AccountMarkWriter(backgroundScope, session, outbox, { _, _ ->
-            calls++; if (fail) throw MarkVerificationException()
+            calls++; if (fail) throw MarkSaveRejectedException()
         }, 1_000)
         runCurrent()
         writer.enqueue(mark, 1); runCurrent()

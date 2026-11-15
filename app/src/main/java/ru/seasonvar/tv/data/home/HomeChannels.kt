@@ -31,8 +31,17 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
 
     fun start() {
         scope.launch {
-            combine(store.enabled, app.account.session, app.account.marksRevision,
-                app.interfaceSettings.preferredTranslations, requests) { _, _, _, _, _ -> Unit }
+            var revision = 0L
+            app.account.marksRevision.collect { current ->
+                val changes = app.cardData.changesSince(revision)
+                revision = current
+                if (changes.isNotEmpty()) runCatching { marksChanged(changes) }
+                    .onFailure { if (it is CancellationException) throw it else mutableFailure.value = true }
+            }
+        }
+        scope.launch {
+            combine(store.enabled, app.account.session,
+                app.interfaceSettings.preferredTranslations, requests) { _, _, _, _ -> Unit }
                 .collectLatest {
                     try { schedule(); refresh() }
                     catch (cancelled: CancellationException) { throw cancelled }
@@ -41,6 +50,14 @@ class HomeChannels(private val app: SeasonvarApplication, private val scope: Cor
                         Log.w("SeasonvarHome", "refresh_failed reason=" + error.javaClass.simpleName)
                     }
                 }
+        }
+    }
+    suspend fun marksChanged(changes: List<ru.seasonvar.tv.data.cache.CardMarkChange>) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val owner = app.account.session.value.user?.id ?: return@withLock
+            if (!publisher.supported) return@withLock
+            for (change in changes) if (app.htmlCache.isCurrent(ru.seasonvar.tv.data.cache.CacheLease(change.scope, 0)))
+                publisher.updateMark(change, owner, app.cardData.knownDetails(change.entry.id))
         }
     }
     fun requestRefresh() { requests.value += 1 }

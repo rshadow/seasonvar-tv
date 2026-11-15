@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var personalModels: Map<PersonalFeed, PersonalListViewModel>
     private var visiblePersonalFeed: PersonalFeed? = null
     private var historyRevision = 0L
+    private var markRevision = 0L
 
     private val playbackLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) result.data?.let { data ->
@@ -106,23 +107,8 @@ class MainActivity : ComponentActivity() {
         searchModel = ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java]
         detailsModel = ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
             preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
-        val details = detailsModel
         val removalModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.MarkRemovalViewModel.Factory(
-            container.account, container.accountMarks, { target ->
-                personalModels.values.forEach { it.markRemoved(target) }
-                details.markRemoved(target)
-            }, onChanged = { target, status ->
-                personalModels.forEach { (feed, model) ->
-                    val keepsEntry = when (feed) {
-                        PersonalFeed.HISTORY -> true
-                        PersonalFeed.WANT -> status == ru.seasonvar.tv.data.account.AccountListStatus.WANT_TO_WATCH
-                        PersonalFeed.WATCHED -> status == ru.seasonvar.tv.data.account.AccountListStatus.WATCHED
-                        else -> status == ru.seasonvar.tv.data.account.AccountListStatus.WATCHING
-                    }
-                    if (!keepsEntry) model.markRemoved(target)
-                }
-                details.markChanged(target)
-            }))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
+            container.account, container.accountMarks, onRemoved = {}))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
@@ -130,14 +116,12 @@ class MainActivity : ComponentActivity() {
             val smartState by smartModel.state.collectAsStateWithLifecycle()
             val marksRevision by container.account.marksRevision.collectAsStateWithLifecycle()
             LaunchedEffect(marksRevision) {
-                if (marksRevision > 0) {
-                    smartModel.invalidate()
-                    personalModels.values.forEach { it.refreshIfActive() }
-                    models.values.forEach { it.refreshIfStarted() }
-                    searchModel.marksChanged()
-                    browseModel.refreshIfStarted()
-                    detailsModel.refreshResume()
+                val changes = container.cardData.changesSince(markRevision)
+                for (change in changes) {
+                    personalModels.forEach { (feed, model) -> model.markChanged(feed, change) }
+                    smartModel.markChanged(change, container.cardData.knownDetails(change.entry.id))
                 }
+                markRevision = marksRevision
             }
             val personalStates = personalModels.mapValues { (_, model) -> model.state.collectAsStateWithLifecycle().value }
             LaunchedEffect(accountSession.version) {

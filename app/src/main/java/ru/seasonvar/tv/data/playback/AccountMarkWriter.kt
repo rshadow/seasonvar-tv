@@ -40,7 +40,7 @@ class AccountMarkWriter internal constructor(
         this(scope, account.session, outbox, { mark, version ->
             val saved = account.savePlaybackMark(mark, version, automatic = true)
             if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark",
-                if (saved != null) "write_verified" else "already_current")
+                if (saved != null) "write_accepted" else "already_current")
         }, log = { phase -> if (ru.seasonvar.tv.BuildConfig.DEBUG) android.util.Log.d("SeasonvarMark", phase) },
             remove = account::removeListMark, changeStatus = account::setListStatus)
     private val mutex = Mutex()

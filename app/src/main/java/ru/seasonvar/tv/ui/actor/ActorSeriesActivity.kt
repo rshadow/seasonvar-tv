@@ -67,8 +67,7 @@ class ActorSeriesActivity : ComponentActivity() {
         details = ViewModelProvider(this, SeriesDetailsViewModel.Factory(container.repository, container.playbackProgress,
             container.account, { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
         val actions = ViewModelProvider(this, MarkRemovalViewModel.Factory(container.account, container.accountMarks,
-            onRemoved = { details.markRemoved(it); model.refresh() },
-            onChanged = { entry, _ -> details.markChanged(entry); model.refresh() }))[MarkRemovalViewModel::class.java]
+            onRemoved = {}))[MarkRemovalViewModel::class.java]
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
             SeasonvarTheme(interfaceTheme) {
@@ -99,7 +98,6 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val base by model.state.collectAsStateWithLifecycle()
     val session by container.account.session.collectAsStateWithLifecycle()
     val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
-    val marks by container.account.marksRevision.collectAsStateWithLifecycle()
     val prefetch by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
     val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
     val removal by actions.state.collectAsStateWithLifecycle()
@@ -117,7 +115,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val retry = remember { FocusRequester() }
     val holder = remember { FocusRequester() }
     var holdingFocus by remember { mutableStateOf(true) }
-    LaunchedEffect(session.version, network, marks) {
+    LaunchedEffect(session.version, network) {
         val accountChanged = previousAccount != session.version
         if (accountChanged) { entry = null; selectedKey = null; holdingFocus = true; actions.dismiss() }
         model.refresh(clear = accountChanged)

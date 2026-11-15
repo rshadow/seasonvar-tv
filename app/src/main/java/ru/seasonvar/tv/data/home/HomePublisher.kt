@@ -131,6 +131,25 @@ class HomePublisher(private val context: Context, private val store: HomeStore) 
         old.keys.forEach(store::remove)
     }
 
+    fun updateMark(change: ru.seasonvar.tv.data.cache.CardMarkChange, owner: String, details: ru.seasonvar.tv.data.SeriesDetails?) {
+        for (channel in listOf(HomeChannel.CONTINUE, HomeChannel.WANT)) {
+            val token = HomeLink.token(channel, change.entry.id)
+            val card = store.read(token)?.takeIf { it.owner == owner } ?: continue
+            val updated = if (channel == HomeChannel.CONTINUE) change.continuation(card.entry, details)
+                else card.entry.takeIf { change.status == ru.seasonvar.tv.data.account.AccountListStatus.WANT_TO_WATCH }
+            val program = programs(channel)[token]
+            if (updated == null) {
+                if (program != null) resolver.delete(TvContract.buildPreviewProgramUri(program), null, null)
+                store.remove(token)
+            } else {
+                store.write(token, card.copy(entry = updated))
+                if (program != null) resolver.update(TvContract.buildPreviewProgramUri(program), ContentValues().apply {
+                    put(TvContract.PreviewPrograms.COLUMN_SHORT_DESCRIPTION, updated.update)
+                }, null, null)
+            }
+        }
+    }
+
     fun clear(channel: HomeChannel) {
         programs(channel).forEach { (_, id) -> resolver.delete(TvContract.buildPreviewProgramUri(id), null, null) }
         store.cards(channel).keys.forEach(store::remove)
