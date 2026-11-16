@@ -1,12 +1,10 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("androidx.baselineprofile")
 }
 
-val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
 val guavaVersion = providers.gradleProperty("guavaVersion").get()
-val buildHttpClientVersion = providers.gradleProperty("buildHttpClientVersion").get()
-val buildCommonsLangVersion = providers.gradleProperty("buildCommonsLangVersion").get()
 
 android {
     namespace = "ru.seasonvar.tv"
@@ -38,6 +36,15 @@ android {
             matchingFallbacks += "release"
             proguardFiles("profile-rules.pro")
         }
+        create("nonMinifiedRelease") {
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".baseline"
+        }
+        create("benchmarkRelease") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".baseline"
+        }
     }
 
     buildFeatures {
@@ -57,6 +64,8 @@ kotlin {
 }
 
 dependencies {
+    baselineProfile(project(":baselineprofile"))
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     constraints {
         implementation("com.google.guava:guava:$guavaVersion-android") {
             because("Fix CVE-2026-102554 in Media3 transitive dependencies")
@@ -90,26 +99,28 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-configurations.configureEach {
-    if (name == "androidLintTool") {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
-                useVersion(buildCommonsLangVersion)
-                because("Fix CVE-2025-48924 in Android Lint tooling")
-            }
-            if (requested.group == "org.apache.httpcomponents" && requested.name == "httpclient") {
-                useVersion(buildHttpClientVersion)
-                because("Fix CVE-2020-13956 in Android Lint tooling")
-            }
-            if (requested.group == "org.bouncycastle" && requested.name in
-                setOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on")) {
-                useVersion(buildCryptoVersion)
-                because("Fix CVE-2026-8763 and CVE-2026-13506 in Android Lint tooling")
-            }
-            if (requested.group == "com.google.guava" && requested.name == "guava") {
-                useVersion("$guavaVersion-jre")
-                because("Fix CVE-2026-102554 in Android Lint tooling")
+baselineProfile {
+    mergeIntoMain = true
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    warnings { disabledVariants = false }
+}
+
+androidComponents {
+    finalizeDsl { extension ->
+        // The profile plugin replaces generated variants' source sets with release sources.
+        for (name in listOf("nonMinifiedRelease", "benchmarkRelease")) {
+            extension.sourceSets.getByName(name).apply {
+                manifest.srcFile("src/nonMinifiedRelease/AndroidManifest.xml")
             }
         }
+    }
+    onVariants(selector().all()) { variant ->
+        if (variant.buildType in setOf("nonMinifiedRelease", "benchmarkRelease")) {
+            variant.sources.kotlin?.addStaticSourceDirectory("src/nonMinifiedRelease/java")
+        }
+    }
+    beforeVariants(selector().all()) { variant ->
+        if (variant.buildType in setOf("nonMinifiedProfile", "benchmarkProfile")) variant.enable = false
     }
 }

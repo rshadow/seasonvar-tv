@@ -93,6 +93,8 @@ help:
 		'make profile-planner        Measure window planning while holding D-pad' \
 		'make profile-catalog-lookup Compare key searches at deep catalog positions' \
 		'make profile-startup        Measure real cold launches in the emulator' \
+		'make baseline-profile       Generate application profiles in an isolated emulator package' \
+		'make baseline-profile-verify Verify ProfileInstaller and speed-profile in the emulator' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
@@ -177,6 +179,7 @@ build:
 release:
 	$(MAKE) build BUILD_TYPE=release
 	$(ENV) sh -c 'exec java --class-path "$$ANDROID_HOME/$(SIGNER_JAR)" scripts/SignRelease.java app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/app-release.apk'
+	$(ENV) python3 scripts/check-baseline-profile.py apk --apk app/build/outputs/apk/release/app-release.apk --source app/src/main/generated/baselineProfiles/baseline-prof.txt --mapping app/build/outputs/mapping/release/mapping.txt --profgen .tools/android-sdk/cmdline-tools/latest/bin/profgen
 
 release-dev:
 	@commit="$(DEV_COMMIT)"; \
@@ -229,6 +232,21 @@ profile-planner:
 CATALOG_LOOKUP_OUT ?= build/profile-catalog-lookup
 profile-catalog-lookup:
 	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(CATALOG_LOOKUP_OUT)" CONTAINER_PROFILE_ARGS="--lookup --theme plain --trace-mode off --samples 12 --rounds 3"
+
+.PHONY: baseline-profile
+baseline-profile:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Baseline Profile generation requires an emulator.' >&2; exit 1 ;; esac
+	$(ENV) adb devices -l
+	$(GRADLE) :app:assembleNonMinifiedRelease
+	python3 scripts/check-baseline-profile.py generation --metadata app/build/outputs/apk/nonMinifiedRelease/output-metadata.json
+	ANDROID_SERIAL="$(DEVICE)" $(GRADLE) :app:generateBaselineProfile
+
+.PHONY: baseline-profile-verify
+BASELINE_PROFILE_OUT ?= build/baseline-profile/runtime.json
+baseline-profile-verify:
+	@case "$(DEVICE)" in emulator-*) ;; *) echo 'Profile verification requires an emulator.' >&2; exit 1 ;; esac
+	$(GRADLE) :app:assembleBenchmarkRelease
+	$(ENV) python3 scripts/verify-baseline-profile.py --device "$(DEVICE)" --output "$(BASELINE_PROFILE_OUT)"
 
 .PHONY: profile-startup
 STARTUP_PROFILE_OUT ?= build/profile-startup
