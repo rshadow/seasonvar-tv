@@ -1769,6 +1769,32 @@
         "algorithm": "sha256",
         "value": "3363df84da4540ba8daff02c3f7cd65471037a6a5370591a7e6deba377b36e7f"
       }
+    },
+    {
+      "group": "com.squareup.wire",
+      "artifact": "wire-runtime",
+      "version": "6.4.5",
+      "file": "wire-runtime-6.4.5.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/wire/wire-runtime/6.4.5/wire-runtime-6.4.5.module",
+      "size": 28887,
+      "sha1": "c6a062170c91265487be43dc47774f4edef47ffd",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "9227ebf170024938b548eed98fb3b76891358257c1412f518b53aec3db858ad4"
+      }
+    },
+    {
+      "group": "com.squareup.wire",
+      "artifact": "wire-runtime-jvm",
+      "version": "6.4.5",
+      "file": "wire-runtime-jvm-6.4.5.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/wire/wire-runtime-jvm/6.4.5/wire-runtime-jvm-6.4.5.jar",
+      "size": 263341,
+      "sha1": "55fdfd70ca4d608c6119dc4f36f624748e428e6c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "525cb6f4d838555ed882ebf1567bb4069ab0aa5a5bc69a3fce0be27e6fbb5b4c"
+      }
     }
   ],
   "avd": {
@@ -1839,7 +1865,8 @@
       "generation_package": "ru.seasonvar.tv.baseline",
       "source_directory": "app/src/main/generated/baselineProfiles",
       "max_iterations": 5,
-      "stable_iterations": 2
+      "stable_iterations": 2,
+      "wire_version": "6.4.5"
     }
   },
   "security_ci": {

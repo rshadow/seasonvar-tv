@@ -25,6 +25,11 @@ kotlin { jvmToolchain(17) }
 baselineProfile { useConnectedDevices = true }
 
 dependencies {
+    constraints {
+        implementation("com.squareup.wire:wire-runtime:${providers.gradleProperty("benchmarkWireVersion").get()}") {
+            because("Fix CVE-2026-63126 in benchmark trace parsing")
+        }
+    }
     implementation("androidx.test.ext:junit:1.3.0")
     implementation("androidx.test.uiautomator:uiautomator:2.4.1")
     implementation("androidx.benchmark:benchmark-macro-junit4:1.5.0")
