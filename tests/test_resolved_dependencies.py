@@ -8,7 +8,7 @@ dependencies = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dependencies)
 MINIMUMS = dependencies.minimum_versions(
     "buildCryptoVersion=1.86\nguavaVersion=33.7.2\nbuildJdomVersion=2.0.6.1\n"
-    "buildJose4jVersion=0.9.6\nbuildHttpClientVersion=4.5.14\nbuildCommonsLangVersion=3.18.0\n")
+    "buildJose4jVersion=0.9.6\nbuildHttpClientVersion=4.5.14\nbuildCommonsLangVersion=3.18.0\nbenchmarkWireVersion=6.4.5\n")
 
 
 def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-android",
@@ -33,6 +33,10 @@ def graph(lint_version="1.86", guava_jre="33.7.2-jre", guava_android="33.7.2-and
          "resolvedBy": [{"path": path, "configuration": configuration}]}
         for path, configuration, version in [
             (":", "classpath", commons_root), (":app", "androidLintTool", commons_lint)])
+    entries.extend(
+        {"dependency": "com.squareup.wire:" + module + ":6.4.5",
+         "resolvedBy": [{"path": ":baselineprofile", "configuration": "nonMinifiedReleaseRuntimeClasspath"}]}
+        for module in ("wire-runtime", "wire-runtime-jvm"))
     return entries + [
         {"dependency": "com.google.guava:guava:" + version,
          "resolvedBy": [{"path": path, "configuration": configuration, "scope": "Unknown"}]}
@@ -47,10 +51,17 @@ class ResolvedDependenciesTests(unittest.TestCase):
             dependencies.check_report(graph("1.80.2"), MINIMUMS)
 
     def test_all_build_lint_and_runtime_resolutions_are_accepted_after_fix(self):
-        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 13)
+        self.assertEqual(dependencies.check_report(graph(), MINIMUMS), 15)
 
     def test_newer_patched_versions_are_accepted(self):
-        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 13)
+        self.assertEqual(dependencies.check_report(graph("1.86.1"), MINIMUMS), 15)
+
+    def test_patched_wire_metadata_does_not_hide_a_vulnerable_jvm_runtime(self):
+        for module in ("wire-runtime", "wire-runtime-jvm"):
+            report = graph() + [{"dependency": "com.squareup.wire:" + module + ":6.4.4",
+                "resolvedBy": [{"path": ":baselineprofile", "configuration": "nonMinifiedReleaseRuntimeClasspath"}]}]
+            with self.subTest(module=module), self.assertRaisesRegex(ValueError, r"6\.4\.4.*baselineprofile"):
+                dependencies.check_report(report, MINIMUMS)
 
     def test_missing_or_wrong_graph_is_not_a_success(self):
         for report in ([], {}, ["invalid"]):

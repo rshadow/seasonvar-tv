@@ -75,6 +75,7 @@
 
 - Все штатные команды подготовки инструментов, загрузки зависимостей, сборки, тестирования, запуска и отладки фиксировать в Makefile согласно [ADR-0005](docs/adr/0005-reproducible-local-development.md). Не оставлять необходимые команды только в переписке.
 - При изменении инструментария обновлять toolchain.lock.json и [docs/development.md](docs/development.md).
+- Перед каждым релизом и при изменении исполняемых путей запуска, навигации, общих компонентов списков/карточки, их зависимостей или компилятора повторно генерировать и проверять Baseline/Startup Profiles по [ADR-0174](docs/adr/0174-isolated-baseline-profiles.md); обновлённые правила проводить через PR до релизного тега. Адаптация R8 при сборке не заменяет генерацию.
 
 - Модель карточки любого списка — `SeriesEntry` и вложенный `EntrySelection` в [CatalogModels.kt](app/src/main/java/ru/seasonvar/tv/data/CatalogModels.kt), согласно [ADR-0041](docs/adr/0041-shared-catalog-entry.md). Парсеры заранее заполняют известные поля; интерфейс не извлекает параметры из подписей. Общий выбор при открытии следует [ADR-0040](docs/adr/0040-details-entry-context.md).
 - Использовать принятый стек Kotlin + Compose for TV + Media3 ExoPlayer согласно [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md). Протокол сайта и парсеры отделять от интерфейса и плеера.

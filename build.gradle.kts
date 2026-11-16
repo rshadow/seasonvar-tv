@@ -38,5 +38,37 @@ buildscript {
 
 plugins {
     id("com.android.application") version "9.5.0" apply false
+    id("com.android.test") version "9.5.0" apply false
+    id("androidx.baselineprofile") version "1.5.0" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.4.21" apply false
+}
+
+subprojects {
+    val buildCryptoVersion = providers.gradleProperty("buildCryptoVersion").get()
+    val guavaVersion = providers.gradleProperty("guavaVersion").get()
+    val buildHttpClientVersion = providers.gradleProperty("buildHttpClientVersion").get()
+    val buildCommonsLangVersion = providers.gradleProperty("buildCommonsLangVersion").get()
+    configurations.configureEach {
+        if (name == "androidLintTool") {
+            resolutionStrategy.eachDependency {
+                if (requested.group == "org.apache.commons" && requested.name == "commons-lang3") {
+                    useVersion(buildCommonsLangVersion)
+                    because("Fix CVE-2025-48924 in Android Lint tooling")
+                }
+                if (requested.group == "org.apache.httpcomponents" && requested.name == "httpclient") {
+                    useVersion(buildHttpClientVersion)
+                    because("Fix CVE-2020-13956 in Android Lint tooling")
+                }
+                if (requested.group == "org.bouncycastle" && requested.name in
+                    setOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on")) {
+                    useVersion(buildCryptoVersion)
+                    because("Fix CVE-2026-8763 and CVE-2026-13506 in Android Lint tooling")
+                }
+                if (requested.group == "com.google.guava" && requested.name == "guava") {
+                    useVersion("$guavaVersion-jre")
+                    because("Fix CVE-2026-102554 in Android Lint tooling")
+                }
+            }
+        }
+    }
 }

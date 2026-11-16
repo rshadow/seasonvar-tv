@@ -1678,6 +1678,123 @@
         "algorithm": "sha256",
         "value": "d3b9a5ccc7849a06fd607214954eae907b316e45c02bfd27e77c0c57a8a5319e"
       }
+    },
+    {
+      "group": "androidx.benchmark",
+      "artifact": "benchmark-baseline-profile-gradle-plugin",
+      "version": "1.5.0",
+      "file": "benchmark-baseline-profile-gradle-plugin-1.5.0.jar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-baseline-profile-gradle-plugin/1.5.0/benchmark-baseline-profile-gradle-plugin-1.5.0.jar",
+      "size": 219767,
+      "sha1": "ce45d59a676b6af1cf52ad861746a0e63c4465ed",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "e9044df73c24c164d960c480927481402746c64b6796d8c29cfa0f9330cad699"
+      }
+    },
+    {
+      "group": "androidx.benchmark",
+      "artifact": "benchmark-macro-junit4",
+      "version": "1.5.0",
+      "file": "benchmark-macro-junit4-1.5.0.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-macro-junit4/1.5.0/benchmark-macro-junit4-1.5.0.aar",
+      "size": 18356,
+      "sha1": "d2217417f78982a5924637491bc44146494c0048",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a931079e084f7abdce788272ebaa67584a95a88214d214b409342d865df32c67"
+      }
+    },
+    {
+      "group": "androidx.benchmark",
+      "artifact": "benchmark-macro",
+      "version": "1.5.0",
+      "file": "benchmark-macro-1.5.0.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-macro/1.5.0/benchmark-macro-1.5.0.aar",
+      "size": 250198,
+      "sha1": "3b7c22de78f30f69b8a00fa97c2c9abeb981a3b9",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "252e2e208ac6fc4d08c0e380819c20519982679cbbfa087d225d445b4deb9e33"
+      }
+    },
+    {
+      "group": "androidx.benchmark",
+      "artifact": "benchmark-common",
+      "version": "1.5.0",
+      "file": "benchmark-common-1.5.0.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-common/1.5.0/benchmark-common-1.5.0.aar",
+      "size": 25206679,
+      "sha1": "6c24ea06a81d927e599e1d82c481ebf1b2a8c501",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1b915a31dae4d4c57a1641a16d063983c29069290ce4153c1f356e97bd247db4"
+      }
+    },
+    {
+      "group": "androidx.profileinstaller",
+      "artifact": "profileinstaller",
+      "version": "1.4.1",
+      "file": "profileinstaller-1.4.1.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/profileinstaller/profileinstaller/1.4.1/profileinstaller-1.4.1.aar",
+      "size": 54044,
+      "sha1": "be24aadea661ee537836169df5026fb8f370af9f",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "b519f9317ded1e2c1c2993038c0692e30da326ca99097d9331ff2d3a5861a428"
+      }
+    },
+    {
+      "group": "androidx.test.uiautomator",
+      "artifact": "uiautomator",
+      "version": "2.4.1",
+      "file": "uiautomator-2.4.1.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/test/uiautomator/uiautomator/2.4.1/uiautomator-2.4.1.aar",
+      "size": 230567,
+      "sha1": "cac47c61e86e4931bef5c20e7fed3387695c0f2a",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "549858cf5b51b81576e1d2f3e7fbd4ce40bd6db2fe4954b7c3a62605165d0f25"
+      }
+    },
+    {
+      "group": "androidx.test.ext",
+      "artifact": "junit",
+      "version": "1.3.0",
+      "file": "junit-1.3.0.aar",
+      "url": "https://dl.google.com/dl/android/maven2/androidx/test/ext/junit/1.3.0/junit-1.3.0.aar",
+      "size": 10493,
+      "sha1": "1461515f981eb6342553074fc9ffa0528c083f86",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "3363df84da4540ba8daff02c3f7cd65471037a6a5370591a7e6deba377b36e7f"
+      }
+    },
+    {
+      "group": "com.squareup.wire",
+      "artifact": "wire-runtime",
+      "version": "6.4.5",
+      "file": "wire-runtime-6.4.5.module",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/wire/wire-runtime/6.4.5/wire-runtime-6.4.5.module",
+      "size": 28887,
+      "sha1": "c6a062170c91265487be43dc47774f4edef47ffd",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "9227ebf170024938b548eed98fb3b76891358257c1412f518b53aec3db858ad4"
+      }
+    },
+    {
+      "group": "com.squareup.wire",
+      "artifact": "wire-runtime-jvm",
+      "version": "6.4.5",
+      "file": "wire-runtime-jvm-6.4.5.jar",
+      "url": "https://repo.maven.apache.org/maven2/com/squareup/wire/wire-runtime-jvm/6.4.5/wire-runtime-jvm-6.4.5.jar",
+      "size": 263341,
+      "sha1": "55fdfd70ca4d608c6119dc4f36f624748e428e6c",
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "525cb6f4d838555ed882ebf1567bb4069ab0aa5a5bc69a3fce0be27e6fbb5b4c"
+      }
     }
   ],
   "avd": {
@@ -1739,7 +1856,18 @@
     "details_warmup_opens": 2,
     "details_key_interval_seconds": 0.12,
     "navigation_key_interval_seconds": 0.2,
-    "method_sample_interval_us": 1000
+    "method_sample_interval_us": 1000,
+    "baseline_profile": {
+      "plugin_version": "1.5.0",
+      "profileinstaller_version": "1.4.1",
+      "uiautomator_version": "2.4.1",
+      "test_junit_version": "1.3.0",
+      "generation_package": "ru.seasonvar.tv.baseline",
+      "source_directory": "app/src/main/generated/baselineProfiles",
+      "max_iterations": 5,
+      "stable_iterations": 2,
+      "wire_version": "6.4.5"
+    }
   },
   "security_ci": {
     "codeql_action": {

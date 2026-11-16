@@ -30,6 +30,8 @@ def minimum_versions(properties):
     result["org.bitbucket.b_c:jose4j"] = required("buildJose4jVersion")
     result["org.apache.httpcomponents:httpclient"] = required("buildHttpClientVersion")
     result["org.apache.commons:commons-lang3"] = required("buildCommonsLangVersion")
+    for module in ("wire-runtime", "wire-runtime-jvm"):
+        result["com.squareup.wire:" + module] = required("benchmarkWireVersion")
     return result
 
 
