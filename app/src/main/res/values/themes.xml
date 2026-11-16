@@ -24,6 +24,7 @@
     <dimen name="seasonvar_reviews_status_height">44dp</dimen>
     <integer name="seasonvar_reviews_list_width_percent">34</integer>
     <integer name="seasonvar_preview_poster_max_width_percent">50</integer>
+    <integer name="seasonvar_preview_poster_aspect_percent">75</integer>
     <dimen name="seasonvar_badge_height">20dp</dimen>
     <dimen name="seasonvar_watch_badge_size">28dp</dimen>
     <dimen name="seasonvar_watch_badge_icon_size">18dp</dimen>

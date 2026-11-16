@@ -73,11 +73,14 @@ internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: Po
     val menuButtonOutline: Boolean,
     val iconButtonOutline: Boolean,
     val cardOutline: Boolean,
-    val refreshRotationMillis: Int, val spacing: InterfaceSpacing, val player: PlayerAppearance) {
+    val refreshRotationMillis: Int,
+    val previewPosterAspectPercent: Int, val previewPosterMaxWidthPercent: Int,
+    val spacing: InterfaceSpacing, val player: PlayerAppearance) {
     init {
         require(pageBackground.alpha == 1f && primary.alpha == 1f && onPrimary.alpha > 0f && text.alpha > 0f && secondaryText.alpha > 0f)
         require(focusedText.alpha > 0f && (focusedOutlineText == Color.Unspecified || focusedOutlineText.alpha > 0f))
         require(refreshRotationMillis > 0 && focusBorderWidth.value > 0f)
+        require(previewPosterAspectPercent > 0 && previewPosterMaxWidthPercent in 1..100)
         require(listOf(buttonCornerRadius, cardCornerRadius, focusBorderWidth, outlineWidth).all { it.value >= 0f })
     }
 }
@@ -128,6 +131,8 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
             iconButtonOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarIconButtonOutline, false),
             cardOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarCardOutline, false),
             refreshRotationMillis = integer(R.styleable.SeasonvarInterfaceTheme_seasonvarRefreshRotationMillis, R.integer.seasonvar_refresh_rotation_duration_ms),
+            previewPosterAspectPercent = integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPreviewPosterAspectPercent, R.integer.seasonvar_preview_poster_aspect_percent),
+            previewPosterMaxWidthPercent = integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPreviewPosterMaxWidthPercent, R.integer.seasonvar_preview_poster_max_width_percent),
             spacing = InterfaceSpacing(
                 screenPaddingHorizontal = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarScreenPaddingHorizontal, R.dimen.seasonvar_screen_padding_horizontal),
                 screenPaddingVertical = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarScreenPaddingVertical, R.dimen.seasonvar_screen_padding_vertical),
