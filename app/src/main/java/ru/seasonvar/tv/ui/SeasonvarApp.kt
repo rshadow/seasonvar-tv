@@ -706,6 +706,8 @@ private fun SeasonvarContent(
     }
 
     BackHandler { navigateBack() }
+    // Ссылка на локальную функцию не различает захваченные контексты в equals.
+    val menuEnterContent by rememberUpdatedState { enterContent() }
     val d = SeasonvarTheme.dimensions
     val backdropSource = remember(catalogKey, section, detailsSource?.key, detailsOpen) { PosterBackdropState() }
     val onBackdropSource = remember(backdropSource) { backdropSource::attach }
@@ -771,7 +773,7 @@ private fun SeasonvarContent(
                                     val label = sectionTitle(item)
                                     ThemeButton(
                                         stringResource(label),
-                                        onClick = { startupPending = false; backNavigation.reset(); selectSection(item); enterContent() },
+                                        onClick = { startupPending = false; backNavigation.reset(); selectSection(item); menuEnterContent() },
                                         modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
                                             .bringIntoViewRequester(menuBringIntoView.getValue(item))
                                             .focusRequester(focus).focusProperties { if (item == visibleMenuPages.first()) up = searchFocus }
@@ -781,7 +783,7 @@ private fun SeasonvarContent(
                                             .onPreviewKeyEvent {
                                                 if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
                                                     selectSection(item)
-                                                    enterContent()
+                                                    menuEnterContent()
                                                     true
                                                 } else false
                                             },
