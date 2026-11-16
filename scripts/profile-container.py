@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Measure hidden-list updates against the unchanged Compose container on an emulator."""
+"""Measure isolated Compose navigation and hidden-list updates on an emulator."""
 import argparse
 import json
+import re
 from pathlib import Path
 import socket
 import subprocess
@@ -24,7 +25,13 @@ def main():
     parser.add_argument("--layout", choices=("strip", "grid"), default="strip")
     parser.add_argument("--prefetch", choices=("on", "off"), default="on")
     parser.add_argument("--lookup", action="store_true")
+    parser.add_argument("--menu", action="store_true")
+    parser.add_argument("--compiler-filter", choices=("speed-profile", "speed"), default="speed-profile")
     args = parser.parse_args()
+    if args.menu and (args.planner or args.asynchronous or args.lookup or args.samples % 2):
+        parser.error("menu is a separate benchmark mode and requires an even sample count")
+    if args.compiler_filter != "speed-profile" and not args.menu:
+        parser.error("compiler-filter is only supported in menu mode")
     if args.lookup and (args.planner or args.asynchronous):
         parser.error("lookup is a separate benchmark mode")
     if not args.device.startswith("emulator-"):
@@ -43,6 +50,16 @@ def main():
         raise SystemExit("Install the non-debuggable profile build first")
     if "mWakefulness=Awake" not in call("shell", "dumpsys", "power"):
         raise SystemExit("Wake the emulator before measuring")
+    if args.menu:
+        call("shell", "am", "force-stop", APP)
+        installed = call("shell", "am", "broadcast", "-a", "androidx.profileinstaller.action.INSTALL_PROFILE",
+                         "-n", APP + "/androidx.profileinstaller.ProfileInstallReceiver")
+        if not re.search(r"Broadcast completed: result=1\b", installed):
+            raise SystemExit("ProfileInstaller did not confirm profile installation")
+        if call("shell", "cmd", "package", "compile", "-m", args.compiler_filter, "-f", APP).strip() != "Success":
+            raise SystemExit("ART compilation did not succeed")
+        if f"[status={args.compiler_filter}]" not in call("shell", "dumpsys", "package", APP):
+            raise SystemExit("ART did not report the requested compiler filter")
     args.output.mkdir(parents=True, exist_ok=True)
     themes = ("plain", "glass") if args.theme == "both" else (args.theme,)
     modes = (False, True) if args.trace_mode == "both" else (args.trace_mode == "on",)
@@ -59,6 +76,7 @@ def main():
                      "--ez", "planner", str(args.planner).lower(), "--es", "layout", args.layout,
                      "--ez", "prefetch", str(args.prefetch == "on").lower(),
                      "--ez", "lookup", str(args.lookup).lower(),
+                     "--ez", "menu", str(args.menu).lower(),
                      "--ei", "samples", str(args.samples), "--ei", "rounds", str(args.rounds), "--es", "run", run)
                 with socket.create_connection(("127.0.0.1", port), timeout=args.samples * args.rounds + 120) as connection:
                     with connection.makefile("r", encoding="utf-8") as stream:
@@ -72,6 +90,9 @@ def main():
             remote = f"/sdcard/Android/data/{APP}/files/container-profile/{run}/{filename}"
             raw = call("shell", "cat", remote)
             report = json.loads(raw)
+            if args.menu:
+                report["compiler_filter"] = args.compiler_filter
+                report["installer_result"] = 1
             target = args.output / (f"{theme}-{'trace' if tracing else 'frames'}.json")
             target.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             if not success:

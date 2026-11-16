@@ -90,6 +90,7 @@ help:
 		'make run-profile DEVICE=... Install and launch the profile build' \
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make profile-container      Measure hidden-list updates in an isolated profile fixture' \
+		'make profile-menu           Measure menu focus and section switching on fixed data' \
 		'make profile-planner        Measure window planning while holding D-pad' \
 		'make profile-catalog-lookup Compare key searches at deep catalog positions' \
 		'make profile-startup        Measure real cold launches in the emulator' \
@@ -221,6 +222,12 @@ profile-container: build-profile
 	$(ENV) adb devices -l
 	$(MAKE) install-apk DEVICE="$(DEVICE)" APK="$(CURDIR)/app/build/outputs/apk/profile/app-profile.apk"
 	python3 scripts/profile-container.py --device "$(DEVICE)" --output "$(CONTAINER_PROFILE_OUT)" $(CONTAINER_PROFILE_ARGS)
+
+.PHONY: profile-menu
+MENU_PROFILE_OUT ?= build/profile-menu
+MENU_PROFILE_ARGS ?=
+profile-menu:
+	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(MENU_PROFILE_OUT)" CONTAINER_PROFILE_ARGS="--menu $(MENU_PROFILE_ARGS)"
 
 .PHONY: profile-planner
 PLANNER_PROFILE_OUT ?= build/profile-planner

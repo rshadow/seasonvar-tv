@@ -126,7 +126,6 @@ internal object ListRefreshProbe {
             node?.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id); settle()
             node = control()
             check(checkNotNull(node) { label }.performAction(AccessibilityNodeInfo.ACTION_FOCUS)); settle()
-            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
         }
         try {
             check(android.os.Build.MODEL.contains("sdk", true))
@@ -219,6 +218,34 @@ internal object ListRefreshProbe {
             menu(Section.TOP); sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
             check(card(title)?.isFocused == true && bounds(checkNotNull(card(title))) == original)
             capture("03-returned")
+            val refreshedVisits = visited.size
+            phase = "menu_navigation"
+            menu(Section.TODAY)
+            val listSections = Section.startPages(true).filter { it.publicFeed != null || it.personalFeed != null || it == Section.SMART_CONTINUE }
+            for ((index, section) in listSections.withIndex()) {
+                if (index > 0) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
+                check(shown.get() == section) { "Focus did not select $section" }
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+                check(shown.get() == section && focusedCard() != null) { "OK did not enter $section" }
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+                check(shown.get() == null)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
+                check(shown.get() == section && focusedCard() != null) { "Details did not return to $section" }
+                sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+                check(shown.get() == section && focusedCard() != null) { "Right did not enter $section" }
+                sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
+            }
+            for (label in listOf(R.string.start_page_title, R.string.about_github)) {
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle()
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+                check(find(uiAutomation.rootInActiveWindow) { node ->
+                    node.isFocused && find(node) { it.text?.toString() == targetContext.getString(label) } != null
+                } != null) { "System page focus missing: $label" }
+                sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
+            }
+            result.putBoolean("menu_navigation", true)
+            menu(Section.TOP)
             phase = "activity_visibility"
             cover = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK))
@@ -228,7 +255,7 @@ internal object ListRefreshProbe {
             result.putBoolean("background_refresh_preserved", true)
             result.putBoolean("single_refresh", true)
             result.putBoolean("network_prepared_first", true)
-            result.putInt("visited_lists", visited.size)
+            result.putInt("visited_lists", refreshedVisits)
             result.putInt("refresh_dispatches", firstCounts.keys.sumOf { counts.getValue(it) })
             result.putBoolean("geometry_stable", true); result.putBoolean("focus_preserved", true)
             result.putBoolean("fixture_only", true); result.putBoolean("script_success", true)
@@ -236,6 +263,7 @@ internal object ListRefreshProbe {
             finish(Activity.RESULT_OK, result)
         } catch (error: Throwable) {
             runCatching { capture("failure") }
+            runCatching { File(artifacts, "failure.txt").writeText(error.stackTraceToString()) }
             fun describe(node: AccessibilityNodeInfo?, depth: Int = 0): String {
                 node ?: return ""
                 return " ".repeat(depth) + listOf(node.className, node.text, node.contentDescription, node.isFocused, node.isClickable)

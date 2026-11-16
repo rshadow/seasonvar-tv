@@ -11,9 +11,15 @@ import android.os.HandlerThread
 import android.view.FrameMetrics
 import android.view.KeyEvent
 import android.view.Choreographer
+import android.view.View
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.tv.material3.Text
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -32,6 +38,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONArray
 import org.json.JSONObject
 import ru.seasonvar.tv.data.PublicFeed
+import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.SeriesDescription
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.account.AccountSession
@@ -49,6 +56,8 @@ import kotlin.coroutines.resume
 
 class ContainerProfileActivity : ComponentActivity() {
     private var plannerMode = false
+    private var menuMode = false
+    private var visibleSection: Section? = null
     private var prefetch = true
     private var layout = CatalogLayout.STRIP
     private val planning = PlanningStatistics()
@@ -77,6 +86,7 @@ class ContainerProfileActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
         plannerMode = intent.getBooleanExtra("planner", false)
+        menuMode = intent.getBooleanExtra("menu", false)
         prefetch = intent.getBooleanExtra("prefetch", true)
         layout = CatalogLayout.fromStorage(intent.getStringExtra("layout"))
         Coil.setImageLoader(ImageLoader.Builder(this).components {
@@ -97,9 +107,11 @@ class ContainerProfileActivity : ComponentActivity() {
         }
         val tracing = intent.getBooleanExtra("trace", false)
         asynchronous = intent.getBooleanExtra("asynchronous", false)
-        val cases = if (plannerMode) listOf("idle", "hold_100ms", "hold_50ms")
+        val cases = if (menuMode) listOf("menu_idle", "menu_focus", "menu_sections")
+            else if (plannerMode) listOf("idle", "hold_100ms", "hold_50ms")
             else if (asynchronous) listOf("navigation", "hidden_async_navigation") else scenarios
         val samples = intent.getIntExtra("samples", 48).also { require(it in 12..240) }
+        require(!menuMode || samples % 2 == 0)
         require(!plannerMode || layout != CatalogLayout.GRID || samples <= 96)
         val rounds = intent.getIntExtra("rounds", 3).also { require(it in 1..5) }
         val run = requireNotNull(intent.getStringExtra("run")).also { require(it.matches(Regex("[a-z0-9-]{1,80}"))) }
@@ -135,9 +147,12 @@ class ContainerProfileActivity : ComponentActivity() {
                     completion.complete("complete $run")
                     return@launch
                 }
-                key(KeyEvent.KEYCODE_DPAD_RIGHT)
+                if (!menuMode) key(KeyEvent.KEYCODE_DPAD_RIGHT)
                 settle(12)
-                for (scenario in cases) measure(scenario, 12)
+                for (scenario in cases) {
+                    if (menuMode) prepareMenu(scenario)
+                    measure(scenario, 12)
+                }
                 if (tracing && !plannerMode) Composer.setTracer(tracer)
                 if (tracing && plannerMode) SeriesListPlanningDiagnostics.observer = planning
                 val results = JSONArray()
@@ -147,6 +162,7 @@ class ContainerProfileActivity : ComponentActivity() {
                         public.values.forEach { it.value = ready }
                         personal.values.forEach { it.value = ready }
                         settle(8)
+                        if (menuMode) prepareMenu(scenario)
                         tracer.reset()
                         planning.reset()
                         val result = measure(scenario, samples)
@@ -164,6 +180,7 @@ class ContainerProfileActivity : ComponentActivity() {
                     .put("tracing", tracing).put("debuggable", false).put("fixture_only", true)
                     .put("cpu_window", if (asynchronous || plannerMode) "whole_tick" else "first_two_frames")
                     .put("planner", plannerMode).put("prefetch", prefetch).put("layout", layout.storageId)
+                    .put("menu", menuMode)
                     .put("samples", samples).put("rounds", rounds).put("results", results).toString(2))
                 completion.complete("complete $run")
             } catch (error: Throwable) {
@@ -185,6 +202,7 @@ class ContainerProfileActivity : ComponentActivity() {
         val personalStates = personal.mapValues { (_, flow) -> flow.collectAsStateWithLifecycle().value }
         SeasonvarApp(states, {}, startPage = Section.TOP, interfaceTheme = theme,
             catalogLayouts = mapOf(Section.TOP to layout), accountSession = session,
+            onListVisibilityChange = if (menuMode) ({ visibleSection = it }) else null,
             personalStates = personalStates, imagePrefetchEnabled = prefetch,
             loadDescription = { SeriesDescription(listOf(it.previewDescription.orEmpty())) })
     }
@@ -224,12 +242,24 @@ class ContainerProfileActivity : ComponentActivity() {
             } else null
             if (scenario in setOf("navigation", "hidden_navigation", "hidden_async_navigation"))
                 key(if (index % 2 == 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+            if (scenario == "menu_focus")
+                key(if (index % 2 == 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
+            if (scenario == "menu_sections")
+                key(if (index % 2 == 0) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP)
             settle(2)
             if (!asynchronous && !plannerMode) cpu += (Debug.threadCpuTimeNanos() - cpuStart) / 1_000_000.0
             val interval = if (scenario == "hold_50ms") 50L else 100L
             delay((interval - (System.nanoTime() - tick) / 1_000_000).coerceAtLeast(0))
             delayed?.join()
             if (asynchronous || plannerMode) cpu += (Debug.threadCpuTimeNanos() - cpuStart) / 1_000_000.0
+            if (menuMode) {
+                val expected = if (scenario == "menu_sections" && index % 2 == 0) Section.UPDATES else Section.TODAY
+                check(visibleSection == expected) { "Unexpected section: $visibleSection, expected $expected" }
+                val label = if (scenario == "menu_focus") {
+                    if (index % 2 == 0) R.string.browse_catalog_title else R.string.search_title
+                } else if (expected == Section.UPDATES) R.string.updates_title else R.string.today_title
+                checkMenuFocus(label)
+            }
         }
         heldCode?.let { heldKey(downTime, it, KeyEvent.ACTION_UP, 0) }
         val end = System.nanoTime()
@@ -250,6 +280,36 @@ class ContainerProfileActivity : ComponentActivity() {
             .put("frames_over_16_7ms", selected.count { it[1] > 16_700_000 })
             .put("frames_over_50ms", selected.count { it[1] > 50_000_000 })
             .put("dropped_metric_reports", selected.sumOf { it[4] })
+    }
+
+    private suspend fun prepareMenu(scenario: String) {
+        key(KeyEvent.KEYCODE_DPAD_LEFT)
+        key(KeyEvent.KEYCODE_BACK)
+        settle(8)
+        val position = Section.catalogPages.indexOf(visibleSection)
+        check(position >= 0)
+        repeat(position) { key(KeyEvent.KEYCODE_DPAD_UP); settle(8) }
+        checkMenuFocus(R.string.today_title)
+        if (scenario == "menu_focus") {
+            key(KeyEvent.KEYCODE_DPAD_UP)
+            settle(8)
+            checkMenuFocus(R.string.search_title)
+        }
+    }
+
+    private fun checkMenuFocus(label: Int) {
+        fun root(view: View): ViewRootForTest? = view as? ViewRootForTest ?: (view as? ViewGroup)?.let {
+            (0 until it.childCount).firstNotNullOfOrNull { index -> root(it.getChildAt(index)) }
+        }
+        fun focused(node: SemanticsNode): SemanticsNode? =
+            if (node.config.getOrNull(SemanticsProperties.Focused) == true) node
+            else node.children.firstNotNullOfOrNull(::focused)
+        val node = focused(checkNotNull(root(window.decorView)).semanticsOwner.rootSemanticsNode)
+        val text = node?.config?.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }
+        val description = node?.config?.getOrNull(SemanticsProperties.ContentDescription)?.joinToString("")
+        check(text == getString(label) || description == getString(label)) {
+            "Expected focus ${getString(label)}, got $text/$description"
+        }
     }
 
     private fun key(code: Int) {
