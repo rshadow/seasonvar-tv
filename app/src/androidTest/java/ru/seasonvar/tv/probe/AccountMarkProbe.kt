@@ -32,6 +32,7 @@ class AccountMarkProbe : Instrumentation() {
         if (mode == "card-marks") { CardMarkStateProbe.run(this, theme); return }
         if (mode == "shared-sources") { SharedSourcesProbe.run(this); return }
         if (mode == "list-refresh") { ListRefreshProbe.run(this, theme); return }
+        if (mode == "selected-panel") { SelectedPanelProbe.run(this, theme); return }
         if (mode == "poster-backdrop") { PosterBackdropProbe.run(this); return }
         if (mode == "reviews-layout") { ReviewsLayoutProbe.run(this, theme); return }
         if (mode == "pac-no-webview") { PacEngineProbe.run(this, missingWebView = true); return }

@@ -45,6 +45,8 @@
     <color name="seasonvar_player_unplayed">#33FFFFFF</color>
 
     <style name="SeasonvarInterfaceTheme.Classic" parent="">
+        <item name="seasonvarPreviewPosterAspectPercent">@integer/seasonvar_preview_poster_aspect_percent</item>
+        <item name="seasonvarPreviewPosterMaxWidthPercent">@integer/seasonvar_preview_poster_max_width_percent</item>
         <item name="seasonvarPosterBackgroundEnabled">false</item>
         <item name="seasonvarPosterFallbackScalePercent">@integer/seasonvar_poster_fallback_scale_percent</item>
         <item name="seasonvarPosterBlurRadius">0</item>

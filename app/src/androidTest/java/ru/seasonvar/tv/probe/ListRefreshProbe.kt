@@ -47,6 +47,7 @@ internal object ListRefreshProbe {
         val counts = sections.associateWith { 0 }.toMutableMap()
         val jobs = mutableMapOf<Section, Job>()
         val shown = AtomicReference<Section?>()
+        val grid = mutableStateOf(false)
         var prepareGate = CompletableDeferred<Unit>()
         var responseGate = CompletableDeferred<Unit>()
         fun visit(section: Section) {
@@ -73,9 +74,17 @@ internal object ListRefreshProbe {
         fun main(block: () -> Unit) = runOnMainSync(block)
         fun settle() {
             val frames = CountDownLatch(1)
-            main { android.view.Choreographer.getInstance().postFrameCallback {
-                android.view.Choreographer.getInstance().postFrameCallback { frames.countDown() }
-            } }
+            main {
+                // Вход в список ждёт четыре кадра; проверка фокуса следует после его завершения.
+                var remaining = 6
+                val callback = object : android.view.Choreographer.FrameCallback {
+                    override fun doFrame(frameTimeNanos: Long) {
+                        if (--remaining == 0) frames.countDown()
+                        else android.view.Choreographer.getInstance().postFrameCallback(this)
+                    }
+                }
+                android.view.Choreographer.getInstance().postFrameCallback(callback)
+            }
             check(frames.await(5, TimeUnit.SECONDS))
             waitForIdleSync(); uiAutomation.waitForIdle(250, 5000)
             if (android.os.Build.VERSION.SDK_INT >= 34) uiAutomation.clearCache()
@@ -93,6 +102,19 @@ internal object ListRefreshProbe {
             node.isClickable && node.isFocused && find(node) { it.text?.toString()?.startsWith("Карточка ") == true } != null
         }
         fun bounds(node: AccessibilityNodeInfo) = Rect().also(node::getBoundsInScreen)
+        fun settledCardBounds(title: String): Rect {
+            var previous: Rect? = null
+            var stable = 0
+            val deadline = android.os.SystemClock.elapsedRealtime() + 5000
+            while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                settle()
+                val current = card(title)?.let(::bounds)
+                stable = if (current != null && current == previous) stable + 1 else 0
+                if (stable >= 2) return checkNotNull(current)
+                previous = current
+            }
+            error("Card bounds did not settle")
+        }
         fun capture(name: String) {
             check(artifacts.isDirectory || artifacts.mkdirs())
             val bitmap = checkNotNull(uiAutomation.takeScreenshot())
@@ -169,6 +191,7 @@ internal object ListRefreshProbe {
                 val current = pages.mapValues { (_, state) -> state.collectAsState().value }
                 SeasonvarApp(PublicFeed.entries.associateWith { feed -> current.getValue(sections.first { it.publicFeed == feed }) }, {},
                     startPage = Section.TOP, interfaceTheme = theme, imagePrefetchEnabled = false,
+                    catalogLayouts = if (grid.value) sections.associateWith { CatalogLayout.GRID } else emptyMap(),
                     detailsModel = model, loadDescription = { SeriesDescription(listOf("Синтетическое описание.")) },
                     accountSession = AccountSession(AccountUser("12", "Проверка", null), 1),
                     personalStates = PersonalFeed.entries.associateWith { feed -> current.getValue(sections.first { it.personalFeed == feed }) },
@@ -245,6 +268,26 @@ internal object ListRefreshProbe {
                 sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
             }
             result.putBoolean("menu_navigation", true)
+            main { grid.value = true }; settle()
+            for (section in listOf(Section.TOP, Section.WANT)) {
+                menu(section); sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+                phase = "grid_return_" + section.storageId
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle()
+                val selectedGrid = checkNotNull(focusedCard())
+                val gridTitle = checkNotNull(find(selectedGrid) { it.text?.toString()?.startsWith("Карточка ") == true }?.text).toString()
+                val gridBounds = settledCardBounds(gridTitle)
+                capture("grid-before-" + section.storageId)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle(); check(shown.get() == null)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
+                val returnedBounds = settledCardBounds(gridTitle)
+                check(card(gridTitle)?.isFocused == true && returnedBounds == gridBounds) {
+                    "before=$gridBounds after=$returnedBounds focused=${card(gridTitle)?.isFocused}"
+                }
+                capture("grid-return-" + section.storageId)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_BACK); settle()
+            }
+            main { grid.value = false }; settle()
+            result.putBoolean("grid_return", true)
             menu(Section.TOP)
             phase = "activity_visibility"
             cover = startActivitySync(Intent(targetContext, MarkMenuPreviewActivity::class.java)

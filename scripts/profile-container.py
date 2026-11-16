@@ -26,12 +26,14 @@ def main():
     parser.add_argument("--prefetch", choices=("on", "off"), default="on")
     parser.add_argument("--lookup", action="store_true")
     parser.add_argument("--menu", action="store_true")
+    parser.add_argument("--panel", action="store_true")
     parser.add_argument("--compiler-filter", choices=("speed-profile", "speed"), default="speed-profile")
     args = parser.parse_args()
-    if args.menu and (args.planner or args.asynchronous or args.lookup or args.samples % 2):
-        parser.error("menu is a separate benchmark mode and requires an even sample count")
-    if args.compiler_filter != "speed-profile" and not args.menu:
-        parser.error("compiler-filter is only supported in menu mode")
+    if args.menu or args.panel:
+        if args.planner or args.asynchronous or args.lookup or (args.menu and args.panel) or args.samples % 2:
+            parser.error("menu/panel are separate benchmark modes and require an even sample count")
+    if args.compiler_filter != "speed-profile" and not (args.menu or args.panel):
+        parser.error("compiler-filter is only supported in menu/panel mode")
     if args.lookup and (args.planner or args.asynchronous):
         parser.error("lookup is a separate benchmark mode")
     if not args.device.startswith("emulator-"):
@@ -50,7 +52,7 @@ def main():
         raise SystemExit("Install the non-debuggable profile build first")
     if "mWakefulness=Awake" not in call("shell", "dumpsys", "power"):
         raise SystemExit("Wake the emulator before measuring")
-    if args.menu:
+    if args.menu or args.panel:
         call("shell", "am", "force-stop", APP)
         installed = call("shell", "am", "broadcast", "-a", "androidx.profileinstaller.action.INSTALL_PROFILE",
                          "-n", APP + "/androidx.profileinstaller.ProfileInstallReceiver")
@@ -77,6 +79,7 @@ def main():
                      "--ez", "prefetch", str(args.prefetch == "on").lower(),
                      "--ez", "lookup", str(args.lookup).lower(),
                      "--ez", "menu", str(args.menu).lower(),
+                     "--ez", "panel", str(args.panel).lower(),
                      "--ei", "samples", str(args.samples), "--ei", "rounds", str(args.rounds), "--es", "run", run)
                 with socket.create_connection(("127.0.0.1", port), timeout=args.samples * args.rounds + 120) as connection:
                     with connection.makefile("r", encoding="utf-8") as stream:
@@ -90,7 +93,7 @@ def main():
             remote = f"/sdcard/Android/data/{APP}/files/container-profile/{run}/{filename}"
             raw = call("shell", "cat", remote)
             report = json.loads(raw)
-            if args.menu:
+            if args.menu or args.panel:
                 report["compiler_filter"] = args.compiler_filter
                 report["installer_result"] = 1
             target = args.output / (f"{theme}-{'trace' if tracing else 'frames'}.json")

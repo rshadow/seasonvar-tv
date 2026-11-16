@@ -91,6 +91,8 @@ help:
 		'make profile-navigation     Measure menu navigation (PROFILE_OUT=...)' \
 		'make profile-container      Measure hidden-list updates in an isolated profile fixture' \
 		'make profile-menu           Measure menu focus and section switching on fixed data' \
+		'make profile-selected-panel Measure descriptions and large posters on fixed data' \
+		'make selected-panel-probe   Verify fixed poster bounds, native size and late data' \
 		'make profile-planner        Measure window planning while holding D-pad' \
 		'make profile-catalog-lookup Compare key searches at deep catalog positions' \
 		'make profile-startup        Measure real cold launches in the emulator' \
@@ -228,6 +230,12 @@ MENU_PROFILE_OUT ?= build/profile-menu
 MENU_PROFILE_ARGS ?=
 profile-menu:
 	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(MENU_PROFILE_OUT)" CONTAINER_PROFILE_ARGS="--menu $(MENU_PROFILE_ARGS)"
+
+.PHONY: profile-selected-panel
+SELECTED_PANEL_PROFILE_OUT ?= build/profile-selected-panel
+SELECTED_PANEL_PROFILE_ARGS ?=
+profile-selected-panel:
+	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(SELECTED_PANEL_PROFILE_OUT)" CONTAINER_PROFILE_ARGS="--panel $(SELECTED_PANEL_PROFILE_ARGS)"
 
 .PHONY: profile-planner
 PLANNER_PROFILE_OUT ?= build/profile-planner
@@ -645,6 +653,11 @@ history-clear-probe:
 	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=history-clear-layout MARK_MENU_PROBE_OUT="$(HISTORY_CLEAR_PROBE_OUT)"
 
 .PHONY: details-progress-probe
+.PHONY: selected-panel-probe
+SELECTED_PANEL_PROBE_OUT ?= build/selected-panel-probe
+selected-panel-probe:
+	$(MAKE) mark-menu-probe LAYOUT_PROBE_MODE=selected-panel MARK_MENU_PROBE_OUT="$(SELECTED_PANEL_PROBE_OUT)"
+
 .PHONY: reviews-probe
 .PHONY: poster-backdrop-probe
 .PHONY: profile-details

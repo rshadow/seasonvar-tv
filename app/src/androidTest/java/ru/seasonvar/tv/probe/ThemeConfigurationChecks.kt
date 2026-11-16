@@ -41,10 +41,13 @@ internal fun checkThemeConfiguration(context: Context) {
     check(resolveInterfaceTheme(context, ru.seasonvar.tv.ui.settings.InterfaceTheme.GLASS).poster.fallbackImage == R.drawable.ic_launcher)
     check(!resolveInterfaceTheme(context, ru.seasonvar.tv.ui.settings.InterfaceTheme.CLASSIC).menuButtonOutline)
     val glass = resolveInterfaceTheme(context, ru.seasonvar.tv.ui.settings.InterfaceTheme.GLASS)
+    check(glass.previewPosterAspectPercent == 75 && glass.previewPosterMaxWidthPercent == 50)
     check(glass.poster.fallbackScalePercent == 33)
     check(!glass.menuButtonOutline && glass.textButtonOutline && !glass.iconButtonOutline && glass.cardOutline)
     val configured = loadInterfaceThemes(context, R.xml.theme_config_probe)
     check(configured.default.storageId == "probe")
+    check(resolveInterfaceTheme(context, configured.default).previewPosterAspectPercent == 60)
+    check(resolveInterfaceTheme(context, configured.default).previewPosterMaxWidthPercent == 40)
     check(configured.restore("probe") == configured.default)
     val spec = resolveInterfaceTheme(context, configured.default)
     check(spec.primary == Color(0xFF11AA33) && spec.text == Color(0xFFDDEE11))
@@ -88,6 +91,7 @@ internal fun ThemeConfigurationPreview(preview: ThemeTextPreviewState, onReady: 
             colors.background == Color(0xEE223344) && dimensions.spacingSmall == 9.dp && dimensions.contentGap == 25.dp &&
             dimensions.buttonCornerRadius == 11.dp && dimensions.focusBorderWidth == 3.dp &&
             dimensions.buttonWidth == expectedWidth && text == originalText &&
+            dimensions.previewPosterAspectRatio == 0.6f && dimensions.previewPosterMaxWidthFraction == 0.4f &&
             ru.seasonvar.tv.ui.theme.SeasonvarTheme.posterBackdropFadeMillis == 0 &&
             ru.seasonvar.tv.ui.theme.SeasonvarTheme.refreshRotationDurationMillis == 777 &&
             ru.seasonvar.tv.ui.theme.SeasonvarTheme.iconButtonOutline

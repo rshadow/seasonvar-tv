@@ -6,6 +6,8 @@
         <attr name="seasonvarPosterFallbackScalePercent" format="integer" />
         <attr name="seasonvarPosterBlurRadius" format="integer" />
         <attr name="seasonvarPosterDimPercent" format="integer" />
+        <attr name="seasonvarPreviewPosterAspectPercent" format="integer" />
+        <attr name="seasonvarPreviewPosterMaxWidthPercent" format="integer" />
         <attr name="seasonvarSurfaceColor" format="color" />
         <attr name="seasonvarInactiveSurfaceColor" format="color" />
         <attr name="seasonvarSurfaceOutlineColor" format="color" />

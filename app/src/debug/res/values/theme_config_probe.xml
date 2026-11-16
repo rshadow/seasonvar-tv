@@ -13,6 +13,8 @@
         <item name="seasonvarPosterFallbackScalePercent">45</item>
         <item name="seasonvarPosterBlurRadius">3</item>
         <item name="seasonvarPosterDimPercent">60</item>
+        <item name="seasonvarPreviewPosterAspectPercent">60</item>
+        <item name="seasonvarPreviewPosterMaxWidthPercent">40</item>
         <item name="seasonvarPosterEdgePercent">20</item>
         <item name="seasonvarPosterFadeEdgePercent">15</item>
         <item name="seasonvarPosterFadeMillis">0</item>

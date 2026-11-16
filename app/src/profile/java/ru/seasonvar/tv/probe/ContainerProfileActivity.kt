@@ -3,6 +3,9 @@
 package ru.seasonvar.tv.probe
 
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.net.LocalServerSocket
 import android.os.Bundle
 import android.os.Debug
@@ -16,6 +19,8 @@ import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -41,6 +46,12 @@ import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.SeriesDescription
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.AccountMark
+import ru.seasonvar.tv.data.AccountProgress
+import ru.seasonvar.tv.data.ProgressCounter
+import ru.seasonvar.tv.ui.SelectedPanel
+import ru.seasonvar.tv.ui.catalog.DescriptionState
+import ru.seasonvar.tv.ui.catalog.SelectedPanelDiagnostics
 import ru.seasonvar.tv.data.account.AccountSession
 import ru.seasonvar.tv.data.account.AccountUser
 import ru.seasonvar.tv.data.account.PersonalFeed
@@ -57,16 +68,36 @@ import kotlin.coroutines.resume
 class ContainerProfileActivity : ComponentActivity() {
     private var plannerMode = false
     private var menuMode = false
+    private var panelMode = false
+    private var panelComponent by mutableStateOf(false)
+    private var panelDescription by mutableStateOf(DescriptionState())
+    private val panelStatistics = PanelStatistics()
+    private val panelText = SeriesDescription((1..4).map { "Абзац $it. " +
+        "Синтетическое описание сериала с несколькими предложениями для проверки переноса текста и обновления данных. ".repeat(2) })
+    private val panelImages by lazy { listOf(200 to 300, 1080 to 1440, 1440 to 1780).mapIndexed { index, (width, height) ->
+        File(cacheDir, "panel-fixture-$index.png").also { file ->
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            Canvas(bitmap).apply {
+                drawColor(intArrayOf(0xff913245.toInt(), 0xff275c9c.toInt(), 0xff397f54.toInt())[index])
+                drawRect(width / 4f, height / 4f, width * 3 / 4f, height * 3 / 4f,
+                    Paint().apply { color = 0xffffbf10.toInt() })
+            }
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+    } }
     private var visibleSection: Section? = null
     private var prefetch = true
     private var layout = CatalogLayout.STRIP
     private val planning = PlanningStatistics()
     private val rows by lazy { (1..250).map { index ->
         SeriesEntry(index.toString(), "https://seasonvar.ru/serial-$index-fixture.html",
-            "Карточка $index", 1, "", if (plannerMode) "https://cdn.svstat.net/oblojka/$index.jpg"
+            "Карточка $index", 1, "", if (plannerMode || panelMode) "https://cdn.svstat.net/oblojka/$index.jpg"
                 else "android.resource://ru.seasonvar.tv/drawable/" +
                     if (index % 2 == 0) "actor_placeholder" else "poster_placeholder",
-            previewDescription = "Синтетическое описание карточки для измерения интерфейса.")
+            previewDescription = "Синтетическое описание карточки для измерения интерфейса.",
+            accountMark = if (panelMode) AccountMark("", "Смотрю") else null,
+            accountProgress = if (panelMode) AccountProgress(seasons = ProgressCounter(1, 3)) else null)
     } }
     private val ready by lazy { CatalogUiState(date = LocalDate.of(2026, 11, 15), entries = rows, loading = false, loaded = true) }
     private val changed by lazy { ready.copy(entries = rows.map { it.copy(previewDescription = it.previewDescription + " Обновлено.") }) }
@@ -87,15 +118,18 @@ class ContainerProfileActivity : ComponentActivity() {
         WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
         plannerMode = intent.getBooleanExtra("planner", false)
         menuMode = intent.getBooleanExtra("menu", false)
+        panelMode = intent.getBooleanExtra("panel", false)
         prefetch = intent.getBooleanExtra("prefetch", true)
         layout = CatalogLayout.fromStorage(intent.getStringExtra("layout"))
-        Coil.setImageLoader(ImageLoader.Builder(this).components {
+        if (panelMode) panelImages
+        Coil.setImageLoader(ImageLoader.Builder(this).apply { if (panelMode) diskCache(null) }.components {
             add(Interceptor { chain ->
                 val source = chain.request.data.toString()
                 if (source.startsWith("https://cdn.svstat.net/oblojka/")) {
                     val index = source.substringAfterLast('/').substringBefore('.').toInt()
                     val resource = if (index % 2 == 0) "actor_placeholder" else "poster_placeholder"
-                    chain.proceed(chain.request.newBuilder().data("android.resource://ru.seasonvar.tv/drawable/$resource")
+                    chain.proceed(chain.request.newBuilder().data(if (panelMode) panelImages[(index - 1) % panelImages.size]
+                        else "android.resource://ru.seasonvar.tv/drawable/$resource")
                         .memoryCacheKey(source).diskCacheKey(source).build())
                 } else chain.proceed(chain.request)
             })
@@ -107,11 +141,12 @@ class ContainerProfileActivity : ComponentActivity() {
         }
         val tracing = intent.getBooleanExtra("trace", false)
         asynchronous = intent.getBooleanExtra("asynchronous", false)
-        val cases = if (menuMode) listOf("menu_idle", "menu_focus", "menu_sections")
+        val cases = if (panelMode) listOf("panel_navigation", "panel_description")
+            else if (menuMode) listOf("menu_idle", "menu_focus", "menu_sections")
             else if (plannerMode) listOf("idle", "hold_100ms", "hold_50ms")
             else if (asynchronous) listOf("navigation", "hidden_async_navigation") else scenarios
         val samples = intent.getIntExtra("samples", 48).also { require(it in 12..240) }
-        require(!menuMode || samples % 2 == 0)
+        require(!(menuMode || panelMode) || samples % 2 == 0)
         require(!plannerMode || layout != CatalogLayout.GRID || samples <= 96)
         val rounds = intent.getIntExtra("rounds", 3).also { require(it in 1..5) }
         val run = requireNotNull(intent.getStringExtra("run")).also { require(it.matches(Regex("[a-z0-9-]{1,80}"))) }
@@ -151,6 +186,7 @@ class ContainerProfileActivity : ComponentActivity() {
                 settle(12)
                 for (scenario in cases) {
                     if (menuMode) prepareMenu(scenario)
+                    if (panelMode) preparePanel(scenario)
                     measure(scenario, 12)
                 }
                 if (tracing && !plannerMode) Composer.setTracer(tracer)
@@ -163,12 +199,16 @@ class ContainerProfileActivity : ComponentActivity() {
                         personal.values.forEach { it.value = ready }
                         settle(8)
                         if (menuMode) prepareMenu(scenario)
+                        if (panelMode) preparePanel(scenario)
                         tracer.reset()
                         planning.reset()
+                        panelStatistics.reset()
+                        SelectedPanelDiagnostics.observer = if (panelMode && tracing) panelStatistics else null
                         val result = measure(scenario, samples)
                         drainFrames()
                         results.put(result.put("round", round).put("scenario", scenario)
-                            .put("compositions", tracer.json()).put("planning", planning.json()))
+                            .put("compositions", tracer.json()).put("planning", planning.json())
+                            .put("panel", panelStatistics.json()))
                     }
                 }
                 Composer.setTracer(null)
@@ -181,6 +221,7 @@ class ContainerProfileActivity : ComponentActivity() {
                     .put("cpu_window", if (asynchronous || plannerMode) "whole_tick" else "first_two_frames")
                     .put("planner", plannerMode).put("prefetch", prefetch).put("layout", layout.storageId)
                     .put("menu", menuMode)
+                    .put("panel", panelMode)
                     .put("samples", samples).put("rounds", rounds).put("results", results).toString(2))
                 completion.complete("complete $run")
             } catch (error: Throwable) {
@@ -191,12 +232,20 @@ class ContainerProfileActivity : ComponentActivity() {
             } finally {
                 Composer.setTracer(null)
                 SeriesListPlanningDiagnostics.observer = null
+                SelectedPanelDiagnostics.observer = null
             }
         }
     }
 
     @Composable
     private fun Fixture(theme: InterfaceTheme) {
+        if (panelComponent) {
+            ru.seasonvar.tv.ui.theme.SeasonvarTheme(theme) {
+                SelectedPanel(rows.first(), { panelDescription }, Modifier.fillMaxSize()
+                    .padding(ru.seasonvar.tv.ui.theme.SeasonvarTheme.dimensions.screenPaddingHorizontal))
+            }
+            return
+        }
         // Повторяет границу подписок MainActivity; модели и сеть заменены готовыми состояниями.
         val states = public.mapValues { (_, flow) -> flow.collectAsStateWithLifecycle().value }
         val personalStates = personal.mapValues { (_, flow) -> flow.collectAsStateWithLifecycle().value }
@@ -204,7 +253,7 @@ class ContainerProfileActivity : ComponentActivity() {
             catalogLayouts = mapOf(Section.TOP to layout), accountSession = session,
             onListVisibilityChange = if (menuMode) ({ visibleSection = it }) else null,
             personalStates = personalStates, imagePrefetchEnabled = prefetch,
-            loadDescription = { SeriesDescription(listOf(it.previewDescription.orEmpty())) })
+            loadDescription = { if (panelMode) panelText else SeriesDescription(listOf(it.previewDescription.orEmpty())) })
     }
 
     private suspend fun measure(scenario: String, samples: Int): JSONObject {
@@ -246,6 +295,11 @@ class ContainerProfileActivity : ComponentActivity() {
                 key(if (index % 2 == 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
             if (scenario == "menu_sections")
                 key(if (index % 2 == 0) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP)
+            if (scenario == "panel_navigation") key(if (index % 2 == 0) {
+                if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_RIGHT
+            } else if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_LEFT)
+            if (scenario == "panel_description") panelDescription = if (index % 2 == 0)
+                DescriptionState(rows.first().key, loading = true) else DescriptionState(rows.first().key, panelText)
             settle(2)
             if (!asynchronous && !plannerMode) cpu += (Debug.threadCpuTimeNanos() - cpuStart) / 1_000_000.0
             val interval = if (scenario == "hold_50ms") 50L else 100L
@@ -260,6 +314,7 @@ class ContainerProfileActivity : ComponentActivity() {
                 } else if (expected == Section.UPDATES) R.string.updates_title else R.string.today_title
                 checkMenuFocus(label)
             }
+            if (scenario == "panel_navigation" && index % 2 == 1) checkFocus("Карточка 1")
         }
         heldCode?.let { heldKey(downTime, it, KeyEvent.ACTION_UP, 0) }
         val end = System.nanoTime()
@@ -282,6 +337,18 @@ class ContainerProfileActivity : ComponentActivity() {
             .put("dropped_metric_reports", selected.sumOf { it[4] })
     }
 
+    private suspend fun preparePanel(scenario: String) {
+        panelComponent = scenario == "panel_description"
+        panelDescription = DescriptionState(rows.first().key, panelText)
+        settle(12)
+        if (!panelComponent) {
+            key(KeyEvent.KEYCODE_DPAD_LEFT)
+            key(KeyEvent.KEYCODE_DPAD_RIGHT)
+            settle(12)
+            checkFocus("Карточка 1")
+        }
+    }
+
     private suspend fun prepareMenu(scenario: String) {
         key(KeyEvent.KEYCODE_DPAD_LEFT)
         key(KeyEvent.KEYCODE_BACK)
@@ -297,7 +364,9 @@ class ContainerProfileActivity : ComponentActivity() {
         }
     }
 
-    private fun checkMenuFocus(label: Int) {
+    private fun checkMenuFocus(label: Int) = checkFocus(getString(label))
+
+    private fun checkFocus(label: String) {
         fun root(view: View): ViewRootForTest? = view as? ViewRootForTest ?: (view as? ViewGroup)?.let {
             (0 until it.childCount).firstNotNullOfOrNull { index -> root(it.getChildAt(index)) }
         }
@@ -305,10 +374,10 @@ class ContainerProfileActivity : ComponentActivity() {
             if (node.config.getOrNull(SemanticsProperties.Focused) == true) node
             else node.children.firstNotNullOfOrNull(::focused)
         val node = focused(checkNotNull(root(window.decorView)).semanticsOwner.rootSemanticsNode)
-        val text = node?.config?.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }
-        val description = node?.config?.getOrNull(SemanticsProperties.ContentDescription)?.joinToString("")
-        check(text == getString(label) || description == getString(label)) {
-            "Expected focus ${getString(label)}, got $text/$description"
+        val text = node?.config?.getOrNull(SemanticsProperties.Text)?.map { it.text }
+        val description = node?.config?.getOrNull(SemanticsProperties.ContentDescription)
+        check(text?.contains(label) == true || description?.contains(label) == true) {
+            "Expected focus $label, got $text/$description"
         }
     }
 
@@ -344,6 +413,7 @@ class ContainerProfileActivity : ComponentActivity() {
     override fun onDestroy() {
         Composer.setTracer(null)
         SeriesListPlanningDiagnostics.observer = null
+        SelectedPanelDiagnostics.observer = null
         if (::frameThread.isInitialized) frameThread.quitSafely()
         super.onDestroy()
     }
@@ -396,6 +466,19 @@ private class PlanningStatistics : SeriesListPlanningDiagnostics.Observer {
         .put("plan_cpu_ms", distribution(cpu)).put("plan_wall_ms", distribution(wall))
         .put("apply_cpu_ms", distribution(applyCpu)).put("slots", distribution(slots)).put("images", distribution(images))
         .put("plan_cpu_samples_ms", JSONArray(cpu)).put("apply_cpu_samples_ms", JSONArray(applyCpu))
+}
+
+private class PanelStatistics : SelectedPanelDiagnostics.Observer {
+    private val measures = mutableListOf<Double>()
+    private val texts = mutableListOf<Double>()
+    private var aspects = 0
+
+    override fun measured(cpuNanos: Long) { measures += cpuNanos / 1_000_000.0 }
+    override fun textPrepared(cpuNanos: Long) { texts += cpuNanos / 1_000_000.0 }
+    override fun aspectChanged() { aspects++ }
+    fun reset() { measures.clear(); texts.clear(); aspects = 0 }
+    fun json() = JSONObject().put("measure_cpu_ms", distribution(measures))
+        .put("text_cpu_ms", distribution(texts)).put("aspect_changes", aspects)
 }
 
 private class ContainerCompositionTracer : CompositionTracer {
