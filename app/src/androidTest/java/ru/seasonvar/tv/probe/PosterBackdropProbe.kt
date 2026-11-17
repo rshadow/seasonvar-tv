@@ -36,6 +36,7 @@ import ru.seasonvar.tv.ui.details.PosterBackdropLayer
 import ru.seasonvar.tv.ui.details.PosterBackdropPage
 import ru.seasonvar.tv.ui.details.PosterBackdropState
 import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
+import ru.seasonvar.tv.ui.details.PosterBackdropSource
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.CatalogPane
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
@@ -457,6 +458,73 @@ object PosterBackdropProbe {
             await { !plainBackground(backgroundPixel(0.55f, 0.5f)) && plainBackground(backgroundPixel()) }
             finishFade()
             capture("12-centered-fallback")
+            phase = "solid-placeholder"
+            val delayedPoster = mutableStateOf<Bitmap?>(null)
+            val waitingSource = PosterBackdropState()
+            val themedFallback = mutableStateOf(false)
+            runOnMainSync { activity!!.setContent { SeasonvarTheme(InterfaceTheme.GLASS) {
+                val density = LocalDensity.current
+                BoxWithConstraints(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground)) {
+                    PosterBackdropLayer(waitingSource,
+                        with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
+                        useFallbackImage = themedFallback.value)
+                }
+            } } }
+            fun checkSolid() {
+                finishFade()
+                check(plainBackground(backgroundPixel(0.55f, 0.5f)))
+                check(plainBackground(backgroundPixel(0.5f, 0.55f)))
+            }
+            checkSolid()
+            val cacheBeforeWaiting = app.posterBackdrops.cachedBytes
+            runOnMainSync { waitingSource.attach(PosterBackdropSource("fixture:delayed-poster", delayedPoster)) }
+            checkSolid()
+            check(app.posterBackdrops.cachedBytes == cacheBeforeWaiting)
+            capture("13-solid-poster-loading")
+            runOnMainSync { delayedPoster.value = poster }
+            await { !plainBackground(backgroundPixel(0.55f, 0.5f)) }
+            finishFade()
+            capture("14-delayed-poster-ready")
+            runOnMainSync {
+                waitingSource.attach(PosterBackdropSource("fixture:next-loading-poster", mutableStateOf(null)))
+            }
+            checkSolid()
+            capture("15-solid-next-poster")
+            runOnMainSync { themedFallback.value = true }
+            await { !plainBackground(backgroundPixel(0.55f, 0.5f)) }
+            finishFade()
+            capture("16-system-icon-fallback")
+            runOnMainSync { themedFallback.value = false }
+            checkSolid()
+            result.putBoolean("solid_series_placeholder", true)
+            result.putBoolean("delayed_poster_without_icon", true)
+            result.putBoolean("system_icon_preserved", true)
+            phase = "main-loading-placeholder"
+            val pendingPage = mutableStateOf(CatalogUiState(date = LocalDate.of(2026, 1, 1)))
+            val topTitle = targetContext.getString(ru.seasonvar.tv.R.string.top_title)
+            val settingsTitle = targetContext.getString(ru.seasonvar.tv.R.string.settings_title)
+            runOnMainSync { activity!!.setContent {
+                ru.seasonvar.tv.ui.SeasonvarApp(PublicFeed.entries.associateWith { pendingPage.value }, {},
+                    interfaceTheme = InterfaceTheme.GLASS, showActors = false,
+                    startPage = ru.seasonvar.tv.ui.navigation.Section.TOP)
+            } }
+            await { clickable(topTitle)?.isFocused == true }
+            finishFade()
+            check(plainBackground(backgroundPixel(0.55f, 0.5f)))
+            capture("17-main-list-loading")
+            repeat(4) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); waitForIdleSync() }
+            await { clickable(settingsTitle)?.isFocused == true }
+            finishFade()
+            capture("18-main-settings-icon")
+            repeat(4) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); waitForIdleSync() }
+            await { clickable(topTitle)?.isFocused == true }
+            finishFade()
+            check(plainBackground(backgroundPixel(0.55f, 0.5f)))
+            runOnMainSync { pendingPage.value = pendingPage.value.copy(loading = false, loaded = true) }
+            finishFade()
+            check(plainBackground(backgroundPixel(0.55f, 0.5f)))
+            capture("19-main-list-empty")
+            result.putBoolean("menu_backdrop_context", true)
             result.putBoolean("fallback_background", true)
             result.putBoolean("list_background_tracks_selection", true)
             result.putBoolean("prefetch_toggle", true)
