@@ -1125,6 +1125,8 @@ make release
 
 ## Фоновое обновление и видимость списков
 
+`ListRefreshProbe` задаёт порядок сценариев. `ListStartupChecks` проверяет восстановление стартового раздела; `ListRefreshChecks` — обновление, вход в списки и возвраты. Выбранная карточка и её границы передаются между шагами явно. Синтетические выдачи и барьеры принадлежат `ListRefreshFixtures`, Activity и диагностика — `ListRefreshProbeSession`; модели и корутины освобождаются на главном потоке при любом исходе.
+
 ```bash
 make list-refresh-probe DEVICE=emulator-5554 PROBE_THEME=plain
 make list-refresh-probe DEVICE=emulator-5554 PROBE_THEME=glass
