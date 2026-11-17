@@ -23,8 +23,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -35,7 +33,6 @@ import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.CatalogCardMetrics
 import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -69,7 +66,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -111,6 +107,13 @@ import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.ui.navigation.MainFocus
+import ru.seasonvar.tv.ui.navigation.MainStartupNavigation
+import ru.seasonvar.tv.ui.navigation.MainSearchNavigation
+import ru.seasonvar.tv.ui.navigation.syncMainAccountNavigation
+import ru.seasonvar.tv.ui.navigation.MainContentTarget
+import ru.seasonvar.tv.ui.navigation.requestMainContentFocus
+import ru.seasonvar.tv.ui.navigation.rememberMainCatalogPositions
 import ru.seasonvar.tv.ui.navigation.MenuGroup
 import ru.seasonvar.tv.ui.navigation.BackNavigation
 import ru.seasonvar.tv.ui.navigation.backNavigationKeys
@@ -119,7 +122,6 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import ru.seasonvar.tv.data.account.PersonalFeed
 import ru.seasonvar.tv.ui.search.SearchUiState
-import ru.seasonvar.tv.ui.search.SearchControls
 import java.time.format.DateTimeFormatter
 
 private data class RemovalFocusOrigin(val catalogKey: String, val keys: List<String>, val selected: String)
@@ -353,10 +355,12 @@ private fun SeasonvarContent(
         Section.menuGroups(accountSession.user != null, hiddenSections)
     }
     val visibleMenuPages = remember(visibleMenuGroups) { visibleMenuGroups.flatMap { it.second } }
-    var startupPending by rememberSaveable { mutableStateOf(true) }
+    val startupPendingState = rememberSaveable { mutableStateOf(true) }
+    var startupPending by startupPendingState
     val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy, hiddenSections)
     var menuOwnsInput by remember { mutableStateOf(true) }
-    var section by rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
+    val sectionState = rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
+    var section by sectionState
     val waitingForStartPage = startupPending && section != startupTarget
     val browsing = section == Section.CATALOG
     val browseState = browseCatalog?.state?.collectAsStateWithLifecycle()?.value ?: ru.seasonvar.tv.ui.catalog.BrowseCatalogState()
@@ -384,57 +388,14 @@ private fun SeasonvarContent(
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
     var removalOrigin by remember { mutableStateOf<RemovalFocusOrigin?>(null) }
     var removalWasVisible by remember { mutableStateOf(false) }
-    val todayListState = rememberLazyListState()
-    val updatesListState = rememberLazyListState()
-    val topListState = rememberLazyListState()
-    val newestListState = rememberLazyListState()
-    val bestListState = rememberLazyListState()
-    val announcementsListState = rememberLazyListState()
-    val browseListState = key(browseConditions) { rememberLazyListState() }
-    val browseGridState = key(browseConditions) { rememberLazyGridState() }
-    val searchListState = rememberLazyListState()
-    val smartListState = rememberLazyListState()
-    val personalListStates = PersonalFeed.entries.associateWith { rememberLazyListState() }
-    val listState = if (browsing) browseListState else if (searching) searchListState else if (smart) smartListState else if (personalFeed != null) personalListStates.getValue(personalFeed) else when (activeFeed) {
-        PublicFeed.TODAY -> todayListState
-        PublicFeed.UPDATES -> updatesListState
-        PublicFeed.TOP -> topListState
-        PublicFeed.NEWEST -> newestListState
-        PublicFeed.BEST -> bestListState
-        PublicFeed.ANNOUNCEMENTS -> announcementsListState
-    }
-    val publicGridStates = PublicFeed.entries.associateWith { rememberLazyGridState() }
-    val personalGridStates = PersonalFeed.entries.associateWith { rememberLazyGridState() }
-    val searchGridState = rememberLazyGridState()
-    val smartGridState = rememberLazyGridState()
-    val gridState = if (browsing) browseGridState else if (searching) searchGridState else if (smart) smartGridState else if (personalFeed != null) personalGridStates.getValue(personalFeed)
-        else publicGridStates.getValue(activeFeed)
-    val contentFocus = remember { FocusRequester() }
+    val positions = rememberMainCatalogPositions(browseConditions)
+    val position = positions.forSection(section, activeFeed)
+    val listState = position.list
+    val gridState = position.grid
+    val focus = remember { MainFocus() }
     var returningToList by remember { mutableStateOf(false) }
-    val layoutFocus = remember { FocusRequester() }
-    val browseFocus = remember { FocusRequester() }
-    val browseFiltersFocus = remember { FocusRequester() }
-    val searchFocus = remember { FocusRequester() }
-    val smartFocus = remember { FocusRequester() }
-    val accountFocus = remember { FocusRequester() }
-    val personalFocus = remember { PersonalFeed.entries.associateWith { FocusRequester() } }
-    val menuBringIntoView = remember { Section.entries.associateWith { BringIntoViewRequester() } }
-    val searchInputFocus = remember { FocusRequester() }
-    val searchHistoryFocus = remember { FocusRequester() }
-    var pendingHistoryQuery by remember { mutableStateOf<String?>(null) }
-    val todayFocus = remember { FocusRequester() }
-    val updatesFocus = remember { FocusRequester() }
-    val topFocus = remember { FocusRequester() }
-    val newestFocus = remember { FocusRequester() }
-    val bestFocus = remember { FocusRequester() }
-    val announcementsFocus = remember { FocusRequester() }
-    val settingsFocus = remember { FocusRequester() }
-    val settingsContentFocus = remember { FocusRequester() }
-    val aboutFocus = remember { FocusRequester() }
-    val aboutContentFocus = remember { FocusRequester() }
-    val refreshFocus = remember { FocusRequester() }
-    val retryFocus = remember { FocusRequester() }
-    val cards = remember { mutableMapOf<String, FocusRequester>() }
+    val pendingHistoryQueryState = remember { mutableStateOf<String?>(null) }
+    var pendingHistoryQuery by pendingHistoryQueryState
     val scope = rememberCoroutineScope()
     val backNavigation = remember { BackNavigation() }
     val context = LocalContext.current
@@ -469,48 +430,12 @@ private fun SeasonvarContent(
         }
     }
 
-    fun sectionFocus(item: Section): FocusRequester = when (item) {
-        Section.CATALOG -> browseFocus
-        Section.SEARCH -> searchFocus
-        Section.SMART_CONTINUE -> smartFocus
-        Section.ACCOUNT -> accountFocus
-        Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
-            personalFocus.getValue(requireNotNull(item.personalFeed))
-        Section.TODAY -> todayFocus
-        Section.UPDATES -> updatesFocus
-        Section.TOP -> topFocus
-        Section.NEWEST -> newestFocus
-        Section.BEST -> bestFocus
-        Section.ANNOUNCEMENTS -> announcementsFocus
-        Section.SETTINGS -> settingsFocus
-        Section.ABOUT -> aboutFocus
-    }
-
-    val publicActivation = remember { object { var feed: PublicFeed? = null } }
-    SideEffect {
-        val feed = section.publicFeed.takeUnless { waitingForStartPage }
-        if (publicActivation.feed != feed) {
-            publicActivation.feed = feed
-            feed?.let(onFeedVisible)
-        }
-    }
-    LaunchedEffect(browsing) { if (browsing) browseCatalog?.activate() }
-    DisposableEffect(smart) {
-        onSmartVisible(smart)
-        onDispose { onSmartVisible(false) }
-    }
-    DisposableEffect(personalFeed) {
-        onPersonalVisible(personalFeed)
-        onDispose { onPersonalVisible(null) }
-    }
-    DisposableEffect(searching) {
-        onSearchVisible(searching)
-        onDispose { if (searching) onSearchVisible(false) }
-    }
+    MainCatalogActivation(section, waitingForStartPage, browseCatalog,
+        onFeedVisible, onSmartVisible, onPersonalVisible, onSearchVisible)
     LaunchedEffect(searchState.query) {
         selectedKeys = selectedKeys - "SEARCH"
-        searchListState.scrollToItem(0)
-        searchGridState.scrollToItem(0)
+        positions.search.list.scrollToItem(0)
+        positions.search.grid.scrollToItem(0)
     }
     LaunchedEffect(catalogKey, state.entries) {
         if (state.entries.none { it.key == selectedKey }) {
@@ -521,51 +446,13 @@ private fun SeasonvarContent(
     if (BuildConfig.BUILD_TYPE == "profile" && ru.seasonvar.tv.diagnostics.StartupDiagnostics.active) SideEffect {
         ru.seasonvar.tv.diagnostics.StartupDiagnostics.observe(initialStartPage, startupTarget, section, state, accountState.busy)
     }
-    LaunchedEffect(startupTarget) {
-        if (!startupPending) return@LaunchedEffect
-        val target = startupTarget ?: Section.TODAY.availableAtStart(accountSession.user != null, hiddenSections)
-        if (startupTarget != null) selectSection(target)
-        repeat(2) { withFrameNanos { } }
-        if (startupPending && section == target) {
-            if (startupTarget != null) startupPending = false
-            sectionFocus(target).requestFocus()
-            if (BuildConfig.BUILD_TYPE == "profile" && startupTarget != null)
-                ru.seasonvar.tv.diagnostics.StartupDiagnostics.targetFocused(target)
-        }
-    }
-    LaunchedEffect(Unit) {
-        if (section.canHide && section in hiddenSections) {
-            selectSection(section.availableAtStart(accountSession.user != null, hiddenSections))
-        }
-        if (!startupPending) {
-            repeat(2) { withFrameNanos { } }
-            sectionFocus(section).requestFocus()
-        }
-    }
+    MainStartupNavigation(startupTarget, startupPendingState, sectionState,
+        accountSession.user != null, hiddenSections, focus, ::selectSection)
     LaunchedEffect(accountSession.version) {
-        val menuTarget = section.takeIf { menuOwnsInput }
-        val personalKeys = PersonalFeed.entries.map { it.catalogKey }.toSet() + "SMART_CONTINUE"
-        selectedKeys = selectedKeys - personalKeys
-        removalOrigin = null
-        cards.keys.removeAll { it.substringBefore('|') in personalKeys }
-        personalListStates.values.forEach { it.requestScrollToItem(0) }
-        personalGridStates.values.forEach { it.requestScrollToItem(0) }
-        smartListState.requestScrollToItem(0)
-        smartGridState.requestScrollToItem(0)
-        detailsOpen = false
-        if (section.requiresAccount && accountSession.user == null) section = Section.ACCOUNT
-        if (section == Section.ACCOUNT && accountSession.user != null) {
-            val target = Section.RESUME.availableAtStart(true, hiddenSections)
-            selectSection(target)
-            repeat(2) { withFrameNanos { } }; sectionFocus(target).requestFocus()
-        }
-        if (menuTarget != null) {
-            repeat(2) { withFrameNanos { } }
-            if (menuOwnsInput && section == menuTarget) {
-                sectionFocus(menuTarget).requestFocus()
-                if (menuTarget in visibleMenuPages) menuBringIntoView.getValue(menuTarget).bringIntoView()
-            }
-        }
+        syncMainAccountNavigation(accountSession, hiddenSections, visibleMenuPages, focus, positions,
+            currentSection = { section }, menuOwnsInput = { menuOwnsInput },
+            onClearPersonal = { selectedKeys = selectedKeys - it; removalOrigin = null },
+            onCloseDetails = { detailsOpen = false }, onRequireSignIn = { section = Section.ACCOUNT }, onSelect = ::selectSection)
     }
 
     fun enterContent() {
@@ -573,59 +460,15 @@ private fun SeasonvarContent(
         val restoring = returningToList
         scope.launch {
             try {
-                repeat(2) { withFrameNanos { } }
-                if (section != requestedSection) return@launch
-                val selected = latestSelected
-                val state = latestState
-                val listState = latestListState
-                if (section == Section.SEARCH && latestSearchState.showHistory) {
-                    if (!latestSearchState.historyLoading) {
-                        if (latestSearchState.recentQueries.isEmpty()) searchInputFocus.requestFocus() else searchHistoryFocus.requestFocus()
-                    }
-                } else if (section == Section.ACCOUNT) {
-                    accountFocus.requestFocus()
-                } else if (section == Section.SETTINGS) {
-                    settingsContentFocus.requestFocus()
-                } else if (section == Section.ABOUT) {
-                    aboutContentFocus.requestFocus()
-                } else if (selected == null) {
-                    if (browsing) layoutFocus.requestFocus()
-                    else if (searching) searchInputFocus.requestFocus()
-                    else if (state.failure != null) retryFocus.requestFocus() else refreshFocus.requestFocus()
-                } else {
-                    inputModeManager.requestInputMode(InputMode.Keyboard)
-                    val index = state.entries.indexOfFirst { it.key == selected.key }
-                    val cardKey = catalogKey + "|" + selected.key
-                    val targetLayout = latestCatalogLayout
-                    if (targetLayout == CatalogLayout.GRID) {
-                        val grid = latestGridState
-                        if (grid.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
-                            grid.scrollToItem(index.coerceAtLeast(0))
-                        }
-                    } else if (listState.layoutInfo.visibleItemsInfo.none { it.key == cardKey }) {
-                        listState.scrollToItem(index.coerceAtLeast(0))
-                    }
-                    repeat(2) { withFrameNanos { } }
-                    if (section == requestedSection && !detailsOpen && latestCatalogLayout == targetLayout && latestSelected?.key == selected.key) {
-                        cards[cardKey]?.requestFocus()
-                    }
-                }
+                requestMainContentFocus(requestedSection, { section }, {
+                    MainContentTarget(latestSelected, latestState, latestListState, latestGridState,
+                        latestCatalogLayout, latestSearchState, catalogKey)
+                }, focus, inputModeManager, browsing, searching, { detailsOpen })
             } finally { if (restoring) returningToList = false }
         }
     }
 
-    LaunchedEffect(pendingHistoryQuery, searchState.showHistory, searchState.query, searchState.results.loading, searchState.results.loaded, searchState.results.failure) {
-        if (!searchState.showHistory && pendingHistoryQuery == searchState.query && !searchState.results.loading &&
-            (searchState.results.loaded || searchState.results.failure != null)) {
-            pendingHistoryQuery = null
-            keyboard?.hide()
-            if (searchState.results.entries.isNotEmpty()) enterContent() else refreshFocus.requestFocus()
-        }
-    }
-    LaunchedEffect(searching, searchState.showHistory, searchState.focusHistoryOnShow) {
-        if (!searching) pendingHistoryQuery = null
-        else if (searchState.showHistory && searchState.focusHistoryOnShow) keyboard?.hide()
-    }
+    MainSearchNavigation(searching, searchState, pendingHistoryQueryState, focus, keyboard, ::enterContent)
 
     fun returnToMenu() {
         val requestedSection = section
@@ -633,29 +476,14 @@ private fun SeasonvarContent(
         scope.launch {
             repeat(2) { withFrameNanos { } }
             if (section != requestedSection) return@launch
-            when (section) {
-                Section.SMART_CONTINUE -> smartFocus.requestFocus()
-                Section.CATALOG -> browseFocus.requestFocus()
-                Section.SEARCH -> searchFocus.requestFocus()
-                Section.ACCOUNT -> accountFocus.requestFocus()
-                Section.RESUME, Section.PERSONAL_UPDATES, Section.PERSONAL_NO_UPDATES, Section.WANT, Section.WATCHED, Section.HISTORY ->
-                    personalFocus.getValue(requireNotNull(section.personalFeed)).requestFocus()
-                Section.TODAY -> todayFocus.requestFocus()
-                Section.UPDATES -> updatesFocus.requestFocus()
-                Section.TOP -> topFocus.requestFocus()
-                Section.NEWEST -> newestFocus.requestFocus()
-                Section.BEST -> bestFocus.requestFocus()
-                Section.ANNOUNCEMENTS -> announcementsFocus.requestFocus()
-                Section.SETTINGS -> settingsFocus.requestFocus()
-                Section.ABOUT -> aboutFocus.requestFocus()
-            }
+            focus.sectionFocus(section).requestFocus()
         }
     }
 
     fun closeDetails() {
         // Контейнер удерживает фокус до восстановления карточки ленивого списка.
         returningToList = true
-        contentFocus.requestFocus()
+        focus.contentFocus.requestFocus()
         detailsOpen = false
         enterContent()
     }
@@ -733,81 +561,23 @@ private fun SeasonvarContent(
         }
         Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
             horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {
-            Column(Modifier.width(d.menuWidth).fillMaxHeight()
-                .onFocusChanged { if (it.hasFocus) {
-                    menuOwnsInput = true
-                    ru.seasonvar.tv.diagnostics.startupMark("first_menu_focus")
-                } }.focusGroup()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                    ThemeButton(stringResource(R.string.search_title), onClick = {
-                        startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++
-                    }, modifier = Modifier.focusRequester(searchFocus).focusProperties { down = sectionFocus(visibleMenuPages.first()); right = browseFocus },
-                        icon = R.drawable.ic_search)
-                    ThemeButton(stringResource(R.string.browse_catalog_title), {
-                        startupPending = false; backNavigation.reset(); selectSection(Section.CATALOG)
-                        scope.launch { repeat(2) { withFrameNanos { } }; if (section == Section.CATALOG) browseFiltersFocus.requestFocus() }
-                    }, Modifier.focusRequester(browseFocus).focusProperties { left = searchFocus; right = accountFocus; down = sectionFocus(visibleMenuPages.first()) },
-                        icon = R.drawable.ic_catalog, actionEnabled = browseCatalog != null)
-                    ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
-                        onClick = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
-                        modifier = Modifier.focusRequester(accountFocus).focusProperties { left = browseFocus; right = FocusRequester.Cancel; down = sectionFocus(visibleMenuPages.first()) },
-                        icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
-                }
-                Spacer(Modifier.height(d.menuHeaderSpacing))
-                Column(
-                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(d.menuItemSpacing),
-                ) {
-                    visibleMenuGroups.forEachIndexed { index, (group, sections) ->
-                        key(group) {
-                            Text(
-                                stringResource(menuGroupTitle(group)),
-                                modifier = Modifier.fillMaxWidth()
-                                    .then(if (index > 0) Modifier.padding(top = d.spacingSmall) else Modifier)
-                                    .padding(horizontal = d.spacingSmall, vertical = d.menuItemSpacing)
-                                    .semantics { heading() },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            sections.forEach { item ->
-                                key(item) {
-                                    val focus = sectionFocus(item)
-                                    val label = sectionTitle(item)
-                                    ThemeButton(
-                                        stringResource(label),
-                                        onClick = { startupPending = false; backNavigation.reset(); selectSection(item); menuEnterContent() },
-                                        modifier = Modifier.fillMaxWidth().height(d.menuItemHeight)
-                                            .bringIntoViewRequester(menuBringIntoView.getValue(item))
-                                            .focusRequester(focus).focusProperties { if (item == visibleMenuPages.first()) up = searchFocus }
-                                            .onFocusChanged {
-                                                if (it.isFocused) selectSection(item)
-                                            }
-                                            .onPreviewKeyEvent {
-                                                if (it.key == Key.DirectionRight && it.type == KeyEventType.KeyDown) {
-                                                    selectSection(item)
-                                                    menuEnterContent()
-                                                    true
-                                                } else false
-                                            },
-                                        active = section == item,
-                                        showOutline = SeasonvarTheme.menuButtonOutline,
-                                        contentAlignment = Alignment.CenterStart,
-                                        contentPadding = PaddingValues(horizontal = d.menuItemPaddingHorizontal, vertical = d.spacingSmall),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            MainMenu(visibleMenuGroups, visibleMenuPages, section, accountSession, focus, browseCatalog != null,
+                onMenuFocus = { menuOwnsInput = true; ru.seasonvar.tv.diagnostics.startupMark("first_menu_focus") },
+                onSearch = { startupPending = false; pendingHistoryQuery = null; backNavigation.reset(); detailsOpen = false; section = Section.SEARCH; searchEditRequest++ },
+                onBrowse = {
+                    startupPending = false; backNavigation.reset(); selectSection(Section.CATALOG)
+                    scope.launch { repeat(2) { withFrameNanos { } }; if (section == Section.CATALOG) focus.browseFiltersFocus.requestFocus() }
+                }, onAccount = { startupPending = false; backNavigation.reset(); selectSection(Section.ACCOUNT) },
+                onChoose = { startupPending = false; backNavigation.reset(); selectSection(it); menuEnterContent() },
+                onFocused = ::selectSection, onEnter = { selectSection(it); menuEnterContent() })
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxHeight()
-                    .focusRequester(contentFocus).focusProperties { canFocus = returningToList }.focusTarget()
+                    .focusRequester(focus.contentFocus).focusProperties { canFocus = returningToList }.focusTarget()
                     .onFocusChanged { if (it.hasFocus) menuOwnsInput = false }.focusGroup()
             ) {
                 val cardMetrics = rememberCatalogCardMetrics(maxWidth, if (browsing) d.browseCatalogMinCardWidth else d.catalogMinCardWidth)
                 if (section == Section.ACCOUNT) {
-                    AccountPane(accountSession, accountState, accountFocus, onLogin, onLogout, onCheckAccount)
+                    AccountPane(accountSession, accountState, focus.accountFocus, onLogin, onLogout, onCheckAccount)
                 } else if (section == Section.SETTINGS) {
                     SettingsPane(
                         connectionCheck = connectionCheck, onConnectionRefresh = onConnectionRefresh,
@@ -815,9 +585,9 @@ private fun SeasonvarContent(
                         imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = onImagePrefetchChange,
                         showActors = showActors, onShowActorsChange = onShowActorsChange,
                         interfaceTheme = interfaceTheme, onInterfaceThemeChange = onInterfaceThemeChange,
-                        bypassEnabled = bypassEnabled, settingsContentFocus = settingsContentFocus,
+                        bypassEnabled = bypassEnabled, settingsContentFocus = focus.settingsContentFocus,
                         translationSettingsModel = translationSettingsModel,
-                        menuFocus = settingsFocus,
+                        menuFocus = focus.settingsFocus,
                         onBypassChange = onBypassChange,
                         dnsProvider = dnsProvider,
                         onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
@@ -832,7 +602,7 @@ private fun SeasonvarContent(
                         onInteraction = backNavigation::reset,
                     )
                 } else if (section == Section.ABOUT) {
-                    ru.seasonvar.tv.ui.about.AboutPane(aboutContentFocus, aboutFocus, backNavigation::reset, updateModel)
+                    ru.seasonvar.tv.ui.about.AboutPane(focus.aboutContentFocus, focus.aboutFocus, backNavigation::reset, updateModel)
                 } else if (detailsOpen && detailsSource != null && detailsModel != null) {
                     SeriesDetailsPane(
                         detailsSource!!, detailsModel,
@@ -840,64 +610,29 @@ private fun SeasonvarContent(
                         onActions = if (accountSession.user == null) null else ::openSeriesActions,
                         removalDialogOpen = removalState.visible,
                         onPlay = onPlay,
-                        menuFocus = sectionFocus(section),
+                        menuFocus = focus.sectionFocus(section),
                         onInteraction = backNavigation::reset,
                     )
                 } else {
-                    CatalogPane(
-                        state, selected, listState, cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
-                        sectionFocus(section), refreshFocus, retryFocus,
-                        imagePrefetchEnabled = imagePrefetchEnabled,
-                        onBackdropSource = onBackdropSource,
-                        loadDescription = loadDescription,
-                        cardData = cardData,
-                        preparationContext = listOf(accountSession.version, bypassEnabled, dnsProvider, proxy),
-                        cardMetrics = cardMetrics, layout = catalogLayout, gridState = gridState, layoutFocus = layoutFocus,
-                        onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
-                        onEnterContent = ::enterContent,
-                        inlineFilters = if (browsing && browseCatalog != null) ({
-                            ru.seasonvar.tv.ui.catalog.BrowseCatalogFilters(browseState, browseCatalog, accountSession.user != null,
-                                layoutFocus, browseFiltersFocus, refreshFocus, browseFocus, ::enterContent)
-                        }) else null,
-                        browsing = browsing,
-                        query = if (searching) searchState.query else null,
-                        searchHeader = if (searching) { {
-                            SearchControls(
-                                query = searchState.query,
-                                onQuery = { pendingHistoryQuery = null; onSearchQuery(it) },
-                                showHistory = searchState.showHistory,
-                                historyLoading = searchState.historyLoading,
-                                historyFailed = searchState.historyFailed,
-                                onCommit = onSearchRemember,
-                                inputFocus = searchInputFocus,
-                                menuFocus = searchFocus,
-                                editRequest = searchEditRequest,
-                                onSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
-                                onResults = { keyboard?.hide(); if (searchState.showHistory) {
-                                    if (searchState.recentQueries.isNotEmpty()) searchHistoryFocus.requestFocus()
-                                } else if (state.entries.isNotEmpty()) enterContent() },
-                            )
-                        } } else null,
-                        historyContent = if (searching && searchState.showHistory) ({
-                            if (!searchState.historyLoading) ru.seasonvar.tv.ui.search.SearchHistoryPane(
-                                searchState.recentQueries, searchState.historyClearing, searchHistoryFocus, searchInputFocus, searchFocus,
-                                focusOnShow = searchState.focusHistoryOnShow,
-                                onRecall = { query -> pendingHistoryQuery = query; keyboard?.hide(); onSearchRecall(query) },
-                                onClear = onSearchClearHistory)
-                        }) else null,
-                        onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
-                        smart = smart, personalFeed = personalFeed, catalogKey = catalogKey, allowAccountActions = accountSession.user != null,
+                    MainCatalogContent(state, selected, section, activeFeed, catalogKey, position, focus, catalogLayout, cardMetrics,
+                        accountSession.user != null, imagePrefetchEnabled, loadDescription, cardData,
+                        listOf(accountSession.version, bypassEnabled, dnsProvider, proxy), browseState, browseCatalog, searchState, searchEditRequest,
                         filters = if (personalFeed != null) personalFilters[personalFeed]
                             else if (!browsing && !searching && !smart) publicFilters[activeFeed] else null,
                         historyClear = if (personalFeed == PersonalFeed.HISTORY) historyClear else null,
+                        onLayoutChange = { backNavigation.reset(); onCatalogLayoutChange(section, catalogLayout.other()) },
+                        onEnterContent = ::enterContent,
+                        onSearchQuery = { pendingHistoryQuery = null; onSearchQuery(it) },
+                        onSearchSubmit = { keyboard?.hide(); onSearchSubmit(); if (state.entries.isNotEmpty()) enterContent() },
+                        onSearchResults = { keyboard?.hide(); if (searchState.showHistory) {
+                            if (searchState.recentQueries.isNotEmpty()) focus.searchHistoryFocus.requestFocus()
+                        } else if (state.entries.isNotEmpty()) enterContent() },
+                        onSearchRemember = onSearchRemember,
+                        onSearchRecall = { pendingHistoryQuery = it; keyboard?.hide(); onSearchRecall(it) }, onSearchClearHistory = onSearchClearHistory,
+                        onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                         onLoadMore = { personalFeed?.let(onPersonalMore) },
-                        onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) },
-                        onOpen = ::openDetails,
-                        onActions = { entry ->
-                            selectEntry(entry.key)
-                            openSeriesActions(entry)
-                        },
-                    )
+                        onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) }, onOpen = ::openDetails,
+                        onActions = { selectEntry(it.key); openSeriesActions(it) }, onBackdropSource = onBackdropSource)
                 }
             }
         }
