@@ -8,7 +8,6 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Shader
 import android.util.LruCache
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,7 +26,7 @@ internal class PosterBackdropCache {
     fun get(poster: String, spec: PosterBackdropSpec): Bitmap? = images.get(Key(poster, spec))
     val cachedBytes: Int get() = images.snapshot().values.sumOf { it.allocationByteCount }
 
-    suspend fun prepareResource(context: Context, resource: Int, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
+    suspend fun prepareResource(context: Context, resource: Int, spec: PosterBackdropSpec): Bitmap = withContext(ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher) {
         val key = resourceKey(context, resource)
         get(key, spec)?.let { return@withContext it }
         val drawable = checkNotNull(context.getDrawable(resource))
@@ -41,7 +40,7 @@ internal class PosterBackdropCache {
         } finally { image.recycle() }
     }
 
-    suspend fun prepare(poster: String, input: Bitmap, spec: PosterBackdropSpec): Bitmap = withContext(Dispatchers.Default) {
+    suspend fun prepare(poster: String, input: Bitmap, spec: PosterBackdropSpec): Bitmap = withContext(ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher) {
         require(spec.width > 0 && spec.height > 0 && spec.dim in 0f..1f && spec.edge in 0f..1f && spec.fadeEdge in 0f..0.5f && spec.menuEnd in 0f..0.6f && spec.blurRadius >= 0)
         require(spec.imageScale > 0f && spec.imageScale <= 1f)
         preparation.withLock {

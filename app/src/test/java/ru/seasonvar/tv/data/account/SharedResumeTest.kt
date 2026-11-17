@@ -9,6 +9,36 @@ import ru.seasonvar.tv.data.ParsedSeriesEntries
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SharedResumeTest {
+    @Test fun logout_cancels_a_response_waiting_for_its_computation_slot() = runTest {
+        val html = javaClass.getResource("/account-resume-current.html")!!.readText()
+        val store = MemorySessionStore().apply { cookies = listOf(okhttp3.Cookie.Builder().name("fixture").value("dummy")
+            .domain("seasonvar.ru").secure().build()) }
+        val scheduled = StandardTestDispatcher(testScheduler)
+        var hold = false
+        val queued = mutableListOf<Pair<kotlin.coroutines.CoroutineContext, Runnable>>()
+        val cpu = object : CoroutineDispatcher() {
+            override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+                if (hold) queued += context to block else scheduled.dispatch(context, block)
+            }
+        }
+        val transport = object : AccountTransport {
+            override suspend fun get(url: String, jar: SessionCookies) = html
+            override suspend fun login(login: String, password: String, jar: SessionCookies) = error("No login")
+            override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = error("No write")
+        }
+        val repository = AccountRepository(SessionManager(store), transport, workers = backgroundScope,
+            dispatcher = scheduled, cpuDispatcher = cpu)
+        repository.restore()
+        hold = true
+        val response = async { repository.personalList(PersonalFeed.RESUME, windowed = true) }
+        runCurrent(); assertTrue(queued.isNotEmpty())
+        repository.logout()
+        hold = false
+        queued.toList().forEach { (context, block) -> scheduled.dispatch(context, block) }
+        queued.clear(); runCurrent()
+        assertTrue(response.isCancelled)
+        assertNull(repository.session.value.user)
+    }
     @Test fun a_cancelled_reader_does_not_cancel_another_and_finished_requests_are_fresh() = runTest {
         val requests = SharedRequests<String, Any>(backgroundScope)
         val gate = CompletableDeferred<Unit>(); var count = 0
@@ -54,7 +84,7 @@ class SharedResumeTest {
             override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = error("No write")
         }
         val repository = AccountRepository(SessionManager(store), transport, workers = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler))
+            dispatcher = StandardTestDispatcher(testScheduler), cpuDispatcher = StandardTestDispatcher(testScheduler))
         repository.restore(); calls = 0; gate = CompletableDeferred()
         val lists = PersonalFeed.entries.filter { it != PersonalFeed.HISTORY }.map { feed -> async { repository.personalList(feed, windowed = true) } }
         val progress = async { repository.progressSnapshot() }; val options = async { repository.personalFilterOptions() }
@@ -88,7 +118,7 @@ class SharedResumeTest {
             override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = error("No write")
         }
         val repository = AccountRepository(SessionManager(store), transport, workers = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler))
+            dispatcher = StandardTestDispatcher(testScheduler), cpuDispatcher = StandardTestDispatcher(testScheduler))
         repository.restore(); loading = true
         val a = async { repository.filteredPersonalList(PersonalFeed.WANT, PersonalListFilters("17")) }
         val b = async { repository.filteredPersonalList(PersonalFeed.WATCHED, PersonalListFilters("17")) }

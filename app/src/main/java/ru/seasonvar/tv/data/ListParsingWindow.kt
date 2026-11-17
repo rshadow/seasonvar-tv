@@ -40,7 +40,7 @@ class ListParsingWindow private constructor(
     }
 
     // Смена фокуса не прерывает уже начатую порцию и не теряет позицию курсора.
-    suspend fun advance(selectedIndex: Int) = withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+    suspend fun advance(selectedIndex: Int) = withContext(kotlinx.coroutines.NonCancellable + ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher) {
         mutex.withLock {
             val current = state.value
             if (closed.get() || !current.hasMore || current.loading || current.failed ||

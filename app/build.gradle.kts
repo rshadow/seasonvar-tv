@@ -32,6 +32,9 @@ android {
         }
         create("profile") {
             initWith(getByName("release"))
+            val isolatedCpuProbe = providers.gradleProperty("isolatedCpuProbe").orNull == "true"
+            if (isolatedCpuProbe) applicationIdSuffix = ".cpucheck"
+            manifestPlaceholders["profileAppLabel"] = if (isolatedCpuProbe) "Seasonvar CPU probe" else "@string/app_name"
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
             proguardFiles("profile-rules.pro")

@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
@@ -1338,8 +1339,13 @@ internal fun SeriesThumbnail(
     val shape = RoundedCornerShape(d.cardCornerRadius)
     val outline = if (SeasonvarTheme.cardOutline) SeasonvarTheme.surfaceOutline else Color.Transparent
     val borderWidth = if (!focused && outline != Color.Transparent) SeasonvarTheme.surfaceOutlineWidth else d.focusBorderWidth
+    val navigationObserver = ru.seasonvar.tv.ui.catalog.CatalogNavigationDiagnostics.current()
+    val drawsFocus = focused
     Column(
-        modifier.size(metrics.width, metrics.height)
+        modifier.then(if (navigationObserver == null) Modifier else Modifier.drawWithContent {
+            drawContent()
+            if (drawsFocus) navigationObserver.drawn(entry.key, System.nanoTime())
+        }).size(metrics.width, metrics.height)
             .focusRequester(requester)
             .focusProperties {
                 this.up = up
@@ -1348,7 +1354,10 @@ internal fun SeriesThumbnail(
             }
             .onFocusChanged {
                 focused = it.isFocused
-                if (it.isFocused) onFocused() else { holdJob?.cancel(); activation.cancel() }
+                if (it.isFocused) {
+                    ru.seasonvar.tv.ui.catalog.CatalogNavigationDiagnostics.current()?.focused(entry.key, entry.title, System.nanoTime())
+                    onFocused()
+                } else { holdJob?.cancel(); activation.cancel() }
             }
             .onPreviewKeyEvent { event ->
                 if (onLongClick == null || event.nativeKeyEvent.keyCode !in setOf(

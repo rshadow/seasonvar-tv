@@ -92,12 +92,14 @@ help:
 		'make profile-container      Measure hidden-list updates in an isolated profile fixture' \
 		'make profile-menu           Measure menu focus and section switching on fixed data' \
 		'make profile-selected-panel Measure descriptions and large posters on fixed data' \
+		'make profile-contention    Measure navigation during HTML parsing and image decoding' \
 		'make selected-panel-probe   Verify fixed poster bounds, native size and late data' \
 		'make profile-planner        Measure window planning while holding D-pad' \
 		'make profile-catalog-lookup Compare key searches at deep catalog positions' \
 		'make profile-startup        Measure real cold launches in the emulator' \
 		'make baseline-profile       Generate application profiles in an isolated emulator package' \
 		'make baseline-profile-verify Verify ProfileInstaller and speed-profile in the emulator' \
+		'make profile-cpu-device     Measure background CPU on an explicitly selected device in an isolated app' \
 		'make test                   Run the unit-test task' \
 		'make lint                   Run Android Lint' \
 		'make smart-continue-probe   Read-only account smart-list verification in emulator' \
@@ -224,6 +226,26 @@ profile-container: build-profile
 	$(ENV) adb devices -l
 	$(MAKE) install-apk DEVICE="$(DEVICE)" APK="$(CURDIR)/app/build/outputs/apk/profile/app-profile.apk"
 	python3 scripts/profile-container.py --device "$(DEVICE)" --output "$(CONTAINER_PROFILE_OUT)" $(CONTAINER_PROFILE_ARGS)
+
+.PHONY: profile-contention
+CONTENTION_PROFILE_OUT ?= build/profile-contention
+CONTENTION_PROFILE_ARGS ?= --trace-mode off
+profile-contention:
+	$(MAKE) profile-container DEVICE="$(DEVICE)" CONTAINER_PROFILE_OUT="$(CONTENTION_PROFILE_OUT)" CONTAINER_PROFILE_ARGS="--contention $(CONTENTION_PROFILE_ARGS)"
+
+.PHONY: build-cpu-probe profile-cpu-device
+CPU_PROBE_APK := $(CURDIR)/build/cpu-probe/seasonvar-cpu-probe.apk
+CPU_DEVICE_PROFILE_OUT ?= build/profile-cpu-device
+CPU_DEVICE_PROFILE_ARGS ?= --contention --trace-mode off
+build-cpu-probe:
+	$(MAKE) build-profile GRADLE_ARGS="$(GRADLE_ARGS) -PisolatedCpuProbe=true"
+	mkdir -p "$(dir $(CPU_PROBE_APK))"
+	cp app/build/outputs/apk/profile/app-profile.apk "$(CPU_PROBE_APK)"
+
+profile-cpu-device: build-cpu-probe
+	$(MAKE) devices
+	$(MAKE) install-apk DEVICE="$(DEVICE)" APK="$(CPU_PROBE_APK)"
+	python3 scripts/profile-container.py --device "$(DEVICE)" --physical-device --output "$(CPU_DEVICE_PROFILE_OUT)" $(CPU_DEVICE_PROFILE_ARGS)
 
 .PHONY: profile-menu
 MENU_PROFILE_OUT ?= build/profile-menu
