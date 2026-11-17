@@ -17,6 +17,7 @@ object UiScreensLayoutProbe {
             screens.aboutAndUpdate()
             screens.filterDialogs()
             screens.detailsDialogs()
+            screens.detailsNavigation()
             with(ui.result) {
                 putBoolean("screens_verified", !dialogsOnly); putBoolean("dialogs_verified", true)
                 putBoolean("text_centered", true); putBoolean("fixture_only", true); putBoolean("script_success", true)
