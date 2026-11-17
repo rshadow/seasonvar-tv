@@ -728,7 +728,8 @@ private fun SeasonvarContent(
         if (SeasonvarTheme.posterBackdropEnabled) BoxWithConstraints(Modifier.fillMaxSize()) {
             PosterBackdropLayer(backdropSource,
                 with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
-                ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f))
+                ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f),
+                useFallbackImage = section == Section.ACCOUNT || section == Section.SETTINGS || section == Section.ABOUT)
         }
         Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
             horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {

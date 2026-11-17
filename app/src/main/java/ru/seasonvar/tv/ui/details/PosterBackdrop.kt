@@ -49,26 +49,29 @@ internal fun PosterBackdropPage(content: @Composable BoxScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().background(SeasonvarTheme.pageBackground)) {
         val density = LocalDensity.current
         val source = remember { PosterBackdropState() }
-        PosterBackdropLayer(source, with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) })
+        PosterBackdropLayer(source, with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
+            useFallbackImage = true)
         content()
     }
 }
 
 @Composable
-internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f) {
+internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f,
+    useFallbackImage: Boolean = false) {
     if (!SeasonvarTheme.posterBackdropEnabled) return
     val poster = source.value
     val empty = remember { mutableStateOf<Bitmap?>(null) }
-    PosterBackdrop(poster?.url, poster?.bitmap ?: empty, bounds, menuEnd)
+    PosterBackdrop(poster?.url, poster?.bitmap ?: empty, bounds, menuEnd, useFallbackImage)
 }
 
 @Composable
-internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: IntSize, menuEnd: Float = 0f) {
+internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: IntSize, menuEnd: Float = 0f,
+    useFallbackImage: Boolean = false) {
     if (!SeasonvarTheme.posterBackdropEnabled) return
     val context = LocalContext.current.applicationContext
     val cache = (context as SeasonvarApplication).posterBackdrops
     val input = source.value
-    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { input == null && it != 0 }
+    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { useFallbackImage && input == null && it != 0 }
     val imageScale = if (fallback != null) SeasonvarTheme.posterBackdropFallbackScale else 1f
     val imageKey = fallback?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
     val background = SeasonvarTheme.pageBackground
