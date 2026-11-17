@@ -3840,7 +3840,7 @@ HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->getFirstStateRecord()Lan
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->getPolicy()Landroidx/compose/runtime/SnapshotMutationPolicy;
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->getValue()Ljava/lang/Object;
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->prependStateRecord(Landroidx/compose/runtime/snapshots/StateRecord;)V
-HPLandroidx/compose/runtime/SnapshotMutableStateImpl;->setValue(Ljava/lang/Object;)V
+HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->setValue(Ljava/lang/Object;)V
 Landroidx/compose/runtime/SnapshotMutableStateImpl$StateStateRecord;
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl$StateStateRecord;-><init>(JLjava/lang/Object;)V
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl$StateStateRecord;->assign(Landroidx/compose/runtime/snapshots/StateRecord;)V
@@ -12109,6 +12109,7 @@ HSPLandroidx/emoji2/text/TypefaceEmojiRasterizer;->isDefaultEmoji()Z
 Landroidx/emoji2/text/UnprecomputeTextOnModificationSpannable;
 Landroidx/emoji2/text/flatbuffer/MetadataItem;
 HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;-><init>()V
+HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;->__assign(ILjava/nio/ByteBuffer;)Landroidx/emoji2/text/flatbuffer/MetadataItem;
 HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;->codepointsLength()I
 HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;->emojiStyle()Z
 HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;->id()I
@@ -15548,7 +15549,6 @@ HSPLkotlinx/coroutines/CancellableContinuationImpl;->isReusable()Z
 HSPLkotlinx/coroutines/CancellableContinuationImpl;->parentCancelled$kotlinx_coroutines_core(Ljava/lang/Throwable;)V
 HSPLkotlinx/coroutines/CancellableContinuationImpl;->releaseClaimedReusableContinuation$kotlinx_coroutines_core()V
 HSPLkotlinx/coroutines/CancellableContinuationImpl;->resetStateReusable()Z
-HSPLkotlinx/coroutines/CancellableContinuationImpl;->resume(Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)V
 HSPLkotlinx/coroutines/CancellableContinuationImpl;->resumeImpl$kotlinx_coroutines_core$default(Lkotlinx/coroutines/CancellableContinuationImpl;Ljava/lang/Object;ILkotlin/jvm/functions/Function3;ILjava/lang/Object;)V
 HSPLkotlinx/coroutines/CancellableContinuationImpl;->resumeImpl$kotlinx_coroutines_core(Ljava/lang/Object;ILkotlin/jvm/functions/Function3;)V
 HSPLkotlinx/coroutines/CancellableContinuationImpl;->resumeWith(Ljava/lang/Object;)V
@@ -16756,6 +16756,7 @@ HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;-><init>(Lkotlinx/co
 HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->access$getThis$0$p(Lkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;)Lkotlinx/coroutines/scheduling/CoroutineScheduler;
 HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->executeTask(Lkotlinx/coroutines/scheduling/Task;)V
 HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->findAnyTask(Z)Lkotlinx/coroutines/scheduling/Task;
+HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->findBlockingTask()Lkotlinx/coroutines/scheduling/Task;
 HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->findTask(Z)Lkotlinx/coroutines/scheduling/Task;
 HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->getIndexInArray()I
 HSPLkotlinx/coroutines/scheduling/CoroutineScheduler$Worker;->getNextParkedWorker()Ljava/lang/Object;
@@ -16825,7 +16826,10 @@ HSPLkotlinx/coroutines/scheduling/WorkQueue;->getConsumerIndex$volatile$FU()Ljav
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->getLastScheduledTask$volatile$FU()Ljava/util/concurrent/atomic/AtomicReferenceFieldUpdater;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->getProducerIndex$volatile$FU()Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->poll()Lkotlinx/coroutines/scheduling/Task;
+HSPLkotlinx/coroutines/scheduling/WorkQueue;->pollBlocking()Lkotlinx/coroutines/scheduling/Task;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->pollBuffer()Lkotlinx/coroutines/scheduling/Task;
+HSPLkotlinx/coroutines/scheduling/WorkQueue;->pollWithExclusiveMode(Z)Lkotlinx/coroutines/scheduling/Task;
+HSPLkotlinx/coroutines/scheduling/WorkQueue;->stealWithExclusiveMode(Z)Lkotlinx/coroutines/scheduling/Task;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->trySteal(ILkotlin/jvm/internal/Ref$ObjectRef;)J
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->tryStealLastScheduled(ILkotlin/jvm/internal/Ref$ObjectRef;)J
 Lkotlinx/coroutines/selects/SelectInstance;
@@ -17603,6 +17607,7 @@ Lokhttp3/internal/concurrent/Lockable;
 Lokhttp3/internal/concurrent/Task;
 HSPLokhttp3/internal/concurrent/Task;-><init>(Ljava/lang/String;Z)V
 HSPLokhttp3/internal/concurrent/Task;-><init>(Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+HSPLokhttp3/internal/concurrent/Task;->getCancelable()Z
 HSPLokhttp3/internal/concurrent/Task;->getName()Ljava/lang/String;
 HSPLokhttp3/internal/concurrent/Task;->getNextExecuteNanoTime$okhttp()J
 HSPLokhttp3/internal/concurrent/Task;->getQueue$okhttp()Lokhttp3/internal/concurrent/TaskQueue;
@@ -18220,10 +18225,12 @@ HSPLokhttp3/internal/http2/Http2;-><init>()V
 Lokhttp3/internal/http2/Http2Connection;
 HSPLokhttp3/internal/http2/Http2Connection;-><clinit>()V
 HSPLokhttp3/internal/http2/Http2Connection;-><init>(Lokhttp3/internal/http2/Http2Connection$Builder;)V
+HSPLokhttp3/internal/http2/Http2Connection;->access$failConnection(Lokhttp3/internal/http2/Http2Connection;Ljava/io/IOException;)V
 HSPLokhttp3/internal/http2/Http2Connection;->access$getDEFAULT_SETTINGS$cp()Lokhttp3/internal/http2/Settings;
 HSPLokhttp3/internal/http2/Http2Connection;->access$getSettingsListenerQueue$p(Lokhttp3/internal/http2/Http2Connection;)Lokhttp3/internal/concurrent/TaskQueue;
 HSPLokhttp3/internal/http2/Http2Connection;->access$getWriterQueue$p(Lokhttp3/internal/http2/Http2Connection;)Lokhttp3/internal/concurrent/TaskQueue;
 HSPLokhttp3/internal/http2/Http2Connection;->close$okhttp(Lokhttp3/internal/http2/ErrorCode;Lokhttp3/internal/http2/ErrorCode;Ljava/io/IOException;)V
+HSPLokhttp3/internal/http2/Http2Connection;->failConnection(Ljava/io/IOException;)V
 HSPLokhttp3/internal/http2/Http2Connection;->flush()V
 HSPLokhttp3/internal/http2/Http2Connection;->getClient$okhttp()Z
 HSPLokhttp3/internal/http2/Http2Connection;->getConnectionName$okhttp()Ljava/lang/String;
@@ -18683,7 +18690,7 @@ HSPLokio/AsyncTimeout$Watchdog;->run()V
 Lokio/Buffer;
 HSPLokio/Buffer;-><init>()V
 HSPLokio/Buffer;->clear()V
-HSPLokio/Buffer;->completeSegmentByteCount()J
+HPLokio/Buffer;->completeSegmentByteCount()J
 HSPLokio/Buffer;->copyTo(Lokio/Buffer;JJ)Lokio/Buffer;
 HSPLokio/Buffer;->exhausted()Z
 HSPLokio/Buffer;->getByte(J)B
@@ -19179,7 +19186,7 @@ HSPLorg/jsoup/nodes/Document;-><clinit>()V
 HSPLorg/jsoup/nodes/Document;-><init>(Ljava/lang/String;)V
 HSPLorg/jsoup/nodes/Document;-><init>(Ljava/lang/String;Ljava/lang/String;)V
 HSPLorg/jsoup/nodes/Document;-><init>(Ljava/lang/String;Ljava/lang/String;Lorg/jsoup/parser/Parser;)V
-HSPLorg/jsoup/nodes/Document;->body()Lorg/jsoup/nodes/Element;
+HPLorg/jsoup/nodes/Document;->body()Lorg/jsoup/nodes/Element;
 HSPLorg/jsoup/nodes/Document;->createShell(Ljava/lang/String;)Lorg/jsoup/nodes/Document;
 HSPLorg/jsoup/nodes/Document;->htmlEl()Lorg/jsoup/nodes/Element;
 HSPLorg/jsoup/nodes/Document;->outputSettings()Lorg/jsoup/nodes/Document$OutputSettings;
@@ -19395,7 +19402,7 @@ Lorg/jsoup/parser/CharacterReader;
 HSPLorg/jsoup/parser/CharacterReader;-><clinit>()V
 HSPLorg/jsoup/parser/CharacterReader;-><init>(Ljava/io/Reader;)V
 HSPLorg/jsoup/parser/CharacterReader;-><init>(Ljava/lang/String;)V
-HSPLorg/jsoup/parser/CharacterReader;->advance()V
+HPLorg/jsoup/parser/CharacterReader;->advance()V
 HSPLorg/jsoup/parser/CharacterReader;->bufferUp()V
 HSPLorg/jsoup/parser/CharacterReader;->cacheString([C[Ljava/lang/String;II)Ljava/lang/String;
 HSPLorg/jsoup/parser/CharacterReader;->close()V
