@@ -56,10 +56,11 @@ internal class UiScreensProbeSession(private val probe: Instrumentation, private
         val deadline = SystemClock.elapsedRealtime() + 10000
         while (!predicate()) { check(SystemClock.elapsedRealtime() < deadline) { "Timed out" }; Thread.sleep(50) }
     }
-    fun find(node: AccessibilityNodeInfo?, label: String): AccessibilityNodeInfo? {
+    fun find(node: AccessibilityNodeInfo?, label: String, exact: Boolean = false): AccessibilityNodeInfo? {
         node ?: return null
-        if (node.text?.toString()?.startsWith(label) == true || node.contentDescription?.toString() == label) return node
-        for (index in 0 until node.childCount) find(node.getChild(index), label)?.let { return it }
+        val textMatches = if (exact) node.text?.toString() == label else node.text?.toString()?.startsWith(label) == true
+        if (textMatches || node.contentDescription?.toString() == label) return node
+        for (index in 0 until node.childCount) find(node.getChild(index), label, exact)?.let { return it }
         return null
     }
     fun text(id: Int) = targetContext.getString(id)

@@ -3,6 +3,7 @@ package ru.seasonvar.tv.probe
 import android.graphics.Rect
 import android.view.KeyEvent
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.focus.FocusRequester
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
@@ -181,5 +182,42 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         click("Сезон 1 ▾"); capture("details-seasons"); back()
         click(targetContext.getString(R.string.details_translation, "Оригинал") + " ▾"); capture("details-translations"); back()
         click(text(R.string.details_all_episodes)); centered("1", "12"); capture("details-episodes"); back()
+    } }
+
+    fun detailsNavigation() = with(ui) { with(fixture) {
+        stage("details_navigation")
+        val showActors = mutableStateOf(true)
+        render { SeriesDetailsPane(entry, actorModel, remember { FocusRequester() }, {}, {}, showActors = showActors.value) }
+        waitFor { actorModel.state.value.details != null }; settle()
+        val watch = text(R.string.details_watch)
+        fun focused(label: String): Boolean {
+            var node = find(uiAutomation.rootInActiveWindow, label, exact = true)
+            while (node != null) { if (node.isFocused) return true; node = node.parent }
+            return false
+        }
+        check(focused(watch))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); settle(); check(focused("Первый актёр"))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle(); check(focused("Второй актёр"))
+        capture("details-actor-focus")
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle(); check(focused(watch))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle(); check(focused("Сезон 1 ▾"))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); settle(); check(focused("Второй актёр"))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle(); check(focused("Сезон 1 ▾"))
+        main { showActors.value = false }; settle()
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); settle(); check(focused("Сезон 1 ▾"))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle(); check(focused("1"))
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle()
+        val all = text(R.string.details_all_episodes)
+        check(focused(all))
+        val anchor = Rect().also(checkNotNull(control(all))::getBoundsInScreen)
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle()
+        // Accessibility исключает элементы, ушедшие за границы экрана.
+        val scrolled = control(all)?.let { Rect().also(it::getBoundsInScreen) }
+        check(scrolled == null || scrolled.top < anchor.top)
+        check(find(uiAutomation.rootInActiveWindow, "Синтетическое описание для проверки прокрутки.") != null)
+        capture("details-description-scrolled")
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); settle()
+        check(Rect().also(checkNotNull(control(all))::getBoundsInScreen) == anchor && focused(all))
+        capture("details-description-returned")
     } }
 }

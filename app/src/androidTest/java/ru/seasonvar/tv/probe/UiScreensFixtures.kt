@@ -36,9 +36,13 @@ internal class UiScreensFixtures : AutoCloseable {
         listOf(Translation("0", "Оригинал", (1..30).map { Episode(it.toString(), it.toString()) }),
             Translation("1", "Другая озвучка", listOf(Episode("1", "1")))), "0")
     val detailsModel = SeriesDetailsViewModel { details }
+    val actorModel = SeriesDetailsViewModel { details.copy(
+        actors = listOf(SeriesActor("Первый актёр", "android.resource://ru.seasonvar.tv/drawable/actor_placeholder"),
+            SeriesActor("Второй актёр", "android.resource://ru.seasonvar.tv/drawable/actor_placeholder")),
+        paragraphs = List(12) { "Синтетическое описание для проверки прокрутки. ".repeat(20) }) }
     val filterController = UiProbeFilters()
 
-    fun attach() { store.put("details", detailsModel); store.put("translations", translations); store.put("update", update) }
+    fun attach() { store.put("details", detailsModel); store.put("actors", actorModel); store.put("translations", translations); store.put("update", update) }
     override fun close() { store.clear() }
 }
 

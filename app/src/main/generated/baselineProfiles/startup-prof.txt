@@ -3840,7 +3840,7 @@ HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->getFirstStateRecord()Lan
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->getPolicy()Landroidx/compose/runtime/SnapshotMutationPolicy;
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->getValue()Ljava/lang/Object;
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->prependStateRecord(Landroidx/compose/runtime/snapshots/StateRecord;)V
-HSPLandroidx/compose/runtime/SnapshotMutableStateImpl;->setValue(Ljava/lang/Object;)V
+HPLandroidx/compose/runtime/SnapshotMutableStateImpl;->setValue(Ljava/lang/Object;)V
 Landroidx/compose/runtime/SnapshotMutableStateImpl$StateStateRecord;
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl$StateStateRecord;-><init>(JLjava/lang/Object;)V
 HSPLandroidx/compose/runtime/SnapshotMutableStateImpl$StateStateRecord;->assign(Landroidx/compose/runtime/snapshots/StateRecord;)V
@@ -4195,6 +4195,7 @@ HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->markGroup$default(L
 HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->markGroup(I)V
 HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->moveFrom(Landroidx/compose/runtime/composer/gapbuffer/SlotTable;IZ)Ljava/util/List;
 HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->moveGroupGapTo(I)V
+HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->moveSlotGapTo(II)V
 HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->node(I)Ljava/lang/Object;
 HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->node(Landroidx/compose/runtime/composer/gapbuffer/GapAnchor;)Ljava/lang/Object;
 HSPLandroidx/compose/runtime/composer/gapbuffer/SlotWriter;->nodeIndex([II)I
@@ -4413,7 +4414,7 @@ HSPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$OpIterator
 HSPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$OpIterator;->next()Z
 Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations$WriteScope;
 HSPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$WriteScope;->constructor-impl(Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations;)Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations;
-HPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$WriteScope;->setObject-sGr0YRc(Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations;ILjava/lang/Object;)V
+HSPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$WriteScope;->setObject-sGr0YRc(Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations;ILjava/lang/Object;)V
 HSPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$WriteScope;->setObjects-EsEZvaA(Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations;ILjava/lang/Object;ILjava/lang/Object;)V
 HSPLandroidx/compose/runtime/composer/gapbuffer/changelist/Operations$WriteScope;->setObjects-JOGOPjs(Landroidx/compose/runtime/composer/gapbuffer/changelist/Operations;ILjava/lang/Object;ILjava/lang/Object;ILjava/lang/Object;)V
 Landroidx/compose/runtime/composer/gapbuffer/changelist/OperationsDebugStringFormattable;
@@ -5060,7 +5061,7 @@ HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->takeNewSnapshot$lambda$0(Lko
 HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->takeNewSnapshot(Lkotlin/jvm/functions/Function1;)Landroidx/compose/runtime/snapshots/Snapshot;
 HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->trackPinning(JLandroidx/compose/runtime/snapshots/SnapshotIdSet;)I
 HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->usedLocked(Landroidx/compose/runtime/snapshots/StateObject;)Landroidx/compose/runtime/snapshots/StateRecord;
-HPLandroidx/compose/runtime/snapshots/SnapshotKt;->valid(JJLandroidx/compose/runtime/snapshots/SnapshotIdSet;)Z
+HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->valid(JJLandroidx/compose/runtime/snapshots/SnapshotIdSet;)Z
 HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->valid(Landroidx/compose/runtime/snapshots/StateRecord;JLandroidx/compose/runtime/snapshots/SnapshotIdSet;)Z
 HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->validateOpen(Landroidx/compose/runtime/snapshots/Snapshot;)V
 HSPLandroidx/compose/runtime/snapshots/SnapshotKt;->writableRecord(Landroidx/compose/runtime/snapshots/StateRecord;Landroidx/compose/runtime/snapshots/StateObject;Landroidx/compose/runtime/snapshots/Snapshot;)Landroidx/compose/runtime/snapshots/StateRecord;
@@ -15913,7 +15914,6 @@ Lkotlinx/coroutines/NotCompleted;
 Lkotlinx/coroutines/ParentJob;
 Lkotlinx/coroutines/ResumeAwaitOnCompletion;
 HSPLkotlinx/coroutines/ResumeAwaitOnCompletion;-><init>(Lkotlinx/coroutines/CancellableContinuationImpl;)V
-HSPLkotlinx/coroutines/ResumeAwaitOnCompletion;->getOnCancelling()Z
 HSPLkotlinx/coroutines/ResumeAwaitOnCompletion;->invoke(Ljava/lang/Throwable;)V
 Lkotlinx/coroutines/StandaloneCoroutine;
 HSPLkotlinx/coroutines/StandaloneCoroutine;-><init>(Lkotlin/coroutines/CoroutineContext;Z)V
@@ -16026,7 +16026,6 @@ HSPLkotlinx/coroutines/channels/BufferedChannel;->tryReceive-PtdJZtk()Ljava/lang
 HSPLkotlinx/coroutines/channels/BufferedChannel;->tryResumeReceiver(Ljava/lang/Object;Ljava/lang/Object;)Z
 HSPLkotlinx/coroutines/channels/BufferedChannel;->trySend-JP2dKIU(Ljava/lang/Object;)Ljava/lang/Object;
 HSPLkotlinx/coroutines/channels/BufferedChannel;->updateCellReceive(Lkotlinx/coroutines/channels/ChannelSegment;IJLjava/lang/Object;)Ljava/lang/Object;
-HSPLkotlinx/coroutines/channels/BufferedChannel;->updateCellReceiveSlow(Lkotlinx/coroutines/channels/ChannelSegment;IJLjava/lang/Object;)Ljava/lang/Object;
 HSPLkotlinx/coroutines/channels/BufferedChannel;->updateCellSend(Lkotlinx/coroutines/channels/ChannelSegment;ILjava/lang/Object;JLjava/lang/Object;Z)I
 HSPLkotlinx/coroutines/channels/BufferedChannel;->waitExpandBufferCompletion$kotlinx_coroutines_core(J)V
 Lkotlinx/coroutines/channels/BufferedChannel$BufferedChannelIterator;
@@ -16051,11 +16050,9 @@ HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getEXPAND_BUFFER_COMP
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getFAILED$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getINTERRUPTED_RCV$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getINTERRUPTED_SEND$p()Lkotlinx/coroutines/internal/Symbol;
-HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getIN_BUFFER$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getNO_CLOSE_CAUSE$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getNO_RECEIVE_RESULT$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getNULL_SEGMENT$p()Lkotlinx/coroutines/channels/ChannelSegment;
-HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getPOISONED$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getSUSPEND$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$getSUSPEND_NO_WAITER$p()Lkotlinx/coroutines/internal/Symbol;
 HSPLkotlinx/coroutines/channels/BufferedChannelKt;->access$initialBufferEnd(I)J
@@ -16829,8 +16826,6 @@ HSPLkotlinx/coroutines/scheduling/WorkQueue;->getLastScheduledTask$volatile$FU()
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->getProducerIndex$volatile$FU()Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->poll()Lkotlinx/coroutines/scheduling/Task;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->pollBuffer()Lkotlinx/coroutines/scheduling/Task;
-HSPLkotlinx/coroutines/scheduling/WorkQueue;->pollWithExclusiveMode(Z)Lkotlinx/coroutines/scheduling/Task;
-HSPLkotlinx/coroutines/scheduling/WorkQueue;->stealWithExclusiveMode(Z)Lkotlinx/coroutines/scheduling/Task;
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->trySteal(ILkotlin/jvm/internal/Ref$ObjectRef;)J
 HSPLkotlinx/coroutines/scheduling/WorkQueue;->tryStealLastScheduled(ILkotlin/jvm/internal/Ref$ObjectRef;)J
 Lkotlinx/coroutines/selects/SelectInstance;
@@ -19440,7 +19435,7 @@ HSPLorg/jsoup/parser/CharacterReader;->matchesDigit()Z
 HSPLorg/jsoup/parser/CharacterReader;->matchesIgnoreCase(Ljava/lang/String;)Z
 HSPLorg/jsoup/parser/CharacterReader;->nextIndexOf(C)I
 HSPLorg/jsoup/parser/CharacterReader;->pos()I
-HPLorg/jsoup/parser/CharacterReader;->rangeEquals([CIILjava/lang/String;)Z
+HSPLorg/jsoup/parser/CharacterReader;->rangeEquals([CIILjava/lang/String;)Z
 HSPLorg/jsoup/parser/CharacterReader;->rangeMatchesIgnoreCase(Ljava/lang/String;I)Z
 HSPLorg/jsoup/parser/CharacterReader;->rewindToMark()V
 HSPLorg/jsoup/parser/CharacterReader;->scanBufferForNewlines()V
@@ -20773,7 +20768,7 @@ HSPLru/seasonvar/tv/data/SeriesDetails;->getPlaybackUnavailableReason()Ljava/lan
 Lru/seasonvar/tv/data/SeriesDetailsParser;
 HSPLru/seasonvar/tv/data/SeriesDetailsParser;-><clinit>()V
 HSPLru/seasonvar/tv/data/SeriesDetailsParser;-><init>()V
-HPLru/seasonvar/tv/data/SeriesDetailsParser;->episodes(Lorg/json/JSONObject;)Ljava/util/List;
+HSPLru/seasonvar/tv/data/SeriesDetailsParser;->episodes(Lorg/json/JSONObject;)Ljava/util/List;
 HSPLru/seasonvar/tv/data/SeriesDetailsParser;->parse$app(Lorg/jsoup/nodes/Document;Lru/seasonvar/tv/data/SeriesEntry;)Lru/seasonvar/tv/data/SeriesDetails;
 Lru/seasonvar/tv/data/SeriesEntry;
 HSPLru/seasonvar/tv/data/SeriesEntry;-><clinit>()V
