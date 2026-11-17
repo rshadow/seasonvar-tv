@@ -24,7 +24,12 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             searchState = SearchUiState(showHistory = true, recentQueries = listOf("Комедия", "Сериал")),
             translationSettingsModel = translations, updateModel = update,
             personalFilters = PersonalFeed.entries.filter { it != PersonalFeed.HISTORY }.associateWith { filterController },
-            publicFilters = mapOf(PublicFeed.BEST to filterController), imagePrefetchEnabled = false,
+            publicFilters = mapOf(PublicFeed.BEST to filterController),
+            showActors = toggles.getValue(R.string.show_actors_title), onShowActorsChange = { toggles[R.string.show_actors_title] = it },
+            autoNextEnabled = toggles.getValue(R.string.auto_next_setting_title), onAutoNextChange = { toggles[R.string.auto_next_setting_title] = it },
+            autoNextSeasonEnabled = toggles.getValue(R.string.auto_next_season_setting_title), onAutoNextSeasonChange = { toggles[R.string.auto_next_season_setting_title] = it },
+            imagePrefetchEnabled = toggles.getValue(R.string.image_prefetch_title), onImagePrefetchChange = { toggles[R.string.image_prefetch_title] = it },
+            bypassEnabled = toggles.getValue(R.string.bypass_title), onBypassChange = { toggles[R.string.bypass_title] = it },
             dnsProvider = dns.value, onDnsChange = { dns.value = it })
     } }
 
@@ -37,6 +42,34 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         centered(text(R.string.retry)); capture("catalog-error")
         root(Section.TODAY); click(text(R.string.search_title)); capture("search-history")
         centered(text(R.string.search_history_clear))
+    } }
+
+    fun settingsNavigation() = with(ui) { with(fixture) {
+        stage("settings_navigation")
+        root(Section.SETTINGS); click(text(R.string.settings_title))
+        val rows = listOf(R.string.start_page_title, R.string.menu_visibility_title, R.string.home_settings_title,
+            R.string.preferred_translation_title, R.string.show_actors_title, R.string.interface_theme_title,
+            R.string.auto_next_setting_title, R.string.auto_next_season_setting_title, R.string.player_clock_title,
+            R.string.image_prefetch_title, R.string.connection_refresh, R.string.bypass_title, R.string.dns_setting_title, R.string.proxy_title)
+        for ((index, id) in rows.withIndex()) {
+            if (index > 0) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
+            check(control(text(id))?.isFocused == true) { "Settings focus missing: " + text(id) }
+            if (id in toggles) {
+                val initial = toggles.getValue(id)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+                check(toggles.getValue(id) != initial && control(text(id))?.isChecked == !initial)
+                check(control(text(id))?.isFocused == true)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+                check(toggles.getValue(id) == initial && control(text(id))?.isChecked == initial)
+            }
+        }
+        for (id in rows.asReversed().drop(1)) {
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); settle()
+            check(control(text(id))?.isFocused == true) { "Reverse settings focus missing: " + text(id) }
+        }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_LEFT); settle()
+        check(control(text(R.string.settings_title))?.isFocused == true)
+        capture("settings-navigation")
     } }
 
     fun accountStates() = with(ui) { with(fixture) {
