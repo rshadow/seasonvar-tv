@@ -69,6 +69,12 @@ class ContainerProfileActivity : ComponentActivity() {
     private var plannerMode = false
     private var menuMode = false
     private var panelMode = false
+    private var contentionMode = false
+    private var contention: ContentionWorkload? = null
+    private var diagnosticFocusKey: String? = null
+    private var diagnosticFocusTitle: String? = null
+    private var diagnosticFocusTime = 0L
+    private var diagnosticDrawTime = 0L
     private var panelComponent by mutableStateOf(false)
     private var panelDescription by mutableStateOf(DescriptionState())
     private val panelStatistics = PanelStatistics()
@@ -92,8 +98,8 @@ class ContainerProfileActivity : ComponentActivity() {
     private val planning = PlanningStatistics()
     private val rows by lazy { (1..250).map { index ->
         SeriesEntry(index.toString(), "https://seasonvar.ru/serial-$index-fixture.html",
-            "Карточка $index", 1, "", if (plannerMode || panelMode) "https://cdn.svstat.net/oblojka/$index.jpg"
-                else "android.resource://ru.seasonvar.tv/drawable/" +
+            "Карточка $index", 1, "", if (plannerMode || panelMode || contentionMode) "https://cdn.svstat.net/oblojka/$index.jpg"
+                else "android.resource://$packageName/drawable/" +
                     if (index % 2 == 0) "actor_placeholder" else "poster_placeholder",
             previewDescription = "Синтетическое описание карточки для измерения интерфейса.",
             accountMark = if (panelMode) AccountMark("", "Смотрю") else null,
@@ -112,24 +118,51 @@ class ContainerProfileActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        check(android.os.Build.MODEL.contains("sdk", true))
+        check(android.os.Build.MODEL.contains("sdk", true) ||
+            packageName == "ru.seasonvar.tv.cpucheck" && intent.getBooleanExtra("physical-device", false))
         check(applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
         plannerMode = intent.getBooleanExtra("planner", false)
         menuMode = intent.getBooleanExtra("menu", false)
         panelMode = intent.getBooleanExtra("panel", false)
+        contentionMode = intent.getBooleanExtra("contention", false)
+        val menuLoad = intent.getBooleanExtra("menu-load", false).also { require(!it || menuMode) }
+        val cpuWorkers = intent.getIntExtra("cpu-workers", -1)
+        val ioPool = intent.getStringExtra("cpu-pool") == "io"
+        val burstOnly = intent.getBooleanExtra("burst-only", false)
+        if (contentionMode || menuLoad) {
+            ru.seasonvar.tv.data.work.BackgroundCpu.profileDispatcher = when {
+                cpuWorkers == 0 -> Dispatchers.IO
+                cpuWorkers > 0 -> (if (ioPool) Dispatchers.IO else Dispatchers.Default).limitedParallelism(cpuWorkers)
+                else -> null
+            }
+        }
+        if (contentionMode || menuLoad) contention = ContentionWorkload(this)
+        if (contentionMode) ru.seasonvar.tv.ui.catalog.CatalogNavigationDiagnostics.observer =
+            object : ru.seasonvar.tv.ui.catalog.CatalogNavigationDiagnostics.Observer {
+                override fun focused(key: String, title: String, atNanos: Long) {
+                    diagnosticFocusKey = key; diagnosticFocusTitle = title; diagnosticFocusTime = atNanos
+                    diagnosticDrawTime = 0L
+                }
+                override fun drawn(key: String, atNanos: Long) {
+                    if (key == diagnosticFocusKey && diagnosticDrawTime == 0L) diagnosticDrawTime = atNanos
+                }
+            }
         prefetch = intent.getBooleanExtra("prefetch", true)
         layout = CatalogLayout.fromStorage(intent.getStringExtra("layout"))
-        if (panelMode) panelImages
-        Coil.setImageLoader(ImageLoader.Builder(this).apply { if (panelMode) diskCache(null) }.components {
+        if (panelMode || contentionMode) panelImages
+        Coil.setImageLoader(ImageLoader.Builder(this).apply {
+            if (panelMode || contentionMode) diskCache(null)
+            if (contentionMode || menuLoad) decoderDispatcher(Dispatchers.Default)
+        }.components {
             add(Interceptor { chain ->
                 val source = chain.request.data.toString()
                 if (source.startsWith("https://cdn.svstat.net/oblojka/")) {
                     val index = source.substringAfterLast('/').substringBefore('.').toInt()
                     val resource = if (index % 2 == 0) "actor_placeholder" else "poster_placeholder"
-                    chain.proceed(chain.request.newBuilder().data(if (panelMode) panelImages[(index - 1) % panelImages.size]
-                        else "android.resource://ru.seasonvar.tv/drawable/$resource")
+                    chain.proceed(chain.request.newBuilder().data(if (panelMode || contentionMode) panelImages[(index - 1) % panelImages.size]
+                        else "android.resource://$packageName/drawable/$resource")
                         .memoryCacheKey(source).diskCacheKey(source).build())
                 } else chain.proceed(chain.request)
             })
@@ -141,7 +174,9 @@ class ContainerProfileActivity : ComponentActivity() {
         }
         val tracing = intent.getBooleanExtra("trace", false)
         asynchronous = intent.getBooleanExtra("asynchronous", false)
-        val cases = if (panelMode) listOf("panel_navigation", "panel_description")
+        val cases = if (contentionMode && burstOnly) listOf("busy_idle", "burst_mixed")
+            else if (contentionMode) listOf("busy_idle", "busy_parse", "busy_images", "busy_mixed", "burst_mixed")
+            else if (panelMode) listOf("panel_navigation", "panel_description")
             else if (menuMode) listOf("menu_idle", "menu_focus", "menu_sections")
             else if (plannerMode) listOf("idle", "hold_100ms", "hold_50ms")
             else if (asynchronous) listOf("navigation", "hidden_async_navigation") else scenarios
@@ -187,7 +222,9 @@ class ContainerProfileActivity : ComponentActivity() {
                 for (scenario in cases) {
                     if (menuMode) prepareMenu(scenario)
                     if (panelMode) preparePanel(scenario)
+                    contention?.start(lifecycleScope, if (menuLoad) "busy_mixed" else scenario)
                     measure(scenario, 12)
+                    contention?.stop()
                 }
                 if (tracing && !plannerMode) Composer.setTracer(tracer)
                 if (tracing && plannerMode) SeriesListPlanningDiagnostics.observer = planning
@@ -204,7 +241,9 @@ class ContainerProfileActivity : ComponentActivity() {
                         planning.reset()
                         panelStatistics.reset()
                         SelectedPanelDiagnostics.observer = if (panelMode && tracing) panelStatistics else null
+                        contention?.start(lifecycleScope, if (menuLoad) "busy_mixed" else scenario)
                         val result = measure(scenario, samples)
+                        contention?.stop()?.let { result.put("background", it) }
                         drainFrames()
                         results.put(result.put("round", round).put("scenario", scenario)
                             .put("compositions", tracer.json()).put("planning", planning.json())
@@ -218,10 +257,15 @@ class ContainerProfileActivity : ComponentActivity() {
                 directory.mkdirs()
                 File(directory, "metrics.json").writeText(JSONObject().put("theme", theme.storageId)
                     .put("tracing", tracing).put("debuggable", false).put("fixture_only", true)
-                    .put("cpu_window", if (asynchronous || plannerMode) "whole_tick" else "first_two_frames")
+                    .put("cpu_window", if (contentionMode) "until_focused_draw_and_next_frame"
+                        else if (asynchronous || plannerMode) "whole_tick" else "first_two_frames")
                     .put("planner", plannerMode).put("prefetch", prefetch).put("layout", layout.storageId)
                     .put("menu", menuMode)
+                    .put("menu_load", menuLoad)
                     .put("panel", panelMode)
+                    .put("contention", contentionMode).put("available_processors", Runtime.getRuntime().availableProcessors())
+                    .put("cpu_workers", if (cpuWorkers < 0) ru.seasonvar.tv.data.work.BackgroundCpu.parallelism else cpuWorkers)
+                    .put("cpu_pool", if (ioPool || cpuWorkers <= 0) "io" else "default").put("burst_only", burstOnly)
                     .put("samples", samples).put("rounds", rounds).put("results", results).toString(2))
                 completion.complete("complete $run")
             } catch (error: Throwable) {
@@ -233,6 +277,7 @@ class ContainerProfileActivity : ComponentActivity() {
                 Composer.setTracer(null)
                 SeriesListPlanningDiagnostics.observer = null
                 SelectedPanelDiagnostics.observer = null
+                contention?.stop()
             }
         }
     }
@@ -249,15 +294,21 @@ class ContainerProfileActivity : ComponentActivity() {
         // Повторяет границу подписок MainActivity; модели и сеть заменены готовыми состояниями.
         val states = public.mapValues { (_, flow) -> flow.collectAsStateWithLifecycle().value }
         val personalStates = personal.mapValues { (_, flow) -> flow.collectAsStateWithLifecycle().value }
-        SeasonvarApp(states, {}, startPage = Section.TOP, interfaceTheme = theme,
-            catalogLayouts = mapOf(Section.TOP to layout), accountSession = session,
-            onListVisibilityChange = if (menuMode) ({ visibleSection = it }) else null,
-            personalStates = personalStates, imagePrefetchEnabled = prefetch,
-            loadDescription = { if (panelMode) panelText else SeriesDescription(listOf(it.previewDescription.orEmpty())) })
+        CompositionLocalProvider(ru.seasonvar.tv.ui.account.LocalCardDataCache provides contention?.cache) {
+            SeasonvarApp(states, {}, startPage = Section.TOP, interfaceTheme = theme,
+                cardData = contention?.cache,
+                catalogLayouts = mapOf(Section.TOP to layout), accountSession = session,
+                onListVisibilityChange = if (menuMode) ({ visibleSection = it }) else null,
+                personalStates = personalStates, imagePrefetchEnabled = prefetch,
+                loadDescription = { if (panelMode) panelText else contention?.description(it) ?: SeriesDescription(listOf(it.previewDescription.orEmpty())) })
+        }
     }
 
     private suspend fun measure(scenario: String, samples: Int): JSONObject {
         val cpu = mutableListOf<Double>()
+        val latency = mutableListOf<Double>()
+        val drawn = mutableListOf<Double>()
+        val processCpu = android.os.Process.getElapsedCpuTime()
         val runtimeBefore = runtimeStatistics()
         val start = System.nanoTime()
         var heldCode: Int? = null
@@ -265,6 +316,11 @@ class ContainerProfileActivity : ComponentActivity() {
         repeat(samples) { index ->
             val tick = System.nanoTime()
             val cpuStart = Debug.threadCpuTimeNanos()
+            contention?.tick(lifecycleScope, index)
+            val previousFocus = diagnosticFocusKey
+            if (contentionMode) key(if (index % 2 == 0) {
+                if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_RIGHT
+            } else if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_LEFT)
             if (scenario.startsWith("hold_")) {
                 val forward = index < samples / 2
                 val code = if (layout == CatalogLayout.GRID) {
@@ -300,7 +356,15 @@ class ContainerProfileActivity : ComponentActivity() {
             } else if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_LEFT)
             if (scenario == "panel_description") panelDescription = if (index % 2 == 0)
                 DescriptionState(rows.first().key, loading = true) else DescriptionState(rows.first().key, panelText)
-            settle(2)
+            if (contentionMode) {
+                do { settle(1) } while (diagnosticDrawTime < tick && System.nanoTime() - tick < 2_000_000_000L)
+                check(diagnosticFocusKey != previousFocus) { "Navigation did not move focus under load" }
+                check(diagnosticDrawTime >= tick) { "Focused card was not drawn" }
+                latency += (diagnosticFocusTime - tick) / 1_000_000.0
+                drawn += (diagnosticDrawTime - tick) / 1_000_000.0
+                if (index % 2 == 1) check(diagnosticFocusTitle == "Карточка 1")
+                settle(1)
+            } else settle(2)
             if (!asynchronous && !plannerMode) cpu += (Debug.threadCpuTimeNanos() - cpuStart) / 1_000_000.0
             val interval = if (scenario == "hold_50ms") 50L else 100L
             delay((interval - (System.nanoTime() - tick) / 1_000_000).coerceAtLeast(0))
@@ -322,6 +386,9 @@ class ContainerProfileActivity : ComponentActivity() {
         drainFrames()
         val selected = synchronized(frames) { frames.filter { it[0] in start..end } }
         return JSONObject().put("main_cpu_ms_per_tick", distribution(cpu))
+            .put("focus_latency_ms", distribution(latency)).put("focus_latency_samples_ms", JSONArray(latency))
+            .put("focus_draw_ms", distribution(drawn)).put("focus_draw_samples_ms", JSONArray(drawn))
+            .put("process_cpu_ms", android.os.Process.getElapsedCpuTime() - processCpu)
             .put("runtime_delta", JSONObject().apply {
                 runtimeBefore.forEach { (name, value) -> put(name, runtimeAfter.getValue(name) - value) }
             })
@@ -366,7 +433,9 @@ class ContainerProfileActivity : ComponentActivity() {
 
     private fun checkMenuFocus(label: Int) = checkFocus(getString(label))
 
-    private fun checkFocus(label: String) {
+    private fun checkFocus(label: String) { check(focusedLabel() == label) { "Expected focus $label, got ${focusedLabel()}" } }
+
+    private fun focusedLabel(): String? {
         fun root(view: View): ViewRootForTest? = view as? ViewRootForTest ?: (view as? ViewGroup)?.let {
             (0 until it.childCount).firstNotNullOfOrNull { index -> root(it.getChildAt(index)) }
         }
@@ -376,9 +445,7 @@ class ContainerProfileActivity : ComponentActivity() {
         val node = focused(checkNotNull(root(window.decorView)).semanticsOwner.rootSemanticsNode)
         val text = node?.config?.getOrNull(SemanticsProperties.Text)?.map { it.text }
         val description = node?.config?.getOrNull(SemanticsProperties.ContentDescription)
-        check(text?.contains(label) == true || description?.contains(label) == true) {
-            "Expected focus $label, got $text/$description"
-        }
+        return text?.firstOrNull() ?: description?.firstOrNull()
     }
 
     private fun key(code: Int) {
@@ -414,6 +481,9 @@ class ContainerProfileActivity : ComponentActivity() {
         Composer.setTracer(null)
         SeriesListPlanningDiagnostics.observer = null
         SelectedPanelDiagnostics.observer = null
+        contention?.close()
+        ru.seasonvar.tv.ui.catalog.CatalogNavigationDiagnostics.observer = null
+        ru.seasonvar.tv.data.work.BackgroundCpu.profileDispatcher = null
         if (::frameThread.isInitialized) frameThread.quitSafely()
         super.onDestroy()
     }

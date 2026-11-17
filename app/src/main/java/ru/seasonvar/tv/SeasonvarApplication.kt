@@ -106,5 +106,6 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     }
 
     override fun newImageLoader(): ImageLoader =
-        ImageLoader.Builder(this).callFactory(siteClient).build()
+        ImageLoader.Builder(this).callFactory(siteClient)
+            .decoderDispatcher(kotlinx.coroutines.Dispatchers.Default).build()
 }

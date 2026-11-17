@@ -27,7 +27,8 @@ data class AccountSession(val user: AccountUser? = null, val version: Long = 0, 
 class AccountRepository(private val sessions: SessionManager, private val transport: AccountTransport,
     private val htmlCache: HtmlResponseCache? = null, private val cardData: CardDataCache? = null,
     workers: kotlinx.coroutines.CoroutineScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO),
-    private val dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO) {
+    private val dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+    private val cpuDispatcher: kotlinx.coroutines.CoroutineDispatcher = ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher) {
     constructor(sessions: SessionManager, client: SiteClient, htmlCache: HtmlResponseCache? = null,
         cardData: CardDataCache? = null) : this(sessions, object : AccountTransport {
         override suspend fun clearHistory(jar: SessionCookies) = client.accountClearHistory(jar)
@@ -86,7 +87,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             currentCoroutineContext().ensureActive()
             if (resumeKey() != key) throw kotlinx.coroutines.CancellationException()
             val parsed = try {
-                AccountParser.snapshot(html).also { if (it.user.id != expected.user.id) throw SessionExpiredException() }
+                withContext(cpuDispatcher) { AccountParser.snapshot(html) }.also { if (it.user.id != expected.user.id) throw SessionExpiredException() }
             } catch (error: SessionExpiredException) {
                 mutex.withLock { if (session.value.version == expected.version) clear(expired = true, cancelReads = false) }
                 throw error
@@ -110,7 +111,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         }
         val parsed = ready ?: runCatching {
             resumeRequests.get(key) {
-                val snapshot = AccountParser.snapshot(saved.html).also { require(it.user.id == user.id) }
+                val snapshot = withContext(cpuDispatcher) { AccountParser.snapshot(saved.html) }.also { require(it.user.id == user.id) }
                 if (resumeKey(cached = true) != key || !cache.isCurrent(lease)) throw kotlinx.coroutines.CancellationException()
                 synchronized(resumeMonitor) { diskSnapshot = Triple(key, saved.savedAt, snapshot) }
                 snapshot
@@ -128,11 +129,11 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val html = transport.get(PersonalFeed.HISTORY.url, jar)
             currentCoroutineContext().ensureActive()
             if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
-            if (AccountParser.user(html)?.id != expected.user.id) {
+            if (withContext(cpuDispatcher) { AccountParser.user(html) }?.id != expected.user.id) {
                 clear(expired = true)
                 throw SessionExpiredException()
             }
-            return HistoryParser.parse(html)
+            return withContext(cpuDispatcher) { HistoryParser.parse(html) }
         }
         val before = read()
         invalidateHistoryCache()
@@ -165,7 +166,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     suspend fun restore(): Unit = withContext(dispatcher) { mutex.withLock {
         if (!sessions.hasSession()) return@withLock
         val html = transport.get("https://seasonvar.ru/resume", sessions.current())
-        val user = AccountParser.user(html)
+        val user = withContext(cpuDispatcher) { AccountParser.user(html) }
         currentCoroutineContext().ensureActive()
         if (user == null) { clear(expired = true); throw SessionExpiredException() }
         sessions.confirmAccount(user.id)
@@ -182,7 +183,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         transport.get("https://seasonvar.ru/?mod=login", candidate)
         transport.login(login.trim(), password, candidate)
         val html = transport.get("https://seasonvar.ru/resume", candidate)
-        val user = AccountParser.user(html) ?: throw LoginRejectedException()
+        val user = withContext(cpuDispatcher) { AccountParser.user(html) } ?: throw LoginRejectedException()
         currentCoroutineContext().ensureActive()
         sessions.commit(candidate, user.id)
         htmlCache?.let { it.save(personalKey(PersonalFeed.RESUME), html, it.capture()) }
@@ -213,7 +214,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         val options = snapshot.options.getOrThrow()
         val selected = options.normalize(requested)
         val user = expected.user ?: throw SessionExpiredException()
-        val page = if (!selected.active) snapshot.page(feed, windowed) else {
+        val page = if (!selected.active) withContext(cpuDispatcher) { snapshot.page(feed, windowed) } else {
             val key = resumeKey()
             val filtered = filterRequests.get(key to selected) {
                 if (key != resumeKey()) throw kotlinx.coroutines.CancellationException()
@@ -221,7 +222,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
                 currentCoroutineContext().ensureActive()
                 if (key != resumeKey()) throw kotlinx.coroutines.CancellationException()
                 try {
-                    AccountParser.filteredSnapshot(response, user).also {
+                    withContext(cpuDispatcher) { AccountParser.filteredSnapshot(response, user) }.also {
                         if (key != resumeKey()) throw kotlinx.coroutines.CancellationException()
                         if (lease != null) htmlCache.save(filterKey(selected), response, lease)
                     }
@@ -234,7 +235,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
                 }
             }
             if (key != resumeKey()) throw kotlinx.coroutines.CancellationException()
-            filtered.page(feed, windowed)
+            withContext(cpuDispatcher) { filtered.page(feed, windowed) }
         }
         currentCoroutineContext().ensureActive()
         valid()
@@ -247,23 +248,23 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             require(feed == PersonalFeed.HISTORY)
             HistoryParser.pageUrl(pageUrl) ?: throw ru.seasonvar.tv.data.MarkupChangedException()
         }
-        if (feed != PersonalFeed.HISTORY) return@withContext resumeData().page(feed, windowed)
+        if (feed != PersonalFeed.HISTORY) return@withContext resumeData().let { withContext(cpuDispatcher) { it.page(feed, windowed) } }
         val html = authenticatedHtml(url)
-        AccountParser.personalList(html, feed, url, windowed).also {
+        withContext(cpuDispatcher) { AccountParser.personalList(html, feed, url, windowed) }.also {
             if (lease != null) htmlCache.save(personalKey(feed, url), html, lease)
         }
     }
 
     suspend fun cachedPersonalList(feed: PersonalFeed, pageUrl: String = feed.url, windowed: Boolean = false): AccountPage? = withContext(dispatcher) {
-        if (feed != PersonalFeed.HISTORY) return@withContext runCatching { cachedResumeData()?.page(feed, windowed) }.getOrNull()
+        if (feed != PersonalFeed.HISTORY) return@withContext runCatching { cachedResumeData()?.let { withContext(cpuDispatcher) { it.page(feed, windowed) } } }.getOrNull()
         val cache = htmlCache ?: return@withContext null
         val expected = session.value
         val owner = expected.user?.id ?: return@withContext null
         val lease = cache.capture()
         val saved = cache.read(personalKey(feed, pageUrl), lease) ?: return@withContext null
         runCatching {
-            require(AccountParser.user(saved.html)?.id == owner)
-            AccountParser.personalList(saved.html, feed, pageUrl, windowed)
+            require(withContext(cpuDispatcher) { AccountParser.user(saved.html) }?.id == owner)
+            withContext(cpuDispatcher) { AccountParser.personalList(saved.html, feed, pageUrl, windowed) }
         }.getOrNull()?.takeIf { session.value.version == expected.version && cache.isCurrent(lease) }
     }
 
@@ -278,9 +279,9 @@ class AccountRepository(private val sessions: SessionManager, private val transp
                 val options = metadata.options.getOrThrow()
                 val selected = options.normalize(requested)
                 require(selected == requested)
-                val page = if (!selected.active) metadata.page(feed, windowed) else {
+                val page = if (!selected.active) withContext(cpuDispatcher) { metadata.page(feed, windowed) } else {
                     val response = cache.read(filterKey(selected), lease) ?: return@runCatching null
-                    AccountParser.filteredPersonalList(response.html, user, feed, windowed)
+                    withContext(cpuDispatcher) { AccountParser.filteredPersonalList(response.html, user, feed, windowed) }
                 }
                 FilteredPersonalPage(page, options, selected)
             }.getOrNull()?.takeIf { session.value.version == expected.version && cache.isCurrent(lease) }
@@ -326,7 +327,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val html = transport.get(mark.pageUrl, jar)
             currentCoroutineContext().ensureActive()
             if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
-            if (AccountParser.user(html)?.id != expected.user.id) {
+            if (withContext(cpuDispatcher) { AccountParser.user(html) }?.id != expected.user.id) {
                 clear(expired = true)
                 throw SessionExpiredException()
             }
@@ -364,7 +365,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val html = transport.get(target.pageUrl, jar)
             currentCoroutineContext().ensureActive()
             if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
-            if (AccountParser.user(html)?.id != expected.user.id) {
+            if (withContext(cpuDispatcher) { AccountParser.user(html) }?.id != expected.user.id) {
                 clear(expired = true); throw SessionExpiredException()
             }
             return html
@@ -402,7 +403,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val html = transport.get(target.pageUrl, jar)
             currentCoroutineContext().ensureActive()
             if (session.value.version != expected.version) throw kotlinx.coroutines.CancellationException()
-            if (AccountParser.user(html)?.id != expected.user.id) {
+            if (withContext(cpuDispatcher) { AccountParser.user(html) }?.id != expected.user.id) {
                 clear(expired = true)
                 throw SessionExpiredException()
             }
@@ -444,7 +445,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             val html = transport.get(url, sessions.current())
             currentCoroutineContext().ensureActive()
             if (!valid()) throw kotlinx.coroutines.CancellationException()
-            if (AccountParser.user(html)?.id != expected.user.id) {
+            if (withContext(cpuDispatcher) { AccountParser.user(html) }?.id != expected.user.id) {
                 mutex.withLock { if (session.value.version == expected.version) clear(expired = true, cancelReads = false) }
                 throw SessionExpiredException()
             }

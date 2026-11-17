@@ -1,5 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:label="${profileAppLabel}" tools:replace="android:label">
         <profileable android:shell="true" />
         <receiver android:name="ru.seasonvar.tv.probe.StartupReportReceiver" android:exported="true" />
         <activity android:name="ru.seasonvar.tv.probe.ContainerProfileActivity"

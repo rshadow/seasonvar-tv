@@ -30,6 +30,7 @@ class CardDataCache(
     private val capacity: Int = CacheSettings.CARD_DATA_CAPACITY,
     private val now: () -> Long = System::currentTimeMillis,
     private val workers: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val cpuDispatcher: CoroutineDispatcher = ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher,
 ) {
     private data class LoadKey(val season: String, val lease: CacheLease, val force: Boolean)
     private class Flight(val job: Deferred<CardData>, var readers: Int = 0)
@@ -47,6 +48,9 @@ class CardDataCache(
     init { require(capacity > 0) }
 
     val size get() = synchronized(monitor) { dataCount }
+    internal fun diagnosticCounts(): IntArray = synchronized(monitor) {
+        intArrayOf(values.size, dataCount, pins.size, pins.values.flatten().toSet().size, flights.size)
+    }
     fun description(id: String): SeriesDescription? = synchronized(monitor) { fresh(id)?.description }
 
     fun details(entry: SeriesEntry, lease: CacheLease): SeriesDetails? = synchronized(monitor) {
@@ -64,13 +68,21 @@ class CardDataCache(
     }
 
     fun observeMark(id: String): Flow<CardMarkChange?> = flow {
+        val observer = CardCacheDiagnostics.current()
+        val cpu = if (observer != null) android.os.Debug.threadCpuTimeNanos() else 0L
         val owner = Any()
         val state = synchronized(monitor) {
             pins[owner] = setOf(id)
             values.getOrPut(id) { Record() }.mark.also { evict() }
         }
+        observer?.subscription(true, android.os.Debug.threadCpuTimeNanos() - cpu)
         try { emitAll(state.map { change -> change?.takeIf { htmlCache.isCurrent(CacheLease(it.scope, 0)) } }.distinctUntilChanged()) }
-        finally { retain(owner, emptySet()) }
+        finally {
+            val closing = CardCacheDiagnostics.current()
+            val start = if (closing != null) android.os.Debug.threadCpuTimeNanos() else 0L
+            retain(owner, emptySet())
+            closing?.subscription(false, android.os.Debug.threadCpuTimeNanos() - start)
+        }
     }
 
     fun applyMark(entry: SeriesEntry, snapshot: PlaybackMarkSnapshot, revision: Long): CardMarkChange {
@@ -96,6 +108,24 @@ class CardDataCache(
             if (record?.data == null && record?.hasLocalChange != true && pins.values.none { id in it }) values.remove(id)
         }
         evict()
+    }
+
+    private fun parse(entry: SeriesEntry, response: CachedHtml, lease: CacheLease, previousMark: CardMarkChange?): CardData {
+        val doc = Jsoup.parse(response.html, entry.url)
+        val description = SeasonvarParser.description(doc, entry)
+        val pageOwner = runCatching { ru.seasonvar.tv.data.account.AccountParser.user(doc)?.id }.getOrNull()
+        if (lease.scope?.private == true && doc.selectFirst(".headblock-menu") != null && pageOwner != lease.scope.owner)
+            throw ru.seasonvar.tv.data.account.SessionExpiredException()
+        val details = runCatching { SeriesDetailsParser.parse(doc, entry) }.getOrNull()
+        val serverMark = if ((!response.fromDisk || previousMark == null) && lease.scope?.private == true)
+            runCatching { ru.seasonvar.tv.data.account.PlaybackMarkParser.snapshot(doc, entry.id, entry.url) }.getOrNull()
+            else null
+        val commonDetails = details?.copy(entry = commonEntry(details.entry), defaultTranslationId = null,
+            playbackUnavailableReason = null)
+        val privateData = CardPrivateData(lease.scope, details?.defaultTranslationId,
+            details?.playbackUnavailableReason, entry.accountMark, entry.accountProgress, entry.accountListMark,
+            serverMark, pageOwner)
+        return CardData(description, commonDetails, response.savedAt, privateData)
     }
 
     fun clearPrivate(cancelLoads: Boolean = true) = synchronized(monitor) {
@@ -125,28 +155,14 @@ class CardDataCache(
                 Flight(workerScope.async(start = CoroutineStart.LAZY) {
                     var response = fetch(false)
                     currentCoroutineContext().ensureActive()
-                    var doc = Jsoup.parse(response.html, entry.url)
-                    val description = try { SeasonvarParser.description(doc, entry) }
-                    catch (error: MarkupChangedException) {
+                    val parsed = try {
+                        withContext(cpuDispatcher) { parse(entry, response, lease, previousMark) }
+                    } catch (error: MarkupChangedException) {
                         if (!response.fromDisk) throw error
                         response = fetch(true)
                         currentCoroutineContext().ensureActive()
-                        doc = Jsoup.parse(response.html, entry.url)
-                        SeasonvarParser.description(doc, entry)
+                        withContext(cpuDispatcher) { parse(entry, response, lease, previousMark) }
                     }
-                    val pageOwner = runCatching { ru.seasonvar.tv.data.account.AccountParser.user(doc)?.id }.getOrNull()
-                    if (lease.scope?.private == true && doc.selectFirst(".headblock-menu") != null && pageOwner != lease.scope.owner)
-                        throw ru.seasonvar.tv.data.account.SessionExpiredException()
-                    val details = runCatching { SeriesDetailsParser.parse(doc, entry) }.getOrNull()
-                    val serverMark = if ((!response.fromDisk || previousMark == null) && lease.scope?.private == true)
-                        runCatching { ru.seasonvar.tv.data.account.PlaybackMarkParser.snapshot(doc, entry.id, entry.url) }.getOrNull()
-                        else null
-                    val commonDetails = details?.copy(entry = commonEntry(details.entry), defaultTranslationId = null,
-                        playbackUnavailableReason = null)
-                    val privateData = CardPrivateData(lease.scope, details?.defaultTranslationId,
-                        details?.playbackUnavailableReason, entry.accountMark, entry.accountProgress, entry.accountListMark,
-                        serverMark, pageOwner)
-                    val parsed = CardData(description, commonDetails, response.savedAt, privateData)
                     currentCoroutineContext().ensureActive()
                     if (!htmlCache.isCurrent(lease)) throw CancellationException("Card cache scope changed")
                     persist(response)
@@ -154,12 +170,13 @@ class CardDataCache(
                         if (!htmlCache.isCurrent(lease)) throw CancellationException("Card cache scope changed")
                         val result = parsed.copy(details = parsed.details ?: fresh(entry.id)?.details,
                             privateData = parsed.privateData.takeIf { privateRevision == version })
+                        val serverMark = parsed.privateData?.snapshot
                         if (lease.scope != null) {
                             val record = values.getOrPut(entry.id) { Record() }
                             if (record.data == null) dataCount++
                             record.data = result
                             if (serverMark != null && privateRevision == version && record.mark.value === previousMark)
-                                record.mark.value = CardMarkChange(commonEntry(entry).copy(previewDescription = null), serverMark, previousMark?.revision ?: 0, lease.scope, episodeTotal(details, serverMark))
+                                record.mark.value = CardMarkChange(commonEntry(entry).copy(previewDescription = null), serverMark, previousMark?.revision ?: 0, lease.scope, episodeTotal(parsed.details, serverMark))
                             evict()
                         }
                         result

@@ -49,6 +49,18 @@ data class CatalogFilterOptions(val choices: Map<String, List<FilterOption>>) {
     }
 }
 
+internal suspend fun readCatalogEntries(reader: java.io.Reader,
+    dispatcher: kotlinx.coroutines.CoroutineDispatcher = ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher): ParsedSeriesEntries {
+    var parsed: ParsedSeriesEntries? = null
+    try {
+        return kotlinx.coroutines.withContext(dispatcher) { BrowseCatalogParser.entries(reader).also { parsed = it } }
+    } catch (error: Throwable) {
+        runCatching { parsed?.window?.close() }
+        runCatching { reader.close() }
+        throw error
+    }
+}
+
 object BrowseCatalogParser {
     private val pagePath = Regex("/serial-([0-9]+)[^/?#]*\\.html")
     private val seasonPath = Regex("-([0-9]+)-season\\.html$")

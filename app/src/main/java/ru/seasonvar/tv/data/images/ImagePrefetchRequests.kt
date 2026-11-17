@@ -18,6 +18,7 @@ private val diskOnlyDecoder = Decoder.Factory { _, _, _ ->
 
 internal suspend fun prefetchImage(context: Context, loader: ImageLoader, image: PrefetchImage) {
     val request = ImageRequest.Builder(context).data(image.url)
+        .decoderDispatcher(ru.seasonvar.tv.data.work.BackgroundCpu.dispatcher)
         .diskCachePolicy(CachePolicy.ENABLED).networkCachePolicy(CachePolicy.ENABLED)
         .apply {
             if (image.kind == PrefetchKind.THUMBNAIL) {
