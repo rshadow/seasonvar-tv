@@ -13,6 +13,7 @@ object UiScreensLayoutProbe {
                 screens.accountStates()
             }
             screens.settingsDialogs()
+            screens.settingsNavigation()
             screens.aboutAndUpdate()
             screens.filterDialogs()
             screens.detailsDialogs()
