@@ -156,7 +156,10 @@ object BrowseCatalogLayoutProbe {
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
             stage("details_return")
             key(KeyEvent.KEYCODE_DPAD_CENTER)
-            waitFor { find(uiAutomation.rootInActiveWindow, "Синтетическая карточка для проверки возврата фокуса.") != null }
+            waitFor {
+                val details = detailsModel.state.value
+                details.entry?.id == "200" && details.canPlay && focused(targetContext.getString(R.string.details_watch))
+            }
             val searchFocusEvents = java.util.concurrent.atomic.AtomicInteger()
             uiAutomation.setOnAccessibilityEventListener { event ->
                 if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED &&
@@ -207,8 +210,12 @@ object BrowseCatalogLayoutProbe {
             main { controller.refresh() }; waitFor { focused("Сериал 2") }
             key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
             main { controller.choose("year", "2025"); controller.fail = true }
+            settle()
+            waitFor { control("Год: =2025") != null && control("Применить")?.isEnabled == true }
+            stage("apply_failure")
             key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { controller.state.value.page.failure == LoadFailure.NETWORK }
+            stage("return_after_failure")
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 2") }
             result.putBoolean("sort_reset", true); result.putBoolean("filter_reset", true)
             result.putBoolean("defaults_reset", true); result.putBoolean("refresh_failure_preserved", true)
@@ -219,6 +226,7 @@ object BrowseCatalogLayoutProbe {
         } catch (error: Throwable) {
             result.putBoolean("script_success", false); result.putString("failure_type", error.javaClass.simpleName)
             result.putString("failure_phase", phase)
+            result.putString("failure_detail", "applied:${controller.applied}/failure:${controller.state.value.page.failure}/changed:${controller.state.value.changed}")
             result.putString("failure_line", error.stackTrace.firstOrNull { it.fileName == "BrowseCatalogLayoutProbe.kt" }?.lineNumber?.toString())
             fun describe(node: AccessibilityNodeInfo?): String = if (node == null) "" else
                 "${node.className}|${node.text}|click=${node.isClickable}|focus=${node.isFocused}\n" +
