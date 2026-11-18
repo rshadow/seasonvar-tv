@@ -196,6 +196,60 @@ object PlayerAutoNextProbe {
             val paused = main { player().currentPosition }
             capture("03-paused-a"); Thread.sleep(1000); capture("04-paused-b")
             check(kotlin.math.abs(main { player().currentPosition } - paused) < 250)
+            stage("seek_acceleration")
+            main {
+                val media = player()
+                val screen = checkNotNull(activity)
+                val downTime = SystemClock.uptimeMillis() - 6000
+                val middle = media.duration / 2
+                check(middle > 80_000)
+                for (code in listOf(KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_REWIND)) {
+                    val direction = if (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_MEDIA_REWIND) -1 else 1
+                    val holds = listOf(0L to 10_000L, 1999L to 10_000L, 2000L to 20_000L,
+                        3999L to 20_000L, 4000L to 40_000L, 5999L to 40_000L, 6000L to 80_000L)
+                    holds.forEachIndexed { index, (held, step) ->
+                        media.seekTo(middle)
+                        screen.dispatchKeyEvent(KeyEvent(downTime, downTime + held, KeyEvent.ACTION_DOWN, code, index))
+                        check(media.currentPosition == middle + direction * step)
+                    }
+                    val beforeRelease = media.currentPosition
+                    screen.dispatchKeyEvent(KeyEvent(downTime, downTime + 6000, KeyEvent.ACTION_UP, code, 0))
+                    check(media.currentPosition == beforeRelease)
+                    screen.dispatchKeyEvent(KeyEvent(downTime + 6000, downTime + 6000, KeyEvent.ACTION_DOWN, code, 0))
+                    check(media.currentPosition == beforeRelease + direction * 10_000L)
+                    screen.dispatchKeyEvent(KeyEvent(downTime + 6000, downTime + 6000, KeyEvent.ACTION_UP, code, 0))
+                }
+                media.seekTo(paused)
+            }
+            result.putBoolean("seek_acceleration_verified", true)
+            stage("seek_keyboard_pulses")
+            var pulseStart = 0L
+            var pulseCount = 0
+            do {
+                val middle = main { player().duration / 2 }
+                main { player().seekTo(middle) }
+                val now = SystemClock.uptimeMillis()
+                if (pulseCount == 0) pulseStart = now
+                val elapsed = now - pulseStart
+                val step = when {
+                    elapsed >= 6000 -> 80_000L
+                    elapsed >= 4000 -> 40_000L
+                    elapsed >= 2000 -> 20_000L
+                    else -> 10_000L
+                }
+                check(uiAutomation.injectInputEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, 0), true))
+                check(uiAutomation.injectInputEvent(KeyEvent(now, now + 1, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT, 0), true))
+                check(main { player().currentPosition } == middle + step)
+                pulseCount++
+                waitFor(1000) { SystemClock.uptimeMillis() - now >= 84 }
+            } while (SystemClock.uptimeMillis() - pulseStart < 6200)
+            check(pulseCount > 30)
+            waitFor(1000) { SystemClock.uptimeMillis() - pulseStart >= 6500 }
+            val beforeFreshPress = main { player().currentPosition }
+            key(KeyEvent.KEYCODE_DPAD_LEFT)
+            check(main { player().currentPosition } == beforeFreshPress - 10_000)
+            result.putBoolean("seek_keyboard_pulses_verified", true)
             key(KeyEvent.KEYCODE_DPAD_CENTER); playing(episodes[0].id)
             val beforeSeek = main { player().currentPosition }
             key(KeyEvent.KEYCODE_DPAD_RIGHT); playing(episodes[0].id)

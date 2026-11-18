@@ -36,6 +36,10 @@
     <dimen name="seasonvar_episode_width">60dp</dimen>
     <integer name="seasonvar_all_episodes_threshold">12</integer>
     <integer name="seasonvar_player_seek_ms">10000</integer>
+    <integer name="seasonvar_player_seek_doubling_ms">2000</integer>
+    <integer name="seasonvar_player_seek_max_ms">80000</integer>
+    <integer name="seasonvar_player_seek_pulse_gap_ms">200</integer>
+    <integer name="seasonvar_player_seek_pulse_duration_ms">20</integer>
     <integer name="seasonvar_player_controls_timeout_ms">3000</integer>
     <integer name="seasonvar_player_progress_interval_ms">5000</integer>
 

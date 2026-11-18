@@ -34,7 +34,7 @@ watchdog.start()
 fields = {}
 allowed = {"failure_origin", "proxy_tls_transports_verified", "proxy_settings_restored", "phase", "default_enabled", "automatic_next", "disabled_stays", "last_stays", "last_closes",
            "default_season_enabled", "season_disabled_stays", "automatic_season", "season_pause_seek",
-           "clock_positions_verified", "clock_setting_restored",
+           "clock_positions_verified", "clock_setting_restored", "seek_acceleration_verified", "seek_keyboard_pulses_verified",
            "no_account_marks_written", "script_success", "explicit_resume_verified", "position_restored", "settings_restored", "season_title_verified", "failure_type", "activity_state", "offer_visible", "artifacts"}
 for line in process.stdout:
     if line.startswith("INSTRUMENTATION_STATUS: phase="):
@@ -57,6 +57,8 @@ if fields.get("automatic_season") is not True or fields.get("season_disabled_sta
 if fields.get("settings_restored") is not True or fields.get("season_title_verified") is not True:
     raise SystemExit(1)
 if fields.get("clock_positions_verified") is not True or fields.get("clock_setting_restored") is not True:
+    raise SystemExit(1)
+if fields.get("seek_acceleration_verified") is not True or fields.get("seek_keyboard_pulses_verified") is not True:
     raise SystemExit(1)
 if args.proxy_pac and fields.get("proxy_settings_restored") is not True:
     raise SystemExit(1)
