@@ -6,10 +6,27 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.*
 import ru.seasonvar.tv.data.PublicFeed
+import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.account.PersonalFeed
+import ru.seasonvar.tv.ui.catalog.CatalogLayout
 
 @Stable
-internal class MainCatalogPosition(val list: LazyListState, val grid: LazyGridState)
+internal class MainCatalogPosition(val list: LazyListState, val grid: LazyGridState) {
+    fun keepSelectionVisible(layout: CatalogLayout, catalogKey: String, selectedKey: String?, entries: List<SeriesEntry>) {
+        if (selectedKey == null) return
+        val visibleKeys = if (layout == CatalogLayout.GRID) grid.layoutInfo.visibleItemsInfo.map { it.key }
+            else list.layoutInfo.visibleItemsInfo.map { it.key }
+        val offset = visibleKeys.indexOf("$catalogKey|$selectedKey")
+        if (offset < 0) return
+        val selectedIndex = entries.indexOfFirst { it.key == selectedKey }
+        if (selectedIndex < 0) return
+        val firstKey = (visibleKeys.first() as? String)?.removePrefix("$catalogKey|")
+        val firstIndex = entries.indexOfFirst { it.key == firstKey }
+        if (firstIndex >= 0 && selectedIndex - firstIndex in visibleKeys.indices) return
+        val anchor = (selectedIndex - offset).coerceAtLeast(0)
+        if (layout == CatalogLayout.GRID) grid.requestScrollToItem(anchor) else list.requestScrollToItem(anchor)
+    }
+}
 
 /** Все списки сохраняют позиции независимо; смена фильтров пересоздаёт только позицию каталога. */
 @Stable

@@ -24,12 +24,15 @@ class CatalogStartupTest {
     private class Source : HtmlSource {
         val requests = AtomicInteger()
         var gate: CompletableDeferred<Unit>? = null
+        var requested: CompletableDeferred<Unit>? = null
+        var seriesId = "123"
         override suspend fun get(url: String): String {
             requests.incrementAndGet()
+            requested?.complete(Unit)
             gate?.await()
             val date = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.uuuu", Locale.ROOT))
             return "<div class='news'><div class='news-head'>$date</div>" +
-                "<a href='/serial-123-Fixture.html' data-id='123'><div class='news-w'>" +
+                "<a href='/serial-$seriesId-Fixture.html' data-id='$seriesId'><div class='news-w'>" +
                 "<div class='news_n'>Сериал</div><span class='news_s'>1 серия</span></div></a></div>"
         }
         override suspend fun sidebar(feed: PublicFeed): String = error("Unexpected sidebar request")
@@ -68,17 +71,24 @@ class CatalogStartupTest {
         assertEquals(3, source.requests.get())
     }
 
-    @Test fun activating_today_exposes_cached_rows_before_the_fresh_response() = runBlocking {
+    @Test fun activating_today_waits_for_the_fresh_response_when_an_old_snapshot_exists() = runBlocking {
         val source = Source(); val repository = CatalogRepository(folder.newFolder(), source)
         repository.load(LocalDate.now(), PublicFeed.TODAY)
+        assertEquals("123", repository.cached(LocalDate.now())!!.entries.single().id)
         val model = model(source, repository = repository)
         assertFalse(model.state.value.loaded)
         source.gate = CompletableDeferred()
+        source.requested = CompletableDeferred()
+        source.seriesId = "456"
         try {
             model.activate()
-            val cached = withTimeout(10_000) { model.state.first { it.loaded } }
-            assertTrue(cached.cached); assertTrue(cached.loading); assertEquals(1, cached.entries.size)
+            withTimeout(10_000) { source.requested!!.await() }
+            val pending = model.state.value
+            assertTrue(pending.loading)
+            assertFalse(pending.cached || pending.loaded)
+            assertTrue(pending.entries.isEmpty())
         } finally { source.gate!!.complete(Unit) }
-        ready(model); assertEquals(2, source.requests.get())
+        assertEquals("456", ready(model).entries.single().id)
+        assertEquals(2, source.requests.get())
     }
 }

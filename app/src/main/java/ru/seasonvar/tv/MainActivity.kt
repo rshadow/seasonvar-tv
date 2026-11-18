@@ -198,7 +198,7 @@ class MainActivity : ComponentActivity() {
                 if (it.section == Section.SMART_CONTINUE) smartState else personalStates[it.section.personalFeed]
             }
             val discardPreview = startupPreview != null && (currentPreview == null ||
-                accountSession.user != null && (livePreviewList?.loaded == true || livePreviewList?.failure != null))
+                accountSession.user != null && currentPreview.isReplacedBy(livePreviewList))
             LaunchedEffect(discardPreview) { if (discardPreview) startupPreview = null }
             SeasonvarApp(
                 browseCatalog = browseModel,
@@ -283,13 +283,14 @@ class MainActivity : ComponentActivity() {
         return try {
             val owner = container.account.startupOwner() ?: return null
             val ownerKey = markOwnerId(owner) ?: return null
-            val entries = if (section == Section.SMART_CONTINUE) container.smartContinueCache.read(ownerKey) else {
-                val feed = section.personalFeed ?: return null
-                val filters = PersonalListFilters.from(container.listFilterPreferences.read(ownerKey, feed.catalogKey))
-                container.account.cachedStartupPage(owner, feed, filters)?.entries
-            }
+            val feed = section.personalFeed
+            val filters = if (feed == null) PersonalListFilters()
+                else PersonalListFilters.from(container.listFilterPreferences.read(ownerKey, feed.catalogKey))
+            val entries = if (feed == null) container.smartContinueCache.read(ownerKey)
+                else container.account.cachedStartupPage(owner, feed, filters)?.entries
             if (entries.isNullOrEmpty() || container.account.startupOwner() != owner) return null
-            PersonalStartPreview(section, owner, CatalogUiState(entries = entries, loaded = true, loading = false, cached = true))
+            PersonalStartPreview(section, owner,
+                CatalogUiState(entries = entries, loaded = true, loading = false, cached = true), filters)
         } catch (_: SessionStorageException) { null }
     }
 

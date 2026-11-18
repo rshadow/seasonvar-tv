@@ -11,11 +11,14 @@ import ru.seasonvar.tv.data.cache.CardDataCache
 internal val LocalCardDataCache = staticCompositionLocalOf<CardDataCache?> { null }
 
 @Composable
-internal fun cardMarkState(entry: SeriesEntry): CardMarkChange? {
+internal fun cardMarkState(entry: SeriesEntry): CardMarkChange? = cardMarkState(entry.id)
+
+@Composable
+internal fun cardMarkState(seasonId: String): CardMarkChange? {
     val cache = LocalCardDataCache.current
         ?: (LocalContext.current.applicationContext as? SeasonvarApplication)?.cardData ?: return null
-    val changes = remember(cache, entry.id) { cache.observeMark(entry.id) }
-    return changes.collectAsState(initial = cache.mark(entry.id)).value
+    val changes = remember(cache, seasonId) { cache.observeMark(seasonId) }
+    return changes.collectAsState(initial = cache.mark(seasonId)).value
 }
 
 @Composable

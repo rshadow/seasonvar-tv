@@ -1,6 +1,7 @@
 package ru.seasonvar.tv.baseline
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
@@ -24,6 +25,16 @@ import java.time.LocalDate
 import java.util.Locale
 
 class BaselineActivity : ComponentActivity() {
+    private var accountConfirmed by mutableStateOf(false)
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_F8 && intent.getBooleanExtra("cached_personal_start", false)) {
+            if (event.action == KeyEvent.ACTION_UP) accountConfirmed = true
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         check(android.os.Build.MODEL.contains("sdk", true))
@@ -55,12 +66,23 @@ class BaselineActivity : ComponentActivity() {
         val preview = if (cachedStart) PersonalStartPreview(Section.RESUME, "12", page.copy(cached = true)) else null
         setContent {
             var layouts by remember { mutableStateOf(Section.entries.associateWith { layout }) }
+            val waitingForAccount = cachedStart && !accountConfirmed
+            val personalPages = when {
+                waitingForAccount -> emptyMap()
+                cachedStart -> remember {
+                    mapOf(PersonalFeed.RESUME to page.copy(entries = rows.map {
+                        it.copy(previewDescription = "Свежее описание для навигации Baseline Profile.")
+                    }))
+                }
+                else -> remember { PersonalFeed.entries.associateWith { page } }
+            }
             SeasonvarApp(PublicFeed.entries.associateWith { page }, {}, startPage = preview?.section ?: Section.TOP,
                 interfaceTheme = theme, imagePrefetchEnabled = true,
                 catalogLayouts = layouts, onCatalogLayoutChange = { section, value -> layouts = layouts + (section to value) },
-                accountSession = if (cachedStart) AccountSession() else AccountSession(AccountUser("fixture", "Проверка", null), 1),
-                accountState = AccountUiState(busy = cachedStart), personalStartPreview = preview,
-                personalStates = PersonalFeed.entries.associateWith { page }, smartState = page,
+                accountSession = if (waitingForAccount) AccountSession()
+                    else AccountSession(AccountUser(if (cachedStart) "12" else "fixture", "Проверка", null), 1),
+                accountState = AccountUiState(busy = waitingForAccount), personalStartPreview = preview,
+                personalStates = personalPages, smartState = page,
                 detailsModel = details, loadDescription = { SeriesDescription(listOf("Описание для навигации Baseline Profile.")) })
         }
     }

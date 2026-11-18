@@ -1,11 +1,20 @@
 package ru.seasonvar.tv.ui.navigation
 
 import ru.seasonvar.tv.data.account.AccountSession
+import ru.seasonvar.tv.data.account.PersonalListFilters
 import ru.seasonvar.tv.ui.account.AccountFailure
 import ru.seasonvar.tv.ui.account.AccountUiState
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
 
-internal data class PersonalStartPreview(val section: Section, val owner: String, val state: CatalogUiState) {
+internal data class PersonalStartPreview(
+    val section: Section,
+    val owner: String,
+    val state: CatalogUiState,
+    val filters: PersonalListFilters = PersonalListFilters(),
+) {
+    fun isReplacedBy(live: CatalogUiState?): Boolean =
+        live?.loaded == true && (!live.cached || !live.loading)
+
     fun isAvailable(account: AccountSession, status: AccountUiState): Boolean {
         if (account.expired) return false
         if (account.user != null) return account.user.id == owner

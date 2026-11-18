@@ -2,6 +2,7 @@ package ru.seasonvar.tv.baselineprofile
 
 import android.content.Intent
 import android.os.Build
+import android.view.KeyEvent
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.uiautomator.By
@@ -34,6 +35,13 @@ class BaselineProfileGenerator {
                 .putExtra("cached_personal_start", true))
             check(device.wait(Until.hasObject(By.text("Карточка 001")), 10_000)) { "Cached personal cards are missing" }
             check(device.wait(Until.hasObject(By.focused(true).hasDescendant(By.text("На чём остановились"))), 10_000))
+            device.pressDPadRight()
+            val focusedCard = By.focused(true).hasDescendant(By.text("Карточка 001"))
+            check(device.wait(Until.hasObject(focusedCard), 10_000))
+            check(device.wait(Until.hasObject(By.textContains("Сохранённые данные")), 10_000))
+            device.pressKeyCode(KeyEvent.KEYCODE_F8)
+            check(device.wait(Until.gone(By.textContains("Сохранённые данные")), 10_000))
+            check(device.wait(Until.hasObject(focusedCard), 10_000)) { "Personal card lost focus after confirmation" }
         }
     }
 

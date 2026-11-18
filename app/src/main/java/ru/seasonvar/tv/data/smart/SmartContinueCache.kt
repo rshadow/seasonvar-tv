@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import ru.seasonvar.tv.data.*
+import ru.seasonvar.tv.data.account.AccountListMark
 
 interface SmartContinueCache {
     suspend fun read(owner: String): List<SeriesEntry>?
@@ -20,6 +21,7 @@ object SmartContinueCodec {
             .put("episode", e.initialSelection.episodeId).put("episodeLabel", e.initialSelection.episodeLabel)
             .put("translation", e.initialSelection.translationId).put("voiceLabel", e.initialSelection.translationLabel)
             .put("position", e.initialSelection.positionMillis)
+            .put("watching", e.isWatching).put("marked", e.accountListMark != null)
     })).toString()
 
     fun decode(value: String?): List<SeriesEntry>? = runCatching {
@@ -35,7 +37,9 @@ object SmartContinueCodec {
             SeriesEntry(id, url, o.getString("title"), if (o.isNull("season")) null else o.getInt("season"),
                 o.getString("subtitle"), o.getString("poster"), originalTitle = o.optString("original").takeIf { it.isNotBlank() },
                 sourceKey = key, initialSelection = EntrySelection(o.getString("episode"), o.getString("episodeLabel"),
-                    o.getString("translation"), o.getString("voiceLabel"), position))
+                    o.getString("translation"), o.getString("voiceLabel"), position),
+                accountListMark = if (o.optBoolean("marked")) AccountListMark(id, url) else null,
+                isWatching = o.optBoolean("watching"))
         }.also { require(it.map { e -> e.key }.distinct().size == it.size) }
     }.getOrNull()
 }
