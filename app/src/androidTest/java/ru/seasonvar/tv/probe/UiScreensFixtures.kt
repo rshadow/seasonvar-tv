@@ -27,7 +27,8 @@ internal class UiScreensFixtures : AutoCloseable {
     val playbackSpeed = mutableStateOf(ru.seasonvar.tv.data.playback.PlaybackSpeed.NORMAL)
     val dns = mutableStateOf(DnsProvider.QUAD9_DOH)
     val toggles = mutableStateMapOf(R.string.show_actors_title to true, R.string.auto_next_setting_title to true,
-        R.string.auto_next_season_setting_title to true, R.string.image_prefetch_title to false, R.string.bypass_title to true)
+        R.string.auto_next_season_setting_title to true, R.string.image_prefetch_title to false,
+        R.string.list_prefetch_title to false, R.string.bypass_title to true)
     val translations = TranslationSettingsViewModel(preferred, { preferred.value = it }, { throw IOException() })
     val update = UpdateViewModel("1.0.0", { GitHubRelease("99.0.0", ReleaseAsset("test.apk",
         "https://github.com/rshadow/seasonvar-tv/releases/download/v99.0.0/test.apk", 1, "0".repeat(64))) },

@@ -71,10 +71,14 @@ internal fun PlayerSettingsSection(autoNextEnabled: Boolean, onAutoNextChange: (
 
 @Composable
 internal fun NetworkSettingsSection(imagePrefetchEnabled: Boolean, onImagePrefetchChange: (Boolean) -> Unit,
+    listPrefetchEnabled: Boolean, onListPrefetchChange: (Boolean) -> Unit,
     focus: SettingsFocus, onInteraction: () -> Unit) {
     SettingsGroupTitle(R.string.network_title)
     SettingsToggle(R.string.image_prefetch_title, R.string.image_prefetch_description, imagePrefetchEnabled,
-        { onInteraction(); onImagePrefetchChange(it) }, focus.prefetch, focus.menu, focus.speed, focus.connectionRefresh)
+        { onInteraction(); onImagePrefetchChange(it) }, focus.prefetch, focus.menu, focus.speed, focus.listPrefetch)
+    Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingMedium))
+    SettingsToggle(R.string.list_prefetch_title, R.string.list_prefetch_description, listPrefetchEnabled,
+        { onInteraction(); onListPrefetchChange(it) }, focus.listPrefetch, focus.menu, focus.prefetch, focus.connectionRefresh)
 }
 
 @Composable
@@ -85,7 +89,7 @@ internal fun ConnectionSettingsSection(connectionCheck: ConnectionCheckState, on
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     ConnectionChecks(connectionCheck, { onInteraction(); onConnectionRefresh() },
-        focus.connectionRefresh, focus.prefetch, focus.bypass, focus.menu)
+        focus.connectionRefresh, focus.listPrefetch, focus.bypass, focus.menu)
     Spacer(Modifier.height(d.spacingMedium))
     SettingsToggle(R.string.bypass_title, R.string.bypass_description, bypassEnabled,
         onBypassChange, focus.bypass, focus.menu, focus.connectionRefresh, focus.dns)
