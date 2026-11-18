@@ -101,7 +101,7 @@ class BrowseCatalogTest {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    @Test fun first_catalog_opening_waits_for_a_fresh_batch_when_an_old_snapshot_exists() = runBlocking {
+    @Test fun first_catalog_opening_shows_cached_rows_before_the_fresh_batch() = runBlocking {
         val requested = CompletableDeferred<Unit>()
         val response = CompletableDeferred<String>()
         val source = object : HtmlSource {
@@ -127,11 +127,12 @@ class BrowseCatalogTest {
             withTimeout(10_000) { requested.await() }
             val pending = model.state.value.page
             assertTrue(pending.loading)
-            assertFalse(pending.loaded || pending.cached)
-            assertTrue(pending.entries.isEmpty())
+            assertTrue(pending.loaded && pending.cached)
+            assertEquals(listOf("123", "122"), pending.entries.map { it.id })
             response.complete(fragment.replace("\"123\"", "\"456\"").replace("/serial-123-", "/serial-456-"))
-            val first = withTimeout(10_000) { model.state.first { it.page.loaded } }
-            assertEquals(listOf("456", "122"), first.page.entries.map { it.id })
+            val fresh = withTimeout(10_000) { model.state.first { it.page.loaded && !it.page.loading } }
+            assertFalse(fresh.page.cached)
+            assertEquals(listOf("456", "122"), fresh.page.entries.map { it.id })
         } finally {
             store.clear()
             Dispatchers.resetMain()

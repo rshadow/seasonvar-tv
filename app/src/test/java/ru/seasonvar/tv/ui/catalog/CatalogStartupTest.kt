@@ -71,7 +71,7 @@ class CatalogStartupTest {
         assertEquals(3, source.requests.get())
     }
 
-    @Test fun activating_today_waits_for_the_fresh_response_when_an_old_snapshot_exists() = runBlocking {
+    @Test fun activating_today_shows_cached_rows_before_the_fresh_response() = runBlocking {
         val source = Source(); val repository = CatalogRepository(folder.newFolder(), source)
         repository.load(LocalDate.now(), PublicFeed.TODAY)
         assertEquals("123", repository.cached(LocalDate.now())!!.entries.single().id)
@@ -85,8 +85,8 @@ class CatalogStartupTest {
             withTimeout(10_000) { source.requested!!.await() }
             val pending = model.state.value
             assertTrue(pending.loading)
-            assertFalse(pending.cached || pending.loaded)
-            assertTrue(pending.entries.isEmpty())
+            assertTrue(pending.cached && pending.loaded)
+            assertEquals("123", pending.entries.single().id)
         } finally { source.gate!!.complete(Unit) }
         assertEquals("456", ready(model).entries.single().id)
         assertEquals(2, source.requests.get())

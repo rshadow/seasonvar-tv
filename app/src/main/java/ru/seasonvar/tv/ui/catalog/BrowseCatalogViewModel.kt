@@ -69,6 +69,15 @@ class BrowseCatalogViewModel(
         job = viewModelScope.launch {
             fun current() = expected == generation && owner() == expectedOwner
             try {
+                if (!applying && !state.value.page.loaded) {
+                    val options = repository.cachedCatalogOptions()
+                    val filters = options?.normalize(requested, expectedOwner != null)
+                    if (filters != null) repository.cachedCatalog(filters)?.let { page ->
+                        ensureActive()
+                        if (current()) mutableState.value = BrowseCatalogState(
+                            CatalogUiState(date = page.date, entries = page.entries, loaded = true, cached = true), options, filters, filters)
+                    }
+                }
                 val options = repository.catalogOptions(if (expectedOwner != null) account?.let { it::catalogMetadata } else null)
                 ensureActive()
                 if (!current()) return@launch
