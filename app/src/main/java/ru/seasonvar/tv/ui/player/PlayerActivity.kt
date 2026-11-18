@@ -74,6 +74,10 @@ class PlayerActivity : ComponentActivity() {
     private var request by mutableStateOf<PlaybackRequest?>(null)
     private var controlsPlayer by mutableStateOf<Player?>(null)
     private var navigatingControls = false
+    private val seekKeys by lazy {
+        SeekKeySequence(resources.getInteger(R.integer.seasonvar_player_seek_pulse_gap_ms).toLong(),
+            resources.getInteger(R.integer.seasonvar_player_seek_pulse_duration_ms).toLong())
+    }
     private var playback by mutableStateOf<ExoPlayer?>(null)
     private var loading by mutableStateOf(true)
     private var failure by mutableStateOf<Int?>(null)
@@ -451,6 +455,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun releasePlayback() {
+        seekKeys.reset()
         cancelAutoNext()
         progressJob?.cancel()
         savePosition(MarkEvent.STOP)
@@ -467,6 +472,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        seekKeys.reset()
         cancelAutoNext()
         savePosition(MarkEvent.STOP)
         playback?.pause()
@@ -497,6 +503,13 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun handlePlaybackKey(event: KeyEvent): Boolean {
+        val seekKey = event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD)
+        if (seekKey && event.action == KeyEvent.ACTION_UP) {
+            seekKeys.up(event.keyCode, event.eventTime, event.isCanceled)
+        } else if (!seekKey && event.action == KeyEvent.ACTION_DOWN) {
+            seekKeys.reset()
+        }
         if (event.keyCode in setOf(KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE)) {
             if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) finish()
             return true
@@ -546,7 +559,13 @@ class PlayerActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                     if (event.action == KeyEvent.ACTION_DOWN) {
-                        val step = resources.getInteger(R.integer.seasonvar_player_seek_ms).toLong()
+                        val heldMs = seekKeys.down(event.keyCode, event.eventTime, event.repeatCount)
+                        val step = acceleratedSeekStep(
+                            heldMs = heldMs,
+                            initialStepMs = resources.getInteger(R.integer.seasonvar_player_seek_ms),
+                            doublingIntervalMs = resources.getInteger(R.integer.seasonvar_player_seek_doubling_ms),
+                            maxStepMs = resources.getInteger(R.integer.seasonvar_player_seek_max_ms),
+                        )
                         val backwards = event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND)
                         val maximum = if (player.duration > 0) player.duration else Long.MAX_VALUE
                         player.seekTo((player.currentPosition + if (backwards) -step else step).coerceIn(0, maximum))
@@ -562,6 +581,11 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
         handlePlaybackKey(event) || super.onKeyDown(keyCode, event)
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) seekKeys.reset()
+    }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
         handlePlaybackKey(event) || super.onKeyUp(keyCode, event)
