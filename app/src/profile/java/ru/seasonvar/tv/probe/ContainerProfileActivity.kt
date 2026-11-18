@@ -176,6 +176,7 @@ class ContainerProfileActivity : ComponentActivity() {
         asynchronous = intent.getBooleanExtra("asynchronous", false)
         val cases = if (contentionMode && burstOnly) listOf("busy_idle", "burst_mixed")
             else if (contentionMode) listOf("busy_idle", "busy_parse", "busy_images", "busy_mixed", "burst_mixed")
+            else if (panelMode && layout == CatalogLayout.GRID) listOf("panel_navigation", "panel_description", "panel_focus")
             else if (panelMode) listOf("panel_navigation", "panel_description")
             else if (menuMode) listOf("menu_idle", "menu_focus", "menu_sections")
             else if (plannerMode) listOf("idle", "hold_100ms", "hold_50ms")
@@ -310,6 +311,7 @@ class ContainerProfileActivity : ComponentActivity() {
         val drawn = mutableListOf<Double>()
         val processCpu = android.os.Process.getElapsedCpuTime()
         val runtimeBefore = runtimeStatistics()
+        val firstCardBounds = if (scenario == "panel_focus") firstCard().boundsInRoot else null
         val start = System.nanoTime()
         var heldCode: Int? = null
         var downTime = 0L
@@ -354,6 +356,8 @@ class ContainerProfileActivity : ComponentActivity() {
             if (scenario == "panel_navigation") key(if (index % 2 == 0) {
                 if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_RIGHT
             } else if (layout == CatalogLayout.GRID) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_LEFT)
+            if (scenario == "panel_focus")
+                key(if (index % 2 == 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
             if (scenario == "panel_description") panelDescription = if (index % 2 == 0)
                 DescriptionState(rows.first().key, loading = true) else DescriptionState(rows.first().key, panelText)
             if (contentionMode) {
@@ -379,6 +383,10 @@ class ContainerProfileActivity : ComponentActivity() {
                 checkMenuFocus(label)
             }
             if (scenario == "panel_navigation" && index % 2 == 1) checkFocus("Карточка 1")
+            if (firstCardBounds != null) {
+                checkFocus(if (index % 2 == 0) "Карточка 2" else "Карточка 1")
+                check(firstCard().boundsInRoot == firstCardBounds) { "Grid scrolled during focus-only navigation" }
+            }
         }
         heldCode?.let { heldKey(downTime, it, KeyEvent.ACTION_UP, 0) }
         val end = System.nanoTime()
@@ -435,18 +443,23 @@ class ContainerProfileActivity : ComponentActivity() {
 
     private fun checkFocus(label: String) { check(focusedLabel() == label) { "Expected focus $label, got ${focusedLabel()}" } }
 
-    private fun focusedLabel(): String? {
+    private fun semanticsRoot(): SemanticsNode {
         fun root(view: View): ViewRootForTest? = view as? ViewRootForTest ?: (view as? ViewGroup)?.let {
             (0 until it.childCount).firstNotNullOfOrNull { index -> root(it.getChildAt(index)) }
         }
-        fun focused(node: SemanticsNode): SemanticsNode? =
-            if (node.config.getOrNull(SemanticsProperties.Focused) == true) node
-            else node.children.firstNotNullOfOrNull(::focused)
-        val node = focused(checkNotNull(root(window.decorView)).semanticsOwner.rootSemanticsNode)
-        val text = node?.config?.getOrNull(SemanticsProperties.Text)?.map { it.text }
-        val description = node?.config?.getOrNull(SemanticsProperties.ContentDescription)
-        return text?.firstOrNull() ?: description?.firstOrNull()
+        return checkNotNull(root(window.decorView)).semanticsOwner.rootSemanticsNode
     }
+
+    private fun SemanticsNode.findNode(matches: (SemanticsNode) -> Boolean): SemanticsNode? =
+        if (matches(this)) this else children.firstNotNullOfOrNull { it.findNode(matches) }
+
+    private fun SemanticsNode.label(): String? = config.getOrNull(SemanticsProperties.Text)?.firstOrNull()?.text
+        ?: config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull()
+
+    private fun focusedLabel(): String? =
+        semanticsRoot().findNode { it.config.getOrNull(SemanticsProperties.Focused) == true }?.label()
+
+    private fun firstCard(): SemanticsNode = checkNotNull(semanticsRoot().findNode { it.label() == "Карточка 1" })
 
     private fun key(code: Int) {
         window.decorView.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))

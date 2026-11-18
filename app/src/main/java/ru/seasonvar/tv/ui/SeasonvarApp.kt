@@ -638,7 +638,7 @@ private fun SeasonvarContent(
                         onSearchRecall = { pendingHistoryQuery = it; keyboard?.hide(); onSearchRecall(it) }, onSearchClearHistory = onSearchClearHistory,
                         onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                         onLoadMore = { personalFeed?.let(onPersonalMore) },
-                        onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) }, onOpen = ::openDetails,
+                        onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) }, onOpen = { openDetails(it) },
                         onActions = { selectEntry(it.key); openSeriesActions(it) }, onBackdropSource = onBackdropSource)
                 }
             }
