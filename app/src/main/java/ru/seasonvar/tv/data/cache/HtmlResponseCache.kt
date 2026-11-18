@@ -25,8 +25,17 @@ class HtmlResponseCache(
     fun isCurrent(lease: CacheLease): Boolean = currentScope() == lease.scope
 
     fun read(name: String, lease: CacheLease, lifetime: Long = DAY,
-        fresh: ((Long) -> Boolean)? = null): CachedHtml? = synchronized(monitor) {
-        val file = file(name, lease) ?: return@synchronized null
+        fresh: ((Long) -> Boolean)? = null): CachedHtml? = readCached(name, lease, lifetime, fresh)
+
+    internal fun readForStartup(name: String, lease: CacheLease, owner: String): CachedHtml? {
+        val scope = lease.scope ?: return null
+        if (!scope.private || scope.owner != null && scope.owner != owner) return null
+        return readCached(name, lease, DAY, null, owner)
+    }
+
+    private fun readCached(name: String, lease: CacheLease, lifetime: Long, fresh: ((Long) -> Boolean)?,
+        startupOwner: String? = null): CachedHtml? = synchronized(monitor) {
+        val file = file(name, lease, startupOwner) ?: return@synchronized null
         if (!isCurrent(lease) || lease.revision != revision || !file.isFile) return@synchronized null
         val timestamp = file.lastModified()
         if (!(fresh?.invoke(timestamp) ?: (now() - timestamp in 0 until lifetime))) return@synchronized null
@@ -83,11 +92,11 @@ class HtmlResponseCache(
         }
     }
 
-    private fun file(name: String, lease: CacheLease): File? {
+    private fun file(name: String, lease: CacheLease, startupOwner: String? = null): File? {
         require(name.matches(Regex("[A-Za-z0-9._-]+")))
         val selected = lease.scope ?: return null
-        if (selected.private && selected.owner == null) return null
-        if (selected.private && runCatching { File(directory, "private/owner").readText() }.getOrNull() != selected.owner) return null
+        val owner = startupOwner ?: selected.owner
+        if (selected.private && (owner == null || runCatching { File(directory, "private/owner").readText() }.getOrNull() != owner)) return null
         return File(if (selected.private) File(directory, "private") else directory, name)
     }
 

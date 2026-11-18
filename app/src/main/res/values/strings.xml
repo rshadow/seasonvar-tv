@@ -247,6 +247,7 @@
     <string name="account_storage_error">Не удалось восстановить или сохранить вход на устройстве. Повторите проверку аккаунта.</string>
     <string name="account_markup_error">Не удалось проверить аккаунт: ответ сайта изменился.</string>
     <string name="account_check">Проверить сессию</string>
+    <string name="personal_start_requires_session">Дождитесь проверки сессии аккаунта</string>
     <string name="personal_updates_title">Есть обновления</string>
     <string name="personal_no_updates_title">Нет новых серий</string>
     <string name="personal_want_title">Хочу посмотреть</string>

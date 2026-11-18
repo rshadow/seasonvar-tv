@@ -16,6 +16,8 @@ import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.catalog.CatalogLayout
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
+import ru.seasonvar.tv.ui.account.AccountUiState
+import ru.seasonvar.tv.ui.navigation.PersonalStartPreview
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.time.LocalDate
@@ -30,6 +32,7 @@ class BaselineActivity : ComponentActivity() {
         WindowInsetsControllerCompat(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
         val theme = if (intent.getBooleanExtra("glass", false)) InterfaceTheme.GLASS else InterfaceTheme.CLASSIC
         val layout = if (intent.getBooleanExtra("grid", false)) CatalogLayout.GRID else CatalogLayout.STRIP
+        val cachedStart = intent.getBooleanExtra("cached_personal_start", false)
         val rows = (1..250).map { index ->
             SeriesEntry(index.toString(), "https://seasonvar.ru/serial-$index-Fixture.html",
                 "Карточка " + String.format(Locale.ROOT, "%03d", index), 1, "",
@@ -49,12 +52,14 @@ class BaselineActivity : ComponentActivity() {
                 } as T
             }
         })[SeriesDetailsViewModel::class.java]
+        val preview = if (cachedStart) PersonalStartPreview(Section.RESUME, "12", page.copy(cached = true)) else null
         setContent {
             var layouts by remember { mutableStateOf(Section.entries.associateWith { layout }) }
-            SeasonvarApp(PublicFeed.entries.associateWith { page }, {}, startPage = Section.TOP,
+            SeasonvarApp(PublicFeed.entries.associateWith { page }, {}, startPage = preview?.section ?: Section.TOP,
                 interfaceTheme = theme, imagePrefetchEnabled = true,
                 catalogLayouts = layouts, onCatalogLayoutChange = { section, value -> layouts = layouts + (section to value) },
-                accountSession = AccountSession(AccountUser("fixture", "Проверка", null), 1),
+                accountSession = if (cachedStart) AccountSession() else AccountSession(AccountUser("fixture", "Проверка", null), 1),
+                accountState = AccountUiState(busy = cachedStart), personalStartPreview = preview,
                 personalStates = PersonalFeed.entries.associateWith { page }, smartState = page,
                 detailsModel = details, loadDescription = { SeriesDescription(listOf("Описание для навигации Baseline Profile.")) })
         }

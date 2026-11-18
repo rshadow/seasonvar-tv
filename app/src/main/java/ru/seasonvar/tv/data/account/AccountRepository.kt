@@ -255,6 +255,33 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         }
     }
 
+    internal suspend fun startupOwner(): String? = withContext(dispatcher) { sessions.startupOwner() }
+
+    internal suspend fun cachedStartupPage(owner: String, feed: PersonalFeed, filters: PersonalListFilters): AccountPage? = withContext(dispatcher) {
+        val cache = htmlCache ?: return@withContext null
+        if (sessions.startupOwner() != owner) return@withContext null
+        val lease = cache.capture()
+        val saved = cache.readForStartup(personalKey(feed), lease, owner) ?: return@withContext null
+        val filtered = if (filters.active && feed != PersonalFeed.HISTORY) {
+            cache.readForStartup(filterKey(filters), lease, owner) ?: return@withContext null
+        } else null
+        val page = try {
+            withContext(cpuDispatcher) {
+                if (feed == PersonalFeed.HISTORY) AccountParser.personalList(saved.html, feed)
+                else {
+                    val snapshot = AccountParser.snapshot(saved.html)
+                    if (snapshot.user.id != owner) return@withContext null
+                    if (filtered == null) snapshot.page(feed, windowed = false)
+                    else if (snapshot.options.getOrThrow().normalize(filters) == filters)
+                        AccountParser.filteredPersonalList(filtered.html, snapshot.user, feed)
+                    else null
+                }
+            }
+        } catch (error: kotlinx.coroutines.CancellationException) { throw error }
+        catch (_: Exception) { null }
+        page?.takeIf { it.user.id == owner && sessions.startupOwner() == owner && cache.isCurrent(lease) }
+    }
+
     suspend fun cachedPersonalList(feed: PersonalFeed, pageUrl: String = feed.url, windowed: Boolean = false): AccountPage? = withContext(dispatcher) {
         if (feed != PersonalFeed.HISTORY) return@withContext runCatching { cachedResumeData()?.let { withContext(cpuDispatcher) { it.page(feed, windowed) } } }.getOrNull()
         val cache = htmlCache ?: return@withContext null

@@ -16,8 +16,9 @@ class PersonalHtmlCacheTest {
     @get:Rule val folder = TemporaryFolder()
     private val page get() = javaClass.getResource("/account-resume-current.html")!!.readText() +
         javaClass.getResource("/account-filter-options.html")!!.readText()
-    private inner class Fixture {
-        val directory = folder.newFolder()
+    private inner class Fixture(val directory: File = folder.newFolder(), val store: MemorySessionStore = MemorySessionStore().apply {
+        cookies = listOf(Cookie.Builder().name("svid1").value("dummy").domain("seasonvar.ru").secure().build())
+    }) {
         val sessions: SessionManager
         val disk: HtmlResponseCache
         val cards: CardDataCache
@@ -25,9 +26,6 @@ class PersonalHtmlCacheTest {
         var afterGet: suspend () -> Unit = {}
         val account: AccountRepository
         init {
-            val store = MemorySessionStore().apply {
-                cookies = listOf(Cookie.Builder().name("fixture").value("dummy").domain("seasonvar.ru").secure().build())
-            }
             sessions = SessionManager(store) {
                 val current = sessions.currentCacheScope()
                 if (current?.private == true && current.owner != null) disk.selectPrivateOwner(current.owner)
@@ -49,6 +47,37 @@ class PersonalHtmlCacheTest {
                 override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String = error("No write")
             }, disk, cards)
         }
+    }
+    @Test fun personal_preview_reads_matching_disk_data_while_restore_is_still_blocked() = runBlocking {
+        val warm = Fixture(); warm.account.restore()
+        val filters = PersonalListFilters("17", "Япония")
+        val expected = warm.account.filteredPersonalList(PersonalFeed.RESUME, filters).page
+        val cold = Fixture(warm.directory, warm.store)
+        val entered = CompletableDeferred<Unit>()
+        val reply = CompletableDeferred<Unit>()
+        cold.afterGet = { entered.complete(Unit); reply.await() }
+        val restore = async { cold.account.restore() }
+        try {
+            withTimeout(5_000) { entered.await() }
+            assertEquals("12", cold.account.startupOwner())
+            assertEquals(expected, cold.account.cachedStartupPage("12", PersonalFeed.RESUME, filters))
+            assertNull(cold.account.cachedStartupPage("34", PersonalFeed.RESUME, filters))
+            assertNull(cold.account.cachedStartupPage("12", PersonalFeed.RESUME, filters.copy(genre = "18")))
+            assertNull(cold.account.session.value.user)
+            assertEquals(1, cold.calls)
+            assertEquals(0, cold.posts)
+        } finally { reply.complete(Unit) }
+        restore.await()
+        assertEquals("12", cold.account.session.value.user?.id)
+    }
+
+    @Test fun personal_preview_rejects_the_previous_accounts_disk_cache() = runBlocking {
+        val warm = Fixture(); warm.account.restore()
+        warm.store.owner = "34"
+        val cold = Fixture(warm.directory, warm.store)
+        assertEquals("34", cold.account.startupOwner())
+        assertNull(cold.account.cachedStartupPage("34", PersonalFeed.RESUME, PersonalListFilters()))
+        assertEquals(0, cold.calls)
     }
     @Test fun validated_resume_html_is_shared_by_personal_tabs_and_survives_a_new_cache_instance() = runBlocking {
         val f = Fixture(); f.account.restore(); f.account.personalList(PersonalFeed.RESUME)

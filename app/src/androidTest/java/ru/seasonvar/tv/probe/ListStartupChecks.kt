@@ -6,7 +6,9 @@ import androidx.compose.runtime.*
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.ui.SeasonvarApp
+import ru.seasonvar.tv.ui.account.AccountUiState
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
+import ru.seasonvar.tv.ui.navigation.PersonalStartPreview
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 
@@ -21,7 +23,54 @@ internal class ListStartupChecks(
         startupCase(Section.RESUME, signedIn = true, interrupt = true)
         startupCase(Section.SETTINGS, signedIn = true)
         startupCase(Section.TOP, signedIn = true)
+        previewCase(expired = false)
+        previewCase(expired = true)
         result.putBoolean("startup_selection", true)
+    }
+
+    private fun previewCase(expired: Boolean) = with(ui) {
+        phase = "startup_cached_personal"
+        val account = mutableStateOf(AccountSession())
+        val restoring = mutableStateOf(true)
+        val cached = CatalogUiState(entries = fixture.rows, loaded = true, loading = false, cached = true)
+        val cachedPreview = PersonalStartPreview(Section.RESUME, "12", cached)
+        val preview = mutableStateOf(cachedPreview.takeIf { expired })
+        val publicLoads = mutableListOf<PublicFeed>()
+        val visible = java.util.concurrent.atomic.AtomicReference<Section?>()
+        main { activity.setContent {
+            key(expired) {
+                SeasonvarApp(PublicFeed.entries.associateWith { CatalogUiState(loading = false) }, {},
+                    startPage = Section.RESUME, interfaceTheme = theme, imagePrefetchEnabled = false,
+                    detailsModel = fixture.model, accountSession = account.value,
+                    accountState = AccountUiState(busy = restoring.value), personalStartPreview = preview.value,
+                    personalStates = mapOf(PersonalFeed.RESUME to cached),
+                    onFeedVisible = { publicLoads += it }, onListVisibilityChange = { visible.set(it) })
+            }
+        } }
+        settle()
+        if (!expired) {
+            check(card(fixture.rows.first().title) == null)
+            main { preview.value = cachedPreview }; settle()
+        }
+        check(card(fixture.rows.first().title) != null && publicLoads.isEmpty())
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+        val selected = fixture.rows[1].title
+        check(card(selected)?.isFocused == true)
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+        check(card(selected)?.isFocused == true)
+        capture(if (expired) "startup-cached-before-expiry" else "startup-cached-before-confirmation")
+        main {
+            account.value = if (expired) AccountSession(version = 1, expired = true)
+                else AccountSession(AccountUser("12", "Проверка", null), 1)
+            restoring.value = false
+        }; settle()
+        if (expired) check(card(selected) == null && card(fixture.rows.first().title) == null)
+        else {
+            check(card(selected)?.isFocused == true && visible.get() == Section.RESUME)
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+            check(visible.get() == null)
+        }
     }
 
     private fun startupCase(start: Section, signedIn: Boolean, interrupt: Boolean = false) = with(ui) {

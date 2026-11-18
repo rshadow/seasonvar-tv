@@ -26,6 +26,17 @@ class BaselineProfileGenerator {
         }
     }
 
+    @Test fun cachedPersonalStartup() {
+        check(Build.MODEL.contains("sdk", true))
+        profile.collect(packageName, maxIterations = 5, stableIterations = 2, includeInStartupProfile = true) {
+            pressHome()
+            startActivityAndWait(Intent().setClassName(packageName, "ru.seasonvar.tv.baseline.BaselineActivity")
+                .putExtra("cached_personal_start", true))
+            check(device.wait(Until.hasObject(By.text("Карточка 001")), 10_000)) { "Cached personal cards are missing" }
+            check(device.wait(Until.hasObject(By.focused(true).hasDescendant(By.text("На чём остановились"))), 10_000))
+        }
+    }
+
     @Test fun navigation() {
         check(Build.MODEL.contains("sdk", true))
         profile.collect(packageName, maxIterations = 5, stableIterations = 2, includeInStartupProfile = false) {
