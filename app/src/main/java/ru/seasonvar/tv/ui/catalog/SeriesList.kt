@@ -75,6 +75,10 @@ internal fun SeriesList(
             } finally { engine.clear() }
         }
     }
+    val selection = key(catalogKey) { rememberUpdatedState(selectedKey) }
+    val focusAction = key(catalogKey) { rememberUpdatedState(onFocused) }
+    val openAction = key(catalogKey) { rememberUpdatedState(onOpen) }
+    val longAction = key(catalogKey) { rememberUpdatedState(onActions) }.takeIf { onActions != null }
     if (layout == CatalogLayout.GRID) {
         LazyVerticalGrid(columns = GridCells.FixedSize(metrics.width), state = gridState, modifier = modifier,
             contentPadding = PaddingValues(d.cardPadding),
@@ -82,9 +86,9 @@ internal fun SeriesList(
             verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
             itemsIndexed(entries, key = { _, entry -> catalogKey + "|" + entry.key }, contentType = { _, _ -> "series" }) { index, entry ->
                 SeriesListCard(entry, index, entries.size, catalogKey, layout, cards, engine,
-                    headerFocus, menuFocus, metrics, onFocused, onOpen, onActions,
+                    headerFocus, menuFocus, metrics, focusAction, openAction, longAction,
                     columns = { gridState.layoutInfo.maxSpan.coerceAtLeast(1) },
-                    selected = entry.key == selectedKey, onBackdropSource = onBackdropSource)
+                    selection = selection, onBackdropSource = onBackdropSource)
             }
         }
     } else {
@@ -92,8 +96,8 @@ internal fun SeriesList(
             horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
             itemsIndexed(entries, key = { _, entry -> catalogKey + "|" + entry.key }, contentType = { _, _ -> "series" }) { index, entry ->
                 SeriesListCard(entry, index, entries.size, catalogKey, layout, cards, engine,
-                    headerFocus, menuFocus, metrics, onFocused, onOpen, onActions, columns = { metrics.columns },
-                    selected = entry.key == selectedKey, onBackdropSource = onBackdropSource)
+                    headerFocus, menuFocus, metrics, focusAction, openAction, longAction, columns = { metrics.columns },
+                    selection = selection, onBackdropSource = onBackdropSource)
             }
         }
     }
@@ -128,9 +132,9 @@ internal fun rememberSeriesListEngine(loadDescription: (suspend (SeriesEntry) ->
 @Composable
 private fun SeriesListCard(entry: SeriesEntry, index: Int, count: Int, catalogKey: String, layout: CatalogLayout,
     cards: MutableMap<String, FocusRequester>, engine: SeriesListEngine, headerFocus: FocusRequester,
-    menuFocus: FocusRequester, metrics: CatalogCardMetrics, onFocused: (SeriesEntry) -> Unit,
-    onOpen: (SeriesEntry) -> Unit, onActions: ((SeriesEntry) -> Unit)?, columns: () -> Int,
-    selected: Boolean, onBackdropSource: PosterBackdropPublisher?) {
+    menuFocus: FocusRequester, metrics: CatalogCardMetrics, onFocused: State<(SeriesEntry) -> Unit>,
+    onOpen: State<(SeriesEntry) -> Unit>, onActions: State<((SeriesEntry) -> Unit)?>?, columns: () -> Int,
+    selection: State<String?>, onBackdropSource: PosterBackdropPublisher?) {
     val key = catalogKey + "|" + entry.key
     val requester = remember(key, cards) { cards[key] ?: FocusRequester() }
     DisposableEffect(key, cards, requester) {
@@ -138,8 +142,13 @@ private fun SeriesListCard(entry: SeriesEntry, index: Int, count: Int, catalogKe
         onDispose { if (cards[key] === requester) cards.remove(key) }
     }
     val grid = layout == CatalogLayout.GRID
+    val prepared = remember(engine, key, entry) {
+        derivedStateOf(referentialEqualityPolicy()) { engine.content(key, entry) }
+    }
     val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
-    if (selected && onBackdropSource != null) {
+    if (onBackdropSource != null && remember(selection, entry.key) {
+            derivedStateOf(structuralEqualityPolicy()) { selection.value == entry.key }
+        }.value) {
         DisposableEffect(entry.posterUrl, posterImage, onBackdropSource) {
             val handle = onBackdropSource(PosterBackdropSource(entry.posterUrl, posterImage))
             onDispose { handle.dispose() }
@@ -148,9 +157,9 @@ private fun SeriesListCard(entry: SeriesEntry, index: Int, count: Int, catalogKe
     SeriesThumbnail(entry, requester, if (grid) FocusRequester.Default else headerFocus, metrics,
         if (!grid && index == 0) menuFocus else null,
         right = if (!grid && index == count - 1) FocusRequester.Cancel else FocusRequester.Default,
-        content = { engine.content(key, entry) },
-        onFocused = { onFocused(entry) }, onClick = { onOpen(entry) },
-        onLongClick = onActions?.let { { it(entry) } },
+        content = { prepared.value },
+        onFocused = { onFocused.value(entry) }, onClick = { onOpen.value(entry) },
+        onLongClick = onActions?.let { { it.value?.invoke(entry) } },
         onPosterLoaded = { posterImage.value = it },
         modifier = if (!grid) Modifier else Modifier.focusProperties {
             val edges = catalogGridEdges(index, count, columns())
