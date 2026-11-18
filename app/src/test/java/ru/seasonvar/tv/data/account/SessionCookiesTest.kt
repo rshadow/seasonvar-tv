@@ -7,12 +7,45 @@ import org.junit.Test
 
 internal class MemorySessionStore : SessionStore {
     var cookies = emptyList<Cookie>()
+    var owner: String? = null
     override fun read() = cookies
     override fun save(cookies: List<Cookie>) { this.cookies = cookies }
-    override fun clear() { cookies = emptyList() }
+    override fun readSession() = StoredSession(cookies, owner)
+    override fun saveSession(session: StoredSession) { cookies = session.cookies; owner = session.owner }
+    override fun saveRestoredOwner(session: StoredSession) = saveSession(session)
+    override fun clear() { cookies = emptyList(); owner = null }
 }
 
 class SessionCookiesTest {
+    @Test fun preview_requires_a_confirmed_owner_and_a_matching_live_cookie() {
+        val store = MemorySessionStore()
+        val url = "https://seasonvar.ru/resume".toHttpUrl()
+        fun auth(value: String, expiry: Long = Long.MAX_VALUE) = Cookie.Builder()
+            .name("svid1").value(value).domain("seasonvar.ru").path("/").secure().expiresAt(expiry).build()
+        val initial = auth("fixture-a")
+        store.save(listOf(initial))
+        val manager = SessionManager(store)
+        assertNull(manager.startupOwner())
+        manager.confirmAccount("12")
+        assertEquals("12", SessionManager(store).startupOwner())
+
+        manager.current().saveFromResponse(url, listOf(auth("fixture-b")))
+        assertNull(manager.startupOwner())
+        assertNull(SessionManager(store).startupOwner())
+        manager.confirmAccount("34")
+        assertEquals("34", SessionManager(store).startupOwner())
+        manager.clear()
+        assertNull(SessionManager(store).startupOwner())
+
+        store.saveSession(StoredSession(listOf(auth("expired", 1L), cookie("unrelated")), "12"))
+        assertNull(SessionManager(store).startupOwner())
+    }
+
+    @Test fun encrypted_owner_metadata_binds_only_to_the_cookie_record_it_was_saved_with() {
+        val binding = StoredSessionOwnerCodec.encode("12", "saved-session-a")
+        assertEquals("12", StoredSessionOwnerCodec.decode(binding, "saved-session-a"))
+        assertNull(StoredSessionOwnerCodec.decode(binding, "saved-session-b"))
+    }
     @Test fun history_cookie_field_is_a_script_visible_name_offset_with_path_and_expiry_rules() {
         fun visible(name: String, path: String = "/") = Cookie.Builder().name(name).value("dummy").domain("seasonvar.ru").path(path).secure().build()
         val jar = SessionCookies(listOf(cookie("hidden"), visible("other"), visible("svid1", "/serial-123-test.html")))
@@ -53,6 +86,15 @@ class SessionCookiesTest {
         assertEquals(listOf(session, persistent), decoded)
         assertFalse(decoded[0].persistent)
         assertTrue(decoded[1].persistent)
+    }
+    @Test fun codec_reads_wrapped_cookie_records_and_keeps_malformed_record_details_private() {
+        val cookies = listOf(cookie())
+        assertEquals(cookies, CookieCodec.decode("""{"cookies":${CookieCodec.encode(cookies)},"owner":"12"}"""))
+        val failure = assertThrows(SessionStorageException::class.java) {
+            CookieCodec.decode("""{"cookies":"fixture-secret"}""")
+        }
+        assertEquals("Session storage unavailable", failure.message)
+        assertNull(failure.cause)
     }
     private fun Cookie.newBuilderForTest(): Cookie = Cookie.Builder().name(name).value(value).domain(domain).path(path)
         .expiresAt(System.currentTimeMillis() + 100_000).secure().httpOnly().build()
@@ -133,6 +175,7 @@ class SessionCookiesTest {
         val store = FailingReadStore(original).apply { failure = java.io.IOException("Read failed") }
         val manager = SessionManager(store)
         assertNull(manager.cacheToken())
+        assertNull(manager.cacheScope())
         assertEquals(original, store.cookies); assertEquals(0, store.clears)
         store.failure = null
         assertTrue(manager.hasSession()); assertNull(manager.cacheToken())

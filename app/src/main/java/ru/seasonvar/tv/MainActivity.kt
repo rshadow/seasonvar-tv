@@ -7,9 +7,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import ru.seasonvar.tv.ui.account.AccountViewModel
 import ru.seasonvar.tv.ui.account.PersonalListViewModel
 import ru.seasonvar.tv.data.account.PersonalFeed
+import ru.seasonvar.tv.data.account.PersonalListFilters
+import ru.seasonvar.tv.data.account.SessionStorageException
+import ru.seasonvar.tv.data.playback.markOwnerId
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -24,6 +30,9 @@ import ru.seasonvar.tv.ui.player.PlayerActivity
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.navigation.traceBackKey
+import ru.seasonvar.tv.ui.navigation.PersonalStartPreview
+import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import ru.seasonvar.tv.ui.catalog.CatalogViewModel
 import ru.seasonvar.tv.ui.search.SearchViewModel
 import ru.seasonvar.tv.diagnostics.startupMark
@@ -139,6 +148,7 @@ class MainActivity : ComponentActivity() {
         })
         setContent {
             val accountSession by container.account.session.collectAsStateWithLifecycle()
+            val cachedAccountOwner by container.sessions.personalCacheOwner.collectAsStateWithLifecycle()
             val accountState by accountModel.state.collectAsStateWithLifecycle()
             val removalState by removalModel.state.collectAsStateWithLifecycle()
             val smartState by smartModel.state.collectAsStateWithLifecycle()
@@ -173,6 +183,23 @@ class MainActivity : ComponentActivity() {
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
             val playbackSpeed by container.interfaceSettings.playbackSpeeds.defaultSpeed.collectAsStateWithLifecycle()
             val playerClockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
+            var previewEnabled by remember { mutableStateOf(true) }
+            var startupPreview by remember { mutableStateOf<PersonalStartPreview?>(null) }
+            val firstSection = remember { probeStart ?: startPage }
+            LaunchedEffect(previewEnabled) {
+                if (previewEnabled && firstSection.requiresAccount && firstSection !in hiddenSections)
+                    startupPreview = loadPersonalStartPreview(firstSection, container)
+            }
+            val currentPreview = startupPreview?.takeIf {
+                previewEnabled && it.isAvailable(accountSession, accountState) &&
+                    (it.owner == cachedAccountOwner || it.owner == accountSession.user?.id)
+            }
+            val livePreviewList = currentPreview?.let {
+                if (it.section == Section.SMART_CONTINUE) smartState else personalStates[it.section.personalFeed]
+            }
+            val discardPreview = startupPreview != null && (currentPreview == null ||
+                accountSession.user != null && (livePreviewList?.loaded == true || livePreviewList?.failure != null))
+            LaunchedEffect(discardPreview) { if (discardPreview) startupPreview = null }
             SeasonvarApp(
                 browseCatalog = browseModel,
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
@@ -191,13 +218,15 @@ class MainActivity : ComponentActivity() {
                 onRemovalRefresh = removalModel::refreshStatus, onRemovalSetStatus = removalModel::selectStatus,
                 onRemovalAsk = removalModel::ask, onRemovalDismiss = removalModel::dismiss, onRemovalConfirm = removalModel::confirm,
                 accountSession = accountSession, accountState = accountState,
+                personalStartPreview = currentPreview,
                 personalStates = personalStates,
                 historyClear = historyClearModel,
                 personalFilters = personalModels.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 publicFilters = models.mapNotNull { (feed, model) -> model.filters?.let { feed to it } }.toMap(),
                 smartState = smartState,
                 onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
-                onLogin = accountModel::login, onLogout = accountModel::logout, onCheckAccount = accountModel::restore,
+                onLogin = { login, password -> previewEnabled = false; accountModel.login(login, password) },
+                onLogout = { previewEnabled = false; accountModel.logout() }, onCheckAccount = accountModel::restore,
                 onPersonalVisible = { feed ->
                     visiblePersonalFeed = feed
                     feed?.let { personalModels.getValue(it).activate() }
@@ -248,6 +277,20 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
+    }
+
+    private suspend fun loadPersonalStartPreview(section: Section, container: SeasonvarApplication): PersonalStartPreview? {
+        return try {
+            val owner = container.account.startupOwner() ?: return null
+            val ownerKey = markOwnerId(owner) ?: return null
+            val entries = if (section == Section.SMART_CONTINUE) container.smartContinueCache.read(ownerKey) else {
+                val feed = section.personalFeed ?: return null
+                val filters = PersonalListFilters.from(container.listFilterPreferences.read(ownerKey, feed.catalogKey))
+                container.account.cachedStartupPage(owner, feed, filters)?.entries
+            }
+            if (entries.isNullOrEmpty() || container.account.startupOwner() != owner) return null
+            PersonalStartPreview(section, owner, CatalogUiState(entries = entries, loaded = true, loading = false, cached = true))
+        } catch (_: SessionStorageException) { null }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

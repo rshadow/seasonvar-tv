@@ -213,6 +213,7 @@ internal fun SeasonvarApp(
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
     accountState: AccountUiState = AccountUiState(busy = false),
+    personalStartPreview: ru.seasonvar.tv.ui.navigation.PersonalStartPreview? = null,
     personalStates: Map<PersonalFeed, CatalogUiState> = emptyMap(),
     smartState: CatalogUiState = CatalogUiState(loading = false),
     onSmartVisible: (Boolean) -> Unit = {},
@@ -271,7 +272,7 @@ internal fun SeasonvarApp(
             removalState = removalState, onRemovalActions = onRemovalActions,
             onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
-            accountSession = accountSession, accountState = accountState,
+            accountSession = accountSession, accountState = accountState, personalStartPreview = personalStartPreview,
             personalStates = personalStates,
             smartState = smartState,
             onSmartVisible = onSmartVisible, onSmartRefresh = onSmartRefresh,
@@ -335,6 +336,7 @@ private fun SeasonvarContent(
     onPlay: (PlaybackRequest) -> Unit = {},
     accountSession: AccountSession = AccountSession(),
     accountState: AccountUiState = AccountUiState(busy = false),
+    personalStartPreview: ru.seasonvar.tv.ui.navigation.PersonalStartPreview? = null,
     personalStates: Map<PersonalFeed, CatalogUiState> = emptyMap(),
     smartState: CatalogUiState = CatalogUiState(loading = false),
     onSmartVisible: (Boolean) -> Unit = {},
@@ -357,16 +359,27 @@ private fun SeasonvarContent(
     onRemovalConfirm: () -> Unit = {},
 ) {
     val initialStartPage = remember { startPage }
-    val visibleMenuGroups = remember(accountSession.user != null, hiddenSections) {
-        Section.menuGroups(accountSession.user != null, hiddenSections)
-    }
-    val visibleMenuPages = remember(visibleMenuGroups) { visibleMenuGroups.flatMap { it.second } }
     val startupPendingState = rememberSaveable { mutableStateOf(true) }
     var startupPending by startupPendingState
-    val startupTarget = initialStartPage.atStartup(accountSession.user != null, accountState.busy, hiddenSections)
     var menuOwnsInput by remember { mutableStateOf(true) }
-    val sectionState = rememberSaveable { mutableStateOf(initialStartPage.availableAtStart(accountSession.user != null, hiddenSections)) }
+    val signedIn = accountSession.user != null
+    val preview = personalStartPreview?.takeIf {
+        it.section == initialStartPage && it.section !in hiddenSections && it.isAvailable(accountSession, accountState)
+    }
+    val sectionState = rememberSaveable {
+        mutableStateOf(preview?.section ?: initialStartPage.availableAtStart(signedIn, hiddenSections))
+    }
     var section by sectionState
+    val previewSection = preview?.section?.takeIf { startupPending || section == it }
+    val visibleMenuGroups = remember(signedIn, previewSection, hiddenSections) {
+        val groups = Section.menuGroups(signedIn || previewSection != null, hiddenSections)
+        if (signedIn || previewSection == null) groups else groups.mapNotNull { (group, pages) ->
+            val visible = pages.filter { !it.requiresAccount || it == previewSection }
+            visible.takeIf { it.isNotEmpty() }?.let { group to it }
+        }
+    }
+    val visibleMenuPages = remember(visibleMenuGroups) { visibleMenuGroups.flatMap { it.second } }
+    val startupTarget = previewSection ?: initialStartPage.atStartup(signedIn, accountState.busy, hiddenSections)
     val waitingForStartPage = startupPending && section != startupTarget
     val browsing = section == Section.CATALOG
     val browseState = browseCatalog?.state?.collectAsStateWithLifecycle()?.value ?: ru.seasonvar.tv.ui.catalog.BrowseCatalogState()
@@ -379,7 +392,15 @@ private fun SeasonvarContent(
     val searching = section == Section.SEARCH
     val personalFeed = section.personalFeed
     val catalogKey = if (browsing) "CATALOG" else if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
-    val sourceState = if (waitingForStartPage) CatalogUiState() else if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
+    val liveState = if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
+    val pendingPreview = preview?.takeIf { it.section == section && (!signedIn || !liveState.loaded && liveState.failure == null) }
+    val previewLocked = pendingPreview != null && !signedIn
+    val sourceState = when {
+        waitingForStartPage -> CatalogUiState()
+        pendingPreview != null -> pendingPreview.state
+        section.requiresAccount && !signedIn -> CatalogUiState()
+        else -> liveState
+    }
     val selectedKey = if (browsing) browseSelectedKey else selectedKeys[catalogKey]
     val activeFilters = (if (personalFeed != null) personalFilters[personalFeed] else publicFilters[activeFeed])
         ?.state?.collectAsStateWithLifecycle()?.value?.values
@@ -388,7 +409,7 @@ private fun SeasonvarContent(
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
     ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(section.takeIf {
-        !waitingForStartPage && !detailsOpen && (it.publicFeed != null || it.personalFeed != null ||
+        !waitingForStartPage && !previewLocked && !detailsOpen && (it.publicFeed != null || it.personalFeed != null ||
             it == Section.CATALOG || it == Section.SEARCH || it == Section.SMART_CONTINUE)
     }, onListVisibilityChange)
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
@@ -454,7 +475,14 @@ private fun SeasonvarContent(
     }
     MainStartupNavigation(startupTarget, startupPendingState, sectionState,
         accountSession.user != null, hiddenSections, focus, ::selectSection)
+    LaunchedEffect(previewSection, accountState.busy, accountSession.version) {
+        if (previewSection == null && !accountState.busy && accountSession.version == 0L && !signedIn && section.requiresAccount)
+            selectSection(initialStartPage.availableAtStart(false, hiddenSections))
+    }
     LaunchedEffect(accountSession.version) {
+        if (accountSession.version == 0L && preview != null) return@LaunchedEffect
+        if (accountSession.version == 1L && preview?.section == section && accountSession.user?.id == preview.owner)
+            return@LaunchedEffect
         syncMainAccountNavigation(accountSession, hiddenSections, visibleMenuPages, focus, positions,
             currentSection = { section }, menuOwnsInput = { menuOwnsInput },
             onClearPersonal = { selectedKeys = selectedKeys - it; removalOrigin = null },
@@ -501,6 +529,10 @@ private fun SeasonvarContent(
     }
 
     fun openDetails(entry: SeriesEntry) {
+        if (section.requiresAccount && !signedIn) {
+            showShortMessage(context, R.string.personal_start_requires_session)
+            return
+        }
         ru.seasonvar.tv.ui.details.DetailsPerformance.opened()
         pendingHistoryQuery = null
         if (searching) onSearchRemember()
@@ -610,7 +642,7 @@ private fun SeasonvarContent(
                     )
                 } else if (section == Section.ABOUT) {
                     ru.seasonvar.tv.ui.about.AboutPane(focus.aboutContentFocus, focus.aboutFocus, backNavigation::reset, updateModel)
-                } else if (detailsOpen && detailsSource != null && detailsModel != null) {
+                } else if (detailsOpen && detailsSource != null && detailsModel != null && (!section.requiresAccount || signedIn)) {
                     SeriesDetailsPane(
                         detailsSource!!, detailsModel,
                         showActors = showActors, onBackdropSource = onBackdropSource,
@@ -622,7 +654,8 @@ private fun SeasonvarContent(
                     )
                 } else {
                     MainCatalogContent(state, selected, section, activeFeed, catalogKey, position, focus, catalogLayout, cardMetrics,
-                        accountSession.user != null, imagePrefetchEnabled, loadDescription, cardData,
+                        signedIn, previewLocked, imagePrefetchEnabled && !previewLocked,
+                        loadDescription.takeUnless { previewLocked }, cardData.takeUnless { previewLocked },
                         listOf(accountSession.version, bypassEnabled, dnsProvider, proxy), browseState, browseCatalog, searchState, searchEditRequest,
                         filters = if (personalFeed != null) personalFilters[personalFeed]
                             else if (!browsing && !searching && !smart) publicFilters[activeFeed] else null,
@@ -636,7 +669,7 @@ private fun SeasonvarContent(
                         } else if (state.entries.isNotEmpty()) enterContent() },
                         onSearchRemember = onSearchRemember,
                         onSearchRecall = { pendingHistoryQuery = it; keyboard?.hide(); onSearchRecall(it) }, onSearchClearHistory = onSearchClearHistory,
-                        onRefresh = { if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
+                        onRefresh = { if (previewLocked) onCheckAccount() else if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                         onLoadMore = { personalFeed?.let(onPersonalMore) },
                         onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) }, onOpen = { openDetails(it) },
                         onActions = { selectEntry(it.key); openSeriesActions(it) }, onBackdropSource = onBackdropSource)
@@ -832,6 +865,7 @@ internal fun CatalogPane(
     cardMetrics: CatalogCardMetrics,
     imagePrefetchEnabled: Boolean = true,
     allowAccountActions: Boolean = false,
+    privateActionsEnabled: Boolean = true,
     layout: CatalogLayout = CatalogLayout.STRIP,
     gridState: LazyGridState = rememberLazyGridState(),
     layoutFocus: FocusRequester = remember { FocusRequester() },
@@ -940,12 +974,12 @@ internal fun CatalogPane(
                     stringResource(if (filterState.activeCount == 0) R.string.filters else R.string.filters_active, filterState.activeCount),
                     filters::open, Modifier.focusRequester(filterFocus)
                         .focusProperties { left = menuFocus; right = layoutFocus }.then(enterCards),
-                    icon = R.drawable.ic_filter, badgeCount = filterState.activeCount,
+                    icon = R.drawable.ic_filter, badgeCount = filterState.activeCount, actionEnabled = privateActionsEnabled,
                 )
                 if (historyClear != null) ThemeButton(stringResource(R.string.history_clear_action), historyClear::ask,
                     Modifier.focusRequester(clearFocus).focusProperties { left = menuFocus; right = layoutFocus }.then(enterCards),
                     icon = R.drawable.ic_delete,
-                    actionEnabled = state.loaded && !state.loading && state.entries.isNotEmpty() && clearState?.busy != true)
+                    actionEnabled = privateActionsEnabled && state.loaded && !state.loading && state.entries.isNotEmpty() && clearState?.busy != true)
                 if (!browsing) ThemeButton(
                     stringResource(if (layout == CatalogLayout.STRIP) R.string.catalog_show_grid else R.string.catalog_show_strip),
                     onLayoutChange,

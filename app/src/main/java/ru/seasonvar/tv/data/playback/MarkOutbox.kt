@@ -6,8 +6,10 @@ import ru.seasonvar.tv.data.account.AccountUser
 import ru.seasonvar.tv.data.account.PlaybackMark
 import java.security.MessageDigest
 
-internal fun markOwner(user: AccountUser?): String? {
-    val id = user?.id?.takeIf { it.matches(Regex("[1-9][0-9]*")) } ?: return null
+internal fun markOwner(user: AccountUser?): String? = markOwnerId(user?.id)
+
+internal fun markOwnerId(userId: String?): String? {
+    val id = userId?.takeIf { it.matches(Regex("[1-9][0-9]*")) } ?: return null
     return MessageDigest.getInstance("SHA-256").digest(id.toByteArray(Charsets.UTF_8))
         .joinToString("") { "%02x".format(it.toInt() and 255) }
 }

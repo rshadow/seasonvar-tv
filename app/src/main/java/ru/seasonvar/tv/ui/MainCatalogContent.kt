@@ -18,7 +18,7 @@ import ru.seasonvar.tv.ui.search.SearchUiState
 @Composable
 internal fun MainCatalogContent(state: CatalogUiState, selected: SeriesEntry?, section: Section, activeFeed: PublicFeed,
     catalogKey: String, position: MainCatalogPosition, focus: MainFocus, layout: CatalogLayout, cardMetrics: CatalogCardMetrics,
-    signedIn: Boolean, imagePrefetchEnabled: Boolean, loadDescription: (suspend (SeriesEntry) -> SeriesDescription)?,
+    signedIn: Boolean, cachedPreviewLocked: Boolean, imagePrefetchEnabled: Boolean, loadDescription: (suspend (SeriesEntry) -> SeriesDescription)?,
     cardData: CardDataCache?, preparationContext: Any?, browseState: BrowseCatalogState, browseCatalog: BrowseCatalogController?,
     searchState: SearchUiState, searchEditRequest: Int, filters: ListFiltersController?, historyClear: HistoryClearController?,
     onLayoutChange: () -> Unit, onEnterContent: () -> Unit, onSearchQuery: (String) -> Unit,
@@ -34,6 +34,7 @@ internal fun MainCatalogContent(state: CatalogUiState, selected: SeriesEntry?, s
         state, selected, position.list, focus.cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
         focus.sectionFocus(section), focus.refreshFocus, focus.retryFocus,
         imagePrefetchEnabled = imagePrefetchEnabled,
+        privateActionsEnabled = !cachedPreviewLocked,
         onBackdropSource = onBackdropSource,
         loadDescription = loadDescription,
         cardData = cardData,
