@@ -1,11 +1,20 @@
 package ru.seasonvar.tv.data
 
+import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import okhttp3.FormBody
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel
 import java.time.LocalDate
 
 class BrowseCatalogTest {
@@ -89,5 +98,43 @@ class BrowseCatalogTest {
         assertNotNull(restored.cachedCatalogOptions())
         assertNull(restored.cachedCatalog(filters.with("sort", "name")))
         assertEquals(1, posts)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test fun first_catalog_opening_waits_for_a_fresh_batch_when_an_old_snapshot_exists() = runBlocking {
+        val requested = CompletableDeferred<Unit>()
+        val response = CompletableDeferred<String>()
+        val source = object : HtmlSource {
+            private var requests = 0
+            override suspend fun get(url: String) = metadata
+            override suspend fun sidebar(feed: PublicFeed) = error("Wrong source")
+            override suspend fun catalog(filters: CatalogFilters): String {
+                if (requests++ == 0) return fragment
+                requested.complete(Unit)
+                return response.await()
+            }
+        }
+        val repository = CatalogRepository(folder.newFolder(), source)
+        val filters = repository.catalogOptions().normalize(CatalogFilters(), false)
+        repository.catalog(filters)
+        assertEquals("123", repository.cachedCatalog(filters)!!.entries.first().id)
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        val store = ViewModelStore()
+        try {
+            val model = BrowseCatalogViewModel(repository)
+            store.put("catalog", model)
+            model.activate()
+            withTimeout(10_000) { requested.await() }
+            val pending = model.state.value.page
+            assertTrue(pending.loading)
+            assertFalse(pending.loaded || pending.cached)
+            assertTrue(pending.entries.isEmpty())
+            response.complete(fragment.replace("\"123\"", "\"456\"").replace("/serial-123-", "/serial-456-"))
+            val first = withTimeout(10_000) { model.state.first { it.page.loaded } }
+            assertEquals(listOf("456", "122"), first.page.entries.map { it.id })
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
     }
 }
