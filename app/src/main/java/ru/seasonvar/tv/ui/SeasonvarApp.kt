@@ -98,6 +98,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import ru.seasonvar.tv.ui.settings.SettingsPane
+import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.CatalogFilters
@@ -195,6 +196,8 @@ internal fun SeasonvarApp(
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
+    playbackSpeed: PlaybackSpeed = PlaybackSpeed.NORMAL,
+    onPlaybackSpeedChange: (PlaybackSpeed) -> Unit = {},
     playerClockPosition: PlayerClockPosition = PlayerClockPosition.OFF,
     onPlayerClockPositionChange: (PlayerClockPosition) -> Unit = {},
     catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
@@ -260,6 +263,7 @@ internal fun SeasonvarApp(
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
             autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
             playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
+            playbackSpeed = playbackSpeed, onPlaybackSpeedChange = onPlaybackSpeedChange,
             onExit = onExit,
             updateModel = updateModel, translationSettingsModel = translationSettingsModel,
             detailsModel = detailsModel,
@@ -314,6 +318,8 @@ private fun SeasonvarContent(
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
     onAutoNextChange: (Boolean) -> Unit = {},
+    playbackSpeed: PlaybackSpeed = PlaybackSpeed.NORMAL,
+    onPlaybackSpeedChange: (PlaybackSpeed) -> Unit = {},
     playerClockPosition: PlayerClockPosition = PlayerClockPosition.OFF,
     onPlayerClockPositionChange: (PlayerClockPosition) -> Unit = {},
     catalogLayouts: Map<Section, CatalogLayout> = emptyMap(),
@@ -596,6 +602,7 @@ private fun SeasonvarContent(
                         autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
                         autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
                         playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
+                        playbackSpeed = playbackSpeed, onPlaybackSpeedChange = onPlaybackSpeedChange,
                         signedIn = accountSession.user != null,
                         onBack = ::navigateBack,
                         onCloseDialog = { backNavigation.reset(); returnToMenu() },
@@ -1219,6 +1226,7 @@ internal fun <T> SettingsChoiceDialog(
     onClose: () -> Unit,
     onBack: () -> Unit,
     onInteraction: () -> Unit,
+    textLabel: ((T) -> String)? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -1253,7 +1261,7 @@ internal fun <T> SettingsChoiceDialog(
                                 .padding(d.spacingMedium),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(stringResource(label(provider)), color = SeasonvarTheme.textColor({ focused }, c.onBackground),
+                            Text(textLabel?.invoke(provider) ?: stringResource(label(provider)), color = SeasonvarTheme.textColor({ focused }, c.onBackground),
                                 style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), fontWeight = SeasonvarTheme.textWeight { focused })
                             Spacer(Modifier.width(d.spacingMedium))
                             RadioButton(selected = selected == provider, onClick = null)

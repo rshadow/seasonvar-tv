@@ -47,6 +47,7 @@
         </provider>
         <activity
             android:name=".ui.player.PlayerActivity"
+            android:theme="@style/Theme.SeasonvarTV.Player"
             android:exported="false"
             android:screenOrientation="landscape" />
         <activity

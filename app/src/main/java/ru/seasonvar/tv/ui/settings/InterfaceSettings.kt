@@ -14,6 +14,10 @@ internal class InterfaceSettings(context: Context) {
         read = { preferences.getString(it, null) },
         write = { key, value -> preferences.edit().putString(key, value).apply() },
     )
+    val playbackSpeeds = ru.seasonvar.tv.data.playback.PlaybackSpeedPreferences(
+        read = { preferences.getString(it, null) },
+        write = { key, value -> preferences.edit().putString(key, value).apply() },
+    )
     val catalogLayouts = layoutPreferences.layouts
 
     fun setCatalogLayout(section: Section, layout: CatalogLayout) = layoutPreferences.set(section, layout)

@@ -111,7 +111,7 @@ class ConnectionChecker internal constructor(
         val translation = details.translations.firstOrNull { !it.episodes.isNullOrEmpty() }
             ?: throw MarkupChangedException()
         val episode = translation.episodes!!.first()
-        return PlaybackRequest(entry.id, entry.url, translation.id, episode.id, episode.label, entry.title)
+        return PlaybackRequest(entry.id, entry.url, translation.id, episode.id, episode.label, entry.title, serialId = details.serialId)
     }
 
     private suspend fun outcome(action: suspend () -> Unit): ConnectionResult = try {

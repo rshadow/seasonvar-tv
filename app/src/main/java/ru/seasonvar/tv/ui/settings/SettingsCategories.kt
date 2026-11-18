@@ -11,6 +11,8 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.network.ProxyConfiguration
 import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.data.playback.PlaybackSpeed
+import ru.seasonvar.tv.ui.player.playbackSpeedLabel
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.ui.sectionTitle
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
@@ -46,6 +48,7 @@ internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (
 internal fun PlayerSettingsSection(autoNextEnabled: Boolean, onAutoNextChange: (Boolean) -> Unit,
     autoNextSeasonEnabled: Boolean, onAutoNextSeasonChange: (Boolean) -> Unit,
     playerClockPosition: PlayerClockPosition, onPlayerClockPositionChange: (PlayerClockPosition) -> Unit,
+    playbackSpeed: PlaybackSpeed, onPlaybackSpeedChange: (PlaybackSpeed) -> Unit,
     focus: SettingsFocus, onBack: () -> Unit, onCloseDialog: () -> Unit, onInteraction: () -> Unit) {
     val d = SeasonvarTheme.dimensions
     SettingsGroupTitle(R.string.player_settings_title)
@@ -57,7 +60,12 @@ internal fun PlayerSettingsSection(autoNextEnabled: Boolean, onAutoNextChange: (
     Spacer(Modifier.height(d.spacingMedium))
     SettingsChoice(R.string.player_clock_title, R.string.player_clock_description,
         options = PlayerClockPosition.entries, selected = playerClockPosition, label = ::playerClockLabel, onChange = onPlayerClockPositionChange,
-        focus = focus.clock, menu = focus.menu, previous = focus.autoSeason, next = focus.prefetch,
+        focus = focus.clock, menu = focus.menu, previous = focus.autoSeason, next = focus.speed,
+        onBack = onBack, onClose = onCloseDialog, onInteraction = onInteraction)
+    Spacer(Modifier.height(d.spacingMedium))
+    SettingsChoice(R.string.playback_speed_default_title, R.string.playback_speed_default_description,
+        options = PlaybackSpeed.entries, selected = playbackSpeed, label = ::playbackSpeedLabel, onChange = onPlaybackSpeedChange,
+        focus = focus.speed, menu = focus.menu, previous = focus.clock, next = focus.prefetch,
         onBack = onBack, onClose = onCloseDialog, onInteraction = onInteraction)
 }
 
@@ -66,7 +74,7 @@ internal fun NetworkSettingsSection(imagePrefetchEnabled: Boolean, onImagePrefet
     focus: SettingsFocus, onInteraction: () -> Unit) {
     SettingsGroupTitle(R.string.network_title)
     SettingsToggle(R.string.image_prefetch_title, R.string.image_prefetch_description, imagePrefetchEnabled,
-        { onInteraction(); onImagePrefetchChange(it) }, focus.prefetch, focus.menu, focus.clock, focus.connectionRefresh)
+        { onInteraction(); onImagePrefetchChange(it) }, focus.prefetch, focus.menu, focus.speed, focus.connectionRefresh)
 }
 
 @Composable

@@ -425,4 +425,15 @@
     <string name="interface_theme_description">Цвета, прозрачность и фон списков и карточек.</string>
     <string name="interface_theme_classic">Классическая</string>
     <string name="interface_theme_glass">Стекло</string>
+    <string name="playback_speed_title">Скорость воспроизведения</string>
+    <string name="playback_speed_default_title">Скорость по умолчанию</string>
+    <string name="playback_speed_default_description">Скорость для всех сериалов, кроме тех, где вы выбрали другую.</string>
+    <string name="playback_speed_inherit">Как в настройках · %1$s</string>
+    <string name="playback_speed_half">0,5×</string>
+    <string name="playback_speed_three_quarters">0,75×</string>
+    <string name="playback_speed_normal">1×</string>
+    <string name="playback_speed_one_quarter">1,25×</string>
+    <string name="playback_speed_one_half">1,5×</string>
+    <string name="playback_speed_one_three_quarters">1,75×</string>
+    <string name="playback_speed_double">2×</string>
 </resources>

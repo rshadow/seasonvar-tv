@@ -24,6 +24,7 @@ internal class UiScreensFixtures : AutoCloseable {
     val entry = SeriesEntry("123", "https://seasonvar.ru/serial-123-example.html", "Проверка интерфейса", 1, "", "")
     val catalog = CatalogUiState(loading = false, loaded = true, entries = listOf(entry))
     private val preferred = MutableStateFlow(listOf("AniDub", "LostFilm"))
+    val playbackSpeed = mutableStateOf(ru.seasonvar.tv.data.playback.PlaybackSpeed.NORMAL)
     val dns = mutableStateOf(DnsProvider.QUAD9_DOH)
     val toggles = mutableStateMapOf(R.string.show_actors_title to true, R.string.auto_next_setting_title to true,
         R.string.auto_next_season_setting_title to true, R.string.image_prefetch_title to false, R.string.bypass_title to true)

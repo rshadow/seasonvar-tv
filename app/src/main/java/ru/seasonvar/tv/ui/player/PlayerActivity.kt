@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.res.stringResource
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -65,6 +67,8 @@ import ru.seasonvar.tv.data.playback.markOwner
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.playback.playbackEpisodes
 import ru.seasonvar.tv.data.playback.VideoUnavailableException
+import ru.seasonvar.tv.data.playback.PlaybackSpeed
+import ru.seasonvar.tv.ui.SettingsChoiceDialog
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import java.io.IOException
@@ -73,6 +77,11 @@ import java.io.IOException
 class PlayerActivity : ComponentActivity() {
     private var request by mutableStateOf<PlaybackRequest?>(null)
     private var controlsPlayer by mutableStateOf<Player?>(null)
+    private val speedFocus = FocusRequester()
+    private var speedFocused = false
+    private var restoreSpeedFocus by mutableStateOf(false)
+    private var speedMenuOpen by mutableStateOf(false)
+    private var currentSpeed by mutableStateOf(PlaybackSpeed.NORMAL)
     private var navigatingControls = false
     private val seekKeys by lazy {
         SeekKeySequence(resources.getInteger(R.integer.seasonvar_player_seek_pulse_gap_ms).toLong(),
@@ -108,7 +117,7 @@ class PlayerActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() { finish() }
+            override fun handleOnBackPressed() { if (speedMenuOpen) closeSpeedMenu() else finish() }
         })
         lifecycleScope.launch {
             container.interfaceSettings.autoNextEnabled.collect { enabled ->
@@ -122,6 +131,9 @@ class PlayerActivity : ComponentActivity() {
                     if (playback?.playbackState == Player.STATE_ENDED) showCompletion()
                 }
             }
+        }
+        lifecycleScope.launch {
+            container.interfaceSettings.playbackSpeeds.defaultSpeed.collect { applySpeed() }
         }
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
@@ -154,7 +166,7 @@ class PlayerActivity : ComponentActivity() {
                         }.apply {
                             setShowNextButton(true)
                             setShowPreviousButton(true)
-                            findViewById<android.view.View>(androidx.media3.ui.R.id.exo_settings)?.visibility = android.view.View.GONE
+                            findViewById<View>(androidx.media3.ui.R.id.exo_settings)?.visibility = View.GONE
                             controllerShowTimeoutMs = resources.getInteger(R.integer.seasonvar_player_controls_timeout_ms)
                             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                             findViewById<View>(androidx.media3.ui.R.id.exo_prev)?.contentDescription = getString(R.string.player_previous_episode)
@@ -208,6 +220,23 @@ class PlayerActivity : ComponentActivity() {
                             if (clockPosition == PlayerClockPosition.CENTER) Spacer(Modifier.weight(1f))
                         }
                     }
+                    if (controlsVisible && failure == null && !completionVisible && !seasonTransitionPending) {
+                        ThemeButton(stringResource(playbackSpeedLabel(currentSpeed)), {
+                            view?.controllerShowTimeoutMs = 0
+                            speedMenuOpen = true
+                        }, Modifier.align(Alignment.BottomEnd).padding(d.spacingSmall)
+                            .height(d.headerButtonSize).focusRequester(speedFocus)
+                            .onFocusChanged {
+                                speedFocused = it.isFocused
+                                if (it.isFocused) {
+                                    navigatingControls = true
+                                    view?.showController()
+                                }
+                            }.focusProperties {
+                                left = FocusRequester.Cancel; right = FocusRequester.Cancel
+                                down = FocusRequester.Cancel
+                            }, enabled = !request?.serialId.isNullOrBlank() && playback != null)
+                    }
                     if (completionVisible) {
                         Column(Modifier.align(Alignment.BottomEnd).padding(d.spacingLarge).width(d.playerAutoNextWidth)
                             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(d.cardCornerRadius))
@@ -243,11 +272,47 @@ class PlayerActivity : ComponentActivity() {
                     }
                     else if (failure == null) { withFrameNanos { }; surface.requestFocus() }
                 }
+                LaunchedEffect(restoreSpeedFocus) {
+                    if (restoreSpeedFocus) {
+                        repeat(2) { withFrameNanos { } }
+                        if (controlsVisible && failure == null && !completionVisible && !seasonTransitionPending) {
+                            speedFocus.requestFocus()
+                        }
+                        restoreSpeedFocus = false
+                    }
+                }
+                if (speedMenuOpen) {
+                    val speeds = container.interfaceSettings.playbackSpeeds
+                    val defaultSpeed by speeds.defaultSpeed.collectAsStateWithLifecycle()
+                    SettingsChoiceDialog<PlaybackSpeed?>(R.string.playback_speed_title,
+                        listOf(null) + PlaybackSpeed.entries, speeds.overrideFor(request?.serialId),
+                        label = { playbackSpeedLabel(it ?: defaultSpeed) },
+                        textLabel = { speed -> speed?.let { getString(playbackSpeedLabel(it)) }
+                            ?: getString(R.string.playback_speed_inherit, getString(playbackSpeedLabel(defaultSpeed))) },
+                        onSelect = { speed ->
+                            request?.serialId?.let { speeds.setOverride(it, speed) }
+                            applySpeed()
+                            closeSpeedMenu()
+                        }, onClose = ::closeSpeedMenu, onBack = ::closeSpeedMenu, onInteraction = {})
+                }
                 LaunchedEffect(failure) {
                     if (failure != null) { repeat(2) { withFrameNanos { } }; retry.requestFocus() }
                 }
             }
         }
+    }
+
+    private fun applySpeed() {
+        currentSpeed = container.interfaceSettings.playbackSpeeds.effective(request?.serialId)
+        playback?.playbackParameters = PlaybackParameters(currentSpeed.multiplier, 1f)
+        trace("speed=" + currentSpeed.multiplier + " pitch=1.0")
+    }
+
+    private fun closeSpeedMenu() {
+        speedMenuOpen = false
+        restoreSpeedFocus = true
+        view?.controllerShowTimeoutMs = resources.getInteger(R.integer.seasonvar_player_controls_timeout_ms)
+        view?.showController()
     }
 
     override fun onStart() { super.onStart(); preparePlayback() }
@@ -332,6 +397,7 @@ class PlayerActivity : ComponentActivity() {
                     }
                 })
                 playback = player
+                applySpeed()
                 val account = container.account.session.value
                 markPolicy = if (markOwner(account.user) != null) AccountMarkPolicy(selected) else null
                 markOwnerVersion = account.version
@@ -455,6 +521,9 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun releasePlayback() {
+        speedMenuOpen = false
+        restoreSpeedFocus = false
+        view?.controllerShowTimeoutMs = resources.getInteger(R.integer.seasonvar_player_controls_timeout_ms)
         seekKeys.reset()
         cancelAutoNext()
         progressJob?.cancel()
@@ -503,6 +572,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun handlePlaybackKey(event: KeyEvent): Boolean {
+        if (speedMenuOpen) return false
         val seekKey = event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD)
         if (seekKey && event.action == KeyEvent.ACTION_UP) {
@@ -525,27 +595,38 @@ class PlayerActivity : ComponentActivity() {
         if (seasonTransitionPending && failure == null) return true
         val player = playback
         if (player != null && failure == null) {
-            if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            if (!navigatingControls && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN)) {
                 if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                     navigatingControls = true
                     view?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
                     view?.showController()
-                    view?.findViewById<View>(androidx.media3.ui.R.id.exo_play_pause)?.requestFocus()
+                    val target = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+                        androidx.media3.ui.R.id.exo_progress else androidx.media3.ui.R.id.exo_play_pause
+                    view?.findViewById<View>(target)?.requestFocus()
                     traceControls()
                 }
                 return true
             }
-            if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && navigatingControls) {
-                if (event.action == KeyEvent.ACTION_DOWN) {
-                    navigatingControls = false
-                    view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-                    view?.hideController()
-                    view?.requestFocus()
+            if (navigatingControls && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN)) {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    val timelineFocused = view?.findFocus()?.id == androidx.media3.ui.R.id.exo_progress
+                    view?.showController()
+                    if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && (timelineFocused || speedFocused)) {
+                        if (!request?.serialId.isNullOrBlank()) speedFocus.requestFocus()
+                    } else {
+                        val target = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || speedFocused)
+                            androidx.media3.ui.R.id.exo_progress else androidx.media3.ui.R.id.exo_play_pause
+                        view?.findViewById<View>(target)?.requestFocus()
+                    }
                 }
                 return true
             }
             if (navigatingControls && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER)) return false
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER)) {
+                if (event.action == KeyEvent.ACTION_DOWN) view?.showController()
+                return false
+            }
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE,
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
@@ -592,7 +673,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun traceControls() {
         if (!BuildConfig.DEBUG) return
-        val focus = when (view?.findFocus()?.id) {
+        val focus = if (speedFocused) "speed" else when (view?.findFocus()?.id) {
+            androidx.media3.ui.R.id.exo_progress -> "timeline"
             androidx.media3.ui.R.id.exo_prev -> "previous"
             androidx.media3.ui.R.id.exo_next -> "next"
             androidx.media3.ui.R.id.exo_play_pause -> "play_pause"
@@ -608,6 +690,7 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         fun intent(context: Context, request: PlaybackRequest): Intent = Intent(context, PlayerActivity::class.java)
+            .putExtra("serial", request.serialId)
             .putExtra("season", request.seasonId).putExtra("page", request.pageUrl)
             .putExtra("translation", request.translationId).putExtra("episode", request.episodeId)
             .putExtra("label", request.episodeLabel).putExtra("title", request.title)
@@ -625,7 +708,8 @@ class PlayerActivity : ComponentActivity() {
             return PlaybackRequest(season, page, translation, episode, label, intent.getStringExtra("title").orEmpty(),
                 playbackEpisodes(intent.getStringArrayListExtra("episode_ids"), intent.getStringArrayListExtra("episode_labels")),
                 intent.getLongExtra("resume_position", -1L).takeIf { it >= 0 },
-                intent.getIntExtra("season_number", -1).takeIf { it >= 0 })
+                intent.getIntExtra("season_number", -1).takeIf { it >= 0 },
+                intent.getStringExtra("serial")?.takeIf { it.isNotBlank() })
         }
     }
 }
