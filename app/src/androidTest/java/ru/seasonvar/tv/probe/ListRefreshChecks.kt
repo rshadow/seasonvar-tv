@@ -21,21 +21,31 @@ internal class ListRefreshChecks(
     private val theme: InterfaceTheme,
 ) {
     data class StripReference(val title: String, val bounds: Rect)
+    private val readyThumbnails = mutableSetOf<String>()
+    private val observedRefresh = mutableListOf<Boolean>()
+    private var observingRefresh = false
+
+    private fun thumbnail(key: String, ready: Boolean) {
+        if (observingRefresh && key in readyThumbnails) observedRefresh.add(ready)
+        if (ready) readyThumbnails.add(key)
+    }
 
     fun render() = with(ui) { with(fixture) {
         main { activity.setContent {
-            val current = pages.mapValues { (_, state) -> state.collectAsState().value }
-            SeasonvarApp(PublicFeed.entries.associateWith { feed -> current.getValue(sections.first { it.publicFeed == feed }) }, {},
-                startPage = Section.TOP, interfaceTheme = theme, imagePrefetchEnabled = false,
-                catalogLayouts = if (grid.value) sections.associateWith { CatalogLayout.GRID } else emptyMap(),
-                detailsModel = model, loadDescription = { SeriesDescription(listOf("Синтетическое описание.")) },
-                accountSession = AccountSession(AccountUser("12", "Проверка", null), 1),
-                personalStates = PersonalFeed.entries.associateWith { feed -> current.getValue(sections.first { it.personalFeed == feed }) },
-                smartState = current.getValue(Section.SMART_CONTINUE),
-                onFeedVisible = { feed -> visit(sections.first { it.publicFeed == feed }) },
-                onPersonalVisible = { feed -> feed?.let { visit(sections.first { it.personalFeed == feed }) } },
-                onSmartVisible = { if (it) visit(Section.SMART_CONTINUE) },
-                onListVisibilityChange = { coordinator.setVisible(it); shown.set(it) })
+            CompositionLocalProvider(LocalThumbnailObserver provides ::thumbnail) {
+                val current = pages.mapValues { (_, state) -> state.collectAsState().value }
+                SeasonvarApp(PublicFeed.entries.associateWith { feed -> current.getValue(sections.first { it.publicFeed == feed }) }, {},
+                    startPage = Section.TOP, interfaceTheme = theme, imagePrefetchEnabled = false,
+                    catalogLayouts = if (grid.value) sections.associateWith { CatalogLayout.GRID } else emptyMap(),
+                    detailsModel = model, loadDescription = { SeriesDescription(listOf("Синтетическое описание.")) },
+                    accountSession = AccountSession(AccountUser("12", "Проверка", null), 1),
+                    personalStates = PersonalFeed.entries.associateWith { feed -> current.getValue(sections.first { it.personalFeed == feed }) },
+                    smartState = current.getValue(Section.SMART_CONTINUE),
+                    onFeedVisible = { feed -> visit(sections.first { it.publicFeed == feed }) },
+                    onPersonalVisible = { feed -> feed?.let { visit(sections.first { it.personalFeed == feed }) } },
+                    onSmartVisible = { if (it) visit(Section.SMART_CONTINUE) },
+                    onListVisibilityChange = { coordinator.setVisible(it); shown.set(it) })
+            }
         } }
     } }
 
@@ -48,7 +58,7 @@ internal class ListRefreshChecks(
         repeat(7) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT) }; settle()
         val selected = checkNotNull(focusedCard())
         val title = checkNotNull(find(selected) { it.text?.toString()?.startsWith("Карточка ") == true }?.text).toString()
-        val original = bounds(selected)
+        val original = settledCardBounds(title)
         capture("01-before")
         StripReference(title, original)
     }
@@ -66,7 +76,15 @@ internal class ListRefreshChecks(
         check(card(title)?.isFocused == true && bounds(checkNotNull(card(title))) == original) {
             "before=$original after=${card(title)?.let(::bounds)} focused=${card(title)?.isFocused}"
         }
-        main { responseGate.complete(Unit) }; settle()
+        main {
+            check(readyThumbnails.size >= 5)
+            observingRefresh = true
+            responseGate.complete(Unit)
+        }; settle()
+        main {
+            observingRefresh = false
+            check(observedRefresh.isEmpty()) { "Unchanged thumbnail visuals recomposed: ${observedRefresh.size}, ready=${observedRefresh.count { it }}" }
+        }
         check(card(title)?.isFocused == true && bounds(checkNotNull(card(title))) == original)
         capture("02-refreshed")
         val after = counts.toMap()

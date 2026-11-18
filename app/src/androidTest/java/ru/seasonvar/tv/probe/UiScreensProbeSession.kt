@@ -54,7 +54,11 @@ internal class UiScreensProbeSession(private val probe: Instrumentation, private
     fun main(block: () -> Unit) { probe.runOnMainSync(block) }
     fun waitFor(predicate: () -> Boolean) {
         val deadline = SystemClock.elapsedRealtime() + 10000
-        while (!predicate()) { check(SystemClock.elapsedRealtime() < deadline) { "Timed out" }; Thread.sleep(50) }
+        while (!predicate()) {
+            check(SystemClock.elapsedRealtime() < deadline) { "Timed out" }
+            Thread.sleep(50)
+            if (android.os.Build.VERSION.SDK_INT >= 34) uiAutomation.clearCache()
+        }
     }
     fun find(node: AccessibilityNodeInfo?, label: String, exact: Boolean = false): AccessibilityNodeInfo? {
         node ?: return null

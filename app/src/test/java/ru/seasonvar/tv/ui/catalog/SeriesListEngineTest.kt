@@ -74,6 +74,23 @@ class SeriesListEngineTest {
         assertEquals("Новое название", engine.content("test|" + updated[4].key, updated[4])?.subtitle)
         engine.clear()
     }
+    @Test fun refresh_keeps_the_previous_appearance_until_the_same_key_is_prepared_again() = runTest {
+        val rows = entries(20)
+        val gate = CompletableDeferred<Unit>()
+        var refreshing = false
+        val engine = engine(frame = { if (refreshing) gate.await() })
+        engine.update(input(rows)); advanceUntilIdle()
+        val key = "test|" + rows[4].key
+        val old = checkNotNull(engine.appearance(key))
+        refreshing = true
+        val updated = rows.map { it.copy(previewDescription = "New details") }
+        engine.update(input(updated).copy(resourceContext = "new-network")); runCurrent()
+        assertSame(old, engine.appearance(key))
+        gate.complete(Unit); advanceUntilIdle()
+        assertEquals(old, engine.appearance(key))
+        assertNotNull(engine.content(key, updated[4]))
+        engine.clear()
+    }
     @Test fun enriched_card_is_reused_until_its_source_entry_changes() = runTest {
         val rows = entries(20); var preparations = 0
         val engine = engine(prepare = { preparations++; SeriesCardContent(it.copy(originalTitle = "Original"), it.title) })

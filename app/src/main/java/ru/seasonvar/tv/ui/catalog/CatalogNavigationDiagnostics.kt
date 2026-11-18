@@ -1,6 +1,9 @@
 package ru.seasonvar.tv.ui.catalog
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import ru.seasonvar.tv.BuildConfig
+
+internal val LocalThumbnailObserver = staticCompositionLocalOf<((String, Boolean) -> Unit)?> { null }
 
 internal object CatalogNavigationDiagnostics {
     interface Observer {

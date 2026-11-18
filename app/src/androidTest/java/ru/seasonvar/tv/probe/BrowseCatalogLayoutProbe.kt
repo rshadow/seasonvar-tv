@@ -95,7 +95,11 @@ object BrowseCatalogLayoutProbe {
         }
         fun waitFor(predicate: () -> Boolean) {
             val deadline = SystemClock.elapsedRealtime() + 10000
-            while (!predicate()) { check(SystemClock.elapsedRealtime() < deadline) { "Timed out" }; Thread.sleep(25) }
+            while (!predicate()) {
+                check(SystemClock.elapsedRealtime() < deadline) { "Timed out" }
+                Thread.sleep(25)
+                if (android.os.Build.VERSION.SDK_INT >= 33) uiAutomation.clearCache()
+            }
         }
         fun key(code: Int) { sendKeyDownUpSync(code); settle() }
         fun focused(text: String) = control(text)?.isFocused == true
@@ -180,6 +184,7 @@ object BrowseCatalogLayoutProbe {
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("По названию") }
             key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { control("Назад") == null && focused("По названию") }
+            stage("return_from_sort_dialog")
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
             key(KeyEvent.KEYCODE_DPAD_UP)
             waitFor { focused("Применить") }; key(KeyEvent.KEYCODE_DPAD_CENTER)

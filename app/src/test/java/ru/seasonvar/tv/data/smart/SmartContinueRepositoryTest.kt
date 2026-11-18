@@ -265,6 +265,20 @@ class SmartContinueRepositoryTest {
         assertNull("Old unfiltered cache must not appear before refresh", SmartContinueCodec.decode(legacy))
         assertNull(SmartContinueCodec.decode(SmartContinueCodec.encode(listOf(item)).replace("\"historyOnly\":true", "\"historyOnly\":false")))
     }
+    @Test fun cache_preserves_the_watching_badge_and_mark_target_with_legacy_defaults() = runTest {
+        val item = SmartContinueRepository({ emptyList() }, { error("Unexpected") })
+            .resolve(season("40", 4))!!.copy(isWatching = true)
+        val json = SmartContinueCodec.encode(listOf(item))
+        val restored = SmartContinueCodec.decode(json)!!.single()
+        assertTrue(restored.isWatching)
+        assertEquals(AccountListMark(item.id, item.url), restored.accountListMark)
+
+        val old = org.json.JSONObject(json)
+        old.getJSONArray("entries").getJSONObject(0).apply { remove("watching"); remove("marked") }
+        val legacy = SmartContinueCodec.decode(old.toString())!!.single()
+        assertFalse(legacy.isWatching)
+        assertNull(legacy.accountListMark)
+    }
     @Test fun symbolic_episode_ids_are_resolved_without_requiring_the_visible_label_to_match() = runTest {
         val current = season("50", 5, "Osnovnoj", 22, episodes = listOf(Episode("Osnovnoj_seriya", "Основной")))
         val result = SmartContinueRepository({ emptyList() }, { error("No extra request") }).resolve(current)!!

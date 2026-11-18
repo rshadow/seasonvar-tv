@@ -41,6 +41,7 @@ internal fun SeriesList(
     engine: SeriesListEngine = rememberSeriesListEngine(),
     onBackdropSource: PosterBackdropPublisher? = null,
     descriptionsEnabled: Boolean = true,
+    resourceContext: Any? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -49,7 +50,8 @@ internal fun SeriesList(
     val thumbnailHeight = with(density) { metrics.posterHeight.roundToPx().coerceAtLeast(1) }
     val rowHeight = with(density) { (metrics.height + d.spacingSmall).roundToPx().coerceAtLeast(1) }
     val input = rememberUpdatedState(SeriesListInput(catalogKey, entries, selectedKey, metrics.columns,
-        IntRange.EMPTY, prefetchEnabled, thumbnailWidth, thumbnailHeight, layout == CatalogLayout.STRIP, descriptionsEnabled))
+        IntRange.EMPTY, prefetchEnabled, thumbnailWidth, thumbnailHeight, layout == CatalogLayout.STRIP,
+        descriptionsEnabled, resourceContext))
     val latestLayout = rememberUpdatedState(layout)
     val latestRowHeight = rememberUpdatedState(rowHeight)
     DisposableEffect(engine) { onDispose { engine.clear() } }
@@ -145,8 +147,8 @@ private fun SeriesListCard(entry: SeriesEntry, index: Int, count: Int, catalogKe
         onDispose { if (cards[key] === requester) cards.remove(key) }
     }
     val grid = layout == CatalogLayout.GRID
-    val prepared = remember(engine, key, entry) {
-        derivedStateOf(referentialEqualityPolicy()) { engine.content(key, entry) }
+    val prepared = remember(engine, key) {
+        derivedStateOf(structuralEqualityPolicy()) { engine.appearance(key) }
     }
     val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
     if (onBackdropSource != null && remember(selection, entry.key) {

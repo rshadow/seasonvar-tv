@@ -69,7 +69,11 @@ class BaselineActivity : ComponentActivity() {
             val waitingForAccount = cachedStart && !accountConfirmed
             val personalPages = when {
                 waitingForAccount -> emptyMap()
-                cachedStart -> remember { mapOf(PersonalFeed.RESUME to page.copy(entries = rows.map { it.copy() })) }
+                cachedStart -> remember {
+                    mapOf(PersonalFeed.RESUME to page.copy(entries = rows.map {
+                        it.copy(previewDescription = "Свежее описание для навигации Baseline Profile.")
+                    }))
+                }
                 else -> remember { PersonalFeed.entries.associateWith { page } }
             }
             SeasonvarApp(PublicFeed.entries.associateWith { page }, {}, startPage = preview?.section ?: Section.TOP,

@@ -22,7 +22,7 @@ import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.data.cache.*
 import ru.seasonvar.tv.ui.SeriesThumbnail
 import ru.seasonvar.tv.ui.account.LocalCardDataCache
-import ru.seasonvar.tv.ui.catalog.SeriesCardContent
+import ru.seasonvar.tv.ui.catalog.SeriesCardAppearance
 import ru.seasonvar.tv.ui.catalog.rememberCatalogCardMetrics
 import ru.seasonvar.tv.ui.details.DetailsUiState
 import ru.seasonvar.tv.ui.details.SeasonProgress
@@ -121,7 +121,8 @@ internal object CardMarkStateProbe {
                                             if (index == 1) SideEffect { neighborCompositions.incrementAndGet() }
                                             val requester = if (index == 0) focus else remember { FocusRequester() }
                                             SeriesThumbnail(item, requester, FocusRequester.Default, metrics, left = null, right = FocusRequester.Default,
-                                                content = { SeriesCardContent(item, "Сезон 1") }, onFocused = {}, onClick = {})
+                                                content = { SeriesCardAppearance(item.id, item.title, "Сезон 1", item.posterUrl, item.isNew, item.isWatching) },
+                                                onFocused = {}, onClick = {})
                                         }
                                     }
                                 }

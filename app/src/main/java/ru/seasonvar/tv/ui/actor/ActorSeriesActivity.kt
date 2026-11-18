@@ -105,13 +105,17 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val removal by actions.state.collectAsStateWithLifecycle()
     var previousAccount by remember { mutableLongStateOf(session.version) }
     var selectedKey by rememberSaveable(url) { mutableStateOf<String?>(null) }
-    val state = parsedCatalogState(base, selectedKey, url to session.version)
-    val selected = state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
-    var entry by remember { mutableStateOf<SeriesEntry?>(null) }
-    ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(url.takeIf { entry == null }) { model.setVisible(it != null) }
     val list = rememberLazyListState()
     val grid = rememberLazyGridState()
     val layout by container.interfaceSettings.actorCatalogLayout.collectAsStateWithLifecycle()
+    val position = remember(list, grid) { ru.seasonvar.tv.ui.navigation.MainCatalogPosition(list, grid) }
+    val catalogKey = "ACTOR|$url"
+    val state = parsedCatalogState(base, selectedKey, url to session.version) {
+        position.keepSelectionVisible(layout, catalogKey, selectedKey, it)
+    }
+    val selected = state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
+    var entry by remember { mutableStateOf<SeriesEntry?>(null) }
+    ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(url.takeIf { entry == null }) { model.setVisible(it != null) }
     val cards = remember { mutableMapOf<String, FocusRequester>() }
     val header = remember { FocusRequester() }
     val refresh = remember { FocusRequester() }
@@ -128,7 +132,6 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val latestState by rememberUpdatedState(state)
     val latestSelected by rememberUpdatedState(selected)
     val latestLayout by rememberUpdatedState(layout)
-    val catalogKey = "ACTOR|$url"
     fun focusList() {
         scope.launch {
             repeat(2) { withFrameNanos { } }
@@ -197,7 +200,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
                 layoutFocus = header, onLayoutChange = { container.interfaceSettings.setActorCatalogLayout(layout.other()) }, onEnterContent = ::focusList,
                 allowAccountActions = session.user != null, onActions = { actions.show(it) },
                 loadDescription = container.repository::description, cardData = container.repository.cardData,
-                preparationContext = session.version to network)
+                preparationContext = session.version, resourceContext = network)
         }
     }
     MarkRemovalDialog(removal, onDismiss = actions::dismiss, onAsk = actions::ask, onConfirm = actions::confirm,

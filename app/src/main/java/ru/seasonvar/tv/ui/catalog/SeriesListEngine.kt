@@ -9,7 +9,12 @@ import ru.seasonvar.tv.data.SeriesListWindow
 import ru.seasonvar.tv.data.seriesListWindow
 import ru.seasonvar.tv.data.images.*
 
-internal data class SeriesCardContent(val entry: SeriesEntry, val subtitle: String)
+internal data class SeriesCardAppearance(val seasonId: String, val title: String, val subtitle: String, val posterUrl: String,
+    val isNew: Boolean, val isWatching: Boolean)
+
+internal data class SeriesCardContent(val entry: SeriesEntry, val subtitle: String) {
+    val appearance = SeriesCardAppearance(entry.id, entry.title, subtitle, entry.posterUrl, entry.isNew, entry.isWatching)
+}
 
 internal data class SeriesListInput(
     val catalogKey: String,
@@ -22,6 +27,7 @@ internal data class SeriesListInput(
     val thumbnailHeight: Int,
     val selectedPosterVisible: Boolean,
     val descriptionsEnabled: Boolean = true,
+    val resourceContext: Any? = null,
 )
 
 internal class SeriesListEngine(
@@ -73,6 +79,7 @@ internal class SeriesListEngine(
     }, parallelism = 1)
     private var knownIndices = emptyMap<String, Int>()
     private var catalogKey: String? = null
+    private var resourceContext: Any? = null
     private var work: Job? = null
     private var generation = 0L
     internal var window = SeriesListWindow(IntRange.EMPTY, IntRange.EMPTY)
@@ -82,6 +89,8 @@ internal class SeriesListEngine(
 
     fun content(key: String, entry: SeriesEntry): SeriesCardContent? =
         prepared[key]?.takeIf { it.source == entry }?.content
+
+    fun appearance(key: String): SeriesCardAppearance? = prepared[key]?.content?.appearance
 
     fun description(entry: SeriesEntry): DescriptionState =
         cachedDescription(entry)?.let { DescriptionState(entry.key, it) }
@@ -100,9 +109,12 @@ internal class SeriesListEngine(
             desired = emptyMap()
             prepared.clear()
             knownIndices = emptyMap()
+        }
+        if (catalogKey != input.catalogKey || resourceContext != input.resourceContext) {
             clearDescriptions()
             resources.clear()
             catalogKey = input.catalogKey
+            resourceContext = input.resourceContext
         }
         val known = knownIndices
         work = scope.launch {
@@ -129,9 +141,7 @@ internal class SeriesListEngine(
                 slot.key to (previous[slot.key]?.takeIf { it.slot.entry == slot.entry }
                     ?: Preparation(++nextToken, slot))
             }
-            prepared.keys.toList().forEach { key ->
-                if (desired[key]?.slot?.entry != prepared[key]?.source) prepared.remove(key)
-            }
+            prepared.keys.toList().forEach { key -> if (key !in desired) prepared.remove(key) }
             updateResources(plan, input.selectedKey, input.descriptionsEnabled)
             cards.update(desired.values.filter { prepared[it.slot.key]?.source != it.slot.entry })
             observer?.applied(android.os.Debug.threadCpuTimeNanos() - applyCpu)
