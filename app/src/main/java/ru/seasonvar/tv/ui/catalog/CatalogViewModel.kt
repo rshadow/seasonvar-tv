@@ -74,6 +74,15 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         val previous = mutableState.value.takeIf { it.date == day && it.loaded }
         mutableState.value = previous?.copy(loading = true, failure = null) ?: CatalogUiState(date = day)
         refreshJob = viewModelScope.launch {
+            val cached = if (previous == null) repository.cached(day, feed) else null
+            ensureActive()
+            if (generation != expected) return@launch
+            mutableState.value = CatalogUiState(
+                date = day,
+                entries = previous?.entries ?: cached?.entries.orEmpty(),
+                loaded = previous != null || cached != null,
+                cached = previous?.cached ?: (cached != null),
+            )
             try {
                 val page = repository.load(day, feed)
                 ensureActive()
@@ -109,6 +118,12 @@ class CatalogViewModel(private val repository: CatalogRepository, private val fe
         mutableState.value = previous?.copy(loading = true, failure = null) ?: CatalogUiState(date = day)
         refreshJob = viewModelScope.launch {
             try {
+                if (previous == null) source.cached(controller.state.value.values)?.let { cached ->
+                    ensureActive()
+                    if (generation != expected || accountOwner() != expectedOwner) return@launch
+                    mutableState.value = CatalogUiState(date = cached.page.date, entries = cached.page.entries, cached = true, loaded = true)
+                    controller.accept(cached)
+                }
                 val result = source.load(controller.state.value.values)
                 ensureActive()
                 if (generation != expected || accountOwner() != expectedOwner) return@launch

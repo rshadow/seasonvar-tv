@@ -1,6 +1,6 @@
 # ADR-0191. Первый показ публичных списков после ответа сайта
 
-Статус: принято. Дата: 2026-11-19. Уточняет [ADR-0003](0003-performance-principles.md) и [ADR-0170](0170-list-visibility-and-background-refresh.md).
+Статус: заменено [ADR-0192](0192-cached-public-lists.md). Дата принятия: 2026-11-19. Уточняло [ADR-0003](0003-performance-principles.md) и [ADR-0170](0170-list-visibility-and-background-refresh.md).
 
 ## Контекст
 

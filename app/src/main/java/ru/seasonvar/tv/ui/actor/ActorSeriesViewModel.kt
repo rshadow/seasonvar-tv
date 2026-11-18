@@ -18,6 +18,7 @@ import ru.seasonvar.tv.ui.catalog.LoadFailure
 import ru.seasonvar.tv.ui.catalog.manageListParsing
 
 class ActorSeriesViewModel(
+    private val cached: suspend () -> CatalogPage?,
     private val load: suspend () -> CatalogPage,
     private val prepare: suspend () -> Unit = {},
 ) : ViewModel() {
@@ -34,6 +35,11 @@ class ActorSeriesViewModel(
         mutableState.value = if (clear) CatalogUiState() else state.value.copy(loading = true, failure = null)
         job = viewModelScope.launch {
             try {
+                if (!state.value.loaded) cached()?.let {
+                    ensureActive()
+                    mutableState.value = CatalogUiState(date = it.date, entries = it.entries,
+                        loaded = true, loading = true, cached = true)
+                }
                 prepare()
                 ensureActive()
                 val page = load()
@@ -56,7 +62,7 @@ class ActorSeriesViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(ActorSeriesViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return ActorSeriesViewModel({ repository.actorPage(url) }, prepare) as T
+            return ActorSeriesViewModel({ repository.cachedActorPage(url) }, { repository.actorPage(url) }, prepare) as T
         }
     }
 }
