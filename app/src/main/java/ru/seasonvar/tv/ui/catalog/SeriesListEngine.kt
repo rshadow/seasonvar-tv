@@ -21,6 +21,7 @@ internal data class SeriesListInput(
     val thumbnailWidth: Int,
     val thumbnailHeight: Int,
     val selectedPosterVisible: Boolean,
+    val descriptionsEnabled: Boolean = true,
 )
 
 internal class SeriesListEngine(
@@ -131,19 +132,19 @@ internal class SeriesListEngine(
             prepared.keys.toList().forEach { key ->
                 if (desired[key]?.slot?.entry != prepared[key]?.source) prepared.remove(key)
             }
-            updateResources(plan, input.selectedKey)
+            updateResources(plan, input.selectedKey, input.descriptionsEnabled)
             cards.update(desired.values.filter { prepared[it.slot.key]?.source != it.slot.entry })
             observer?.applied(android.os.Debug.threadCpuTimeNanos() - applyCpu)
         }
     }
 
-    private fun updateResources(plan: Plan, selectedKey: String?) {
+    private fun updateResources(plan: Plan, selectedKey: String?, descriptionsEnabled: Boolean) {
         val previous = desiredDescriptions
         val selected = plan.slots.firstOrNull { it.entry.key == selectedKey }?.entry?.let(::descriptionKey)
         val retry = selected?.takeIf { it != selectedDescription && described[it]?.failed == true }
         if (retry != null) described.remove(retry)
         selectedDescription = selected
-        desiredDescriptions = if (loadDescription == null) emptyMap() else plan.slots.associate { slot ->
+        desiredDescriptions = if (!descriptionsEnabled || loadDescription == null) emptyMap() else plan.slots.associate { slot ->
             val source = descriptionKey(slot.entry)
             source to (previous[source]?.takeIf { source != retry }
                 ?: Resource.Description(++nextToken, source, slot.entry))

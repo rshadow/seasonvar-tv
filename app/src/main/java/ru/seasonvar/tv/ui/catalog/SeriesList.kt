@@ -40,6 +40,7 @@ internal fun SeriesList(
     onFocused: (SeriesEntry) -> Unit, onOpen: (SeriesEntry) -> Unit, onActions: ((SeriesEntry) -> Unit)?,
     engine: SeriesListEngine = rememberSeriesListEngine(),
     onBackdropSource: PosterBackdropPublisher? = null,
+    descriptionsEnabled: Boolean = true,
 ) {
     val d = SeasonvarTheme.dimensions
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -48,7 +49,7 @@ internal fun SeriesList(
     val thumbnailHeight = with(density) { metrics.posterHeight.roundToPx().coerceAtLeast(1) }
     val rowHeight = with(density) { (metrics.height + d.spacingSmall).roundToPx().coerceAtLeast(1) }
     val input = rememberUpdatedState(SeriesListInput(catalogKey, entries, selectedKey, metrics.columns,
-        IntRange.EMPTY, prefetchEnabled, thumbnailWidth, thumbnailHeight, layout == CatalogLayout.STRIP))
+        IntRange.EMPTY, prefetchEnabled, thumbnailWidth, thumbnailHeight, layout == CatalogLayout.STRIP, descriptionsEnabled))
     val latestLayout = rememberUpdatedState(layout)
     val latestRowHeight = rememberUpdatedState(rowHeight)
     DisposableEffect(engine) { onDispose { engine.clear() } }
@@ -105,11 +106,13 @@ internal fun SeriesList(
 
 @Composable
 internal fun rememberSeriesListEngine(loadDescription: (suspend (SeriesEntry) -> SeriesDescription)? = null,
-    contextKey: Any? = null, cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null): SeriesListEngine {
+    contextKey: Any? = null, cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
+    cardDataEnabled: Boolean = true): SeriesListEngine {
     val context = LocalContext.current.applicationContext
     val loader = context.imageLoader
     val locale = LocalConfiguration.current.locales.toLanguageTags()
     val scope = rememberCoroutineScope()
+    val latestCardData = rememberUpdatedState(cardData.takeIf { cardDataEnabled })
     return remember(context, loader, scope, locale, loadDescription, contextKey, cardData) {
         val holder = Any()
         SeriesListEngine(scope, prepare = { entry ->
@@ -120,7 +123,7 @@ internal fun rememberSeriesListEngine(loadDescription: (suspend (SeriesEntry) ->
             ).joinToString(" · ") else entry.subtitle.ifBlank {
                 entry.season?.let { context.getString(R.string.season_number, it) }.orEmpty()
             }
-            SeriesCardContent(cardData?.entry(entry) ?: entry, subtitle)
+            SeriesCardContent(latestCardData.value?.entry(entry) ?: entry, subtitle)
         }, loadImage = { prefetchImage(context, loader, it) },
             permits = (context as SeasonvarApplication).listResourcePermits,
             nextFrame = { withFrameNanos { } }, loadDescription = loadDescription,

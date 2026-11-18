@@ -393,19 +393,33 @@ private fun SeasonvarContent(
     val personalFeed = section.personalFeed
     val catalogKey = if (browsing) "CATALOG" else if (searching) "SEARCH" else if (smart) "SMART_CONTINUE" else if (personalFeed != null) personalFeed.catalogKey else activeFeed.name
     val liveState = if (browsing) browseState.page else if (searching) searchState.results else if (smart) smartState else if (personalFeed != null) personalStates[personalFeed] ?: CatalogUiState(loading = false) else states.getValue(activeFeed)
-    val pendingPreview = preview?.takeIf { it.section == section && (!signedIn || !liveState.loaded && liveState.failure == null) }
+    val pendingPreview = preview?.takeIf {
+        it.section == section && (!signedIn || !it.isReplacedBy(liveState))
+    }
     val previewLocked = pendingPreview != null && !signedIn
+    val displayUser = accountSession.user?.id ?: pendingPreview?.owner
+    val displayVersion = if (previewLocked) 1L else accountSession.version
     val sourceState = when {
         waitingForStartPage -> CatalogUiState()
-        pendingPreview != null -> pendingPreview.state
+        pendingPreview != null -> pendingPreview.state.copy(failure = liveState.failure)
         section.requiresAccount && !signedIn -> CatalogUiState()
         else -> liveState
     }
     val selectedKey = if (browsing) browseSelectedKey else selectedKeys[catalogKey]
+    val positions = rememberMainCatalogPositions(browseConditions)
+    val position = positions.forSection(section, activeFeed)
     val activeFilters = (if (personalFeed != null) personalFilters[personalFeed] else publicFilters[activeFeed])
         ?.state?.collectAsStateWithLifecycle()?.value?.values
-    val state = ru.seasonvar.tv.ui.catalog.parsedCatalogState(sourceState, selectedKey,
-        Triple(catalogKey, if (browsing) browseState.applied.values else activeFilters, accountSession.version))
+    val state = if (section.requiresAccount) {
+        val filters = pendingPreview?.filters ?: ru.seasonvar.tv.data.account.PersonalListFilters.from(activeFilters.orEmpty())
+        ru.seasonvar.tv.ui.catalog.personalStartCatalogState(sourceState, selectedKey,
+            listOf(catalogKey, displayUser, displayVersion, filters), pendingPreview != null) { entries ->
+            position.keepSelectionVisible(catalogLayout, catalogKey, selectedKey, entries)
+        }
+    } else {
+        ru.seasonvar.tv.ui.catalog.parsedCatalogState(sourceState, selectedKey,
+            Triple(catalogKey, if (browsing) browseState.applied.values else activeFilters, accountSession.version))
+    }
     var searchEditRequest by remember { mutableIntStateOf(0) }
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
     ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(section.takeIf {
@@ -415,8 +429,6 @@ private fun SeasonvarContent(
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
     var removalOrigin by remember { mutableStateOf<RemovalFocusOrigin?>(null) }
     var removalWasVisible by remember { mutableStateOf(false) }
-    val positions = rememberMainCatalogPositions(browseConditions)
-    val position = positions.forSection(section, activeFeed)
     val listState = position.list
     val gridState = position.grid
     val focus = remember { MainFocus() }
@@ -655,8 +667,8 @@ private fun SeasonvarContent(
                 } else {
                     MainCatalogContent(state, selected, section, activeFeed, catalogKey, position, focus, catalogLayout, cardMetrics,
                         signedIn, previewLocked, imagePrefetchEnabled && !previewLocked,
-                        loadDescription.takeUnless { previewLocked }, cardData.takeUnless { previewLocked },
-                        listOf(accountSession.version, bypassEnabled, dnsProvider, proxy), browseState, browseCatalog, searchState, searchEditRequest,
+                        loadDescription, cardData,
+                        listOf(displayVersion, displayUser, bypassEnabled, dnsProvider, proxy), browseState, browseCatalog, searchState, searchEditRequest,
                         filters = if (personalFeed != null) personalFilters[personalFeed]
                             else if (!browsing && !searching && !smart) publicFilters[activeFeed] else null,
                         historyClear = if (personalFeed == PersonalFeed.HISTORY) historyClear else null,
@@ -881,7 +893,8 @@ internal fun CatalogPane(
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
-    val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext, cardData)
+    val engine = ru.seasonvar.tv.ui.catalog.rememberSeriesListEngine(loadDescription, preparationContext, cardData,
+        cardDataEnabled = privateActionsEnabled)
     val backdropPublisher = if (SeasonvarTheme.posterBackdropEnabled) onBackdropSource else null
     val theme = SeasonvarTheme.interfaceTheme
     if (BuildConfig.BUILD_TYPE == "profile") LaunchedEffect(catalogKey, layout, backdropPublisher != null, theme) {
@@ -1039,13 +1052,14 @@ internal fun CatalogPane(
             }
         } else {
             if (layout == CatalogLayout.STRIP)
-                SelectedPanel(selected, { engine.description(selected) }, Modifier.weight(1f).padding(bottom = d.spacingMedium))
+                SelectedPanel(selected, { if (privateActionsEnabled) engine.description(selected) else DescriptionState(key = selected.key) },
+                    Modifier.weight(1f).padding(bottom = d.spacingMedium))
             ru.seasonvar.tv.ui.catalog.SeriesList(state.entries, catalogKey, selected.key, layout,
                 listState, gridState, cards, layoutFocus, menuFocus, cardMetrics, imagePrefetchEnabled,
                 if (layout == CatalogLayout.GRID) Modifier.fillMaxWidth().weight(1f)
                 else Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
                 onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine,
-                onBackdropSource = backdropPublisher)
+                onBackdropSource = backdropPublisher, descriptionsEnabled = privateActionsEnabled)
         }
     }
     if (filters != null && filterState != null) ru.seasonvar.tv.ui.filters.ListFilterPanel(stringResource(strings.title), filterState, filters)

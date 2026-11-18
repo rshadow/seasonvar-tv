@@ -21,6 +21,21 @@ class SeriesListDescriptionsTest {
         image: suspend (PrefetchImage) -> Unit = {}, permits: Semaphore = Semaphore(3)) = SeriesListEngine(
         this, { SeriesCardContent(it, it.title) }, image, permits, {}, StandardTestDispatcher(testScheduler), load)
 
+    @Test fun confirming_the_session_enables_description_reads_and_keeps_prepared_cards() = runTest {
+        val rows = entries(5)
+        val calls = mutableListOf<String>()
+        val engine = engine({ calls += it.id; text(it) })
+        val input = input(rows, enabled = false)
+        engine.update(input.copy(descriptionsEnabled = false)); advanceUntilIdle()
+        val prepared = checkNotNull(engine.content("test|" + rows[0].key, rows[0]))
+        assertTrue(calls.isEmpty())
+
+        engine.update(input); advanceUntilIdle()
+        assertEquals(listOf("0", "1", "2"), calls)
+        assertSame(prepared, engine.content("test|" + rows[0].key, rows[0]))
+        engine.clear()
+    }
+
     @Test fun off_loads_only_visible_descriptions_with_selection_first_and_no_background_images() = runTest {
         val rows = entries(33000); val calls = mutableListOf<String>(); var images = 0
         val engine = engine({ calls += it.id; text(it) }, image = { images++ })

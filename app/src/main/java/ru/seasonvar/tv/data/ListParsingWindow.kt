@@ -13,29 +13,29 @@ import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.data.settings.CacheSettings
 
 data class ListParseState(val entries: List<SeriesEntry>, val hasMore: Boolean, val loading: Boolean = false,
-    val failed: Boolean = false)
+    val failed: Boolean = false, val excludedSeasons: Set<String> = emptySet())
 
 class ListParsingWindow private constructor(
     private var cursor: Iterator<SeriesEntry>?, private var release: (() -> Unit)?,
 ) : Closeable {
     private val mutex = Mutex()
     private val closed = AtomicBoolean(false)
-    private val excludedSeasons = HashSet<String>()
     private val localVersions = mutableMapOf<String, Long>()
     private val mutableState = MutableStateFlow(ListParseState(emptyList(), true))
     val state = mutableState.asStateFlow()
 
     private fun batch(checkActive: () -> Unit = {}) {
         val iterator = cursor ?: return
+        val current = state.value
         val next = ArrayList<SeriesEntry>(CacheSettings.LIST_PARSE_BATCH_SIZE)
         while (next.size < CacheSettings.LIST_PARSE_BATCH_SIZE && iterator.hasNext()) {
             checkActive()
             check(!closed.get())
             val entry = iterator.next()
-            if (entry.id !in excludedSeasons) next.add(entry)
+            if (entry.id !in current.excludedSeasons) next.add(entry)
         }
         val more = iterator.hasNext()
-        mutableState.value = ListParseState(state.value.entries + next, more)
+        mutableState.value = current.copy(entries = current.entries + next, hasMore = more, loading = false)
         if (!more) dispose()
     }
 
@@ -67,8 +67,9 @@ class ListParsingWindow private constructor(
         mutex.withLock {
             if (closed.get() || revision < (localVersions[id] ?: 0)) return@withLock
             localVersions[id] = revision
-            excludedSeasons.add(id)
-            mutableState.value = state.value.copy(entries = listOfNotNull(entry) + state.value.entries.filterNot { it.id == id })
+            val current = state.value
+            mutableState.value = current.copy(entries = listOfNotNull(entry) + current.entries.filterNot { it.id == id },
+                excludedSeasons = current.excludedSeasons + id)
         }
     }
 
