@@ -13,6 +13,7 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.network.ProxyConfiguration
 import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
@@ -31,6 +32,8 @@ internal fun SettingsPane(
     onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
     onAutoNextChange: (Boolean) -> Unit,
+    playbackSpeed: PlaybackSpeed,
+    onPlaybackSpeedChange: (PlaybackSpeed) -> Unit,
     playerClockPosition: PlayerClockPosition,
     onPlayerClockPositionChange: (PlayerClockPosition) -> Unit,
     translationSettingsModel: TranslationSettingsViewModel?,
@@ -66,7 +69,7 @@ internal fun SettingsPane(
             focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         PlayerSettingsSection(autoNextEnabled, onAutoNextChange, autoNextSeasonEnabled, onAutoNextSeasonChange,
-            playerClockPosition, onPlayerClockPositionChange, focus, onBack, onCloseDialog, onInteraction)
+            playerClockPosition, onPlayerClockPositionChange, playbackSpeed, onPlaybackSpeedChange, focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         NetworkSettingsSection(imagePrefetchEnabled, onImagePrefetchChange, focus, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
@@ -86,6 +89,7 @@ internal class SettingsFocus(val start: FocusRequester, val menu: FocusRequester
     val autoNext = FocusRequester()
     val autoSeason = FocusRequester()
     val clock = FocusRequester()
+    val speed = FocusRequester()
     val prefetch = FocusRequester()
     val connectionRefresh = FocusRequester()
     val bypass = FocusRequester()

@@ -43,6 +43,10 @@
     <integer name="seasonvar_player_controls_timeout_ms">3000</integer>
     <integer name="seasonvar_player_progress_interval_ms">5000</integer>
 
+    <style name="Theme.SeasonvarTV.Player" parent="Theme.SeasonvarTV">
+        <item name="android:soundEffectsEnabled">false</item>
+    </style>
+
     <style name="Theme.SeasonvarTV" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/seasonvar_background</item>
         <item name="android:colorAccent">@color/seasonvar_accent</item>

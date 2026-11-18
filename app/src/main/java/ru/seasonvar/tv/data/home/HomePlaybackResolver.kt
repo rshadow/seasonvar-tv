@@ -67,6 +67,6 @@ class HomePlaybackResolver(
         val episode = voice.episodes?.singleOrNull { it.id == selected.episodeId } ?: throw HomePlaybackUnavailable()
         return PlaybackRequest(details.entry.id, details.entry.url, voice.id, episode.id, episode.label,
             details.entry.title, voice.episodes, hint.positionMillis ?: 0,
-            details.seasons.firstOrNull { it.id == details.entry.id }?.number ?: details.entry.season)
+            details.seasons.firstOrNull { it.id == details.entry.id }?.number ?: details.entry.season, serialId = details.serialId)
     }
 }

@@ -9,6 +9,7 @@ import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.data.network.DnsProvider
+import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.account.*
 import ru.seasonvar.tv.ui.catalog.*
@@ -31,6 +32,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             autoNextSeasonEnabled = toggles.getValue(R.string.auto_next_season_setting_title), onAutoNextSeasonChange = { toggles[R.string.auto_next_season_setting_title] = it },
             imagePrefetchEnabled = toggles.getValue(R.string.image_prefetch_title), onImagePrefetchChange = { toggles[R.string.image_prefetch_title] = it },
             bypassEnabled = toggles.getValue(R.string.bypass_title), onBypassChange = { toggles[R.string.bypass_title] = it },
+            playbackSpeed = playbackSpeed.value, onPlaybackSpeedChange = { playbackSpeed.value = it },
             dnsProvider = dns.value, onDnsChange = { dns.value = it })
     } }
 
@@ -51,7 +53,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         val rows = listOf(R.string.start_page_title, R.string.menu_visibility_title, R.string.home_settings_title,
             R.string.preferred_translation_title, R.string.show_actors_title, R.string.interface_theme_title,
             R.string.auto_next_setting_title, R.string.auto_next_season_setting_title, R.string.player_clock_title,
-            R.string.image_prefetch_title, R.string.connection_refresh, R.string.bypass_title, R.string.dns_setting_title, R.string.proxy_title)
+            R.string.playback_speed_default_title, R.string.image_prefetch_title, R.string.connection_refresh, R.string.bypass_title, R.string.dns_setting_title, R.string.proxy_title)
         for ((index, id) in rows.withIndex()) {
             if (index > 0) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
             check(control(text(id))?.isFocused == true) { "Settings focus missing: " + text(id) }
@@ -124,14 +126,38 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         }
     } }
 
+    private fun optionFocused(label: String): Boolean {
+        var node = ui.find(ui.uiAutomation.rootInActiveWindow, label, exact = true)
+        while (node != null) {
+            if (node.isFocused) return true
+            node = node.parent
+        }
+        return false
+    }
+
     fun settingsDialogs() = with(ui) { with(fixture) {
         stage("settings_dialogs")
         root(Section.SETTINGS); capture("settings-application")
         for ((name, id) in listOf("start" to R.string.start_page_title, "menu" to R.string.menu_visibility_title,
-            "channels" to R.string.home_settings_title, "clock" to R.string.player_clock_title, "dns" to R.string.dns_setting_title)) {
+            "channels" to R.string.home_settings_title, "clock" to R.string.player_clock_title,
+            "speed" to R.string.playback_speed_default_title, "dns" to R.string.dns_setting_title)) {
             stage("settings_" + name)
             click(text(id))
             if (name in listOf("menu", "channels")) centered(text(R.string.menu_visibility_done))
+            if (name == "speed") {
+                capture("settings-speed-open")
+                check(optionFocused(text(R.string.playback_speed_normal)))
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle()
+                check(playbackSpeed.value == PlaybackSpeed.NORMAL)
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+                check(playbackSpeed.value == PlaybackSpeed.ONE_QUARTER)
+                check(control(text(R.string.playback_speed_default_title))?.isFocused == true)
+                capture("settings-speed-selected")
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+                check(optionFocused(text(R.string.playback_speed_one_quarter)))
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle()
+                check(playbackSpeed.value == PlaybackSpeed.ONE_QUARTER)
+            }
             if (name == "dns") {
                 check(control(text(R.string.dns_system)) != null)
                 check(find(uiAutomation.rootInActiveWindow, text(R.string.dns_quad9)) != null)

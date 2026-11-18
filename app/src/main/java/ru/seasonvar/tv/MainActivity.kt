@@ -171,6 +171,7 @@ class MainActivity : ComponentActivity() {
             val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
+            val playbackSpeed by container.interfaceSettings.playbackSpeeds.defaultSpeed.collectAsStateWithLifecycle()
             val playerClockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
             SeasonvarApp(
                 browseCatalog = browseModel,
@@ -183,6 +184,7 @@ class MainActivity : ComponentActivity() {
                 hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
+                playbackSpeed = playbackSpeed, onPlaybackSpeedChange = container.interfaceSettings.playbackSpeeds::setDefault,
                 playerClockPosition = playerClockPosition, onPlayerClockPositionChange = container.interfaceSettings::setPlayerClockPosition,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },
