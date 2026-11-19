@@ -362,7 +362,7 @@ class PlayerActivity : ComponentActivity() {
                 player.addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
                         if (playback !== player) return
-                        loading = state == Player.STATE_BUFFERING
+                        loading = !ready && state == Player.STATE_BUFFERING
                         if (state == Player.STATE_READY) ready = true
                         if (state == Player.STATE_ENDED) {
                             savePosition(MarkEvent.ENDED)

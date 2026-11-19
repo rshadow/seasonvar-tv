@@ -428,8 +428,8 @@
     <string name="interface_theme_description">Цвета, прозрачность и фон списков и карточек.</string>
     <string name="interface_theme_classic">Классическая</string>
     <string name="interface_theme_glass">Стекло</string>
-    <string name="show_player_controls_title">Показывать элементы управления</string>
-    <string name="show_player_controls_description">Пауза и переходы между сериями в центре экрана. Шкала перемотки и скорость доступны в обоих режимах.</string>
+    <string name="show_player_controls_title">Все элементы управления</string>
+    <string name="show_player_controls_description">Управление с пульта доступно всегда. Если снять галочку, в панели останутся только шкала перемотки и кнопка скорости.</string>
     <string name="playback_speed_title">Скорость воспроизведения</string>
     <string name="playback_speed_default_title">Скорость по умолчанию</string>
     <string name="playback_speed_default_description">Скорость для всех сериалов, кроме тех, где вы выбрали другую.</string>
