@@ -43,6 +43,14 @@ internal class InterfaceSettings(context: Context) {
         preferences.getString("player_clock_position", null)))
     val playerClockPosition = mutablePlayerClockPosition.asStateFlow()
 
+    private val mutableShowPlayerControls = MutableStateFlow(preferences.getBoolean("show_player_controls", true))
+    val showPlayerControls = mutableShowPlayerControls.asStateFlow()
+
+    fun setShowPlayerControls(show: Boolean) {
+        preferences.edit().putBoolean("show_player_controls", show).apply()
+        mutableShowPlayerControls.value = show
+    }
+
     fun setPlayerClockPosition(position: PlayerClockPosition) {
         preferences.edit().putString("player_clock_position", position.storageId).apply()
         mutablePlayerClockPosition.value = position

@@ -34,6 +34,8 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             listPrefetchEnabled = toggles.getValue(R.string.list_prefetch_title), onListPrefetchChange = { toggles[R.string.list_prefetch_title] = it },
             bypassEnabled = toggles.getValue(R.string.bypass_title), onBypassChange = { toggles[R.string.bypass_title] = it },
             playbackSpeed = playbackSpeed.value, onPlaybackSpeedChange = { playbackSpeed.value = it },
+            showPlayerControls = toggles.getValue(R.string.show_player_controls_title),
+            onShowPlayerControlsChange = { toggles[R.string.show_player_controls_title] = it },
             dnsProvider = dns.value, onDnsChange = { dns.value = it })
     } }
 
@@ -54,7 +56,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         val rows = listOf(R.string.start_page_title, R.string.menu_visibility_title, R.string.home_settings_title,
             R.string.preferred_translation_title, R.string.show_actors_title, R.string.interface_theme_title,
             R.string.auto_next_setting_title, R.string.auto_next_season_setting_title, R.string.player_clock_title,
-            R.string.playback_speed_default_title, R.string.image_prefetch_title, R.string.list_prefetch_title,
+            R.string.playback_speed_default_title, R.string.show_player_controls_title, R.string.image_prefetch_title, R.string.list_prefetch_title,
             R.string.connection_refresh, R.string.bypass_title, R.string.dns_setting_title, R.string.proxy_title)
         for ((index, id) in rows.withIndex()) {
             if (index > 0) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN); settle() }
