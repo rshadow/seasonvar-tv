@@ -190,6 +190,7 @@ class MainActivity : ComponentActivity() {
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
             val playbackSpeed by container.interfaceSettings.playbackSpeeds.defaultSpeed.collectAsStateWithLifecycle()
+            val showPlayerControls by container.interfaceSettings.showPlayerControls.collectAsStateWithLifecycle()
             val playerClockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
             var previewEnabled by remember { mutableStateOf(true) }
             var startupPreview by remember { mutableStateOf<PersonalStartPreview?>(null) }
@@ -221,6 +222,7 @@ class MainActivity : ComponentActivity() {
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
                 playbackSpeed = playbackSpeed, onPlaybackSpeedChange = container.interfaceSettings.playbackSpeeds::setDefault,
+                showPlayerControls = showPlayerControls, onShowPlayerControlsChange = container.interfaceSettings::setShowPlayerControls,
                 playerClockPosition = playerClockPosition, onPlayerClockPositionChange = container.interfaceSettings::setPlayerClockPosition,
                 detailsModel = detailsModel,
                 removalState = removalState, onRemovalActions = { removalModel.show(it) },

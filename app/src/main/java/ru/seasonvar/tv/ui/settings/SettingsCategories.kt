@@ -49,6 +49,7 @@ internal fun PlayerSettingsSection(autoNextEnabled: Boolean, onAutoNextChange: (
     autoNextSeasonEnabled: Boolean, onAutoNextSeasonChange: (Boolean) -> Unit,
     playerClockPosition: PlayerClockPosition, onPlayerClockPositionChange: (PlayerClockPosition) -> Unit,
     playbackSpeed: PlaybackSpeed, onPlaybackSpeedChange: (PlaybackSpeed) -> Unit,
+    showPlayerControls: Boolean, onShowPlayerControlsChange: (Boolean) -> Unit,
     focus: SettingsFocus, onBack: () -> Unit, onCloseDialog: () -> Unit, onInteraction: () -> Unit) {
     val d = SeasonvarTheme.dimensions
     SettingsGroupTitle(R.string.player_settings_title)
@@ -65,8 +66,11 @@ internal fun PlayerSettingsSection(autoNextEnabled: Boolean, onAutoNextChange: (
     Spacer(Modifier.height(d.spacingMedium))
     SettingsChoice(R.string.playback_speed_default_title, R.string.playback_speed_default_description,
         options = PlaybackSpeed.entries, selected = playbackSpeed, label = ::playbackSpeedLabel, onChange = onPlaybackSpeedChange,
-        focus = focus.speed, menu = focus.menu, previous = focus.clock, next = focus.prefetch,
+        focus = focus.speed, menu = focus.menu, previous = focus.clock, next = focus.showPlayerControls,
         onBack = onBack, onClose = onCloseDialog, onInteraction = onInteraction)
+    Spacer(Modifier.height(d.spacingMedium))
+    SettingsToggle(R.string.show_player_controls_title, R.string.show_player_controls_description, showPlayerControls,
+        { onInteraction(); onShowPlayerControlsChange(it) }, focus.showPlayerControls, focus.menu, focus.speed, focus.prefetch)
 }
 
 @Composable
@@ -75,7 +79,7 @@ internal fun NetworkSettingsSection(imagePrefetchEnabled: Boolean, onImagePrefet
     focus: SettingsFocus, onInteraction: () -> Unit) {
     SettingsGroupTitle(R.string.network_title)
     SettingsToggle(R.string.image_prefetch_title, R.string.image_prefetch_description, imagePrefetchEnabled,
-        { onInteraction(); onImagePrefetchChange(it) }, focus.prefetch, focus.menu, focus.speed, focus.listPrefetch)
+        { onInteraction(); onImagePrefetchChange(it) }, focus.prefetch, focus.menu, focus.showPlayerControls, focus.listPrefetch)
     Spacer(Modifier.height(SeasonvarTheme.dimensions.spacingMedium))
     SettingsToggle(R.string.list_prefetch_title, R.string.list_prefetch_description, listPrefetchEnabled,
         { onInteraction(); onListPrefetchChange(it) }, focus.listPrefetch, focus.menu, focus.prefetch, focus.connectionRefresh)

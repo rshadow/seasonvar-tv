@@ -36,6 +36,8 @@ internal fun SettingsPane(
     onAutoNextChange: (Boolean) -> Unit,
     playbackSpeed: PlaybackSpeed,
     onPlaybackSpeedChange: (PlaybackSpeed) -> Unit,
+    showPlayerControls: Boolean,
+    onShowPlayerControlsChange: (Boolean) -> Unit,
     playerClockPosition: PlayerClockPosition,
     onPlayerClockPositionChange: (PlayerClockPosition) -> Unit,
     translationSettingsModel: TranslationSettingsViewModel?,
@@ -71,7 +73,8 @@ internal fun SettingsPane(
             focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         PlayerSettingsSection(autoNextEnabled, onAutoNextChange, autoNextSeasonEnabled, onAutoNextSeasonChange,
-            playerClockPosition, onPlayerClockPositionChange, playbackSpeed, onPlaybackSpeedChange, focus, onBack, onCloseDialog, onInteraction)
+            playerClockPosition, onPlayerClockPositionChange, playbackSpeed, onPlaybackSpeedChange,
+            showPlayerControls, onShowPlayerControlsChange, focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         NetworkSettingsSection(imagePrefetchEnabled, onImagePrefetchChange, listPrefetchEnabled, onListPrefetchChange,
             focus, onInteraction)
@@ -93,6 +96,7 @@ internal class SettingsFocus(val start: FocusRequester, val menu: FocusRequester
     val autoSeason = FocusRequester()
     val clock = FocusRequester()
     val speed = FocusRequester()
+    val showPlayerControls = FocusRequester()
     val prefetch = FocusRequester()
     val listPrefetch = FocusRequester()
     val connectionRefresh = FocusRequester()

@@ -143,6 +143,7 @@ class PlayerActivity : ComponentActivity() {
                 val markSync by container.accountMarks.state.collectAsStateWithLifecycle()
                 val accountSession by container.account.session.collectAsStateWithLifecycle()
                 val clockPosition by container.interfaceSettings.playerClockPosition.collectAsStateWithLifecycle()
+                val showPlayerControls by container.interfaceSettings.showPlayerControls.collectAsStateWithLifecycle()
                 val syncMessage = when {
                     accountSession.expired -> R.string.account_expired
                     markSync.owner != markOwner(accountSession.user) -> null
@@ -164,8 +165,8 @@ class PlayerActivity : ComponentActivity() {
                                 return handled
                             }
                         }.apply {
-                            setShowNextButton(true)
-                            setShowPreviousButton(true)
+                            setShowRewindButton(false)
+                            setShowFastForwardButton(false)
                             findViewById<View>(androidx.media3.ui.R.id.exo_settings)?.visibility = View.GONE
                             controllerShowTimeoutMs = resources.getInteger(R.integer.seasonvar_player_controls_timeout_ms)
                             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
@@ -186,6 +187,10 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }, update = { native ->
                         applyPlayerAppearance(native, appearance)
+                        native.setShowNextButton(showPlayerControls)
+                        native.setShowPreviousButton(showPlayerControls)
+                        native.findViewById<View>(androidx.media3.ui.R.id.exo_play_pause)?.visibility =
+                            if (showPlayerControls) View.VISIBLE else View.GONE
                         if (native.player !== controlsPlayer) {
                             native.player = controlsPlayer
                             if (controlsPlayer != null) native.requestFocus()
@@ -595,12 +600,13 @@ class PlayerActivity : ComponentActivity() {
         if (seasonTransitionPending && failure == null) return true
         val player = playback
         if (player != null && failure == null) {
+            val showPlayerControls = container.interfaceSettings.showPlayerControls.value
             if (!navigatingControls && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN)) {
                 if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                     navigatingControls = true
                     view?.descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
                     view?.showController()
-                    val target = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN)
+                    val target = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || !showPlayerControls)
                         androidx.media3.ui.R.id.exo_progress else androidx.media3.ui.R.id.exo_play_pause
                     view?.findViewById<View>(target)?.requestFocus()
                     traceControls()
@@ -613,25 +619,38 @@ class PlayerActivity : ComponentActivity() {
                     view?.showController()
                     if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && (timelineFocused || speedFocused)) {
                         if (!request?.serialId.isNullOrBlank()) speedFocus.requestFocus()
+                    } else if (!showPlayerControls && timelineFocused) {
+                        navigatingControls = false
+                        view?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                        view?.requestFocus()
                     } else {
-                        val target = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || speedFocused)
+                        val target = if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN || speedFocused || !showPlayerControls)
                             androidx.media3.ui.R.id.exo_progress else androidx.media3.ui.R.id.exo_play_pause
                         view?.findViewById<View>(target)?.requestFocus()
                     }
                 }
                 return true
             }
-            if (navigatingControls && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER)) {
+            val controlsHandleKey = when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> showPlayerControls || speedFocused
+                else -> false
+            }
+            if (navigatingControls && controlsHandleKey) {
                 if (event.action == KeyEvent.ACTION_DOWN) view?.showController()
                 return false
             }
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE,
-                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> {
                     if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                        if (player.playWhenReady) { player.pause(); savePosition(MarkEvent.PAUSE) } else player.play()
+                        val play = when (event.keyCode) {
+                            KeyEvent.KEYCODE_MEDIA_PLAY -> true
+                            KeyEvent.KEYCODE_MEDIA_PAUSE -> false
+                            else -> !player.playWhenReady
+                        }
+                        if (play) player.play()
+                        else if (player.playWhenReady) { player.pause(); savePosition(MarkEvent.PAUSE) }
                         view?.showController()
                         trace("toggle playing=" + player.playWhenReady)
                     }

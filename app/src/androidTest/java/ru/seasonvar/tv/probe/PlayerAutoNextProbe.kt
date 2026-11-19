@@ -50,8 +50,10 @@ object PlayerAutoNextProbe {
         val originalEnabled = app.interfaceSettings.autoNextEnabled.value
         val originalSeasonEnabled = app.interfaceSettings.autoNextSeasonEnabled.value
         val originalClockPosition = app.interfaceSettings.playerClockPosition.value
-        val originalClockValue = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
-            .getString("player_clock_position", null)
+        val settings = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
+        val originalClockValue = settings.getString("player_clock_position", null)
+        val originalControls = app.interfaceSettings.showPlayerControls.value
+        val hadControlsSetting = settings.contains("show_player_controls")
         var expectedClock: PlayerClockPosition? = null
         val originalProxy = app.networkSettings.configuration.value.proxy
         var proxyChanged = false
@@ -166,7 +168,8 @@ object PlayerAutoNextProbe {
             val translation = details.translations.firstOrNull { it.id == "0" && (it.episodes?.size ?: 0) >= 2 }
                 ?: details.translations.first { (it.episodes?.size ?: 0) >= 2 }
             val episodes = checkNotNull(translation.episodes).take(2)
-            val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes, resumePositionMillis = 10_000, seasonNumber = details.entry.season)
+            val request = PlaybackRequest(id, page, translation.id, episodes[0].id, episodes[0].label, details.entry.title, episodes,
+                resumePositionMillis = 10_000, seasonNumber = details.entry.season, serialId = details.serialId)
             rememberProgress(id)
             preferences.edit().remove("season-$id").commit()
             result.putBoolean("default_enabled", originalEnabled)
@@ -176,6 +179,43 @@ object PlayerAutoNextProbe {
             stage("first_video"); playing(episodes[0].id);
             waitFor { main { player().currentPosition in 10_000..25_000 } }
             result.putBoolean("explicit_resume_verified", true)
+            stage("hidden_controls")
+            val controlIds = listOf(androidx.media3.ui.R.id.exo_prev, androidx.media3.ui.R.id.exo_play_pause, androidx.media3.ui.R.id.exo_next)
+            val seekButtonIds = listOf(androidx.media3.ui.R.id.exo_rew, androidx.media3.ui.R.id.exo_rew_with_amount,
+                androidx.media3.ui.R.id.exo_ffwd, androidx.media3.ui.R.id.exo_ffwd_with_amount)
+            val timelineId = androidx.media3.ui.R.id.exo_progress
+            fun control(id: Int) = checkNotNull(activity).findViewById<View>(id)
+            main {
+                app.interfaceSettings.setShowPlayerControls(true)
+                playerView(checkNotNull(activity).window.decorView)?.showController()
+            }
+            waitFor(5000) { main { controlIds.all { control(it).isShown } } }
+            check(main { seekButtonIds.none { control(it)?.isShown == true } })
+            main { app.interfaceSettings.setShowPlayerControls(false) }
+            waitFor(5000) { main { control(timelineId).isShown && controlIds.none { control(it).isShown } } }
+            stage("hidden_controls_keys")
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor(5000) { main { !player().isPlaying } }
+            capture("hidden-controls-paused")
+            val hiddenPausedAt = main { player().currentPosition }
+            key(KeyEvent.KEYCODE_ENTER); playing(episodes[0].id)
+            waitFor(5000) { main { player().currentPosition > hiddenPausedAt + 1600 } }
+            capture("hidden-controls-playing")
+            key(KeyEvent.KEYCODE_SPACE); waitFor(5000) { main { !player().isPlaying } }
+            key(KeyEvent.KEYCODE_MEDIA_PLAY); playing(episodes[0].id)
+            key(KeyEvent.KEYCODE_MEDIA_PAUSE); waitFor(5000) { main { !player().isPlaying } }
+            key(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE); playing(episodes[0].id)
+            stage("hidden_controls_focus")
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor(5000) { main { control(timelineId).hasFocus() } }
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor(5000) { main { !player().isPlaying } }
+            key(KeyEvent.KEYCODE_ENTER); playing(episodes[0].id)
+            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor(5000) { visibleText(targetContext.getString(R.string.playback_speed_title)) }
+            key(KeyEvent.KEYCODE_BACK)
+            waitFor(5000) { !visibleText(targetContext.getString(R.string.playback_speed_title)) }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor(5000) { main { control(timelineId).hasFocus() } }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor(5000) { main { !control(timelineId).hasFocus() } }
+            main { app.interfaceSettings.setShowPlayerControls(true) }
+            result.putBoolean("hidden_controls_verified", true)
             stage("clock_positions")
             PlayerClockPosition.entries.forEach { position ->
                 main { app.interfaceSettings.setPlayerClockPosition(position) }
@@ -357,17 +397,20 @@ object PlayerAutoNextProbe {
                 app.interfaceSettings.setAutoNextEnabled(originalEnabled)
                 app.interfaceSettings.setAutoNextSeasonEnabled(originalSeasonEnabled)
                 app.interfaceSettings.setPlayerClockPosition(originalClockPosition)
+                app.interfaceSettings.setShowPlayerControls(originalControls)
             }
-            val settings = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
             val saved = settings.edit().putBoolean("auto_next_episode", originalEnabled)
                 .putBoolean("auto_next_season", originalSeasonEnabled).apply {
                     if (originalClockValue == null) remove("player_clock_position")
                     else putString("player_clock_position", originalClockValue)
+                    if (!hadControlsSetting) remove("show_player_controls")
                 }.commit()
             result.putBoolean("clock_setting_restored", saved && settings.getString("player_clock_position", null) == originalClockValue &&
                 app.interfaceSettings.playerClockPosition.value == originalClockPosition)
             result.putBoolean("settings_restored", saved && settings.getBoolean("auto_next_episode", !originalEnabled) == originalEnabled &&
-                settings.getBoolean("auto_next_season", !originalSeasonEnabled) == originalSeasonEnabled)
+                settings.getBoolean("auto_next_season", !originalSeasonEnabled) == originalSeasonEnabled &&
+                settings.contains("show_player_controls") == hadControlsSetting &&
+                settings.getBoolean("show_player_controls", true) == originalControls)
             result.putString("artifacts", artifacts.absolutePath)
         }
         finish(if (result.getBoolean("script_success")) Activity.RESULT_OK else Activity.RESULT_CANCELED, result)
