@@ -12,15 +12,27 @@ internal class ListRefreshCoordinator(
     initial: NetworkConfiguration,
     private val prepare: suspend (NetworkConfiguration) -> Unit,
     private val targets: Map<Section, Target>,
+    private val preloadOnStart: Boolean = false,
 ) : ViewModel() {
-    class Target(val cancel: () -> Unit, val refresh: () -> Unit)
+    class Target(val cancel: () -> Unit, val refresh: () -> Unit, val preload: (() -> Unit)? = null)
     var visible: Section? = null
         private set
     private var configuration = initial
     private var revision = 0L
     private var job: Job? = null
+    private val preloaded = mutableSetOf<Section>()
 
     fun setVisible(section: Section?) { visible = section?.takeIf { it in targets } }
+
+    fun preloadMenuLists(accountBusy: Boolean, signedIn: Boolean, hiddenSections: Set<Section>) {
+        if (!preloadOnStart || accountBusy) return
+        val eligible = Section.catalogPages + if (signedIn) Section.smartPages + Section.personalPages else emptyList()
+        for (section in eligible) {
+            if (section in hiddenSections) continue
+            val preload = targets[section]?.preload ?: continue
+            if (preloaded.add(section)) preload()
+        }
+    }
 
     fun networkChanged(selected: NetworkConfiguration) {
         if (configuration == selected) return
@@ -42,11 +54,11 @@ internal class ListRefreshCoordinator(
 
     class Factory(private val initial: NetworkConfiguration,
         private val prepare: suspend (NetworkConfiguration) -> Unit,
-        private val targets: Map<Section, Target>) : ViewModelProvider.Factory {
+        private val targets: Map<Section, Target>, private val preloadOnStart: Boolean = false) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(ListRefreshCoordinator::class.java))
             @Suppress("UNCHECKED_CAST")
-            return ListRefreshCoordinator(null, initial, prepare, targets) as T
+            return ListRefreshCoordinator(null, initial, prepare, targets, preloadOnStart) as T
         }
     }
 }

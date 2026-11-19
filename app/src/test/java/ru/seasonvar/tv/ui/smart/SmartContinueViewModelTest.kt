@@ -30,6 +30,24 @@ class SmartContinueViewModelTest {
         .also { store.put("smart", it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
+
+    @Test fun first_open_reuses_preloaded_continue_and_later_visits_refresh_normally() = runTest(dispatcher) {
+        var calls = 0
+        val model = model(Cache()) {
+            calls++
+            SmartContinuePage(listOf(entry), emptySet(), false)
+        }
+        runCurrent()
+        model.preload(); model.preload(); runCurrent()
+        assertEquals(1, calls)
+        assertEquals(listOf(entry), model.state.value.entries)
+
+        model.setVisible(true); runCurrent()
+        assertEquals(1, calls)
+        model.setVisible(false); model.setVisible(true); runCurrent()
+        assertEquals(2, calls)
+    }
+
     @Test fun hidden_continue_invalidation_keeps_cached_cards_and_waits_until_open_to_load_new_history_order() = runTest(dispatcher) {
         var calls = 0
         val other = entry.copy(id = "50", sourceKey = "smart:200")

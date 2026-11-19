@@ -15,6 +15,29 @@ class ListRefreshCoordinatorTest {
     private val initial = NetworkConfiguration()
     private val changed = initial.copy(bypassEnabled = false)
 
+    @Test fun preloading_only_starts_enabled_menu_lists_after_the_account_check() = runTest {
+        val calls = mutableListOf<Section>()
+        val targets = Section.entries.associateWith { section -> ListRefreshCoordinator.Target({}, {}, { calls += section }) }
+        val disabled = ListRefreshCoordinator(this, initial, {}, targets)
+        disabled.preloadMenuLists(accountBusy = false, signedIn = true, hiddenSections = emptySet())
+        assertTrue(calls.isEmpty())
+
+        val enabled = ListRefreshCoordinator(this, initial, {}, targets, preloadOnStart = true)
+        val hidden = setOf(Section.TODAY, Section.WANT)
+        enabled.preloadMenuLists(accountBusy = true, signedIn = false, hiddenSections = hidden)
+        assertTrue(calls.isEmpty())
+        val public = listOf(Section.UPDATES, Section.TOP, Section.NEWEST, Section.BEST, Section.ANNOUNCEMENTS)
+        enabled.preloadMenuLists(accountBusy = false, signedIn = false, hiddenSections = hidden)
+        assertEquals(public, calls)
+
+        val personal = listOf(Section.SMART_CONTINUE, Section.RESUME, Section.PERSONAL_UPDATES,
+            Section.PERSONAL_NO_UPDATES, Section.WATCHED, Section.HISTORY)
+        enabled.preloadMenuLists(accountBusy = false, signedIn = true, hiddenSections = hidden)
+        enabled.preloadMenuLists(accountBusy = false, signedIn = true, hiddenSections = hidden)
+        assertEquals(public + personal, calls)
+        assertNull(enabled.visible)
+    }
+
     @Test fun cancels_old_work_then_prepares_before_refreshing_visible_and_hidden_targets_once() = runTest {
         val events = mutableListOf<String>()
         val gate = CompletableDeferred<Unit>()

@@ -24,6 +24,8 @@ internal fun SettingsPane(
     onConnectionVisible: (Boolean) -> Unit,
     imagePrefetchEnabled: Boolean,
     onImagePrefetchChange: (Boolean) -> Unit,
+    listPrefetchEnabled: Boolean,
+    onListPrefetchChange: (Boolean) -> Unit,
     showActors: Boolean,
     onShowActorsChange: (Boolean) -> Unit,
     interfaceTheme: InterfaceTheme,
@@ -71,7 +73,8 @@ internal fun SettingsPane(
         PlayerSettingsSection(autoNextEnabled, onAutoNextChange, autoNextSeasonEnabled, onAutoNextSeasonChange,
             playerClockPosition, onPlayerClockPositionChange, playbackSpeed, onPlaybackSpeedChange, focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
-        NetworkSettingsSection(imagePrefetchEnabled, onImagePrefetchChange, focus, onInteraction)
+        NetworkSettingsSection(imagePrefetchEnabled, onImagePrefetchChange, listPrefetchEnabled, onListPrefetchChange,
+            focus, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         ConnectionSettingsSection(connectionCheck, onConnectionRefresh, bypassEnabled, onBypassChange,
             dnsProvider, onDnsChange, proxy, onProxyChange, focus, onBack, onCloseDialog, onInteraction)
@@ -91,6 +94,7 @@ internal class SettingsFocus(val start: FocusRequester, val menu: FocusRequester
     val clock = FocusRequester()
     val speed = FocusRequester()
     val prefetch = FocusRequester()
+    val listPrefetch = FocusRequester()
     val connectionRefresh = FocusRequester()
     val bypass = FocusRequester()
     val dns = FocusRequester()

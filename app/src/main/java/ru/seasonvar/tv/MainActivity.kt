@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import ru.seasonvar.tv.ui.account.AccountViewModel
 import ru.seasonvar.tv.ui.account.PersonalListViewModel
 import ru.seasonvar.tv.data.account.PersonalFeed
@@ -122,16 +123,16 @@ class MainActivity : ComponentActivity() {
         listRefresh = ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Factory(
             container.networkSettings.configuration.value, container::prepareNetwork, buildMap {
                 models.forEach { (feed, model) -> put(ru.seasonvar.tv.ui.navigation.Section.entries.first { it.publicFeed == feed },
-                    ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(model::cancelForNetworkChange, model::refreshIfStarted)) }
+                    ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(model::cancelForNetworkChange, model::refreshIfStarted, model::activate)) }
                 personalModels.forEach { (feed, model) -> put(ru.seasonvar.tv.ui.navigation.Section.entries.first { it.personalFeed == feed },
-                    ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(model::cancelForNetworkChange, model::refreshIfStarted)) }
+                    ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(model::cancelForNetworkChange, model::refreshIfStarted, model::activate)) }
                 put(ru.seasonvar.tv.ui.navigation.Section.CATALOG, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(
                     browseModel::cancelForNetworkChange, browseModel::refreshIfStarted))
                 put(ru.seasonvar.tv.ui.navigation.Section.SEARCH, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(
                     searchModel::cancelForNetworkChange, searchModel::networkChanged))
                 put(ru.seasonvar.tv.ui.navigation.Section.SMART_CONTINUE, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Target(
-                    smartModel::cancelForNetworkChange, smartModel::refreshIfStarted))
-            }))[ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator::class.java]
+                    smartModel::cancelForNetworkChange, smartModel::refreshIfStarted, smartModel::preload))
+            }, preloadOnStart = container.interfaceSettings.listPrefetchEnabled.value))[ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator::class.java]
         val removalModel = ViewModelProvider(this, ru.seasonvar.tv.ui.account.MarkRemovalViewModel.Factory(
             container.account, container.accountMarks, onRemoved = {}))[ru.seasonvar.tv.ui.account.MarkRemovalViewModel::class.java]
         val probeStart = if (startupProbe) intent.getStringExtra("startup_probe_start")
@@ -174,11 +175,18 @@ class MainActivity : ComponentActivity() {
             val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
             val connectionCheck by connectionCheckModel.state.collectAsStateWithLifecycle()
             val imagePrefetchEnabled by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
+            val listPrefetchEnabled by container.interfaceSettings.listPrefetchEnabled.collectAsStateWithLifecycle()
             val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
+            LaunchedEffect(accountState.busy, accountSession.version, hiddenSections) {
+                if (!accountState.busy) {
+                    withFrameNanos { }
+                    listRefresh.preloadMenuLists(accountState.busy, accountSession.user != null, hiddenSections)
+                }
+            }
             val autoNextEnabled by container.interfaceSettings.autoNextEnabled.collectAsStateWithLifecycle()
             val autoNextSeasonEnabled by container.interfaceSettings.autoNextSeasonEnabled.collectAsStateWithLifecycle()
             val playbackSpeed by container.interfaceSettings.playbackSpeeds.defaultSpeed.collectAsStateWithLifecycle()
@@ -204,6 +212,7 @@ class MainActivity : ComponentActivity() {
                 browseCatalog = browseModel,
                 updateModel = updateModel, translationSettingsModel = translationSettingsModel,
                 imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = container.interfaceSettings::setImagePrefetchEnabled,
+                listPrefetchEnabled = listPrefetchEnabled, onListPrefetchChange = container.interfaceSettings::setListPrefetchEnabled,
                 showActors = showActors, onShowActorsChange = container.interfaceSettings::setShowActors,
                 interfaceTheme = interfaceTheme, onInterfaceThemeChange = container.interfaceSettings::setInterfaceTheme,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,

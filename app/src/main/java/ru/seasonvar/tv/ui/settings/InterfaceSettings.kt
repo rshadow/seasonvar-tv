@@ -90,6 +90,14 @@ internal class InterfaceSettings(context: Context) {
         mutableImagePrefetchEnabled.value = enabled
     }
 
+    private val mutableListPrefetchEnabled = MutableStateFlow(preferences.getBoolean("list_prefetch", false))
+    val listPrefetchEnabled = mutableListPrefetchEnabled.asStateFlow()
+
+    fun setListPrefetchEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean("list_prefetch", enabled).apply()
+        mutableListPrefetchEnabled.value = enabled
+    }
+
     private val mutableShowActors = MutableStateFlow(preferences.getBoolean("show_actors", true))
     val showActors = mutableShowActors.asStateFlow()
 

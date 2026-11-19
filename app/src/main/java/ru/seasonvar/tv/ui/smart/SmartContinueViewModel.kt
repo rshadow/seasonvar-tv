@@ -30,6 +30,7 @@ class SmartContinueViewModel internal constructor(
     private var refreshJob: Job? = null
     private var visible = false
     private var started = false
+    private var preloaded = false
     private var dirty = true
     private var owner: String? = null
     private var ownerVersion = -1L
@@ -50,7 +51,14 @@ class SmartContinueViewModel internal constructor(
     fun setVisible(value: Boolean) {
         val entering = value && !visible
         visible = value
-        if (value && (entering || dirty || !state.value.loaded) && !state.value.loading) refresh()
+        val refreshOnEntry = entering && !preloaded
+        if (entering) preloaded = false
+        if (value && (refreshOnEntry || dirty || !state.value.loaded) && !state.value.loading) refresh()
+    }
+    fun preload() {
+        if (started || session.value.user == null) return
+        preloaded = true
+        refresh()
     }
     fun invalidate() {
         dirty = true
