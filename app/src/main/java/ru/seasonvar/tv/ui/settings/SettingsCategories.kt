@@ -108,7 +108,7 @@ internal fun ConnectionSettingsSection(connectionCheck: ConnectionCheckState, on
         DnsProvider.entries, dnsProvider, ::dnsLabel, onDnsChange, focus.dns, focus.menu, focus.bypass, focus.proxy,
         onBack, onCloseDialog, onInteraction)
     Spacer(Modifier.height(d.spacingLarge))
-    ProxySetting(proxy, onProxyChange, focus.proxy, focus.dns, focus.menu)
+    ProxySetting(proxy, onProxyChange, focus.proxy, focus.dns, focus.diagnosticsRefresh, focus.menu)
     Spacer(Modifier.height(d.spacingLarge))
     Text(stringResource(R.string.network_applies), color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyLarge)
     Spacer(Modifier.height(d.spacingSmall))
