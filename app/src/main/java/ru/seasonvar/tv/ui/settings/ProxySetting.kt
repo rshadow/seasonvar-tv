@@ -35,7 +35,7 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
 @Composable
 internal fun ProxySetting(value: ProxyConfiguration, onSave: suspend (ProxyConfiguration) -> Boolean,
-    focus: FocusRequester, previous: FocusRequester, menu: FocusRequester) {
+    focus: FocusRequester, previous: FocusRequester, next: FocusRequester, menu: FocusRequester) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     var open by remember { mutableStateOf(false) }
@@ -43,7 +43,7 @@ internal fun ProxySetting(value: ProxyConfiguration, onSave: suspend (ProxyConfi
     val scope = rememberCoroutineScope()
     fun close() { open = false; scope.launch { repeat(2) { withFrameNanos { } }; focus.requestFocus() } }
     Row(Modifier.fillMaxWidth().focusRequester(focus)
-        .focusProperties { up = previous; left = menu; down = FocusRequester.Cancel }
+        .focusProperties { up = previous; left = menu; down = next }
         .onFocusChanged { focused = it.isFocused }
         .border(d.focusBorderWidth, if (focused) c.primary else Color.Transparent, RoundedCornerShape(d.cardCornerRadius))
         .clickable(role = Role.Button) { open = true }.padding(d.spacingMedium), verticalAlignment = Alignment.CenterVertically) {

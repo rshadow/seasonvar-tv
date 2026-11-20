@@ -83,6 +83,8 @@ internal fun SettingsPane(
         Spacer(Modifier.height(d.spacingLarge))
         ConnectionSettingsSection(connectionCheck, onConnectionRefresh, bypassEnabled, onBypassChange,
             dnsProvider, onDnsChange, proxy, onProxyChange, focus, onBack, onCloseDialog, onInteraction)
+        Spacer(Modifier.height(d.spacingLarge))
+        DeviceDiagnosticsSection(focus, onInteraction)
     }
 }
 
@@ -106,4 +108,6 @@ internal class SettingsFocus(val start: FocusRequester, val menu: FocusRequester
     val bypass = FocusRequester()
     val dns = FocusRequester()
     val proxy = FocusRequester()
+    val diagnosticsRefresh = FocusRequester()
+    val installPermission = FocusRequester()
 }
