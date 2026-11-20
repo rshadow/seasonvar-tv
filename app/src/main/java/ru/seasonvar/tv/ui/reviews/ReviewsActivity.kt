@@ -31,7 +31,8 @@ class ReviewsActivity : ComponentActivity() {
         val model = ViewModelProvider(this, ReviewsViewModel.Factory(container.reviews, entry))[ReviewsViewModel::class.java]
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
-            SeasonvarTheme(interfaceTheme) {
+            val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme, fontSize) {
                 val state by model.state.collectAsStateWithLifecycle()
                 val account by container.account.session.collectAsStateWithLifecycle()
                 val network by container.networkSettings.configuration.collectAsStateWithLifecycle()

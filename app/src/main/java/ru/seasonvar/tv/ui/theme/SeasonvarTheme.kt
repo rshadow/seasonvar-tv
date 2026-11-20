@@ -13,12 +13,14 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.ui.settings.InterfaceFontSize
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import ru.seasonvar.tv.ui.settings.InterfaceThemeCatalog
 import ru.seasonvar.tv.ui.settings.loadInterfaceThemes
@@ -175,10 +177,16 @@ object SeasonvarTheme {
 }
 
 @Composable
-internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLASSIC, content: @Composable () -> Unit) {
+internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLASSIC,
+    fontSize: InterfaceFontSize = InterfaceFontSize.NORMAL, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
+    val textDensity = remember(density, fontSize) {
+        if (fontSize == InterfaceFontSize.LARGE && density.fontScale < fontSize.scale) {
+            Density(density.density, fontSize.scale)
+        } else density
+    }
     val resources = LocalResources.current
     val catalog = remember(context, configuration) { loadInterfaceThemes(context) }
     val appearance = remember(context, configuration, interfaceTheme) { resolveInterfaceTheme(context, interfaceTheme) }
@@ -194,7 +202,7 @@ internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLAS
             onSurfaceVariant = appearance.secondaryText,
         )
     }
-    val dimensions = remember(appearance, resources, configuration, density) {
+    val dimensions = remember(appearance, resources, configuration, density, fontSize) {
         fun dimension(id: Int): Dp = (resources.getDimension(id) / density.density).dp
         fun integer(id: Int): Int = resources.getInteger(id)
         SeasonvarDimensions(
@@ -208,7 +216,7 @@ internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLAS
             buttonWidth = dimension(R.dimen.seasonvar_button_width),
             buttonHeight = dimension(R.dimen.seasonvar_button_height),
             buttonCornerRadius = appearance.buttonCornerRadius,
-            menuWidth = dimension(R.dimen.seasonvar_menu_width),
+            menuWidth = dimension(R.dimen.seasonvar_menu_width) * fontSize.scale,
             menuItemPaddingHorizontal = appearance.spacing.menuItemPaddingHorizontal,
             menuItemHeight = dimension(R.dimen.seasonvar_menu_item_height),
             menuItemSpacing = appearance.spacing.menuItemSpacing,
@@ -230,7 +238,7 @@ internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLAS
             actorPhotoSize = dimension(R.dimen.seasonvar_actor_photo_size),
             actorTileWidth = dimension(R.dimen.seasonvar_actor_tile_width),
             actorNameHeight = dimension(R.dimen.seasonvar_actor_name_height),
-            reviewsButtonWidth = dimension(R.dimen.seasonvar_reviews_button_width),
+            reviewsButtonWidth = dimension(R.dimen.seasonvar_reviews_button_width) * fontSize.scale,
             reviewsMetadataHeight = dimension(R.dimen.seasonvar_reviews_metadata_height),
             reviewsStatusHeight = dimension(R.dimen.seasonvar_reviews_status_height),
             reviewsListWidthFraction = integer(R.integer.seasonvar_reviews_list_width_percent) / 100f,
@@ -252,7 +260,7 @@ internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLAS
         )
     }
 
-    CompositionLocalProvider(LocalDimensions provides dimensions, LocalInterfaceTheme provides appearance,
+    CompositionLocalProvider(LocalDensity provides textDensity, LocalDimensions provides dimensions, LocalInterfaceTheme provides appearance,
         LocalPageBackground provides pageBackground, LocalThemeCatalog provides catalog) {
         MaterialTheme(
             colorScheme = colors,

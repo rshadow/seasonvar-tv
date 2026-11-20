@@ -22,6 +22,7 @@ internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (
     hiddenSections: Set<Section>, onSectionVisibilityChange: (Section, Boolean) -> Unit, signedIn: Boolean,
     translationSettingsModel: TranslationSettingsViewModel?, showActors: Boolean, onShowActorsChange: (Boolean) -> Unit,
     interfaceTheme: InterfaceTheme, onInterfaceThemeChange: (InterfaceTheme) -> Unit,
+    fontSize: InterfaceFontSize, onFontSizeChange: (InterfaceFontSize) -> Unit,
     focus: SettingsFocus, onBack: () -> Unit, onCloseDialog: () -> Unit, onInteraction: () -> Unit) {
     val d = SeasonvarTheme.dimensions
     SettingsGroupTitle(R.string.application_settings_title)
@@ -41,7 +42,12 @@ internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (
         { onInteraction(); onShowActorsChange(it) }, focus.actors, focus.menu, focus.translations, focus.appearance)
     Spacer(Modifier.height(d.spacingMedium))
     InterfaceThemeSetting(interfaceTheme, onInterfaceThemeChange,
-        focus.appearance, focus.menu, focus.actors, focus.autoNext, onBack, onCloseDialog, onInteraction)
+        focus.appearance, focus.menu, focus.actors, focus.fontSize, onBack, onCloseDialog, onInteraction)
+    Spacer(Modifier.height(d.spacingMedium))
+    SettingsChoice(R.string.font_size_title, R.string.font_size_description,
+        options = InterfaceFontSize.entries, selected = fontSize, label = InterfaceFontSize::label,
+        onChange = onFontSizeChange, focus = focus.fontSize, menu = focus.menu,
+        previous = focus.appearance, next = focus.autoNext, onBack = onBack, onClose = onCloseDialog, onInteraction = onInteraction)
 }
 
 @Composable
@@ -54,7 +60,7 @@ internal fun PlayerSettingsSection(autoNextEnabled: Boolean, onAutoNextChange: (
     val d = SeasonvarTheme.dimensions
     SettingsGroupTitle(R.string.player_settings_title)
     SettingsToggle(R.string.auto_next_setting_title, R.string.auto_next_setting_description, autoNextEnabled,
-        { onInteraction(); onAutoNextChange(it) }, focus.autoNext, focus.menu, focus.appearance, focus.autoSeason)
+        { onInteraction(); onAutoNextChange(it) }, focus.autoNext, focus.menu, focus.fontSize, focus.autoSeason)
     Spacer(Modifier.height(d.spacingMedium))
     SettingsToggle(R.string.auto_next_season_setting_title, R.string.auto_next_season_setting_description, autoNextSeasonEnabled,
         { onInteraction(); onAutoNextSeasonChange(it) }, focus.autoSeason, focus.menu, focus.autoNext, focus.clock)

@@ -178,6 +178,7 @@ class MainActivity : ComponentActivity() {
             val listPrefetchEnabled by container.interfaceSettings.listPrefetchEnabled.collectAsStateWithLifecycle()
             val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
+            val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
@@ -216,6 +217,7 @@ class MainActivity : ComponentActivity() {
                 listPrefetchEnabled = listPrefetchEnabled, onListPrefetchChange = container.interfaceSettings::setListPrefetchEnabled,
                 showActors = showActors, onShowActorsChange = container.interfaceSettings::setShowActors,
                 interfaceTheme = interfaceTheme, onInterfaceThemeChange = container.interfaceSettings::setInterfaceTheme,
+                fontSize = fontSize, onFontSizeChange = container.interfaceSettings::setFontSize,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = probeStart ?: startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,

@@ -137,7 +137,8 @@ class PlayerActivity : ComponentActivity() {
         }
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
-            SeasonvarTheme(interfaceTheme) {
+            val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme, fontSize) {
                 val appearance = SeasonvarTheme.playerAppearance
                 val d = SeasonvarTheme.dimensions
                 val markSync by container.accountMarks.state.collectAsStateWithLifecycle()
