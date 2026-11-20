@@ -96,6 +96,7 @@ import ru.seasonvar.tv.ui.details.PosterBackdropState
 import ru.seasonvar.tv.ui.details.PosterBackdropPublisher
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
+import ru.seasonvar.tv.ui.settings.InterfaceFontSize
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import ru.seasonvar.tv.ui.settings.SettingsPane
 import ru.seasonvar.tv.data.playback.PlaybackSpeed
@@ -194,6 +195,8 @@ internal fun SeasonvarApp(
     onShowActorsChange: (Boolean) -> Unit = {},
     interfaceTheme: InterfaceTheme = SeasonvarTheme.interfaceTheme,
     onInterfaceThemeChange: (InterfaceTheme) -> Unit = {},
+    fontSize: InterfaceFontSize = InterfaceFontSize.NORMAL,
+    onFontSizeChange: (InterfaceFontSize) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -239,7 +242,7 @@ internal fun SeasonvarApp(
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
 ) {
-    SeasonvarTheme(interfaceTheme) {
+    SeasonvarTheme(interfaceTheme, fontSize) {
         SeasonvarContent(
             states = states,
             onRefresh = onRefresh,
@@ -263,6 +266,7 @@ internal fun SeasonvarApp(
             listPrefetchEnabled = listPrefetchEnabled, onListPrefetchChange = onListPrefetchChange,
             showActors = showActors, onShowActorsChange = onShowActorsChange,
             interfaceTheme = interfaceTheme, onInterfaceThemeChange = onInterfaceThemeChange,
+            fontSize = fontSize, onFontSizeChange = onFontSizeChange,
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
@@ -323,6 +327,8 @@ private fun SeasonvarContent(
     onShowActorsChange: (Boolean) -> Unit = {},
     interfaceTheme: InterfaceTheme = SeasonvarTheme.interfaceTheme,
     onInterfaceThemeChange: (InterfaceTheme) -> Unit = {},
+    fontSize: InterfaceFontSize = InterfaceFontSize.NORMAL,
+    onFontSizeChange: (InterfaceFontSize) -> Unit = {},
     autoNextSeasonEnabled: Boolean = true,
     onAutoNextSeasonChange: (Boolean) -> Unit = {},
     autoNextEnabled: Boolean = true,
@@ -648,6 +654,7 @@ private fun SeasonvarContent(
                         listPrefetchEnabled = listPrefetchEnabled, onListPrefetchChange = onListPrefetchChange,
                         showActors = showActors, onShowActorsChange = onShowActorsChange,
                         interfaceTheme = interfaceTheme, onInterfaceThemeChange = onInterfaceThemeChange,
+                        fontSize = fontSize, onFontSizeChange = onFontSizeChange,
                         bypassEnabled = bypassEnabled, settingsContentFocus = focus.settingsContentFocus,
                         translationSettingsModel = translationSettingsModel,
                         menuFocus = focus.settingsFocus,

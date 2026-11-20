@@ -425,6 +425,10 @@
     <string name="reviews_read">Читать рецензию</string>
     <string name="reviews_hint">Вправо — читать · Влево — к списку</string>
     <string name="interface_theme_title">Тема оформления</string>
+    <string name="font_size_title">Размер шрифта</string>
+    <string name="font_size_description">Размер текста в приложении.</string>
+    <string name="font_size_normal">Обычный</string>
+    <string name="font_size_large">Крупный</string>
     <string name="interface_theme_description">Цвета, прозрачность и фон списков и карточек.</string>
     <string name="interface_theme_classic">Классическая</string>
     <string name="interface_theme_glass">Стекло</string>

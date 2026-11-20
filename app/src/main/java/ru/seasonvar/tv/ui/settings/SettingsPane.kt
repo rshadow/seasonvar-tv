@@ -30,6 +30,8 @@ internal fun SettingsPane(
     onShowActorsChange: (Boolean) -> Unit,
     interfaceTheme: InterfaceTheme,
     onInterfaceThemeChange: (InterfaceTheme) -> Unit,
+    fontSize: InterfaceFontSize,
+    onFontSizeChange: (InterfaceFontSize) -> Unit,
     autoNextSeasonEnabled: Boolean,
     onAutoNextSeasonChange: (Boolean) -> Unit,
     autoNextEnabled: Boolean,
@@ -70,7 +72,7 @@ internal fun SettingsPane(
         Spacer(Modifier.height(d.spacingLarge))
         ApplicationSettingsSection(startPage, onStartPageChange, hiddenSections, onSectionVisibilityChange, signedIn,
             translationSettingsModel, showActors, onShowActorsChange, interfaceTheme, onInterfaceThemeChange,
-            focus, onBack, onCloseDialog, onInteraction)
+            fontSize, onFontSizeChange, focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         PlayerSettingsSection(autoNextEnabled, onAutoNextChange, autoNextSeasonEnabled, onAutoNextSeasonChange,
             playerClockPosition, onPlayerClockPositionChange, playbackSpeed, onPlaybackSpeedChange,
@@ -92,6 +94,7 @@ internal class SettingsFocus(val start: FocusRequester, val menu: FocusRequester
     val translations = FocusRequester()
     val actors = FocusRequester()
     val appearance = FocusRequester()
+    val fontSize = FocusRequester()
     val autoNext = FocusRequester()
     val autoSeason = FocusRequester()
     val clock = FocusRequester()

@@ -72,7 +72,8 @@ class ActorSeriesActivity : ComponentActivity() {
             onRemoved = {}))[MarkRemovalViewModel::class.java]
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
-            SeasonvarTheme(interfaceTheme) {
+            val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme, fontSize) {
                 ActorSeriesScreen(name, url, container, model, details, actions,
                     onPlay = { playback.launch(PlayerActivity.intent(this, it)) }, onExit = ::finish)
             }

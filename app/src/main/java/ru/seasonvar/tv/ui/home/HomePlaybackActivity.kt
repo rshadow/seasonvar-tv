@@ -41,7 +41,8 @@ class HomePlaybackActivity : ComponentActivity() {
         val container = application as SeasonvarApplication
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
-            SeasonvarTheme(interfaceTheme) {
+            val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
+            SeasonvarTheme(interfaceTheme, fontSize) {
                 val d = SeasonvarTheme.dimensions
                 val retry = remember { FocusRequester() }
                 BackHandler { finish() }

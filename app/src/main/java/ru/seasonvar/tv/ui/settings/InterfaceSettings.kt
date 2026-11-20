@@ -36,6 +36,16 @@ internal class InterfaceSettings(context: Context) {
         mutableInterfaceTheme.value = value
     }
 
+    private val mutableFontSize = MutableStateFlow(
+        if (preferences.getBoolean("large_interface_font", false)) InterfaceFontSize.LARGE else InterfaceFontSize.NORMAL,
+    )
+    val fontSize = mutableFontSize.asStateFlow()
+
+    fun setFontSize(size: InterfaceFontSize) {
+        preferences.edit().putBoolean("large_interface_font", size == InterfaceFontSize.LARGE).apply()
+        mutableFontSize.value = size
+    }
+
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 
