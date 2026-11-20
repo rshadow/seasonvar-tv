@@ -32,6 +32,7 @@
 - [x] **Настройки** — группы «Приложение», «Плеер», «Сеть» и «Подключение»; [ADR-0103](docs/adr/0103-player-settings-group.md), [ADR-0141](docs/adr/0141-network-and-connection-settings.md).
 - [x] **При запуске** — выбор первого раздела; [ADR-0045](docs/adr/0045-start-page-setting.md).
 - [x] **Скрытие разделов меню** — галочки видимости и скрытие пустых групп; [ADR-0101](docs/adr/0101-menu-section-visibility.md).
+- [x] **Размер шрифта** — обычный и крупный текст с сохранением выбора; [ADR-0195](docs/adr/0195-interface-font-size.md).
 - [x] **О программе** — версия, обновление приложения и описания релизов; [ADR-0074](docs/adr/0074-in-app-github-updates.md), [ADR-0100](docs/adr/0100-about-release-notes.md).
 
 ## Аккаунт и личные списки
