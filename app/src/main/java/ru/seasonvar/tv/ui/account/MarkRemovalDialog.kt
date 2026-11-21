@@ -31,7 +31,7 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 @Composable
 internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit, onAsk: () -> Unit,
     onConfirm: () -> Unit, onInteraction: () -> Unit, onRefresh: () -> Unit = {},
-    onSelectStatus: (AccountListStatus) -> Unit = {}) {
+    onSelectStatus: (AccountListStatus) -> Unit = {}, onMarkEpisode: () -> Unit = {}) {
     val error = stringResource(if (state.stage != RemovalStage.CONFIRM) R.string.mark_list_error else R.string.mark_remove_error)
     ShortMessageEffect(if (state.failure != null) error else null)
     val entry = state.entry ?: return
@@ -42,11 +42,14 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
     val second = remember { FocusRequester() }
     val refresh = remember { FocusRequester() }
     val delete = remember { FocusRequester() }
+    val episodeFocus = remember { FocusRequester() }
     val choices = remember { AccountListStatus.entries.map { FocusRequester() } }
     var lastChoice by remember { mutableStateOf<FocusRequester?>(null) }
     var initialFocusPlaced by remember(entry.key) { mutableStateOf(false) }
     val openedAt = remember { android.os.SystemClock.uptimeMillis() }
-    val confirm = state.stage == RemovalStage.CONFIRM
+    val confirm = state.stage != RemovalStage.ACTIONS
+    val episodeConfirmation = state.stage == RemovalStage.EPISODE_CONFIRM
+    val episode = state.episodeMark?.episode
     val pending = state.loadingStatus || state.busy
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         BackHandler(onBack = onDismiss)
@@ -73,7 +76,11 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
             verticalArrangement = Arrangement.spacedBy(if (confirm) d.spacingMedium else d.spacingSmall)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                Text(stringResource(if (confirm) R.string.mark_remove_question else R.string.mark_actions_title),
+                Text(stringResource(when (state.stage) {
+                    RemovalStage.ACTIONS -> R.string.mark_actions_title
+                    RemovalStage.CONFIRM -> R.string.mark_remove_question
+                    RemovalStage.EPISODE_CONFIRM -> R.string.mark_episode_replace_question
+                }),
                     modifier = Modifier.weight(1f), color = c.onBackground, style = MaterialTheme.typography.headlineSmall)
                 if (!confirm) ThemeButton(stringResource(R.string.mark_list_refresh), onRefresh,
                     Modifier.focusRequester(refresh).focusProperties {
@@ -85,14 +92,21 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
             Text(listOfNotNull(entry.title, entry.season?.let { stringResource(R.string.season_number, it) }).joinToString(" · "),
                 color = c.onBackground, style = MaterialTheme.typography.titleMedium)
             if (confirm) {
-                Text(stringResource(R.string.mark_remove_explanation), color = c.onSurfaceVariant,
+                val explanation = if (episodeConfirmation) {
+                    val previous = checkNotNull(state.episodeConflict)
+                    val label = previous.mark?.let { stringResource(R.string.episode_number, it.episode) }
+                        ?: stringResource(statusLabel(checkNotNull(AccountListStatus.from(previous))))
+                    stringResource(R.string.mark_episode_replace_explanation, label, checkNotNull(episode))
+                } else stringResource(R.string.mark_remove_explanation)
+                Text(explanation, color = c.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
                     ThemeButton(stringResource(R.string.mark_remove_cancel), onDismiss,
                         Modifier.height(d.headerButtonSize).focusRequester(first).focusProperties { left = FocusRequester.Cancel; right = second })
-                    ThemeButton(stringResource(R.string.mark_remove_action), onConfirm,
+                    ThemeButton(stringResource(if (episodeConfirmation) R.string.mark_episode_confirm else R.string.mark_remove_action), onConfirm,
                         Modifier.height(d.headerButtonSize).focusRequester(second).focusProperties { left = first; right = FocusRequester.Cancel },
-                        loading = state.busy, actionEnabled = !state.busy, loadingLabel = stringResource(R.string.mark_removing))
+                        loading = state.busy, actionEnabled = !state.busy,
+                        loadingLabel = stringResource(if (episodeConfirmation) R.string.mark_list_saving else R.string.mark_removing))
                 }
             } else {
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
@@ -103,20 +117,27 @@ internal fun MarkRemovalDialog(state: MarkRemovalUiState, onDismiss: () -> Unit,
                                 .onFocusChanged { if (it.isFocused) { lastChoice = choices[index] } }
                                 .focusProperties {
                                     up = choices.getOrNull(index - 1) ?: refresh
-                                    down = choices.getOrNull(index + 1) ?: delete
+                                    down = choices.getOrNull(index + 1) ?: if (episode == null) delete else episodeFocus
                                     left = FocusRequester.Cancel; right = refresh
                                 }, active = state.status == option, actionEnabled = !pending, checked = state.status == option)
                     }
+                    if (episode != null) ThemeButton(stringResource(R.string.mark_episode_action, episode), onMarkEpisode,
+                        Modifier.fillMaxWidth().height(d.headerButtonSize).focusRequester(episodeFocus)
+                            .onFocusChanged { if (it.isFocused) lastChoice = episodeFocus }
+                            .focusProperties {
+                                up = choices.last(); down = delete; left = FocusRequester.Cancel; right = refresh
+                            }, actionEnabled = !pending, reserveCheckSpace = true)
                     ThemeButton(stringResource(R.string.mark_remove_from_list), onAsk,
                         Modifier.fillMaxWidth().height(d.headerButtonSize).focusRequester(delete)
                             .onFocusChanged { if (it.isFocused) { lastChoice = delete } }
                             .focusProperties {
-                                up = choices.last(); down = FocusRequester.Cancel; left = FocusRequester.Cancel; right = refresh
+                                up = if (episode == null) choices.last() else episodeFocus
+                                down = FocusRequester.Cancel; left = FocusRequester.Cancel; right = refresh
                             }, actionEnabled = !pending && entry.accountListMark != null, reserveCheckSpace = true)
                 }
             }
         }
-        LaunchedEffect(state.stage, state.loadingStatus) {
+        LaunchedEffect(state.stage, state.loadingStatus, state.episodeConflict) {
             if (confirm) {
                 repeat(2) { withFrameNanos { } }
                 first.requestFocus()

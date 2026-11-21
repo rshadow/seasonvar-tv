@@ -17,7 +17,7 @@ import ru.seasonvar.tv.data.playback.AccountMarkWriter
 import ru.seasonvar.tv.ui.catalog.LoadFailure
 import java.io.IOException
 
-enum class RemovalStage { ACTIONS, CONFIRM }
+enum class RemovalStage { ACTIONS, CONFIRM, EPISODE_CONFIRM }
 data class MarkRemovalUiState(
     val entry: SeriesEntry? = null,
     val stage: RemovalStage = RemovalStage.ACTIONS,
@@ -26,6 +26,8 @@ data class MarkRemovalUiState(
     val failure: LoadFailure? = null,
     val status: AccountListStatus? = null,
     val loadingStatus: Boolean = false,
+    val episodeMark: PlaybackMark? = null,
+    val episodeConflict: PlaybackMarkSnapshot? = null,
 )
 
 class MarkRemovalViewModel internal constructor(
@@ -35,6 +37,7 @@ class MarkRemovalViewModel internal constructor(
     private val loadStatus: suspend (AccountListMark) -> AccountListStatus? = { null },
     private val changeStatus: suspend (SeriesEntry, AccountListStatus, Long) -> PlaybackMarkSnapshot = { _, _, _ -> throw UnsupportedOperationException() },
     private val onChanged: (AccountListMark, AccountListStatus) -> Unit = { _, _ -> },
+    private val completeEpisode: suspend (PlaybackMark, Long, PlaybackMarkSnapshot?) -> Unit = { _, _, _ -> throw UnsupportedOperationException() },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MarkRemovalUiState())
     val state = mutableState.asStateFlow()
@@ -47,17 +50,21 @@ class MarkRemovalViewModel internal constructor(
         }
     } } }
 
-    fun show(entry: SeriesEntry, stage: RemovalStage = RemovalStage.ACTIONS) {
+    fun show(entry: SeriesEntry, stage: RemovalStage = RemovalStage.ACTIONS, fromDetails: Boolean = false) {
         if (state.value.busy || session.value.user == null || stage == RemovalStage.CONFIRM && entry.accountListMark == null) return
         job?.cancel()
         ownerVersion = session.value.version
-        mutableState.value = MarkRemovalUiState(entry, stage, visible = true)
-        if (stage != RemovalStage.CONFIRM) loadCurrentStatus()
+        val selection = entry.initialSelection
+        val episodeMark = if (fromDetails && selection.episodeLabel != null && selection.translationId != null) {
+            runCatching { PlaybackMark(entry.id, entry.url, selection.episodeLabel, selection.translationId, 0) }.getOrNull()
+        } else null
+        mutableState.value = MarkRemovalUiState(entry, stage, visible = true, episodeMark = episodeMark)
+        if (stage == RemovalStage.ACTIONS) loadCurrentStatus()
     }
     fun refreshStatus() {
         val current = state.value
         if (!current.visible || current.entry == null || current.loadingStatus || current.busy ||
-            current.stage == RemovalStage.CONFIRM || session.value.version != ownerVersion) return
+            current.stage != RemovalStage.ACTIONS || session.value.version != ownerVersion) return
         loadCurrentStatus()
     }
 
@@ -86,7 +93,7 @@ class MarkRemovalViewModel internal constructor(
     fun selectStatus(status: AccountListStatus) {
         val current = state.value
         val entry = current.entry ?: return
-        if (current.busy || current.loadingStatus || current.stage == RemovalStage.CONFIRM || session.value.version != ownerVersion) return
+        if (current.busy || current.loadingStatus || current.stage != RemovalStage.ACTIONS || session.value.version != ownerVersion) return
         mutableState.value = current.copy(busy = true, failure = null)
         val version = ownerVersion
         job = viewModelScope.launch {
@@ -108,6 +115,34 @@ class MarkRemovalViewModel internal constructor(
         is SiteHttpException -> LoadFailure.HTTP
         else -> LoadFailure.MARKUP
     }
+    fun markEpisode() {
+        if (state.value.stage == RemovalStage.ACTIONS) saveEpisode(confirmed = null)
+    }
+
+    private fun saveEpisode(confirmed: PlaybackMarkSnapshot?) {
+        val current = state.value
+        val mark = current.episodeMark ?: return
+        if (!current.visible || current.busy || current.loadingStatus || session.value.version != ownerVersion) return
+        mutableState.value = current.copy(busy = true, failure = null)
+        val version = ownerVersion
+        job = viewModelScope.launch {
+            try {
+                completeEpisode(mark, version, confirmed)
+                ensureActive()
+                if (session.value.version == version) mutableState.value = MarkRemovalUiState()
+            } catch (error: EpisodeMarkConflict) {
+                ensureActive()
+                if (session.value.version == version) mutableState.value = state.value.copy(
+                    stage = RemovalStage.EPISODE_CONFIRM, episodeConflict = error.current, busy = false,
+                )
+            } catch (error: CancellationException) { throw error }
+            catch (error: Exception) {
+                ensureActive()
+                if (session.value.version == version) mutableState.value = state.value.copy(busy = false, failure = failure(error))
+            }
+        }
+    }
+
     fun ask() {
         val current = state.value
         if (current.busy || current.entry?.accountListMark == null || session.value.version != ownerVersion) return
@@ -120,6 +155,10 @@ class MarkRemovalViewModel internal constructor(
     }
     fun confirm() {
         val current = state.value
+        if (current.stage == RemovalStage.EPISODE_CONFIRM) {
+            saveEpisode(confirmed = current.episodeConflict ?: return)
+            return
+        }
         val target = current.entry?.accountListMark ?: return
         if (current.busy || current.stage != RemovalStage.CONFIRM || session.value.version != ownerVersion) return
         mutableState.value = current.copy(busy = true, failure = null)
@@ -147,7 +186,8 @@ class MarkRemovalViewModel internal constructor(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(MarkRemovalViewModel::class.java))
             @Suppress("UNCHECKED_CAST")
-            return MarkRemovalViewModel(account.session, writer::removeMark, onRemoved, account::listStatus, writer::setListStatus, onChanged) as T
+            return MarkRemovalViewModel(account.session, writer::removeMark, onRemoved, account::listStatus,
+                writer::setListStatus, onChanged, writer::completeEpisode) as T
         }
     }
 }

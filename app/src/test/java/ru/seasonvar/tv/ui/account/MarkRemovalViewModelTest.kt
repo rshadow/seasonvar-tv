@@ -10,6 +10,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import ru.seasonvar.tv.data.EntrySelection
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.account.*
 import java.io.IOException
@@ -26,6 +27,27 @@ class MarkRemovalViewModelTest {
         MarkRemovalViewModel(session, remove, removed::add).also { store.put("removal", it) }
     @Before fun setup() { Dispatchers.setMain(dispatcher) }
     @After fun teardown() { store.clear(); Dispatchers.resetMain() }
+
+    @Test fun card_menu_marks_the_selected_episode_and_confirmed_progress_only() = runTest(dispatcher) {
+        val current = PlaybackMarkSnapshot(PlaybackMark(target.seasonId, target.pageUrl, "8", "0", 125))
+        val calls = mutableListOf<PlaybackMarkSnapshot?>()
+        val model = MarkRemovalViewModel(session, { _, _ -> fail() }, {}, completeEpisode = { mark, version, confirmed ->
+            assertEquals(PlaybackMark(target.seasonId, target.pageUrl, "5", "7", 0), mark)
+            assertEquals(1L, version)
+            calls += confirmed
+            if (confirmed != current) throw EpisodeMarkConflict(current)
+        }).also { store.put("removal", it) }
+        val selected = entry.copy(initialSelection = EntrySelection(episodeId = "5_0", episodeLabel = "5", translationId = "7"))
+        model.show(selected); runCurrent()
+        assertNull(model.state.value.episodeMark)
+        model.show(selected, fromDetails = true); runCurrent()
+        model.markEpisode(); runCurrent()
+        assertEquals(RemovalStage.EPISODE_CONFIRM, model.state.value.stage)
+        assertEquals(current, model.state.value.episodeConflict)
+        model.confirm(); model.confirm(); runCurrent()
+        assertEquals(listOf(null, current), calls)
+        assertFalse(model.state.value.visible)
+    }
 
     @Test fun actions_and_cancellation_do_not_write_and_confirmation_cannot_be_submitted_twice() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>()

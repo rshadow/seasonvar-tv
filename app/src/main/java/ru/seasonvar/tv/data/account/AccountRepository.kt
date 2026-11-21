@@ -345,7 +345,26 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         resumeData().progress
     }
 
-    suspend fun savePlaybackMark(mark: PlaybackMark, ownerVersion: Long = session.value.version, automatic: Boolean = false): PlaybackMark? = withContext(dispatcher) { mutex.withLock {
+    suspend fun savePlaybackMark(mark: PlaybackMark, ownerVersion: Long = session.value.version, automatic: Boolean = false): PlaybackMark? =
+        writePlaybackMark(mark, ownerVersion) { !automatic || !markSupersedes(it, mark) }
+
+    suspend fun completeEpisode(mark: PlaybackMark, ownerVersion: Long, confirmed: PlaybackMarkSnapshot?) {
+        require(mark.positionSeconds == 0L)
+        writePlaybackMark(mark, ownerVersion) { before ->
+            val previous = before.mark
+            val previousNumber = previous?.episode?.toBigDecimalOrNull()
+            val selectedNumber = mark.episode.toBigDecimalOrNull()
+            val replacesProgress = previous != null && previous.episode != mark.episode &&
+                (previousNumber == null || selectedNumber == null || previousNumber >= selectedNumber)
+            val replacesStatus = before.status == AccountListStatus.WATCHED.code ||
+                before.status == AccountListStatus.NOT_WATCHING.code
+            if ((replacesProgress || replacesStatus) && before != confirmed) throw EpisodeMarkConflict(before)
+            previous != mark
+        }
+    }
+
+    private suspend fun writePlaybackMark(mark: PlaybackMark, ownerVersion: Long,
+        shouldWrite: (PlaybackMarkSnapshot) -> Boolean): PlaybackMark? = withContext(dispatcher) { mutex.withLock {
         val expected = session.value
         if (expected.user == null) throw SessionExpiredException()
         if (expected.version != ownerVersion) throw kotlinx.coroutines.CancellationException()
@@ -361,7 +380,7 @@ class AccountRepository(private val sessions: SessionManager, private val transp
             return html
         }
         val before = PlaybackMarkParser.snapshot(read(), mark.seasonId, mark.pageUrl)
-        if (automatic && markSupersedes(before, mark)) {
+        if (!shouldWrite(before)) {
             acceptCurrentMark(mark.seasonId, before)
             return@withLock null
         }

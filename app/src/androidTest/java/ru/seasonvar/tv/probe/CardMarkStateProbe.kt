@@ -156,6 +156,14 @@ internal object CardMarkStateProbe {
             runBlocking { check(runCatching { account.savePlaybackMark(PlaybackMark(row.id, row.url, "4", "0", 90)) }
                 .exceptionOrNull() is MarkSaveRejectedException) }
             check(cache.mark(row.id)?.snapshot?.mark?.episode == "3")
+            phase = "manual_completion"
+            response = """{"msg":"success"}"""; calls.clear()
+            val completed = PlaybackMark(row.id, row.url, "5", "0", 0)
+            runBlocking { account.completeEpisode(completed, account.session.value.version, confirmed = null) }
+            check(calls == listOf("GET", "POST"))
+            check(cache.mark(row.id)?.snapshot?.mark == completed)
+            waitFor { find(uiAutomation.rootInActiveWindow, progress(5)) != null && badges(uiAutomation.rootInActiveWindow) == 2 }
+            check(card(row.title)?.isFocused == true)
             phase = "remove"
             response = """{"msg":"success"}"""; calls.clear()
             runBlocking { account.removeListMark(AccountListMark(row.id, row.url), account.session.value.version) }

@@ -15,13 +15,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 import ru.seasonvar.tv.R
+import ru.seasonvar.tv.data.Episode
+import ru.seasonvar.tv.data.PublicFeed
+import ru.seasonvar.tv.data.SeasonOption
+import ru.seasonvar.tv.data.SeriesDetails
 import ru.seasonvar.tv.data.SeriesEntry
+import ru.seasonvar.tv.data.Translation
 import ru.seasonvar.tv.data.account.AccountListMark
 import ru.seasonvar.tv.data.account.AccountListStatus
+import ru.seasonvar.tv.data.account.AccountSession
+import ru.seasonvar.tv.data.account.AccountUser
+import ru.seasonvar.tv.data.account.PlaybackMark
+import ru.seasonvar.tv.data.account.PlaybackMarkSnapshot
+import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.account.*
+import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import ru.seasonvar.tv.ui.catalog.LoadFailure
+import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
@@ -38,6 +53,9 @@ object MarkMenuLayoutProbe {
         var selections = 0
         var confirmations = 0
         var asks = 0
+        var episodeRequests = 0
+        val mark = PlaybackMark(entry.id, entry.url, "5", "0", 0)
+        val models = ViewModelStore()
         val artifacts = File(checkNotNull(targetContext.getExternalFilesDir("mark-menu-probe")), "run-" + System.currentTimeMillis())
         fun <T> main(block: () -> T): T {
             var value: Any? = null
@@ -49,12 +67,16 @@ object MarkMenuLayoutProbe {
         }
         fun waitFor(predicate: () -> Boolean) {
             val end = SystemClock.elapsedRealtime() + 8000
-            while (!predicate()) { check(SystemClock.elapsedRealtime() < end) { "Timed out in " + phase }; Thread.sleep(50) }
+            while (!predicate()) {
+                check(SystemClock.elapsedRealtime() < end) { "Timed out in " + phase }
+                Thread.sleep(50)
+                if (android.os.Build.VERSION.SDK_INT >= 33) uiAutomation.clearCache()
+            }
         }
         fun stage(name: String) { phase = name; sendStatus(Activity.RESULT_OK, Bundle().apply { putString("phase", name) }) }
         fun find(node: AccessibilityNodeInfo?, label: String): AccessibilityNodeInfo? {
             node ?: return null
-            if (node.text?.toString() == label || node.contentDescription?.toString() == label) return node
+            if (node.text?.toString()?.lineSequence()?.any { it == label } == true || node.contentDescription?.toString() == label) return node
             for (index in 0 until node.childCount) find(node.getChild(index), label)?.let { return it }
             return null
         }
@@ -92,7 +114,12 @@ object MarkMenuLayoutProbe {
                                 onConfirm = { confirmations++; state.value = state.value.copy(busy = true) },
                                 onInteraction = {},
                                 onRefresh = { refreshes++; state.value = state.value.copy(loadingStatus = true, failure = null) },
-                                onSelectStatus = { selections++; state.value = state.value.copy(busy = true, failure = null) })
+                                onSelectStatus = { selections++; state.value = state.value.copy(busy = true, failure = null) },
+                                onMarkEpisode = {
+                                    episodeRequests++
+                                    state.value = state.value.copy(stage = RemovalStage.EPISODE_CONFIRM,
+                                        episodeConflict = PlaybackMarkSnapshot(mark.copy(episode = "8")))
+                                })
                         }
                     }
                 }
@@ -167,6 +194,70 @@ object MarkMenuLayoutProbe {
             waitFor { focus(text(R.string.mark_remove_action)) }; check(confirmationBounds() == confirmation)
             key(KeyEvent.KEYCODE_ESCAPE); waitFor { main { !state.value.visible } }
             check(main { confirmations == 1 })
+
+            stage("episode_confirmation")
+            update { MarkRemovalUiState(marked, visible = true, status = AccountListStatus.WATCHING, episodeMark = mark) }
+            waitFor { focus(text(R.string.mark_list_watching)) }
+            repeat(3) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
+            val episodeLabel = targetContext.getString(R.string.mark_episode_action, mark.episode)
+            waitFor { focus(episodeLabel) }
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { focus(text(R.string.mark_remove_cancel)) }
+            check(episodeRequests == 1 && confirmations == 1)
+            val previous = targetContext.getString(R.string.episode_number, "8")
+            val question = targetContext.getString(R.string.mark_episode_replace_explanation, previous, mark.episode)
+            waitFor { find(uiAutomation.rootInActiveWindow, question) != null }
+            ButtonAlignmentChecks.centered(probe, text(R.string.mark_remove_cancel))
+            ButtonAlignmentChecks.centered(probe, text(R.string.mark_episode_confirm))
+            capture("10-replace-episode-mark")
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { focus(text(R.string.mark_episode_confirm)) && main { state.value.busy } }
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
+            check(confirmations == 2)
+            key(KeyEvent.KEYCODE_BACK); waitFor { main { !state.value.visible } }
+
+            stage("mark_from_season_card")
+            val account = AccountSession(AccountUser("12", "Тест", null), version = 1)
+            val session = MutableStateFlow(account)
+            var saved: PlaybackMark? = null
+            main {
+                val details = SeriesDetailsViewModel {
+                    SeriesDetails(it, it.id, emptyList(), emptyList(), emptyList(),
+                        listOf(SeasonOption(it.id, it.url, "Сезон 1", 1)),
+                        listOf(Translation("0", "Оригинал", (1..8).map { number -> Episode("id-$number", number.toString()) })), "0")
+                }.also { models.put("details", it) }
+                val actions = MarkRemovalViewModel(session, { _, _ -> error("Unexpected removal") }, {},
+                    loadStatus = { AccountListStatus.WATCHING }, completeEpisode = { target, _, _ -> saved = target })
+                    .also { models.put("actions", it) }
+                activity.setContent {
+                    SeasonvarApp(mapOf(PublicFeed.TODAY to CatalogUiState(entries = listOf(marked), loaded = true, loading = false)),
+                        onRefresh = {}, interfaceTheme = theme, accountSession = account, detailsModel = details,
+                        onPlay = { error("Unexpected playback") },
+                        removalState = actions.state.collectAsStateWithLifecycle().value,
+                        onRemovalActions = { target, fromDetails -> actions.show(target, fromDetails = fromDetails) },
+                        onMarkEpisode = actions::markEpisode, onRemovalDismiss = actions::dismiss)
+                }
+            }
+            fun cardFocused(node: AccessibilityNodeInfo?): Boolean = node != null &&
+                (node.isFocused && find(node, marked.title) != null || (0 until node.childCount).any { cardFocused(node.getChild(it)) })
+            val today = text(R.string.today_title)
+            waitFor { focus(today) || cardFocused(uiAutomation.rootInActiveWindow) }
+            if (focus(today)) key(KeyEvent.KEYCODE_DPAD_RIGHT)
+            waitFor { cardFocused(uiAutomation.rootInActiveWindow) }
+            stage("select_episode")
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focus(text(R.string.details_watch)) }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focus("1") }
+            repeat(4) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focus("5") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focus(text(R.string.details_watch)) }
+            stage("open_episode_action")
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focus(text(R.string.series_actions_menu)) }
+            key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focus(text(R.string.mark_list_watching)) }
+            repeat(3) { key(KeyEvent.KEYCODE_DPAD_DOWN) }; waitFor { focus(episodeLabel) }
+            capture("09-mark-episode")
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
+            waitFor { focus(text(R.string.series_actions_menu)) }
+            check(main { saved } == mark)
+
             result.putBoolean("geometry_stable", true)
             result.putBoolean("refresh_focus_preserved", true)
             result.putBoolean("save_focus_preserved", true)
@@ -186,6 +277,7 @@ object MarkMenuLayoutProbe {
             runCatching { capture("failure") }
         } finally {
             activity?.let { main { it.finish() } }
+            main { models.clear() }
             result.putString("artifacts", artifacts.path)
             finish(if (result.getBoolean("script_success")) Activity.RESULT_OK else Activity.RESULT_CANCELED, result)
         }

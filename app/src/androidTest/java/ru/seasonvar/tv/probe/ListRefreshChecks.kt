@@ -47,7 +47,7 @@ internal class ListRefreshChecks(
                     personalStates = PersonalFeed.entries.associateWith { feed -> current.getValue(sections.first { it.personalFeed == feed }) },
                     smartState = current.getValue(Section.SMART_CONTINUE),
                     removalState = removal.value,
-                    onRemovalActions = { removal.value = MarkRemovalUiState(it, RemovalStage.CONFIRM, visible = true) },
+                    onRemovalActions = { entry, _ -> removal.value = MarkRemovalUiState(entry, RemovalStage.CONFIRM, visible = true) },
                     onRemovalConfirm = { removal.value = MarkRemovalUiState() },
                     onFeedVisible = { feed -> visit(sections.first { it.publicFeed == feed }) },
                     onPersonalVisible = { feed -> feed?.let { visit(sections.first { it.personalFeed == feed }) } },
