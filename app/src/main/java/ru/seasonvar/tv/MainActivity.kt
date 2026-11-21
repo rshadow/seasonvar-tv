@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
         }
         searchModel = startupMeasure("model_search") { ViewModelProvider(this, SearchViewModel.Factory(repository, container.searchHistory))[SearchViewModel::class.java] }
         detailsModel = startupMeasure("model_details") { ViewModelProvider(this, SeriesDetailsViewModel.Factory(repository, container.playbackProgress, container.account,
-            preferredTranslations = { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java] }
+            preferredTranslations = { container.interfaceSettings.preferredTranslations.value }, comments = container.comments))[SeriesDetailsViewModel::class.java] }
         listRefresh = ViewModelProvider(this, ru.seasonvar.tv.ui.catalog.ListRefreshCoordinator.Factory(
             container.networkSettings.configuration.value, container::prepareNetwork, buildMap {
                 models.forEach { (feed, model) -> put(ru.seasonvar.tv.ui.navigation.Section.entries.first { it.publicFeed == feed },
@@ -176,6 +176,7 @@ class MainActivity : ComponentActivity() {
             val connectionCheck by connectionCheckModel.state.collectAsStateWithLifecycle()
             val imagePrefetchEnabled by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
             val listPrefetchEnabled by container.interfaceSettings.listPrefetchEnabled.collectAsStateWithLifecycle()
+            val showComments by container.interfaceSettings.showComments.collectAsStateWithLifecycle()
             val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
             val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
@@ -217,6 +218,7 @@ class MainActivity : ComponentActivity() {
                 imagePrefetchEnabled = imagePrefetchEnabled, onImagePrefetchChange = container.interfaceSettings::setImagePrefetchEnabled,
                 listPrefetchEnabled = listPrefetchEnabled, onListPrefetchChange = container.interfaceSettings::setListPrefetchEnabled,
                 showActors = showActors, onShowActorsChange = container.interfaceSettings::setShowActors,
+                showComments = showComments, onShowCommentsChange = container.interfaceSettings::setShowComments,
                 interfaceTheme = interfaceTheme, onInterfaceThemeChange = container.interfaceSettings::setInterfaceTheme,
                 fontSize = fontSize, onFontSizeChange = container.interfaceSettings::setFontSize,
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,

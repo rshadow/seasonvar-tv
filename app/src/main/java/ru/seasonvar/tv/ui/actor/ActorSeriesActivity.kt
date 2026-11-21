@@ -67,7 +67,7 @@ class ActorSeriesActivity : ComponentActivity() {
             container.prepareNetwork(container.networkSettings.configuration.value)
         })[ActorSeriesViewModel::class.java]
         details = ViewModelProvider(this, SeriesDetailsViewModel.Factory(container.repository, container.playbackProgress,
-            container.account, { container.interfaceSettings.preferredTranslations.value }))[SeriesDetailsViewModel::class.java]
+            container.account, { container.interfaceSettings.preferredTranslations.value }, comments = container.comments))[SeriesDetailsViewModel::class.java]
         val actions = ViewModelProvider(this, MarkRemovalViewModel.Factory(container.account, container.accountMarks,
             onRemoved = {}))[MarkRemovalViewModel::class.java]
         setContent {
@@ -102,6 +102,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val session by container.account.session.collectAsStateWithLifecycle()
     val network by container.networkSettings.configuration.collectAsStateWithLifecycle()
     val prefetch by container.interfaceSettings.imagePrefetchEnabled.collectAsStateWithLifecycle()
+    val showComments by container.interfaceSettings.showComments.collectAsStateWithLifecycle()
     val showActors by container.interfaceSettings.showActors.collectAsStateWithLifecycle()
     val removal by actions.state.collectAsStateWithLifecycle()
     var previousAccount by remember { mutableLongStateOf(session.version) }
@@ -205,7 +206,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
             val detailEntry = entry
             if (detailEntry != null) SeriesDetailsPane(detailEntry, details, FocusRequester.Cancel, {}, onPlay,
                 onActions = if (session.user == null) null else ({ actions.show(it) }), removalDialogOpen = removal.visible,
-                showActors = showActors, onBackdropSource = onBackdropSource)
+                showActors = showActors, showComments = showComments, onBackdropSource = onBackdropSource)
             else CatalogPane(state, selected, list, cards, null, FocusRequester.Cancel, refresh, retry,
                 onBackdropSource = onBackdropSource,
                 onRefresh = { model.refresh() }, onFocused = { selectedKey = it.key },

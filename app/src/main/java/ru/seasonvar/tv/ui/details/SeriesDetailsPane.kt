@@ -6,14 +6,13 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -33,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import kotlinx.coroutines.flow.filterNotNull
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
@@ -60,6 +60,7 @@ internal fun SeriesDetailsPane(
     onActions: ((SeriesEntry) -> Unit)? = null,
     removalDialogOpen: Boolean = false,
     showActors: Boolean = true,
+    showComments: Boolean = true,
     onBackdropSource: PosterBackdropPublisher? = null,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
@@ -67,6 +68,26 @@ internal fun SeriesDetailsPane(
     val entry = state.entry ?: sourceEntry
     val preparing = state.loading || state.entry == null
     val navigation = rememberDetailsNavigation()
+    val loadComments = model.loadComments.takeIf { showComments }
+    val commentFeed = remember(entry.id, loadComments) { SeasonCommentFeed() }
+    val commentsFocus = remember { FocusRequester() }
+    val commentsReady = commentFeed.entries.isNotEmpty() || commentFeed.failed
+    val afterDescription = if (commentsReady) commentsFocus else FocusRequester.Cancel
+    val episodes = state.episodes.orEmpty()
+    val beforeDescription = when {
+        episodes.size > SeasonvarTheme.allEpisodesThreshold -> navigation.allEpisodes
+        episodes.isNotEmpty() -> navigation.selectedEpisodeFocus
+        else -> navigation.play
+    }
+    LaunchedEffect(commentFeed, preparing) {
+        if (preparing || loadComments == null) return@LaunchedEffect
+        snapshotFlow {
+            val page = commentFeed.next
+            val lastVisible = navigation.scroll.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            page.takeIf { !commentFeed.loading && !commentFeed.failed &&
+                (page == 1 || lastVisible >= commentFeed.entries.size - 2) }
+        }.filterNotNull().collect { page -> commentFeed.append(page, entry, loadComments) }
+    }
     val posterImage = remember(entry.posterUrl) { mutableStateOf<Bitmap?>(null) }
     val backdropEnabled = SeasonvarTheme.posterBackdropEnabled
     if (backdropEnabled && onBackdropSource != null) {
@@ -92,24 +113,45 @@ internal fun SeriesDetailsPane(
             }
             val step = with(density) { (maxHeight - d.spacingSection).coerceAtLeast(d.navigationButtonHeight).toPx() }
             fun actionScrolling(origin: FocusRequester) = navigation.actionScrolling(origin, actorListState,
-                actorFocus, actorIndex, step, state.episodes.isNullOrEmpty(), onInteraction)
-            Column(Modifier.fillMaxSize().detailsScrollbar(navigation.scroll).then(navigation.pageScrolling(step))
-                .verticalScroll(navigation.scroll).padding(d.focusBorderWidth),
+                actorFocus, actorIndex, step, episodes.isEmpty(), commentsReady, onInteraction)
+            LazyColumn(Modifier.fillMaxSize().detailsScrollbar(navigation.scroll).then(navigation.pageScrolling(step)),
+                state = navigation.scroll, contentPadding = PaddingValues(d.focusBorderWidth),
                 verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-                SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
-                    navigation.actorReturnFocus, menuFocus, onPosterLoaded = { posterImage.value = it }) { actorIndex.intValue = it; onInteraction() }
-                SeriesDetailsActions(state, entry, model, navigation, menuFocus, preparing, onActions, onPlay, onInteraction, ::actionScrolling)
-                SeasonProgress(state, entry)
-                EpisodeList(state, model, navigation.selectedEpisodeFocus, navigation.allEpisodes, menuFocus,
-                    up = when {
-                        (state.details?.translations?.size ?: 0) > 1 -> navigation.translation
-                        (state.details?.seasons?.size ?: 0) > 1 -> navigation.season
-                        else -> navigation.play
-                    }, preparing = preparing, onInteraction = onInteraction, onPlay = onPlay,
-                    allModifier = Modifier.bringIntoViewRequester(navigation.allEpisodesView),
-                    onReadDescription = { navigation.readDescription(it, step) },
-                    onAllEpisodes = { navigation.show(DetailsDialog.EPISODES, navigation.allEpisodes, onInteraction) })
-                SeriesSynopsis(state)
+                item(key = "season") {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                        SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
+                            navigation.actorReturnFocus, menuFocus, onPosterLoaded = { posterImage.value = it }) { actorIndex.intValue = it; onInteraction() }
+                        SeriesDetailsActions(state, entry, model, navigation, menuFocus, preparing,
+                            if (episodes.isEmpty()) afterDescription else navigation.selectedEpisodeFocus,
+                            onActions, onPlay, onInteraction, ::actionScrolling)
+                        SeasonProgress(state, entry)
+                        EpisodeList(state, model, navigation.selectedEpisodeFocus, navigation.allEpisodes, menuFocus,
+                            up = when {
+                                (state.details?.translations?.size ?: 0) > 1 -> navigation.translation
+                                (state.details?.seasons?.size ?: 0) > 1 -> navigation.season
+                                else -> navigation.play
+                            }, preparing = preparing, onInteraction = onInteraction, onPlay = onPlay,
+                            allModifier = Modifier.bringIntoViewRequester(navigation.allEpisodesView),
+                            afterDescription = afterDescription,
+                            onReadDescription = { navigation.readDescription(it, step, commentsReady) },
+                            onAllEpisodes = { navigation.show(DetailsDialog.EPISODES, navigation.allEpisodes, onInteraction) })
+                        SeriesSynopsis(state)
+                    }
+                }
+                itemsIndexed(commentFeed.entries, key = { _, comment -> "${entry.id}:${comment.id}" }) { index, comment ->
+                    val first = index == 0
+                    SeasonCommentRow(comment, commentsFocus.takeIf { first },
+                        if (first) ({ navigation.returnFromComments(beforeDescription) }) else null)
+                }
+                if (commentFeed.loading || commentFeed.failed) item(key = "comments-status") {
+                    if (commentFeed.failed) {
+                        val first = commentFeed.entries.isEmpty()
+                        ThemeButton(stringResource(R.string.comments_retry), commentFeed::retry,
+                            if (first) Modifier.focusRequester(commentsFocus).returnFromFirstComment {
+                                navigation.returnFromComments(beforeDescription)
+                            } else Modifier)
+                    } else Text(stringResource(R.string.comments_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
@@ -203,6 +245,7 @@ private fun EpisodeList(
     onInteraction: () -> Unit, onAllEpisodes: () -> Unit,
     onPlay: (PlaybackRequest) -> Unit,
     allModifier: Modifier, onReadDescription: (Boolean) -> Boolean,
+    afterDescription: FocusRequester,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -237,7 +280,7 @@ private fun EpisodeList(
                                     if (index == 0) left = menuFocus
                                     if (index == episodes.lastIndex) right = FocusRequester.Cancel
                                     this.up = up
-                                    down = if (showAllEpisodes) allFocus else FocusRequester.Cancel
+                                    down = if (showAllEpisodes) allFocus else afterDescription
                                 }, active = state.episodeId == episode.id)
                     }
                 }
@@ -257,22 +300,24 @@ private fun EpisodeList(
                 }
                 .focusProperties {
                     left = menuFocus; right = FocusRequester.Cancel
-                    this.up = selectedFocus; down = FocusRequester.Cancel
+                    this.up = selectedFocus; down = afterDescription
                 })
     }
 }
 
 @Composable
-private fun Modifier.detailsScrollbar(scroll: ScrollState): Modifier {
+private fun Modifier.detailsScrollbar(scroll: LazyListState): Modifier {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     return drawWithContent {
         drawContent()
-        if (scroll.maxValue > 0) {
+        val indicator = scroll.scrollIndicatorState ?: return@drawWithContent
+        val range = indicator.contentSize - indicator.viewportSize
+        if (range > 0 && indicator.contentSize != Int.MAX_VALUE) {
             val width = d.focusBorderWidth.toPx()
             val x = size.width - width
-            val thumb = maxOf(d.spacingMedium.toPx(), size.height * size.height / (size.height + scroll.maxValue))
-            val y = (size.height - thumb) * scroll.value / scroll.maxValue
+            val thumb = maxOf(d.spacingMedium.toPx(), size.height * indicator.viewportSize / indicator.contentSize)
+            val y = (size.height - thumb) * indicator.scrollOffset.coerceIn(0, range) / range
             drawLine(c.onSurfaceVariant.copy(alpha = 0.3f), Offset(x, 0f), Offset(x, size.height), width)
             drawLine(c.onSurfaceVariant, Offset(x, y), Offset(x, y + thumb), width)
         }

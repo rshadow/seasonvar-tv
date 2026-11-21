@@ -36,6 +36,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     val searchHistory by lazy { ru.seasonvar.tv.data.SearchHistory(ru.seasonvar.tv.data.PreferencesSearchHistoryStore(this)) }
     val repository by lazy { CatalogRepository(File(cacheDir, "seasonvar-public"), siteClient,
         responseCache = htmlCache, cardCache = cardData) }
+    val comments by lazy { ru.seasonvar.tv.data.comments.CommentsRepository(htmlCache, siteClient) }
     val reviews by lazy { ru.seasonvar.tv.data.reviews.ReviewsRepository(htmlCache, siteClient) }
     internal val posterBackdrops by lazy { ru.seasonvar.tv.data.images.PosterBackdropCache() }
 

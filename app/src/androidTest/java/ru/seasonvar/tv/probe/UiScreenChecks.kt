@@ -34,6 +34,8 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             personalFilters = PersonalFeed.entries.filter { it != PersonalFeed.HISTORY }.associateWith { filterController },
             publicFilters = mapOf(PublicFeed.BEST to filterController),
             showActors = toggles.getValue(R.string.show_actors_title), onShowActorsChange = { toggles[R.string.show_actors_title] = it },
+            showComments = toggles.getValue(R.string.comments_setting_title),
+            onShowCommentsChange = { toggles[R.string.comments_setting_title] = it },
             autoNextEnabled = toggles.getValue(R.string.auto_next_setting_title), onAutoNextChange = { toggles[R.string.auto_next_setting_title] = it },
             autoNextSeasonEnabled = toggles.getValue(R.string.auto_next_season_setting_title), onAutoNextSeasonChange = { toggles[R.string.auto_next_season_setting_title] = it },
             imagePrefetchEnabled = toggles.getValue(R.string.image_prefetch_title), onImagePrefetchChange = { toggles[R.string.image_prefetch_title] = it },
@@ -65,7 +67,8 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         stage("settings_navigation")
         root(Section.SETTINGS); click(text(R.string.settings_title))
         val rows = listOf(R.string.start_page_title, R.string.menu_visibility_title, R.string.home_settings_title,
-            R.string.preferred_translation_title, R.string.show_actors_title, R.string.interface_theme_title, R.string.font_size_title,
+            R.string.preferred_translation_title, R.string.show_actors_title, R.string.comments_setting_title,
+            R.string.interface_theme_title, R.string.font_size_title,
             R.string.auto_next_setting_title, R.string.auto_next_season_setting_title, R.string.player_clock_title,
             R.string.playback_speed_default_title, R.string.show_player_controls_title, R.string.image_prefetch_title, R.string.list_prefetch_title,
             R.string.connection_refresh, R.string.bypass_title, R.string.dns_setting_title, R.string.proxy_title)
@@ -301,5 +304,42 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP); settle()
         check(Rect().also(checkNotNull(control(all))::getBoundsInScreen) == anchor && focused(all))
         capture("details-description-returned")
+    } }
+
+    fun seasonComments() = with(ui) { with(fixture) {
+        stage("season_comments_setting")
+        val enabled = mutableStateOf(false)
+        render { SeriesDetailsPane(entry, commentsModel, remember { FocusRequester() }, {}, {}, showComments = enabled.value) }
+        val watch = text(R.string.details_watch)
+        waitFor { optionFocused(watch) }
+        check(commentPages.isEmpty())
+        main { enabled.value = true }; waitFor { commentPages == listOf(1) }
+        fun dpad(code: Int) { sendKeyDownUpSync(code); settle() }
+        stage("season_comments_focus")
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN)
+        check(optionFocused("1"))
+        repeat(4) { if (!optionFocused("Первый зритель")) dpad(KeyEvent.KEYCODE_DPAD_DOWN) }
+        check(optionFocused("Первый зритель"))
+        check(find(uiAutomation.rootInActiveWindow, "Скрытый ответ.", exact = true) == null)
+        dpad(KeyEvent.KEYCODE_DPAD_UP)
+        check(optionFocused("1"))
+        repeat(4) { if (!optionFocused("Первый зритель")) dpad(KeyEvent.KEYCODE_DPAD_DOWN) }
+        check(optionFocused("Первый зритель"))
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN)
+        val showSpoiler = text(R.string.comment_show_spoiler)
+        waitFor { optionFocused(showSpoiler) }
+        check(find(uiAutomation.rootInActiveWindow, "↳ Автор ответа", exact = true) != null)
+        check(commentPages == listOf(1))
+        capture("comments-spoiler-hidden")
+        stage("season_comments_spoiler")
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFor { find(uiAutomation.rootInActiveWindow, "Скрытый ответ.", exact = true) != null }
+        capture("comments-spoiler-open")
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        check(find(uiAutomation.rootInActiveWindow, "Скрытый ответ.", exact = true) == null)
+        stage("season_comments_pagination")
+        repeat(15) { if (!optionFocused("Последний зритель")) dpad(KeyEvent.KEYCODE_DPAD_DOWN) }
+        check(commentPages == listOf(1, 2) && optionFocused("Последний зритель"))
+        capture("comments-second-page")
     } }
 }

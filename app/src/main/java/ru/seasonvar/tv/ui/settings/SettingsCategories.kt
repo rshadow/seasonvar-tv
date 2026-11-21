@@ -23,6 +23,7 @@ internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (
     hiddenSections: Set<Section>, onSectionVisibilityChange: (Section, Boolean) -> Unit,
     menuOrder: MenuOrder, onMenuOrderChange: (MenuOrder) -> Unit, signedIn: Boolean,
     translationSettingsModel: TranslationSettingsViewModel?, showActors: Boolean, onShowActorsChange: (Boolean) -> Unit,
+    showComments: Boolean, onShowCommentsChange: (Boolean) -> Unit,
     interfaceTheme: InterfaceTheme, onInterfaceThemeChange: (InterfaceTheme) -> Unit,
     fontSize: InterfaceFontSize, onFontSizeChange: (InterfaceFontSize) -> Unit,
     focus: SettingsFocus, onBack: () -> Unit, onCloseDialog: () -> Unit, onInteraction: () -> Unit) {
@@ -41,10 +42,13 @@ internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (
         focus.menu, focus.home, focus.actors, onBack, onCloseDialog, onInteraction)
     Spacer(Modifier.height(d.spacingMedium))
     SettingsToggle(R.string.show_actors_title, R.string.show_actors_description, showActors,
-        { onInteraction(); onShowActorsChange(it) }, focus.actors, focus.menu, focus.translations, focus.appearance)
+        { onInteraction(); onShowActorsChange(it) }, focus.actors, focus.menu, focus.translations, focus.comments)
+    Spacer(Modifier.height(d.spacingMedium))
+    SettingsToggle(R.string.comments_setting_title, R.string.comments_setting_description, showComments,
+        { onInteraction(); onShowCommentsChange(it) }, focus.comments, focus.menu, focus.actors, focus.appearance)
     Spacer(Modifier.height(d.spacingMedium))
     InterfaceThemeSetting(interfaceTheme, onInterfaceThemeChange,
-        focus.appearance, focus.menu, focus.actors, focus.fontSize, onBack, onCloseDialog, onInteraction)
+        focus.appearance, focus.menu, focus.comments, focus.fontSize, onBack, onCloseDialog, onInteraction)
     Spacer(Modifier.height(d.spacingMedium))
     SettingsChoice(R.string.font_size_title, R.string.font_size_description,
         options = InterfaceFontSize.entries, selected = fontSize, label = InterfaceFontSize::label,

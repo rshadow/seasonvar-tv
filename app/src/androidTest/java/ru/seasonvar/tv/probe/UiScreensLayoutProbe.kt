@@ -8,6 +8,8 @@ object UiScreensLayoutProbe {
         val ui = UiScreensProbeSession(probe, theme)
         ui.execute { fixtures ->
             val screens = UiScreenChecks(ui, fixtures)
+            screens.seasonComments()
+            screens.detailsNavigation()
             if (!dialogsOnly) {
                 screens.catalogsAndSearch()
                 screens.accountStates()
@@ -17,7 +19,6 @@ object UiScreensLayoutProbe {
             screens.aboutAndUpdate()
             screens.filterDialogs()
             screens.detailsDialogs()
-            screens.detailsNavigation()
             with(ui.result) {
                 putBoolean("screens_verified", !dialogsOnly); putBoolean("dialogs_verified", true)
                 putBoolean("text_centered", true); putBoolean("fixture_only", true); putBoolean("script_success", true)

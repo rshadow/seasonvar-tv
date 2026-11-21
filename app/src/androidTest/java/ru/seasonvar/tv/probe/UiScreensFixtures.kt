@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
+import ru.seasonvar.tv.data.comments.CommentPart
+import ru.seasonvar.tv.data.comments.CommentsPage
+import ru.seasonvar.tv.data.comments.SeasonComment
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.update.*
 import ru.seasonvar.tv.ui.catalog.CatalogUiState
@@ -27,7 +30,8 @@ internal class UiScreensFixtures : AutoCloseable {
     val playbackSpeed = mutableStateOf(ru.seasonvar.tv.data.playback.PlaybackSpeed.NORMAL)
     val fontSize = mutableStateOf(ru.seasonvar.tv.ui.settings.InterfaceFontSize.NORMAL)
     val dns = mutableStateOf(DnsProvider.QUAD9_DOH)
-    val toggles = mutableStateMapOf(R.string.show_actors_title to true, R.string.auto_next_setting_title to true,
+    val toggles = mutableStateMapOf(R.string.show_actors_title to true, R.string.comments_setting_title to true,
+        R.string.auto_next_setting_title to true,
         R.string.auto_next_season_setting_title to true, R.string.image_prefetch_title to false,
         R.string.list_prefetch_title to false, R.string.bypass_title to true, R.string.show_player_controls_title to true)
     val translations = TranslationSettingsViewModel(preferred, { preferred.value = it }, { throw IOException() })
@@ -39,13 +43,31 @@ internal class UiScreensFixtures : AutoCloseable {
         listOf(Translation("0", "Оригинал", (1..30).map { Episode(it.toString(), it.toString()) }),
             Translation("1", "Другая озвучка", listOf(Episode("1", "1")))), "0")
     val detailsModel = SeriesDetailsViewModel { details }
+    val commentPages = java.util.concurrent.CopyOnWriteArrayList<Int>()
+    val commentsModel = SeriesDetailsViewModel(loadComments = { _, page ->
+        commentPages += page
+        if (page == 1) CommentsPage(
+            listOf(
+                SeasonComment("1", false, "Первый зритель", null, listOf(CommentPart.Text("Первый комментарий."))),
+                SeasonComment("2", true, "Автор ответа", null, listOf(CommentPart.Spoiler(listOf(CommentPart.Text("Скрытый ответ."))))),
+            ) + (3..12).map { id ->
+                SeasonComment(id.toString(), false, "Зритель $id", null, listOf(CommentPart.Text("Комментарий $id.")))
+            }, next = 2,
+        ) else {
+            check(page == 2)
+            CommentsPage(listOf(SeasonComment("13", false, "Последний зритель", null, listOf(CommentPart.Text("Вторая страница.")))))
+        }
+    }) { details.copy(seasons = details.seasons.take(1), translations = details.translations.takeLast(1), defaultTranslationId = "1") }
     val actorModel = SeriesDetailsViewModel { details.copy(
         actors = listOf(SeriesActor("Первый актёр", "android.resource://ru.seasonvar.tv/drawable/actor_placeholder"),
             SeriesActor("Второй актёр", "android.resource://ru.seasonvar.tv/drawable/actor_placeholder")),
         paragraphs = List(12) { "Синтетическое описание для проверки прокрутки. ".repeat(20) }) }
     val filterController = UiProbeFilters()
 
-    fun attach() { store.put("details", detailsModel); store.put("actors", actorModel); store.put("translations", translations); store.put("update", update) }
+    fun attach() {
+        store.put("details", detailsModel); store.put("actors", actorModel); store.put("comments", commentsModel)
+        store.put("translations", translations); store.put("update", update)
+    }
     override fun close() { store.clear() }
 }
 
