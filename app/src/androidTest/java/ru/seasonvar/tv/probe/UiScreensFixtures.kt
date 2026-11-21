@@ -48,9 +48,12 @@ internal class UiScreensFixtures : AutoCloseable {
         commentPages += page
         if (page == 1) CommentsPage(
             listOf(
-                SeasonComment("1", false, "Первый зритель", null, listOf(CommentPart.Text("Первый комментарий."))),
+                SeasonComment("1", false, "Первый зритель", "Сегодня", listOf(CommentPart.Text(
+                    "Посмотрел первые две серии. Во второй стало интереснее, теперь хочется узнать, чем закончится сезон."
+                ))),
                 SeasonComment("2", true, "Автор ответа", null, listOf(CommentPart.Spoiler(listOf(CommentPart.Text("Скрытый ответ."))))),
-            ) + (3..12).map { id ->
+                SeasonComment("3", true, "Второй ответ", "Вчера", listOf(CommentPart.Text("Ответ в той же ветке."))),
+            ) + (4..12).map { id ->
                 SeasonComment(id.toString(), false, "Зритель $id", null, listOf(CommentPart.Text("Комментарий $id.")))
             }, next = 2,
         ) else {

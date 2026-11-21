@@ -470,6 +470,7 @@
     <string name="reviews_hint">Вправо — читать · Влево — к списку</string>
     <string name="comments_setting_title">Комментарии зрителей</string>
     <string name="comments_setting_description">Показывать обсуждение под описанием сезона.</string>
+    <string name="comments_heading">Комментарии</string>
     <string name="comments_loading">Загружаем комментарии…</string>
     <string name="comments_retry">Повторить загрузку комментариев</string>
     <string name="comment_show_spoiler">Показать спойлер</string>

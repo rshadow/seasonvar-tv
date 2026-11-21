@@ -26,6 +26,8 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -115,8 +117,7 @@ internal fun SeriesDetailsPane(
             fun actionScrolling(origin: FocusRequester) = navigation.actionScrolling(origin, actorListState,
                 actorFocus, actorIndex, step, episodes.isEmpty(), commentsReady, onInteraction)
             LazyColumn(Modifier.fillMaxSize().detailsScrollbar(navigation.scroll).then(navigation.pageScrolling(step)),
-                state = navigation.scroll, contentPadding = PaddingValues(d.focusBorderWidth),
-                verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                state = navigation.scroll, contentPadding = PaddingValues(d.focusBorderWidth)) {
                 item(key = "season") {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                         SeriesInformation(state, entry, Modifier.fillMaxWidth(), showActors, actorListState, actorFocus,
@@ -140,6 +141,15 @@ internal fun SeriesDetailsPane(
                 }
                 itemsIndexed(commentFeed.entries, key = { _, comment -> "${entry.id}:${comment.id}" }) { index, comment ->
                     val first = index == 0
+                    if (first) {
+                        Text(
+                            stringResource(R.string.comments_heading),
+                            Modifier.fillMaxWidth().padding(start = d.spacingSmall * 2, top = d.spacingLarge)
+                                .semantics { heading() },
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
                     SeasonCommentRow(comment, commentsFocus.takeIf { first },
                         if (first) ({ navigation.returnFromComments(beforeDescription) }) else null)
                 }

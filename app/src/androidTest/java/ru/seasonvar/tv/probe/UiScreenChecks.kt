@@ -312,7 +312,9 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         render { SeriesDetailsPane(entry, commentsModel, remember { FocusRequester() }, {}, {}, showComments = enabled.value) }
         val watch = text(R.string.details_watch)
         waitFor { optionFocused(watch) }
+        val heading = text(R.string.comments_heading)
         check(commentPages.isEmpty())
+        check(find(uiAutomation.rootInActiveWindow, heading, exact = true) == null)
         main { enabled.value = true }; waitFor { commentPages == listOf(1) }
         fun dpad(code: Int) { sendKeyDownUpSync(code); settle() }
         stage("season_comments_focus")
@@ -320,6 +322,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         check(optionFocused("1"))
         repeat(4) { if (!optionFocused("Первый зритель")) dpad(KeyEvent.KEYCODE_DPAD_DOWN) }
         check(optionFocused("Первый зритель"))
+        check(find(uiAutomation.rootInActiveWindow, heading, exact = true) != null)
         check(find(uiAutomation.rootInActiveWindow, "Скрытый ответ.", exact = true) == null)
         dpad(KeyEvent.KEYCODE_DPAD_UP)
         check(optionFocused("1"))
@@ -328,7 +331,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         dpad(KeyEvent.KEYCODE_DPAD_DOWN)
         val showSpoiler = text(R.string.comment_show_spoiler)
         waitFor { optionFocused(showSpoiler) }
-        check(find(uiAutomation.rootInActiveWindow, "↳ Автор ответа", exact = true) != null)
+        check(find(uiAutomation.rootInActiveWindow, "Автор ответа", exact = true) != null)
         check(commentPages == listOf(1))
         capture("comments-spoiler-hidden")
         stage("season_comments_spoiler")
