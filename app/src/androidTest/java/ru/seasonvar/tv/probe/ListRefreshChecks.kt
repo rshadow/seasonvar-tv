@@ -3,6 +3,7 @@ package ru.seasonvar.tv.probe
 import android.content.Intent
 import android.graphics.Rect
 import android.view.KeyEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import ru.seasonvar.tv.R
@@ -10,6 +11,8 @@ import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.data.network.NetworkConfiguration
 import ru.seasonvar.tv.ui.SeasonvarApp
+import ru.seasonvar.tv.ui.account.MarkRemovalUiState
+import ru.seasonvar.tv.ui.account.RemovalStage
 import ru.seasonvar.tv.ui.catalog.*
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
@@ -22,11 +25,13 @@ internal class ListRefreshChecks(
 ) {
     data class StripReference(val title: String, val bounds: Rect)
     private val readyThumbnails = mutableSetOf<String>()
-    private val observedRefresh = mutableListOf<Boolean>()
+    private val observedRefresh = mutableListOf<Pair<String, Boolean>>()
     private var observingRefresh = false
+    private var observedKeys: Set<String>? = null
+    private val removal = mutableStateOf(MarkRemovalUiState())
 
     private fun thumbnail(key: String, ready: Boolean) {
-        if (observingRefresh && key in readyThumbnails) observedRefresh.add(ready)
+        if (observingRefresh && key in readyThumbnails && observedKeys?.contains(key) != false) observedRefresh.add(key to ready)
         if (ready) readyThumbnails.add(key)
     }
 
@@ -41,6 +46,9 @@ internal class ListRefreshChecks(
                     accountSession = AccountSession(AccountUser("12", "Проверка", null), 1),
                     personalStates = PersonalFeed.entries.associateWith { feed -> current.getValue(sections.first { it.personalFeed == feed }) },
                     smartState = current.getValue(Section.SMART_CONTINUE),
+                    removalState = removal.value,
+                    onRemovalActions = { removal.value = MarkRemovalUiState(it, RemovalStage.CONFIRM, visible = true) },
+                    onRemovalConfirm = { removal.value = MarkRemovalUiState() },
                     onFeedVisible = { feed -> visit(sections.first { it.publicFeed == feed }) },
                     onPersonalVisible = { feed -> feed?.let { visit(sections.first { it.personalFeed == feed }) } },
                     onSmartVisible = { if (it) visit(Section.SMART_CONTINUE) },
@@ -83,7 +91,7 @@ internal class ListRefreshChecks(
         }; settle()
         main {
             observingRefresh = false
-            check(observedRefresh.isEmpty()) { "Unchanged thumbnail visuals recomposed: ${observedRefresh.size}, ready=${observedRefresh.count { it }}" }
+            check(observedRefresh.isEmpty()) { "Unchanged thumbnail visuals recomposed: ${observedRefresh.size}, ready=${observedRefresh.count { it.second }}" }
         }
         check(card(title)?.isFocused == true && bounds(checkNotNull(card(title))) == original)
         capture("02-refreshed")
@@ -157,6 +165,53 @@ internal class ListRefreshChecks(
         }
         main { grid.value = false }; settle()
         result.putBoolean("grid_return", true)
+    } }
+
+    fun removeMarks() = with(ui) { with(fixture) {
+        for (section in listOf(Section.WANT, Section.WATCHED, Section.SMART_CONTINUE, Section.TOP)) {
+            val removeLast = section == Section.WATCHED
+            val original = if (removeLast) rows.take(3) else rows
+            val page = pages.getValue(section)
+            menu(section)
+            phase = "mark_removal_" + section.storageId
+            main {
+                grid.value = removeLast
+                page.value = page.value.copy(entries = original)
+            }
+            settle()
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+            repeat(if (removeLast) 2 else 3) { sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT) }; settle()
+            val selected = checkNotNull(focusedCard())
+            val index = original.indexOfFirst { entry -> find(selected) { it.text?.toString() == entry.title } != null }
+            check(if (removeLast) index == original.lastIndex else index in 1 until original.lastIndex)
+            val removed = original[index]
+            val neighbor = original[if (removeLast) index - 1 else index + 1]
+            check(selected.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)); settle()
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT); settle()
+            sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
+            check(!removal.value.visible && card(removed.title)?.isFocused == true)
+
+            val visibleSurvivors = original.filter { it.key != removed.key && card(it.title) != null }.map { it.key }.toSet()
+            check(visibleSurvivors.isNotEmpty())
+            main {
+                observedRefresh.clear()
+                observedKeys = visibleSurvivors
+                observingRefresh = true
+                page.value = page.value.copy(entries = original.filterNot { it.key == removed.key })
+            }
+            settle()
+            check(card(removed.title) == null && card(neighbor.title)?.isFocused == true) {
+                "Focus did not move from ${removed.title} to ${neighbor.title}"
+            }
+            main {
+                observingRefresh = false
+                observedKeys = null
+            }
+            val unprepared = observedRefresh.filterNot { it.second }.map { it.first }
+            check(unprepared.isEmpty()) { "Visible prepared thumbnails disappeared: $unprepared" }
+            capture("removed-mark-" + section.storageId)
+        }
+        result.putBoolean("mark_removal_focus", true)
     } }
 
     fun activityVisibility() = with(ui) {

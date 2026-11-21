@@ -18,13 +18,14 @@ import ru.seasonvar.tv.data.ListParsingWindow
 import ru.seasonvar.tv.data.ParsedSeriesEntries
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.work.BackgroundCpu
+import ru.seasonvar.tv.ui.navigation.removalNeighbor
 
 @Composable
 internal fun parsedCatalogState(
     base: CatalogUiState,
     selectedKey: String?,
     identity: Any,
-    onEntriesChanged: (List<SeriesEntry>) -> Unit,
+    onEntriesChanged: (List<SeriesEntry>, String?) -> Unit,
 ): CatalogUiState {
     val window = (base.entries as? ParsedSeriesEntries)?.window
     val parsed = window?.state?.collectAsStateWithLifecycle()?.value
@@ -35,6 +36,7 @@ internal fun parsedCatalogState(
     val excludedSeasons = parsed?.excludedSeasons.orEmpty()
     val keepUnresolved = unfinished || base.hasMore || parsed?.failed == true
     var displayed by remember(identity) { mutableStateOf(incoming, referentialEqualityPolicy()) }
+    val latestSelectedKey by rememberUpdatedState(selectedKey)
     val latestOnEntriesChanged by rememberUpdatedState(onEntriesChanged)
     LaunchedEffect(identity, IncomingEntries(incoming), keepUnresolved, excludedSeasons) {
         val previous = displayed
@@ -43,7 +45,10 @@ internal fun parsedCatalogState(
                 reconcileCatalogEntries(previous, incoming, keepUnresolved, excludedSeasons)
             }
             if (reconciled !== previous) {
-                latestOnEntriesChanged(reconciled)
+                val selection = latestSelectedKey
+                val replacement = if (selection != null && reconciled.none { it.key == selection } && previous.any { it.key == selection })
+                    removalNeighbor(previous.map { it.key }, reconciled.map { it.key }, selection) else selection
+                latestOnEntriesChanged(reconciled, replacement)
                 displayed = reconciled
             }
         }
