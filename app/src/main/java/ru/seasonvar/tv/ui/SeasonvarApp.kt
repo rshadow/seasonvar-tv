@@ -81,7 +81,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import ru.seasonvar.tv.ui.navigation.CardActivation
-import ru.seasonvar.tv.ui.navigation.removalNeighbor
 import ru.seasonvar.tv.ui.account.MarkRemovalUiState
 import ru.seasonvar.tv.ui.account.MarkRemovalDialog
 import ru.seasonvar.tv.data.account.AccountSession
@@ -125,8 +124,6 @@ import ru.seasonvar.tv.ui.catalog.CatalogUiState
 import ru.seasonvar.tv.data.account.PersonalFeed
 import ru.seasonvar.tv.ui.search.SearchUiState
 import java.time.format.DateTimeFormatter
-
-private data class RemovalFocusOrigin(val catalogKey: String, val keys: List<String>, val selected: String)
 
 private fun personalTitle(feed: PersonalFeed) = when (feed) {
     PersonalFeed.RESUME -> R.string.resume_title
@@ -434,18 +431,32 @@ private fun SeasonvarContent(
         smart -> null
         else -> activeFilters
     }
-    val state = ru.seasonvar.tv.ui.catalog.parsedCatalogState(sourceState, selectedKey,
-        listOf(catalogKey, displayUser, displayVersion, listConditions)) { entries ->
-        position.keepSelectionVisible(catalogLayout, catalogKey, selectedKey, entries)
+    val listIdentity = listOf(catalogKey, displayUser, displayVersion, listConditions)
+    var detailsOpen by rememberSaveable { mutableStateOf(false) }
+    var cardsHaveFocus by remember(listIdentity) { mutableStateOf(false) }
+    var listFocusRequest by remember(listIdentity) { mutableIntStateOf(0) }
+    var restoringListFocus by remember(listIdentity) { mutableStateOf(false) }
+    var removalOrigin by remember { mutableStateOf<String?>(null) }
+
+    fun selectEntry(key: String?) {
+        if (browsing) browseSelectedKey = key
+        else selectedKeys = if (key == null) selectedKeys - catalogKey
+            else selectedKeys + (catalogKey to key)
+    }
+
+    val state = ru.seasonvar.tv.ui.catalog.parsedCatalogState(sourceState, selectedKey, listIdentity) { entries, replacement ->
+        if (replacement != selectedKey) {
+            selectEntry(replacement)
+            if (!detailsOpen && !removalState.visible && (cardsHaveFocus || restoringListFocus)) listFocusRequest++
+        }
+        position.keepSelectionVisible(catalogLayout, catalogKey, replacement, entries)
     }
     var searchEditRequest by remember { mutableIntStateOf(0) }
-    var detailsOpen by rememberSaveable { mutableStateOf(false) }
     ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(section.takeIf {
         !waitingForStartPage && !previewLocked && !detailsOpen && (it.publicFeed != null || it.personalFeed != null ||
             it == Section.CATALOG || it == Section.SEARCH || it == Section.SMART_CONTINUE)
     }, onListVisibilityChange)
     var detailsSource by remember { mutableStateOf<SeriesEntry?>(null) }
-    var removalOrigin by remember { mutableStateOf<RemovalFocusOrigin?>(null) }
     var removalWasVisible by remember { mutableStateOf(false) }
     val listState = position.list
     val gridState = position.grid
@@ -471,12 +482,6 @@ private fun SeasonvarContent(
     val latestGridState by rememberUpdatedState(gridState)
     val latestCatalogLayout by rememberUpdatedState(catalogLayout)
 
-    fun selectEntry(key: String?) {
-        if (browsing) browseSelectedKey = key
-        else selectedKeys = if (key == null) selectedKeys - catalogKey
-            else selectedKeys + (catalogKey to key)
-    }
-
     fun selectSection(item: Section) {
         pendingHistoryQuery = null
         detailsOpen = false
@@ -495,10 +500,7 @@ private fun SeasonvarContent(
         positions.search.grid.scrollToItem(0)
     }
     LaunchedEffect(catalogKey, state.entries) {
-        if (state.entries.none { it.key == selectedKey }) {
-            val origin = removalOrigin?.takeIf { it.catalogKey == catalogKey && it.selected == selectedKey }
-            selectEntry(if (origin != null) removalNeighbor(origin.keys, state.entries.map { it.key }, origin.selected) else selected?.key)
-        }
+        if (state.entries.none { it.key == selectedKey }) selectEntry(selected?.key)
     }
     if (BuildConfig.BUILD_TYPE == "profile" && ru.seasonvar.tv.diagnostics.StartupDiagnostics.active) SideEffect {
         ru.seasonvar.tv.diagnostics.StartupDiagnostics.observe(initialStartPage, startupTarget, section, state, accountState.busy)
@@ -519,15 +521,19 @@ private fun SeasonvarContent(
             onCloseDetails = { detailsOpen = false }, onRequireSignIn = { section = Section.ACCOUNT }, onSelect = ::selectSection)
     }
 
+    suspend fun focusContent(requestedSection: Section) {
+        requestMainContentFocus(requestedSection, { section }, {
+            MainContentTarget(latestSelected, latestState, latestListState, latestGridState,
+                latestCatalogLayout, latestSearchState, latestCatalogKey)
+        }, focus, inputModeManager, browsing, searching, { detailsOpen })
+    }
+
     fun enterContent() {
         val requestedSection = section
         val restoring = returningToList
         scope.launch {
             try {
-                requestMainContentFocus(requestedSection, { section }, {
-                    MainContentTarget(latestSelected, latestState, latestListState, latestGridState,
-                        latestCatalogLayout, latestSearchState, catalogKey)
-                }, focus, inputModeManager, browsing, searching, { detailsOpen })
+                focusContent(requestedSection)
             } finally { if (restoring) returningToList = false }
         }
     }
@@ -554,7 +560,7 @@ private fun SeasonvarContent(
 
     fun openSeriesActions(entry: SeriesEntry) {
         backNavigation.reset()
-        removalOrigin = RemovalFocusOrigin(catalogKey, state.entries.map { it.key }, if (detailsOpen) selectedKey ?: entry.key else entry.key)
+        removalOrigin = catalogKey
         onRemovalActions(entry)
     }
 
@@ -577,11 +583,17 @@ private fun SeasonvarContent(
 
     LaunchedEffect(removalState.visible) {
         if (removalWasVisible && !removalState.visible) {
-            repeat(2) { withFrameNanos { } }
-            if (!detailsOpen && removalOrigin?.catalogKey == catalogKey) enterContent()
+            if (!detailsOpen && removalOrigin == catalogKey) listFocusRequest++
             removalOrigin = null
         }
         removalWasVisible = removalState.visible
+    }
+    LaunchedEffect(listIdentity, listFocusRequest) {
+        // Фокус может перейти в меню при удалении узла карточки, пока применяется сверка.
+        if (listFocusRequest > 0 && !detailsOpen && !removalState.visible) {
+            restoringListFocus = true
+            try { focusContent(section) } finally { restoringListFocus = false }
+        }
     }
 
     fun navigateBack() {
@@ -706,7 +718,8 @@ private fun SeasonvarContent(
                         onRefresh = { if (previewLocked) onCheckAccount() else if (browsing) browseCatalog?.refresh() else if (searching) onSearchSubmit() else if (smart) onSmartRefresh() else if (personalFeed != null) onPersonalRefresh(personalFeed) else onRefresh(activeFeed) },
                         onLoadMore = { personalFeed?.let(onPersonalMore) },
                         onFocused = { if (latestCatalogKey == catalogKey) selectEntry(it.key) }, onOpen = { openDetails(it) },
-                        onActions = { selectEntry(it.key); openSeriesActions(it) }, onBackdropSource = onBackdropSource)
+                        onActions = { selectEntry(it.key); openSeriesActions(it) }, onBackdropSource = onBackdropSource,
+                        onCardsFocusChanged = { cardsHaveFocus = it })
                 }
             }
         }
@@ -913,6 +926,7 @@ internal fun CatalogPane(
     cardData: ru.seasonvar.tv.data.cache.CardDataCache? = null,
     actorName: String? = null,
     onBackdropSource: PosterBackdropPublisher? = null,
+    onCardsFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
@@ -1077,10 +1091,12 @@ internal fun CatalogPane(
             if (layout == CatalogLayout.STRIP)
                 SelectedPanel(selected, { if (privateActionsEnabled) engine.description(selected) else DescriptionState(key = selected.key) },
                     Modifier.weight(1f).padding(bottom = d.spacingMedium))
+            val listModifier = if (layout == CatalogLayout.GRID) Modifier.fillMaxWidth().weight(1f)
+                else Modifier.fillMaxWidth().height(cardMetrics.rowHeight)
+            val focusModifier = if (onCardsFocusChanged == null) Modifier
+                else Modifier.onFocusChanged { onCardsFocusChanged(it.hasFocus) }.focusGroup()
             ru.seasonvar.tv.ui.catalog.SeriesList(state.entries, catalogKey, selected.key, layout,
-                listState, gridState, cards, layoutFocus, menuFocus, cardMetrics, imagePrefetchEnabled,
-                if (layout == CatalogLayout.GRID) Modifier.fillMaxWidth().weight(1f)
-                else Modifier.fillMaxWidth().height(cardMetrics.rowHeight),
+                listState, gridState, cards, layoutFocus, menuFocus, cardMetrics, imagePrefetchEnabled, listModifier.then(focusModifier),
                 onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine,
                 onBackdropSource = backdropPublisher, descriptionsEnabled = privateActionsEnabled, resourceContext = resourceContext)
         }

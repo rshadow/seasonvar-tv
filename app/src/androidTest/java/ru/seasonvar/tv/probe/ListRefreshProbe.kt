@@ -15,6 +15,7 @@ internal object ListRefreshProbe {
             lists.menuNavigation()
             lists.gridReturn()
             lists.activityVisibility()
+            lists.removeMarks()
             with(ui.result) {
                 putBoolean("list_visibility", true)
                 putBoolean("background_refresh_preserved", true)

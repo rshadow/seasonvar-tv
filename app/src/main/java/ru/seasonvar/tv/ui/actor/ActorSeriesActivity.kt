@@ -111,11 +111,19 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val layout by container.interfaceSettings.actorCatalogLayout.collectAsStateWithLifecycle()
     val position = remember(list, grid) { ru.seasonvar.tv.ui.navigation.MainCatalogPosition(list, grid) }
     val catalogKey = "ACTOR|$url"
-    val state = parsedCatalogState(base, selectedKey, url to session.version) {
-        position.keepSelectionVisible(layout, catalogKey, selectedKey, it)
+    val identity = url to session.version
+    var entry by remember { mutableStateOf<SeriesEntry?>(null) }
+    var cardsHaveFocus by remember(identity) { mutableStateOf(false) }
+    var listFocusRequest by remember(identity) { mutableIntStateOf(0) }
+    var restoringListFocus by remember(identity) { mutableStateOf(false) }
+    val state = parsedCatalogState(base, selectedKey, identity) { entries, replacement ->
+        if (replacement != selectedKey) {
+            selectedKey = replacement
+            if (entry == null && !removal.visible && (cardsHaveFocus || restoringListFocus)) listFocusRequest++
+        }
+        position.keepSelectionVisible(layout, catalogKey, replacement, entries)
     }
     val selected = state.entries.firstOrNull { it.key == selectedKey } ?: state.entries.firstOrNull()
-    var entry by remember { mutableStateOf<SeriesEntry?>(null) }
     ru.seasonvar.tv.ui.navigation.ListVisibilityEffect(url.takeIf { entry == null }) { model.setVisible(it != null) }
     val cards = remember { mutableMapOf<String, FocusRequester>() }
     val header = remember { FocusRequester() }
@@ -133,28 +141,27 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     val latestState by rememberUpdatedState(state)
     val latestSelected by rememberUpdatedState(selected)
     val latestLayout by rememberUpdatedState(layout)
-    fun focusList() {
-        scope.launch {
+    suspend fun requestListFocus() {
+        repeat(2) { withFrameNanos { } }
+        if (entry != null) return
+        val chosen = latestSelected
+        if (chosen == null) {
+            (if (latestState.failure != null) retry else refresh).requestFocus()
+        } else {
+            val index = latestState.entries.indexOfFirst { it.key == chosen.key }.coerceAtLeast(0)
+            val key = "$catalogKey|${chosen.key}"
+            val requestedLayout = latestLayout
+            if (requestedLayout == CatalogLayout.GRID) {
+                if (grid.layoutInfo.visibleItemsInfo.none { it.key == key }) grid.scrollToItem(index)
+            } else if (list.layoutInfo.visibleItemsInfo.none { it.key == key }) list.scrollToItem(index)
             repeat(2) { withFrameNanos { } }
-            if (entry != null) return@launch
-            val chosen = latestSelected
-            if (chosen == null) {
-                (if (latestState.failure != null) retry else refresh).requestFocus()
-            } else {
-                val index = latestState.entries.indexOfFirst { it.key == chosen.key }.coerceAtLeast(0)
-                val key = "$catalogKey|${chosen.key}"
-                val requestedLayout = latestLayout
-                if (requestedLayout == CatalogLayout.GRID) {
-                    if (grid.layoutInfo.visibleItemsInfo.none { it.key == key }) grid.scrollToItem(index)
-                } else if (list.layoutInfo.visibleItemsInfo.none { it.key == key }) list.scrollToItem(index)
-                repeat(2) { withFrameNanos { } }
-                if (entry == null && latestLayout == requestedLayout && latestSelected?.key == chosen.key) {
-                    cards[key]?.requestFocus()
-                }
+            if (entry == null && latestLayout == requestedLayout && latestSelected?.key == chosen.key) {
+                cards[key]?.requestFocus()
             }
-            holdingFocus = false
         }
+        holdingFocus = false
     }
+    fun focusList() { scope.launch { requestListFocus() } }
     fun back() {
         if (entry == null) onExit() else {
             holdingFocus = true
@@ -173,8 +180,14 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
     }
     var actionsWereOpen by remember { mutableStateOf(false) }
     LaunchedEffect(removal.visible) {
-        if (actionsWereOpen && !removal.visible && entry == null) focusList()
+        if (actionsWereOpen && !removal.visible && entry == null) listFocusRequest++
         actionsWereOpen = removal.visible
+    }
+    LaunchedEffect(identity, listFocusRequest) {
+        if (listFocusRequest > 0 && entry == null && !removal.visible) {
+            restoringListFocus = true
+            try { requestListFocus() } finally { restoringListFocus = false }
+        }
     }
     val d = SeasonvarTheme.dimensions
     val backdropSource = remember(entry?.key) { PosterBackdropState() }
@@ -201,7 +214,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
                 layoutFocus = header, onLayoutChange = { container.interfaceSettings.setActorCatalogLayout(layout.other()) }, onEnterContent = ::focusList,
                 allowAccountActions = session.user != null, onActions = { actions.show(it) },
                 loadDescription = container.repository::description, cardData = container.repository.cardData,
-                preparationContext = session.version, resourceContext = network)
+                preparationContext = session.version, resourceContext = network, onCardsFocusChanged = { cardsHaveFocus = it })
         }
     }
     MarkRemovalDialog(removal, onDismiss = actions::dismiss, onAsk = actions::ask, onConfirm = actions::confirm,

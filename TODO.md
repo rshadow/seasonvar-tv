@@ -76,7 +76,7 @@
 - [x] **Вид списков актёров** — общий сохраняемый выбор ленты или сетки, независимый от остальных разделов; [ADR-0155](docs/adr/0155-shared-actor-list-layout.md).
 - [x] **Прогресс сезонов и серий** — постоянная строка под кнопками и позиция остановки; [ADR-0111](docs/adr/0111-season-progress-below-controls.md), [ADR-0114](docs/adr/0114-stable-async-layout.md).
 - [x] **Автоматическая отметка аккаунта** — сохранение позиции и просмотренной серии; [ADR-0056](docs/adr/0056-automatic-account-playback-marks.md).
-- [x] **Удаление из личных списков** — удаление отметки сезона с подтверждением; [ADR-0057](docs/adr/0057-remove-account-list-marks.md).
+- [x] **Удаление из личных списков** — подтверждение и переход к соседней карточке после снятия отметки сезона; [ADR-0057](docs/adr/0057-remove-account-list-marks.md), [ADR-0198](docs/adr/0198-list-focus-after-removal.md).
 - [x] **Добавление в личные списки и смена статуса** — общее меню действий и проверка результата; [ADR-0090](docs/adr/0090-shared-series-actions-menu.md).
 - [x] **Предпочитаемые озвучки** — упорядоченный список в настройках; [ADR-0076](docs/adr/0076-translation-priority-list.md).
 - [x] **Переход к сериям при несопоставленной отметке** — доступный фокус в ленте и сетке; [ADR-0112](docs/adr/0112-episode-focus-without-selection.md).

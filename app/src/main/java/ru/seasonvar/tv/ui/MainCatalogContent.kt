@@ -25,7 +25,7 @@ internal fun MainCatalogContent(state: CatalogUiState, selected: SeriesEntry?, s
     onSearchSubmit: () -> Unit, onSearchResults: () -> Unit, onSearchRemember: () -> Unit,
     onSearchRecall: (String) -> Unit, onSearchClearHistory: () -> Unit, onRefresh: () -> Unit, onLoadMore: () -> Unit,
     onFocused: (SeriesEntry) -> Unit, onOpen: (SeriesEntry) -> Unit, onActions: (SeriesEntry) -> Unit,
-    onBackdropSource: PosterBackdropPublisher?) {
+    onBackdropSource: PosterBackdropPublisher?, onCardsFocusChanged: ((Boolean) -> Unit)?) {
     val browsing = section == Section.CATALOG
     val searching = section == Section.SEARCH
     val smart = section == Section.SMART_CONTINUE
@@ -78,5 +78,6 @@ internal fun MainCatalogContent(state: CatalogUiState, selected: SeriesEntry?, s
         onFocused = onFocused,
         onOpen = onOpen,
         onActions = onActions,
+        onCardsFocusChanged = onCardsFocusChanged,
     )
 }
