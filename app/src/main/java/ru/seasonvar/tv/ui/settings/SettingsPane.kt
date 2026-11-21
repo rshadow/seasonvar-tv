@@ -12,6 +12,7 @@ import androidx.tv.material3.Text
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.network.ProxyConfiguration
+import ru.seasonvar.tv.ui.navigation.MenuOrder
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
@@ -55,6 +56,8 @@ internal fun SettingsPane(
     onStartPageChange: (Section) -> Unit,
     hiddenSections: Set<Section>,
     onSectionVisibilityChange: (Section, Boolean) -> Unit,
+    menuOrder: MenuOrder,
+    onMenuOrderChange: (MenuOrder) -> Unit,
     signedIn: Boolean,
     onBack: () -> Unit,
     onCloseDialog: () -> Unit,
@@ -70,7 +73,7 @@ internal fun SettingsPane(
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Spacer(Modifier.height(d.spacingLarge))
-        ApplicationSettingsSection(startPage, onStartPageChange, hiddenSections, onSectionVisibilityChange, signedIn,
+        ApplicationSettingsSection(startPage, onStartPageChange, hiddenSections, onSectionVisibilityChange, menuOrder, onMenuOrderChange, signedIn,
             translationSettingsModel, showActors, onShowActorsChange, interfaceTheme, onInterfaceThemeChange,
             fontSize, onFontSizeChange, focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))

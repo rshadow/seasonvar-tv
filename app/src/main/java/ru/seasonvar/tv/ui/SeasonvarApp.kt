@@ -209,6 +209,8 @@ internal fun SeasonvarApp(
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     hiddenSections: Set<Section> = emptySet(),
+    menuOrder: ru.seasonvar.tv.ui.navigation.MenuOrder = ru.seasonvar.tv.ui.navigation.MenuOrder(),
+    onMenuOrderChange: (ru.seasonvar.tv.ui.navigation.MenuOrder) -> Unit = {},
     onSectionVisibilityChange: (Section, Boolean) -> Unit = { _, _ -> },
     onExit: () -> Unit = {},
     updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
@@ -267,6 +269,7 @@ internal fun SeasonvarApp(
             catalogLayouts = catalogLayouts, onCatalogLayoutChange = onCatalogLayoutChange,
             startPage = startPage, onStartPageChange = onStartPageChange,
             hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
+            menuOrder = menuOrder, onMenuOrderChange = onMenuOrderChange,
             autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
             autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
             playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,
@@ -341,6 +344,8 @@ private fun SeasonvarContent(
     startPage: Section = Section.TODAY,
     onStartPageChange: (Section) -> Unit = {},
     hiddenSections: Set<Section> = emptySet(),
+    menuOrder: ru.seasonvar.tv.ui.navigation.MenuOrder = ru.seasonvar.tv.ui.navigation.MenuOrder(),
+    onMenuOrderChange: (ru.seasonvar.tv.ui.navigation.MenuOrder) -> Unit = {},
     onSectionVisibilityChange: (Section, Boolean) -> Unit = { _, _ -> },
     onExit: () -> Unit = {},
     updateModel: ru.seasonvar.tv.ui.update.UpdateViewModel? = null,
@@ -380,19 +385,19 @@ private fun SeasonvarContent(
         it.section == initialStartPage && it.section !in hiddenSections && it.isAvailable(accountSession, accountState)
     }
     val sectionState = rememberSaveable {
-        mutableStateOf(preview?.section ?: initialStartPage.availableAtStart(signedIn, hiddenSections))
+        mutableStateOf(preview?.section ?: initialStartPage.availableAtStart(signedIn, hiddenSections, menuOrder))
     }
     var section by sectionState
     val previewSection = preview?.section?.takeIf { startupPending || section == it }
-    val visibleMenuGroups = remember(signedIn, previewSection, hiddenSections) {
-        val groups = Section.menuGroups(signedIn || previewSection != null, hiddenSections)
+    val visibleMenuGroups = remember(signedIn, previewSection, hiddenSections, menuOrder) {
+        val groups = Section.menuGroups(signedIn || previewSection != null, hiddenSections, menuOrder)
         if (signedIn || previewSection == null) groups else groups.mapNotNull { (group, pages) ->
             val visible = pages.filter { !it.requiresAccount || it == previewSection }
             visible.takeIf { it.isNotEmpty() }?.let { group to it }
         }
     }
     val visibleMenuPages = remember(visibleMenuGroups) { visibleMenuGroups.flatMap { it.second } }
-    val startupTarget = previewSection ?: initialStartPage.atStartup(signedIn, accountState.busy, hiddenSections)
+    val startupTarget = previewSection ?: initialStartPage.atStartup(signedIn, accountState.busy, hiddenSections, menuOrder)
     val waitingForStartPage = startupPending && section != startupTarget
     val browsing = section == Section.CATALOG
     val browseState = browseCatalog?.state?.collectAsStateWithLifecycle()?.value ?: ru.seasonvar.tv.ui.catalog.BrowseCatalogState()
@@ -506,16 +511,16 @@ private fun SeasonvarContent(
         ru.seasonvar.tv.diagnostics.StartupDiagnostics.observe(initialStartPage, startupTarget, section, state, accountState.busy)
     }
     MainStartupNavigation(startupTarget, startupPendingState, sectionState,
-        accountSession.user != null, hiddenSections, focus, ::selectSection)
+        accountSession.user != null, hiddenSections, menuOrder, focus, ::selectSection)
     LaunchedEffect(previewSection, accountState.busy, accountSession.version) {
         if (previewSection == null && !accountState.busy && accountSession.version == 0L && !signedIn && section.requiresAccount)
-            selectSection(initialStartPage.availableAtStart(false, hiddenSections))
+            selectSection(initialStartPage.availableAtStart(false, hiddenSections, menuOrder))
     }
     LaunchedEffect(accountSession.version) {
         if (accountSession.version == 0L && preview != null) return@LaunchedEffect
         if (accountSession.version == 1L && preview?.section == section && accountSession.user?.id == preview.owner)
             return@LaunchedEffect
-        syncMainAccountNavigation(accountSession, hiddenSections, visibleMenuPages, focus, positions,
+        syncMainAccountNavigation(accountSession, hiddenSections, menuOrder, visibleMenuPages, focus, positions,
             currentSection = { section }, menuOwnsInput = { menuOwnsInput },
             onClearPersonal = { selectedKeys = selectedKeys - it; removalOrigin = null },
             onCloseDetails = { detailsOpen = false }, onRequireSignIn = { section = Section.ACCOUNT }, onSelect = ::selectSection)
@@ -675,6 +680,7 @@ private fun SeasonvarContent(
                         onDnsChange = onDnsChange, proxy = proxy, onProxyChange = onProxyChange,
                         startPage = startPage, onStartPageChange = onStartPageChange,
                         hiddenSections = hiddenSections, onSectionVisibilityChange = onSectionVisibilityChange,
+                        menuOrder = menuOrder, onMenuOrderChange = onMenuOrderChange,
                         autoNextEnabled = autoNextEnabled, onAutoNextChange = onAutoNextChange,
                         autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = onAutoNextSeasonChange,
                         playerClockPosition = playerClockPosition, onPlayerClockPositionChange = onPlayerClockPositionChange,

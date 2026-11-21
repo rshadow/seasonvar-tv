@@ -9,10 +9,10 @@ import ru.seasonvar.tv.data.account.PersonalFeed
 
 @Composable
 internal fun MainStartupNavigation(startupTarget: Section?, pending: MutableState<Boolean>, section: MutableState<Section>,
-    signedIn: Boolean, hiddenSections: Set<Section>, focus: MainFocus, onSelect: (Section) -> Unit) {
+    signedIn: Boolean, hiddenSections: Set<Section>, menuOrder: MenuOrder, focus: MainFocus, onSelect: (Section) -> Unit) {
     LaunchedEffect(startupTarget) {
         if (!pending.value) return@LaunchedEffect
-        val target = startupTarget ?: Section.TODAY.availableAtStart(signedIn, hiddenSections)
+        val target = startupTarget ?: Section.TODAY.availableAtStart(signedIn, hiddenSections, menuOrder)
         if (startupTarget != null) onSelect(target)
         repeat(2) { withFrameNanos { } }
         if (pending.value && section.value == target) {
@@ -24,7 +24,7 @@ internal fun MainStartupNavigation(startupTarget: Section?, pending: MutableStat
     }
     LaunchedEffect(Unit) {
         if (section.value.canHide && section.value in hiddenSections) {
-            onSelect(section.value.availableAtStart(signedIn, hiddenSections))
+            onSelect(section.value.availableAtStart(signedIn, hiddenSections, menuOrder))
         }
         if (!pending.value) {
             repeat(2) { withFrameNanos { } }
@@ -34,7 +34,7 @@ internal fun MainStartupNavigation(startupTarget: Section?, pending: MutableStat
 }
 
 /** Выполняется в LaunchedEffect версии аккаунта; функции чтения возвращают актуальный экран после ожидания кадров. */
-internal suspend fun syncMainAccountNavigation(account: AccountSession, hiddenSections: Set<Section>, visiblePages: List<Section>,
+internal suspend fun syncMainAccountNavigation(account: AccountSession, hiddenSections: Set<Section>, menuOrder: MenuOrder, visiblePages: List<Section>,
     focus: MainFocus, positions: MainCatalogPositions, currentSection: () -> Section, menuOwnsInput: () -> Boolean,
     onClearPersonal: (Set<String>) -> Unit, onCloseDetails: () -> Unit, onRequireSignIn: () -> Unit, onSelect: (Section) -> Unit) {
     val menuTarget = currentSection().takeIf { menuOwnsInput() }
@@ -45,7 +45,7 @@ internal suspend fun syncMainAccountNavigation(account: AccountSession, hiddenSe
     onCloseDetails()
     if (currentSection().requiresAccount && account.user == null) onRequireSignIn()
     if (currentSection() == Section.ACCOUNT && account.user != null) {
-        val target = Section.RESUME.availableAtStart(true, hiddenSections)
+        val target = Section.RESUME.availableAtStart(true, hiddenSections, menuOrder)
         onSelect(target)
         repeat(2) { withFrameNanos { } }; focus.sectionFocus(target).requestFocus()
     }

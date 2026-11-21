@@ -14,11 +14,17 @@ import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.account.*
 import ru.seasonvar.tv.ui.catalog.*
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
+import ru.seasonvar.tv.ui.menuGroupTitle
+import ru.seasonvar.tv.ui.navigation.MenuGroup
+import ru.seasonvar.tv.ui.navigation.MenuOrder
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.search.SearchUiState
 
 /** Каждая группа экранов имеет собственные проверки; общая fixture сохраняется между диалогами. */
 internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val fixture: UiScreensFixtures) {
+    private val menuOrder = mutableStateOf(MenuOrder())
+    private val hiddenSections = mutableStateOf(emptySet<Section>())
+
     private fun root(page: Section, state: CatalogUiState = fixture.catalog) = ui.render { with(fixture) {
         SeasonvarApp(PublicFeed.entries.associateWith { state }, {}, startPage = page,
             loadDescription = { SeriesDescription(listOf("Синтетическое описание для проверки общего движка.")) },
@@ -35,6 +41,10 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             bypassEnabled = toggles.getValue(R.string.bypass_title), onBypassChange = { toggles[R.string.bypass_title] = it },
             playbackSpeed = playbackSpeed.value, onPlaybackSpeedChange = { playbackSpeed.value = it },
             fontSize = fontSize.value, onFontSizeChange = { fontSize.value = it },
+            menuOrder = menuOrder.value, onMenuOrderChange = { menuOrder.value = it },
+            hiddenSections = hiddenSections.value, onSectionVisibilityChange = { item, visible ->
+                hiddenSections.value = if (visible) hiddenSections.value - item else hiddenSections.value + item
+            },
             showPlayerControls = toggles.getValue(R.string.show_player_controls_title),
             onShowPlayerControlsChange = { toggles[R.string.show_player_controls_title] = it },
             dnsProvider = dns.value, onDnsChange = { dns.value = it })
@@ -150,6 +160,31 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             stage("settings_" + name)
             click(text(id))
             if (name in listOf("menu", "channels")) centered(text(R.string.menu_visibility_done))
+            if (name == "menu") {
+                fun label(id: Int, value: String) = targetContext.getString(id, value)
+                fun dpad(key: Int) { sendKeyDownUpSync(key); settle() }
+                val groupDown = label(R.string.menu_order_move_down, text(menuGroupTitle(MenuGroup.CATALOG)))
+                waitFor { optionFocused(groupDown) }
+                dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+                waitFor { optionFocused(groupDown) }
+                check(menuOrder.value.groups().first().first == MenuGroup.SMART)
+                dpad(KeyEvent.KEYCODE_DPAD_DOWN)
+                val today = text(R.string.today_title)
+                val todayDown = label(R.string.menu_order_move_down, today)
+                waitFor { optionFocused(todayDown) }
+                dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+                waitFor { optionFocused(todayDown) }
+                check(menuOrder.value.groups().toMap().getValue(MenuGroup.CATALOG).first() == Section.UPDATES)
+                dpad(KeyEvent.KEYCODE_DPAD_RIGHT)
+                waitFor { optionFocused(label(R.string.menu_order_hide, today)) }
+                dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+                waitFor { optionFocused(label(R.string.menu_order_show, today)) }
+                check(Section.TODAY in hiddenSections.value)
+                capture("settings-menu-hidden")
+                dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+                waitFor { optionFocused(label(R.string.menu_order_hide, today)) }
+                check(Section.TODAY !in hiddenSections.value)
+            }
             if (name == "font_size") {
                 check(optionFocused(text(R.string.font_size_normal)))
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)

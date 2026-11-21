@@ -182,6 +182,7 @@ class MainActivity : ComponentActivity() {
             val catalogLayouts by container.interfaceSettings.catalogLayouts.collectAsStateWithLifecycle()
             val startPage by container.interfaceSettings.startPage.collectAsStateWithLifecycle()
             val hiddenSections by container.interfaceSettings.hiddenSections.collectAsStateWithLifecycle()
+            val menuOrder by container.interfaceSettings.menuOrder.collectAsStateWithLifecycle()
             LaunchedEffect(accountState.busy, accountSession.version, hiddenSections) {
                 if (!accountState.busy) {
                     withFrameNanos { }
@@ -221,6 +222,7 @@ class MainActivity : ComponentActivity() {
                 catalogLayouts = catalogLayouts, onCatalogLayoutChange = container.interfaceSettings::setCatalogLayout,
                 startPage = probeStart ?: startPage, onStartPageChange = container.interfaceSettings::setStartPage,
                 hiddenSections = hiddenSections, onSectionVisibilityChange = container.interfaceSettings::setSectionVisible,
+                menuOrder = menuOrder, onMenuOrderChange = container.interfaceSettings::setMenuOrder,
                 autoNextEnabled = autoNextEnabled, onAutoNextChange = container.interfaceSettings::setAutoNextEnabled,
                 autoNextSeasonEnabled = autoNextSeasonEnabled, onAutoNextSeasonChange = container.interfaceSettings::setAutoNextSeasonEnabled,
                 playbackSpeed = playbackSpeed, onPlaybackSpeedChange = container.interfaceSettings.playbackSpeeds::setDefault,
