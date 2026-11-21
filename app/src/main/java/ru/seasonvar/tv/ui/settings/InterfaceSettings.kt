@@ -71,8 +71,16 @@ internal class InterfaceSettings(context: Context) {
         write = { preferences.edit().putStringSet("hidden_sections", it).apply() },
     )
     val hiddenSections = menuVisibility.hiddenSections
+    private val mutableMenuOrder = MutableStateFlow(ru.seasonvar.tv.ui.navigation.MenuOrder(
+        preferences.getString("menu_order", null)?.split(',').orEmpty()))
+    val menuOrder = mutableMenuOrder.asStateFlow()
 
     fun setSectionVisible(section: Section, visible: Boolean) = menuVisibility.setVisible(section, visible)
+
+    fun setMenuOrder(order: ru.seasonvar.tv.ui.navigation.MenuOrder) {
+        preferences.edit().putString("menu_order", order.keys.joinToString(",")).apply()
+        mutableMenuOrder.value = order
+    }
 
     private val mutablePreferredTranslations = MutableStateFlow(ru.seasonvar.tv.data.TranslationPriorities.decode(
         preferences.getString("preferred_translations", null)))

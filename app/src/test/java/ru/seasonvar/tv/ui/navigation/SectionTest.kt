@@ -95,4 +95,25 @@ class SectionTest {
         assertEquals(Section.UPDATES, Section.startPages(false, hidden).first())
     }
 
+    @Test fun a_group_moves_with_its_items_and_hidden_items_keep_their_place() {
+        val order = MenuOrder().move(Section.HISTORY.storageId, -1)
+            .move(MenuGroup.PERSONAL.storageId, -1).move(MenuGroup.PERSONAL.storageId, -1)
+        val restored = MenuOrder(order.keys.joinToString(",").split(','))
+        val visible = Section.menuGroups(true, order = restored)
+        assertEquals(MenuGroup.PERSONAL, visible.first().first)
+        assertEquals(listOf(Section.HISTORY, Section.WATCHED), visible.first().second.takeLast(2))
+        assertEquals(visible.first().second - Section.HISTORY,
+            Section.menuGroups(true, setOf(Section.HISTORY), restored).first().second)
+        assertEquals(listOf(MenuGroup.CATALOG, MenuGroup.SYSTEM), Section.menuGroups(false, order = restored).map { it.first })
+    }
+
+    @Test fun moves_respect_group_edges_and_unavailable_start_uses_the_custom_order() {
+        val order = MenuOrder().move(Section.TOP.storageId, -1)
+        assertEquals(order, order.move(Section.TODAY.storageId, -1))
+        assertEquals(order, order.move(MenuGroup.SYSTEM.storageId, -1))
+        assertEquals(order, order.move(Section.ANNOUNCEMENTS.storageId, 1))
+        assertEquals(Section.TOP, Section.TODAY.availableAtStart(false, setOf(Section.TODAY), order))
+        assertEquals(Section.defaultMenuGroups, MenuOrder(listOf("unknown")).groups())
+    }
+
 }

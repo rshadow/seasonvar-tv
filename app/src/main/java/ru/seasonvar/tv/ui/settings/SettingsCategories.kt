@@ -10,6 +10,7 @@ import androidx.tv.material3.Text
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.network.ProxyConfiguration
+import ru.seasonvar.tv.ui.navigation.MenuOrder
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.player.playbackSpeedLabel
@@ -19,7 +20,8 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
 @Composable
 internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (Section) -> Unit,
-    hiddenSections: Set<Section>, onSectionVisibilityChange: (Section, Boolean) -> Unit, signedIn: Boolean,
+    hiddenSections: Set<Section>, onSectionVisibilityChange: (Section, Boolean) -> Unit,
+    menuOrder: MenuOrder, onMenuOrderChange: (MenuOrder) -> Unit, signedIn: Boolean,
     translationSettingsModel: TranslationSettingsViewModel?, showActors: Boolean, onShowActorsChange: (Boolean) -> Unit,
     interfaceTheme: InterfaceTheme, onInterfaceThemeChange: (InterfaceTheme) -> Unit,
     fontSize: InterfaceFontSize, onFontSizeChange: (InterfaceFontSize) -> Unit,
@@ -27,10 +29,10 @@ internal fun ApplicationSettingsSection(startPage: Section, onStartPageChange: (
     val d = SeasonvarTheme.dimensions
     SettingsGroupTitle(R.string.application_settings_title)
     SettingsChoice(R.string.start_page_title, R.string.start_page_description, R.string.start_page_dialog_title,
-        Section.startPages(signedIn, hiddenSections), startPage.availableAtStart(signedIn, hiddenSections), ::sectionTitle, onStartPageChange,
+        Section.startPages(signedIn, hiddenSections, menuOrder), startPage.availableAtStart(signedIn, hiddenSections, menuOrder), ::sectionTitle, onStartPageChange,
         focus.start, focus.menu, FocusRequester.Cancel, focus.visibility, onBack, onCloseDialog, onInteraction)
     Spacer(Modifier.height(d.spacingMedium))
-    MenuVisibilitySetting(hiddenSections, onSectionVisibilityChange,
+    MenuVisibilitySetting(hiddenSections, onSectionVisibilityChange, menuOrder, onMenuOrderChange,
         focus.visibility, focus.menu, focus.start, focus.home, onBack, onCloseDialog, onInteraction)
     Spacer(Modifier.height(d.spacingMedium))
     HomeChannelsSetting(focus.home, focus.menu, focus.visibility, focus.translations, onBack, onCloseDialog, onInteraction)

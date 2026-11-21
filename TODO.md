@@ -31,7 +31,7 @@
 - [x] **Проверка подключения** — сайт, постеры и видео, повтор по кнопке и после изменения настроек; [ADR-0142](docs/adr/0142-connection-availability-checks.md).
 - [x] **Настройки** — группы «Приложение», «Плеер», «Сеть» и «Подключение»; [ADR-0103](docs/adr/0103-player-settings-group.md), [ADR-0141](docs/adr/0141-network-and-connection-settings.md).
 - [x] **При запуске** — выбор первого раздела; [ADR-0045](docs/adr/0045-start-page-setting.md).
-- [x] **Скрытие разделов меню** — галочки видимости и скрытие пустых групп; [ADR-0101](docs/adr/0101-menu-section-visibility.md).
+- [x] **Порядок и видимость разделов меню** — перестановка групп и пунктов, переключатель видимости и сохранение настроек. [ADR-0201](docs/adr/0201-sidebar-menu-order.md)
 - [x] **Размер шрифта** — обычный и крупный текст с сохранением выбора; [ADR-0195](docs/adr/0195-interface-font-size.md).
 - [x] **О программе** — версия, обновление приложения и описания релизов; [ADR-0074](docs/adr/0074-in-app-github-updates.md), [ADR-0100](docs/adr/0100-about-release-notes.md).
 - [x] **Диагностика устройства** — проверка хранилища, кэша, шифрования и сессии, коды сбоев и переход за разрешением на установку обновлений. [ADR-0196](docs/adr/0196-device-diagnostics.md), [ADR-0197](docs/adr/0197-diagnostic-failure-codes.md)
