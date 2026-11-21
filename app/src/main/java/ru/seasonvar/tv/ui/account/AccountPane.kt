@@ -117,5 +117,9 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
             ThemeButton(stringResource(R.string.account_check), onCheck,
                 Modifier.height(d.headerButtonSize).focusProperties { left = menuFocus }, loading = state.busy)
         }
+        state.storageFailureCode?.let {
+            Text(stringResource(R.string.account_storage_failure_code, it),
+                style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+        }
     }
 }

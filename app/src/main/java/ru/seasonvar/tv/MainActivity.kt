@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
             repository, container.listFilterPreferences, container.account) {
                 ru.seasonvar.tv.data.playback.markOwner(container.account.session.value.user)
             })[ru.seasonvar.tv.ui.catalog.BrowseCatalogViewModel::class.java] }
-        val accountModel = startupMeasure("model_account") { ViewModelProvider(this, AccountViewModel.Factory(container.account))[AccountViewModel::class.java] }
+        val accountModel = startupMeasure("model_account") { ViewModelProvider(this, AccountViewModel.Factory(container.account, container))[AccountViewModel::class.java] }
         personalModels = startupMeasure("models_personal") { PersonalFeed.entries.associateWith { feed ->
             ViewModelProvider(this, PersonalListViewModel.Factory(container.account, feed, container.listFilterPreferences))
                 .get("personal-" + feed.name, PersonalListViewModel::class.java)

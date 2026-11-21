@@ -5,6 +5,11 @@ import okhttp3.Cookie
 import org.json.JSONArray
 import org.json.JSONObject
 import ru.seasonvar.tv.data.security.KeystoreCipher
+import ru.seasonvar.tv.diagnostics.DiagnosticStep
+import ru.seasonvar.tv.diagnostics.LocalDiagnosticException
+import ru.seasonvar.tv.diagnostics.LocalDiagnosticFailure
+import ru.seasonvar.tv.diagnostics.diagnosticStep
+import ru.seasonvar.tv.diagnostics.failDiagnostic
 import java.security.MessageDigest
 
 object CookieCodec {
@@ -25,10 +30,18 @@ object CookieCodec {
                 if (row.getBoolean("httpOnly")) httpOnly()
             }.build()
         }
-    } catch (_: Exception) { throw SessionStorageException() }
+    } catch (_: Exception) {
+        throw SessionStorageException(LocalDiagnosticFailure(DiagnosticStep.SESSION_DECODE, "FORMAT"))
+    }
 }
 
-class SessionStorageException(cause: Throwable? = null) : Exception("Session storage unavailable", cause)
+class SessionStorageException private constructor(cause: Throwable?, private val failure: LocalDiagnosticFailure?) :
+    Exception("Session storage unavailable", cause) {
+    constructor(cause: Throwable? = null) : this(cause, null)
+    internal constructor(failure: LocalDiagnosticFailure) : this(null, failure)
+
+    internal val diagnostic: LocalDiagnosticFailure? get() = failure ?: (cause as? SessionStorageException)?.diagnostic
+}
 
 internal object StoredSessionOwnerCodec {
     private fun fingerprint(sealed: String) = MessageDigest.getInstance("SHA-256")
@@ -46,26 +59,36 @@ internal object StoredSessionOwnerCodec {
 }
 
 class EncryptedSessionStore(context: Context) : SessionStore {
-    private val preferences = context.getSharedPreferences("account-session", Context.MODE_PRIVATE)
+    private val preferences by lazy { context.getSharedPreferences("account-session", Context.MODE_PRIVATE) }
     private val cipher = KeystoreCipher("seasonvar-session-v1")
     override fun read(): List<Cookie> = readSession().cookies
-    override fun readSession(): StoredSession {
-        val sealed = preferences.getString("sealed", null) ?: return StoredSession(emptyList())
+    override fun readSession(): StoredSession = sessionOperation {
+        val sealed = diagnosticStep(DiagnosticStep.SESSION_READ) { preferences.getString("sealed", null) }
+            ?: return@sessionOperation StoredSession(emptyList())
         val cookies = CookieCodec.decode(cipher.open(sealed))
         val owner = runCatching {
             preferences.getString("sealed-owner", null)?.let { StoredSessionOwnerCodec.decode(cipher.open(it), sealed) }
         }.getOrNull()
-        return StoredSession(cookies, owner)
+        StoredSession(cookies, owner)
     }
     override fun save(cookies: List<Cookie>) = saveSession(StoredSession(cookies))
     override fun saveRestoredOwner(session: StoredSession) = saveSession(session)
-    override fun saveSession(session: StoredSession) {
-        try {
-            val sealed = cipher.seal(CookieCodec.encode(session.cookies))
-            val owner = session.owner?.let { cipher.seal(StoredSessionOwnerCodec.encode(it, sealed)) }
-            if (!preferences.edit().putString("sealed", sealed).putString("sealed-owner", owner).commit())
-                throw SessionStorageException()
-        } catch (_: Exception) { throw SessionStorageException() }
+    override fun saveSession(session: StoredSession) = sessionOperation {
+        val sealed = cipher.seal(diagnosticStep(DiagnosticStep.SESSION_ENCODE) { CookieCodec.encode(session.cookies) })
+        val owner = session.owner?.let {
+            cipher.seal(diagnosticStep(DiagnosticStep.SESSION_ENCODE) { StoredSessionOwnerCodec.encode(it, sealed) })
+        }
+        diagnosticStep(DiagnosticStep.SESSION_WRITE) {
+            if (!preferences.edit().putString("sealed", sealed).putString("sealed-owner", owner).commit()) {
+                failDiagnostic(DiagnosticStep.SESSION_WRITE, "COMMIT")
+            }
+        }
     }
     override fun clear() { preferences.edit().clear().commit() }
+
+    private inline fun <T> sessionOperation(operation: () -> T): T = try {
+        operation()
+    } catch (error: LocalDiagnosticException) {
+        throw SessionStorageException(error.failure)
+    }
 }

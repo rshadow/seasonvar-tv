@@ -30,14 +30,8 @@ internal fun ConnectionChecks(
     menu: FocusRequester,
 ) {
     val d = SeasonvarTheme.dimensions
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.connection_title), Modifier.weight(1f),
-            style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-        ThemeButton(stringResource(R.string.connection_refresh), refresh,
-            Modifier.size(d.headerButtonSize).focusRequester(focus).focusProperties {
-                up = previous; down = next; left = menu
-            }, icon = R.drawable.ic_reload, contentPadding = PaddingValues(d.spacingSmall))
-    }
+    SettingsRefreshHeader(R.string.connection_title, R.string.connection_refresh, refresh,
+        Modifier.focusRequester(focus).focusProperties { up = previous; down = next; left = menu })
     Spacer(Modifier.height(d.spacingSmall))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
         ConnectionTarget.entries.forEach { target ->
@@ -81,6 +75,17 @@ internal fun ConnectionChecks(
     Text(summary, Modifier.fillMaxWidth().height(d.headerButtonSize),
         style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+@Composable
+internal fun SettingsRefreshHeader(title: Int, refreshLabel: Int, refresh: () -> Unit, buttonModifier: Modifier) {
+    val d = SeasonvarTheme.dimensions
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(title), Modifier.weight(1f),
+            style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+        ThemeButton(stringResource(refreshLabel), refresh, Modifier.size(d.headerButtonSize).then(buttonModifier),
+            icon = R.drawable.ic_reload, contentPadding = PaddingValues(d.spacingSmall))
+    }
 }
 
 private fun ConnectionTarget.label() = when (this) {
