@@ -14,6 +14,7 @@
     <string name="catalog_quality">Качество</string>
     <string name="catalog_personal">Личные</string>
     <string name="catalog_sort">Порядок</string>
+    <string name="catalog_reset_filters">Сбросить фильтры и сортировку</string>
     <string name="catalog_genre_include">Включить</string>
     <string name="catalog_genre_exclude">Исключить</string>
     <string name="catalog_genre_ignore">Не учитывать</string>

@@ -8,15 +8,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import ru.seasonvar.tv.R
@@ -51,12 +58,20 @@ private fun optionsSummary(state: BrowseCatalogState, key: String, values: Set<S
 @Composable
 internal fun BrowseCatalogFilters(state: BrowseCatalogState, controller: BrowseCatalogController,
     signedIn: Boolean, applyFocus: FocusRequester, firstFocus: FocusRequester, headerFocus: FocusRequester,
-    menuFocus: FocusRequester, onResults: () -> Unit) {
+    menuFocus: FocusRequester, onResults: (FocusRequester) -> Unit) {
     val d = SeasonvarTheme.dimensions
     var group by remember { mutableStateOf<CatalogCondition?>(null) }
     val focuses = remember(firstFocus) { conditions.associate { it.id to if (it.id == "country") firstFocus else FocusRequester() } }
     val resetFocus = remember { FocusRequester() }
-    val rows = listOf(conditions.take(5), conditions.drop(5))
+    val upper = conditions.take(5)
+    val lower = conditions.drop(5)
+    val upperFocuses = upper.map { focuses.getValue(it.id) }
+    val lowerFocuses = lower.map { focuses.getValue(it.id) } + applyFocus
+    fun resultsKey(button: FocusRequester) = Modifier.onPreviewKeyEvent {
+        if (it.type != KeyEventType.KeyDown || it.key != Key.DirectionDown) return@onPreviewKeyEvent false
+        onResults(button)
+        true
+    }
     fun summary(condition: CatalogCondition): String {
         val filters = state.draft
         fun label(key: String) = state.options?.choices?.get(key)?.find { it.value == filters[key] }?.label.orEmpty()
@@ -71,43 +86,69 @@ internal fun BrowseCatalogFilters(state: BrowseCatalogState, controller: BrowseC
         }
     }
     Column(Modifier.fillMaxWidth().testTag("catalog_inline_filters"), verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-        rows.forEachIndexed { rowIndex, row ->
+        listOf(upper, lower).forEachIndexed { rowIndex, row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                if (rowIndex == 1) ThemeButton(stringResource(R.string.filters_apply), controller::apply,
-                    Modifier.weight(1f).height(d.headerButtonSize).focusRequester(applyFocus)
-                        .focusProperties { left = menuFocus; right = focuses.getValue(row.first().id); up = focuses.getValue("country") }
-                        .onPreviewKeyEvent { if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) { onResults(); true } else false },
-                    actionEnabled = state.options != null && !state.page.loading && state.changed,
-                    contentPadding = PaddingValues(d.spacingSmall))
+                val top = rowIndex == 0
+                val rowFocuses = if (top) upperFocuses else lowerFocuses
                 row.forEachIndexed { index, condition ->
                     val value = summary(condition)
+                    val button = rowFocuses[index]
                     ThemeButton(if (condition.id == "sort" && value.isNotEmpty()) value else stringResource(condition.title) + if (value.isEmpty()) "" else ": $value",
                         { group = condition },
-                        Modifier.weight(if (condition.id == "sort") 1.5f else 1f).height(d.headerButtonSize).focusRequester(focuses.getValue(condition.id))
+                        Modifier.weight(if (index == 3) 1.5f else 1f).height(d.headerButtonSize).focusRequester(button)
                             .focusProperties {
-                                left = row.getOrNull(index - 1)?.let { focuses.getValue(it.id) } ?: if (rowIndex == 1) applyFocus else menuFocus
-                                right = row.getOrNull(index + 1)?.let { focuses.getValue(it.id) } ?: if (rowIndex == 1) resetFocus else FocusRequester.Cancel
-                                if (rowIndex == 0) {
-                                    up = headerFocus
-                                    down = if (index == 0) applyFocus else focuses.getValue(rows[1][(index - 1).coerceAtMost(3)].id)
-                                }
-                                else up = focuses.getValue(rows[0][index + 1].id)
-                            }.onPreviewKeyEvent {
-                                if (rowIndex == 1 && it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) { onResults(); true } else false
-                            }.testTag("catalog_condition_" + condition.id),
+                                left = rowFocuses.getOrNull(index - 1) ?: menuFocus
+                                right = rowFocuses.getOrNull(index + 1) ?: FocusRequester.Cancel
+                                up = if (top) headerFocus else upperFocuses[index]
+                                if (top) down = lowerFocuses[index]
+                            }.then(if (top) Modifier else resultsKey(button))
+                            .testTag("catalog_condition_" + condition.id),
                         actionEnabled = state.options != null && !state.page.loading && (condition.id != "personal" || signedIn),
                         contentPadding = PaddingValues(d.spacingSmall))
                 }
-                if (rowIndex == 1) ThemeButton(stringResource(R.string.filters_reset), controller::reset,
-                    Modifier.weight(1f).height(d.headerButtonSize).focusRequester(resetFocus)
-                        .focusProperties { left = focuses.getValue("sort"); right = FocusRequester.Cancel; up = focuses.getValue("rating") }
-                        .onPreviewKeyEvent { if (it.type == KeyEventType.KeyDown && it.key == Key.DirectionDown) { onResults(); true } else false },
-                    actionEnabled = !state.page.loading, contentPadding = PaddingValues(d.spacingSmall))
+                if (top) {
+                    Spacer(Modifier.width(d.headerButtonSize))
+                } else {
+                    ThemeButton(stringResource(R.string.filters_apply), controller::apply,
+                        Modifier.weight(1f).height(d.headerButtonSize).focusRequester(applyFocus)
+                            .focusProperties { left = focuses.getValue("sort"); right = resetFocus; up = upperFocuses.last() }
+                            .then(resultsKey(applyFocus)),
+                        actionEnabled = state.options != null && !state.page.loading && state.changed,
+                        contentPadding = PaddingValues(d.spacingSmall))
+                    CatalogResetButton(controller::reset, !state.page.loading,
+                        Modifier.focusRequester(resetFocus).focusProperties {
+                            left = applyFocus
+                            right = FocusRequester.Cancel
+                            up = upperFocuses.last()
+                        }.then(resultsKey(resetFocus)))
+                }
             }
         }
     }
     group?.let { condition ->
         CatalogConditionDialog(condition, state, controller) { group = null }
+    }
+}
+
+@Composable
+private fun CatalogResetButton(onReset: () -> Unit, actionEnabled: Boolean, modifier: Modifier) {
+    val d = SeasonvarTheme.dimensions
+    val colors = MaterialTheme.colorScheme
+    val label = stringResource(R.string.catalog_reset_filters)
+    var focused by remember { mutableStateOf(false) }
+    Box {
+        ThemeButton(label, onReset, modifier.onFocusChanged { focused = it.isFocused },
+            icon = R.drawable.ic_filter_reset, actionEnabled = actionEnabled)
+        if (focused) {
+            val offset = with(LocalDensity.current) { (d.headerButtonSize + d.spacingSmall).roundToPx() }
+            Popup(alignment = Alignment.TopEnd, offset = IntOffset(0, offset),
+                properties = PopupProperties(dismissOnClickOutside = false)) {
+                Text(label, Modifier.clearAndSetSemantics {}
+                    .background(colors.surface, RoundedCornerShape(d.buttonCornerRadius))
+                    .padding(horizontal = d.spacingSmall, vertical = d.spacingSmall),
+                    style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
+            }
+        }
     }
 }
 
