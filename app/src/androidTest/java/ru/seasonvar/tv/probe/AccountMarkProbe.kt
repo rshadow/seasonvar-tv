@@ -43,7 +43,7 @@ class AccountMarkProbe : Instrumentation() {
         if (mode == "connection-checks") { ConnectionChecksProbe.run(this); return }
         if (mode == "proxy-settings") { ProxySettingsProbe.run(this); return }
         if (mode == "tls-pins") { TlsPinningProbe.run(this); return }
-        if (probeArguments.getString("mode") == "catalog-layout") { BrowseCatalogLayoutProbe.run(this); return }
+        if (mode == "catalog-layout") { BrowseCatalogLayoutProbe.run(this, theme); return }
         if (probeArguments.getString("mode") == "catalog-live") { BrowseCatalogLiveProbe.run(this); return }
         if (mode == "season-messages") { SeasonMessagesLiveProbe.run(this); return }
         if (mode == "series-list-engine") { SeriesListEngineProbe.run(this); return }

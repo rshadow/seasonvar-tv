@@ -916,6 +916,7 @@ internal fun CatalogPane(
     layout: CatalogLayout = CatalogLayout.STRIP,
     gridState: LazyGridState = rememberLazyGridState(),
     layoutFocus: FocusRequester = remember { FocusRequester() },
+    cardsUpFocus: FocusRequester = layoutFocus,
     onLayoutChange: () -> Unit = {},
     onEnterContent: () -> Unit = {},
     filters: ru.seasonvar.tv.ui.filters.ListFiltersController? = null,
@@ -1096,7 +1097,7 @@ internal fun CatalogPane(
             val focusModifier = if (onCardsFocusChanged == null) Modifier
                 else Modifier.onFocusChanged { onCardsFocusChanged(it.hasFocus) }.focusGroup()
             ru.seasonvar.tv.ui.catalog.SeriesList(state.entries, catalogKey, selected.key, layout,
-                listState, gridState, cards, layoutFocus, menuFocus, cardMetrics, imagePrefetchEnabled, listModifier.then(focusModifier),
+                listState, gridState, cards, cardsUpFocus, menuFocus, cardMetrics, imagePrefetchEnabled, listModifier.then(focusModifier),
                 onFocused, onOpen, if (allowAccountActions) onActions else null, engine = engine,
                 onBackdropSource = backdropPublisher, descriptionsEnabled = privateActionsEnabled, resourceContext = resourceContext)
         }

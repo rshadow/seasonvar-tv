@@ -1,6 +1,8 @@
 package ru.seasonvar.tv.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import ru.seasonvar.tv.data.PublicFeed
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.SeriesDescription
@@ -30,6 +32,7 @@ internal fun MainCatalogContent(state: CatalogUiState, selected: SeriesEntry?, s
     val searching = section == Section.SEARCH
     val smart = section == Section.SMART_CONTINUE
     val personalFeed = section.personalFeed
+    val cardsUpFocus = remember(browsing) { mutableStateOf(focus.layoutFocus) }
     CatalogPane(
         state, selected, position.list, focus.cards, if (browsing || searching || smart || personalFeed != null) null else activeFeed,
         focus.sectionFocus(section), focus.refreshFocus, focus.retryFocus,
@@ -41,11 +44,15 @@ internal fun MainCatalogContent(state: CatalogUiState, selected: SeriesEntry?, s
         preparationContext = preparationContext,
         resourceContext = resourceContext,
         cardMetrics = cardMetrics, layout = layout, gridState = position.grid, layoutFocus = focus.layoutFocus,
+        cardsUpFocus = cardsUpFocus.value,
         onLayoutChange = onLayoutChange,
         onEnterContent = onEnterContent,
         inlineFilters = if (browsing && browseCatalog != null) ({
             ru.seasonvar.tv.ui.catalog.BrowseCatalogFilters(browseState, browseCatalog, signedIn,
-                focus.layoutFocus, focus.browseFiltersFocus, focus.refreshFocus, focus.browseFocus, onEnterContent)
+                focus.layoutFocus, focus.browseFiltersFocus, focus.refreshFocus, focus.browseFocus) { button ->
+                cardsUpFocus.value = button
+                onEnterContent()
+            }
         }) else null,
         browsing = browsing,
         query = if (searching) searchState.query else null,

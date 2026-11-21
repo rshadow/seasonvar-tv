@@ -20,11 +20,13 @@ import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.catalog.*
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.navigation.Section
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 
-object BrowseCatalogLayoutProbe {
-    fun run(probe: Instrumentation) = with(probe) {
+internal object BrowseCatalogLayoutProbe {
+    fun run(probe: Instrumentation, theme: InterfaceTheme) = with(probe) {
         val result = Bundle()
+        val resetLabel = targetContext.getString(R.string.catalog_reset_filters)
         var phase = "start"
         var activity: MarkMenuPreviewActivity? = null
         val store = ViewModelStore()
@@ -115,12 +117,20 @@ object BrowseCatalogLayoutProbe {
             main { activity.setContent { SeasonvarApp(PublicFeed.entries.associateWith {
                 CatalogUiState(entries = entries.take(1), loaded = true, loading = false)
             }, {}, browseCatalog = controller, detailsModel = detailsModel, hiddenSections = Section.catalogPages.toSet() - Section.TODAY,
+                interfaceTheme = theme,
                 loadDescription = { SeriesDescription(listOf("Описание выделенного сериала остаётся под фильтрами и над общим списком карточек.")) }) } }
             stage("open_catalog")
             waitFor { focused(targetContext.getString(R.string.today_title)) }
             key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_RIGHT); key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { focused("Страна") }; capture("catalog")
             ButtonAlignmentChecks.centered(this, "Страна"); ButtonAlignmentChecks.centered(this, "Применить")
+            fun bounds(label: String) = Rect().also { checkNotNull(control(label)).getBoundsInScreen(it) }
+            val rating = bounds("Рейтинг")
+            val apply = bounds("Применить")
+            val reset = bounds(resetLabel)
+            check(rating.centerX() == apply.centerX() && rating.bottom <= apply.top)
+            check(apply.top == reset.top && apply.bottom == reset.bottom && apply.right <= reset.left)
+            check(reset.width() == reset.height() && reset.width() < apply.width())
             waitFor { find(uiAutomation.rootInActiveWindow, "Описание выделенного сериала остаётся под фильтрами и над общим списком карточек.") != null }
             stage("country_dialog")
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { control("Назад") != null && focused("Страна") }
@@ -130,9 +140,10 @@ object BrowseCatalogLayoutProbe {
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Страна") }
             key(KeyEvent.KEYCODE_BACK); waitFor { focused("Страна: Япония") }; capture("country_selected")
             check(controller.state.value.applied["country"] == "all")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Применить") }
+            key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Озвучка") }
+            repeat(4) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focused("Применить") }
             key(KeyEvent.KEYCODE_DPAD_CENTER); check(controller.applied == 1)
-            repeat(5) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focused("Сбросить") }
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused(resetLabel) }; capture("reset_focused")
             key(KeyEvent.KEYCODE_DPAD_CENTER); check(controller.resets == 1); check(controller.state.value.applied["country"] == "all")
             stage("filter_dialogs")
             key(KeyEvent.KEYCODE_DPAD_UP)
@@ -155,7 +166,7 @@ object BrowseCatalogLayoutProbe {
             val newHeaderBounds = Rect().also { checkNotNull(control("Применить")).getBoundsInScreen(it) }
             val nextCardBounds = Rect().also { checkNotNull(control("Сериал 200")).getBoundsInScreen(it) }
             check(headerBounds == newHeaderBounds && originalBounds.height() == nextCardBounds.height())
-            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Озвучка") }
             stage("return_card")
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
             stage("details_return")
@@ -178,15 +189,16 @@ object BrowseCatalogLayoutProbe {
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Страна") }
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
             stage("sort_resets_selection")
-            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
-            repeat(4) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focused("По добавлению") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Озвучка") }
+            repeat(3) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focused("По добавлению") }
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { control("Назад") != null && focused("По добавлению") }
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("По названию") }
             key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { control("Назад") == null && focused("По названию") }
             stage("return_from_sort_dialog")
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 200") }
-            key(KeyEvent.KEYCODE_DPAD_UP)
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("По названию") }
+            key(KeyEvent.KEYCODE_DPAD_RIGHT)
             waitFor { focused("Применить") }; key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { controller.state.value.applied["sort"] == "name" && control("Сериал 1") != null }
             check(entries.window!!.state.value.entries.size == 250)
@@ -194,26 +206,31 @@ object BrowseCatalogLayoutProbe {
             key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused("Сериал 10") }
 
             stage("filter_resets_selection")
-            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Страна") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Рейтинг") }
+            repeat(4) { key(KeyEvent.KEYCODE_DPAD_LEFT) }; waitFor { focused("Страна") }
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { control("Назад") != null && focused("Страна") }
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor { focused("Любая страна") }
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); key(KeyEvent.KEYCODE_BACK)
             waitFor { control("Назад") == null && focused("Страна: Япония") }
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 10") }
-            key(KeyEvent.KEYCODE_DPAD_UP); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Озвучка") }
+            repeat(4) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }; waitFor { focused("Применить") }
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor { controller.state.value.applied["country"] == "Япония" }
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 1") }; capture("filter_reset")
             key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused("Сериал 10") }
 
             stage("reset_resets_selection")
-            key(KeyEvent.KEYCODE_DPAD_UP); repeat(5) { key(KeyEvent.KEYCODE_DPAD_RIGHT) }
-            waitFor { focused("Сбросить") }; key(KeyEvent.KEYCODE_DPAD_CENTER)
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused(resetLabel) }; key(KeyEvent.KEYCODE_DPAD_CENTER)
             key(KeyEvent.KEYCODE_DPAD_DOWN); waitFor { focused("Сериал 1") }; capture("defaults_reset")
             key(KeyEvent.KEYCODE_DPAD_RIGHT); waitFor { focused("Сериал 2") }
 
             stage("refresh_and_failure_preserve_selection")
             main { controller.refresh() }; waitFor { focused("Сериал 2") }
-            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused("Применить") }
+            key(KeyEvent.KEYCODE_DPAD_UP); waitFor { focused(resetLabel) }
+            key(KeyEvent.KEYCODE_DPAD_LEFT); waitFor { focused("Применить") }
             main { controller.choose("year", "2025"); controller.fail = true }
             settle()
             waitFor { control("Год: =2025") != null && control("Применить")?.isEnabled == true }
