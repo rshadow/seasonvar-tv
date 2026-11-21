@@ -55,6 +55,7 @@ class SiteHttpException(val status: Int) : Exception("HTTP " + status)
 
 interface HtmlSource {
     suspend fun moreReviews(entry: SeriesEntry, cursor: String): String = throw UnsupportedOperationException()
+    suspend fun moreComments(entry: SeriesEntry, page: Int): String = throw UnsupportedOperationException()
     suspend fun catalog(filters: CatalogFilters): String = throw UnsupportedOperationException()
     suspend fun bestFilters(filters: BestListFilters): String = throw UnsupportedOperationException()
     suspend fun get(url: String): String

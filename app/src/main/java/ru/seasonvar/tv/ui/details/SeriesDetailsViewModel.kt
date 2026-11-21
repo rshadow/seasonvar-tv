@@ -46,6 +46,7 @@ class SeriesDetailsViewModel(
     private val preferredTranslations: () -> List<String> = { emptyList() },
     private val currentEntry: (SeriesEntry) -> SeriesEntry = { it },
     private val hasConfirmedMark: (String) -> Boolean = { false },
+    internal val loadComments: (suspend (SeriesEntry, Int) -> ru.seasonvar.tv.data.comments.CommentsPage)? = null,
     private val load: suspend (SeriesEntry) -> SeriesDetails,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DetailsUiState())
@@ -244,7 +245,8 @@ class SeriesDetailsViewModel(
 
     class Factory(private val repository: CatalogRepository, private val progress: PlaybackProgress,
         private val account: ru.seasonvar.tv.data.account.AccountRepository? = null,
-        private val preferredTranslations: () -> List<String> = { emptyList() }) : ViewModelProvider.Factory {
+        private val preferredTranslations: () -> List<String> = { emptyList() },
+        private val comments: ru.seasonvar.tv.data.comments.CommentsRepository? = null) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(SeriesDetailsViewModel::class.java))
             suspend fun loadDetails(entry: SeriesEntry, force: Boolean): SeriesDetails =
@@ -282,7 +284,7 @@ class SeriesDetailsViewModel(
                             " markMatchesSource=" + (direct != null && sourceEpisode != null && direct.marked == sourceEpisode))
                     }
                     parsed
-                } }, load = { loadDetails(it, false) }) as T
+                } }, loadComments = comments?.let { it::load }, load = { loadDetails(it, false) }) as T
         }
     }
 }

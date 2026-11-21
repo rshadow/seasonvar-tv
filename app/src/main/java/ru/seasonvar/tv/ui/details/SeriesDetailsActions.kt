@@ -22,6 +22,7 @@ import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 @Composable
 internal fun SeriesDetailsActions(state: DetailsUiState, entry: SeriesEntry, model: SeriesDetailsViewModel,
     navigation: DetailsNavigation, menuFocus: FocusRequester, preparing: Boolean,
+    nextFocus: FocusRequester,
     onActions: ((SeriesEntry) -> Unit)?, onPlay: (PlaybackRequest) -> Unit, onInteraction: () -> Unit,
     actionScrolling: (FocusRequester) -> Modifier) = with(navigation) {
     val d = SeasonvarTheme.dimensions
@@ -60,7 +61,7 @@ internal fun SeriesDetailsActions(state: DetailsUiState, entry: SeriesEntry, mod
                         canOpenReviews -> reviews
                         else -> FocusRequester.Cancel
                     }
-                    down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                    down = nextFocus
                 })
             if (details != null) {
                 val currentSeason = details.seasons.firstOrNull { it.id == entry.id }
@@ -72,7 +73,7 @@ internal fun SeriesDetailsActions(state: DetailsUiState, entry: SeriesEntry, mod
                         .focusRequester(season).focusProperties {
                             left = play; up = FocusRequester.Cancel
                             right = if (details.translations.size > 1) translation else if (canOpenActions) actionsMenu else if (canOpenReviews) reviews else FocusRequester.Cancel
-                            down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                            down = nextFocus
                         })
                 else if (currentSeason?.number != null || entry.season != null) Text(seasonLabel, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
                     color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -85,7 +86,7 @@ internal fun SeriesDetailsActions(state: DetailsUiState, entry: SeriesEntry, mod
                                 up = FocusRequester.Cancel
                                 left = if (details.seasons.size > 1) season else play
                                 right = if (canOpenActions) actionsMenu else if (canOpenReviews) reviews else FocusRequester.Cancel
-                                down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                                down = nextFocus
                             })
                     else Text(label, Modifier.heightIn(min = d.headerButtonSize).wrapContentHeight(),
                         color = c.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -99,7 +100,7 @@ internal fun SeriesDetailsActions(state: DetailsUiState, entry: SeriesEntry, mod
             }, Modifier.then(actionScrolling(actionsMenu)).focusRequester(actionsMenu).focusProperties {
                 up = FocusRequester.Cancel; right = if (canOpenReviews) reviews else FocusRequester.Cancel
                 left = when { (details?.translations?.size ?: 0) > 1 -> translation; (details?.seasons?.size ?: 0) > 1 -> season; else -> play }
-                down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                down = nextFocus
             }, icon = R.drawable.ic_more_vert)
         }
         ThemeButton(stringResource(R.string.reviews_button, details?.reviewCount?.let { if (it > 999) "999+" else it.toString() } ?: "—"),
@@ -113,7 +114,7 @@ internal fun SeriesDetailsActions(state: DetailsUiState, entry: SeriesEntry, mod
                         (details?.seasons?.size ?: 0) > 1 -> season
                         else -> play
                     }
-                    down = if (!state.episodes.isNullOrEmpty()) selectedEpisodeFocus else FocusRequester.Cancel
+                    down = nextFocus
                 }, enabled = canOpenReviews)
     }
 }

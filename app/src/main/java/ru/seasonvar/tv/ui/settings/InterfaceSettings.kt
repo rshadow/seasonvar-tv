@@ -46,6 +46,14 @@ internal class InterfaceSettings(context: Context) {
         mutableFontSize.value = size
     }
 
+    private val mutableShowComments = MutableStateFlow(preferences.getBoolean("show_season_comments", true))
+    val showComments = mutableShowComments.asStateFlow()
+
+    fun setShowComments(visible: Boolean) {
+        preferences.edit().putBoolean("show_season_comments", visible).apply()
+        mutableShowComments.value = visible
+    }
+
     private val mutableStartPage = MutableStateFlow(Section.fromStorage(preferences.getString("start_page", null)))
     val startPage = mutableStartPage.asStateFlow()
 

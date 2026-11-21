@@ -29,6 +29,8 @@ internal fun SettingsPane(
     onListPrefetchChange: (Boolean) -> Unit,
     showActors: Boolean,
     onShowActorsChange: (Boolean) -> Unit,
+    showComments: Boolean,
+    onShowCommentsChange: (Boolean) -> Unit,
     interfaceTheme: InterfaceTheme,
     onInterfaceThemeChange: (InterfaceTheme) -> Unit,
     fontSize: InterfaceFontSize,
@@ -74,7 +76,7 @@ internal fun SettingsPane(
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         Spacer(Modifier.height(d.spacingLarge))
         ApplicationSettingsSection(startPage, onStartPageChange, hiddenSections, onSectionVisibilityChange, menuOrder, onMenuOrderChange, signedIn,
-            translationSettingsModel, showActors, onShowActorsChange, interfaceTheme, onInterfaceThemeChange,
+            translationSettingsModel, showActors, onShowActorsChange, showComments, onShowCommentsChange, interfaceTheme, onInterfaceThemeChange,
             fontSize, onFontSizeChange, focus, onBack, onCloseDialog, onInteraction)
         Spacer(Modifier.height(d.spacingLarge))
         PlayerSettingsSection(autoNextEnabled, onAutoNextChange, autoNextSeasonEnabled, onAutoNextSeasonChange,
@@ -98,6 +100,7 @@ internal class SettingsFocus(val start: FocusRequester, val menu: FocusRequester
     val home = FocusRequester()
     val translations = FocusRequester()
     val actors = FocusRequester()
+    val comments = FocusRequester()
     val appearance = FocusRequester()
     val fontSize = FocusRequester()
     val autoNext = FocusRequester()

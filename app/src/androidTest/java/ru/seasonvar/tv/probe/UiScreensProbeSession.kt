@@ -79,7 +79,7 @@ internal class UiScreensProbeSession(private val probe: Instrumentation, private
             probe.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
             settle()
             for (direction in listOf(KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_UP)) {
-                for (attempt in 0 until 14) {
+                for (attempt in 0 until 20) {
                     if (control(label) != null) break
                     probe.sendKeyDownUpSync(direction)
                     settle()

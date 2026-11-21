@@ -1,9 +1,8 @@
 package ru.seasonvar.tv.ui.details
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,7 +14,7 @@ import ru.seasonvar.tv.ui.settings.InterfaceTheme
 
 /** Объекты фокуса и незавершённые переходы живут столько же, сколько открытая карточка. */
 @Stable
-internal class DetailsNavigation(private val scope: CoroutineScope, val scroll: ScrollState) {
+internal class DetailsNavigation(private val scope: CoroutineScope, val scroll: LazyListState) {
     val selectedEpisodeFocus = FocusRequester()
     val play = FocusRequester()
     val actionsMenu = FocusRequester()
@@ -39,14 +38,15 @@ internal class DetailsNavigation(private val scope: CoroutineScope, val scroll: 
 
     /** actorFocus содержит по одному объекту на каждого видимого актёра; индекс читается после прокрутки. */
     fun actionScrolling(origin: FocusRequester, actorListState: LazyListState, actorFocus: List<FocusRequester>,
-        actorIndex: MutableIntState, step: Float, episodesEmpty: Boolean, onInteraction: () -> Unit) = Modifier.onPreviewKeyEvent {
+        actorIndex: MutableIntState, step: Float, episodesEmpty: Boolean, commentsReady: Boolean,
+        onInteraction: () -> Unit) = Modifier.onPreviewKeyEvent {
         if (it.type != KeyEventType.KeyDown) false else when {
             it.key == Key.DirectionUp -> {
                 onInteraction()
                 if (actorFocus.isNotEmpty()) {
                     actorReturnFocus = origin
                     scope.launch {
-                        scroll.scrollTo(0)
+                        scroll.scrollToItem(0)
                         val index = actorIndex.intValue.coerceIn(actorFocus.indices)
                         if (actorListState.layoutInfo.visibleItemsInfo.none { item -> item.index == index }) {
                             actorListState.scrollToItem(index)
@@ -58,7 +58,7 @@ internal class DetailsNavigation(private val scope: CoroutineScope, val scroll: 
                 true
             }
             it.key == Key.DirectionDown && episodesEmpty -> {
-                scope.launch { scroll.scrollBy(step) }; true
+                readDescription(true, step, commentsReady)
             }
             else -> false
         }
@@ -73,25 +73,35 @@ internal class DetailsNavigation(private val scope: CoroutineScope, val scroll: 
     }
 
     /** true означает обработанную стрелку; возврат вверх останавливается на исходной позиции описания. */
-    fun readDescription(forward: Boolean, step: Float): Boolean {
+    fun readDescription(forward: Boolean, step: Float, comments: Boolean): Boolean {
+        val offset = scroll.firstVisibleItemScrollOffset
         return if (forward) {
-            if (descriptionAnchor == null) descriptionAnchor = scroll.value
+            if (comments && scroll.layoutInfo.visibleItemsInfo.any { it.index == 1 }) return false
+            if (descriptionAnchor == null) descriptionAnchor = offset
             scope.launch { scroll.scrollBy(step) }
             true
         } else {
             val anchor = descriptionAnchor
-            if (anchor != null && scroll.value > anchor) {
-                val distance = minOf(step, (scroll.value - anchor).toFloat())
+            if (anchor != null && offset > anchor) {
+                val distance = minOf(step, (offset - anchor).toFloat())
                 scope.launch { scroll.scrollBy(-distance) }
                 true
             } else { descriptionAnchor = null; false }
+        }
+    }
+
+    fun returnFromComments(target: FocusRequester) {
+        scope.launch {
+            scroll.scrollToItem(0, descriptionAnchor ?: 0)
+            repeat(2) { withFrameNanos { } }
+            target.requestFocus()
         }
     }
 }
 
 @Composable
 internal fun rememberDetailsNavigation(): DetailsNavigation {
-    val scroll = rememberScrollState()
+    val scroll = rememberLazyListState()
     val scope = rememberCoroutineScope()
     return remember(scope, scroll) { DetailsNavigation(scope, scroll) }
 }

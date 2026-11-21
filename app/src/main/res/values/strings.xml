@@ -468,6 +468,13 @@
     <string name="reviews_refresh">Обновить рецензии</string>
     <string name="reviews_read">Читать рецензию</string>
     <string name="reviews_hint">Вправо — читать · Влево — к списку</string>
+    <string name="comments_setting_title">Комментарии зрителей</string>
+    <string name="comments_setting_description">Показывать обсуждение под описанием сезона.</string>
+    <string name="comments_heading">Комментарии</string>
+    <string name="comments_loading">Загружаем комментарии…</string>
+    <string name="comments_retry">Повторить загрузку комментариев</string>
+    <string name="comment_show_spoiler">Показать спойлер</string>
+    <string name="comment_hide_spoiler">Скрыть спойлер</string>
     <string name="interface_theme_title">Тема оформления</string>
     <string name="font_size_title">Размер шрифта</string>
     <string name="font_size_description">Размер текста в приложении.</string>
