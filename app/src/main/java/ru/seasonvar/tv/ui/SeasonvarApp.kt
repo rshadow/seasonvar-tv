@@ -236,9 +236,10 @@ internal fun SeasonvarApp(
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
-    onRemovalActions: (SeriesEntry) -> Unit = {},
+    onRemovalActions: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onRemovalRefresh: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
+    onMarkEpisode: () -> Unit = {},
     onRemovalAsk: () -> Unit = {},
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
@@ -283,7 +284,7 @@ internal fun SeasonvarApp(
             detailsModel = detailsModel,
             onPlay = onPlay,
             removalState = removalState, onRemovalActions = onRemovalActions,
-            onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus,
+            onRemovalRefresh = onRemovalRefresh, onRemovalSetStatus = onRemovalSetStatus, onMarkEpisode = onMarkEpisode,
             onRemovalAsk = onRemovalAsk, onRemovalDismiss = onRemovalDismiss, onRemovalConfirm = onRemovalConfirm,
             accountSession = accountSession, accountState = accountState, personalStartPreview = personalStartPreview,
             personalStates = personalStates,
@@ -374,9 +375,10 @@ private fun SeasonvarContent(
     onPersonalRefresh: (PersonalFeed) -> Unit = {},
     onPersonalMore: (PersonalFeed) -> Unit = {},
     removalState: MarkRemovalUiState = MarkRemovalUiState(),
-    onRemovalActions: (SeriesEntry) -> Unit = {},
+    onRemovalActions: (SeriesEntry, Boolean) -> Unit = { _, _ -> },
     onRemovalRefresh: () -> Unit = {},
     onRemovalSetStatus: (ru.seasonvar.tv.data.account.AccountListStatus) -> Unit = {},
+    onMarkEpisode: () -> Unit = {},
     onRemovalAsk: () -> Unit = {},
     onRemovalDismiss: () -> Unit = {},
     onRemovalConfirm: () -> Unit = {},
@@ -571,7 +573,7 @@ private fun SeasonvarContent(
     fun openSeriesActions(entry: SeriesEntry) {
         backNavigation.reset()
         removalOrigin = catalogKey
-        onRemovalActions(entry)
+        onRemovalActions(entry, detailsOpen)
     }
 
     fun openDetails(entry: SeriesEntry) {
@@ -741,6 +743,7 @@ private fun SeasonvarContent(
         onDismiss = { backNavigation.reset(); onRemovalDismiss() },
         onRefresh = { backNavigation.reset(); onRemovalRefresh() },
         onSelectStatus = { backNavigation.reset(); onRemovalSetStatus(it) },
+        onMarkEpisode = { backNavigation.reset(); onMarkEpisode() },
         onAsk = { backNavigation.reset(); onRemovalAsk() },
         onConfirm = { backNavigation.reset(); onRemovalConfirm() },
         onInteraction = backNavigation::reset)

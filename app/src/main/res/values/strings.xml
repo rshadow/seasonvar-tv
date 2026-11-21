@@ -344,6 +344,10 @@
     <string name="mark_list_watching">Смотрю</string>
     <string name="mark_list_watched">Посмотрел</string>
     <string name="mark_list_not_watching">Не буду смотреть</string>
+    <string name="mark_episode_action">Отметить серию %1$s как просмотренную</string>
+    <string name="mark_episode_replace_question">Заменить отметку просмотра?</string>
+    <string name="mark_episode_replace_explanation">Текущая отметка: %1$s. Новая отметка: серия %2$s просмотрена.</string>
+    <string name="mark_episode_confirm">Отметить серию</string>
     <string name="search_history_title">Недавние запросы</string>
     <string name="search_history_clear">Очистить историю поиска</string>
     <string name="search_history_empty">Недавних запросов пока нет</string>

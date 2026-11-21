@@ -255,4 +255,23 @@ class AccountMarkWriterTest {
         runCurrent(); assertEquals(0, writes); assertTrue(outbox.all().isEmpty())
     }
 
+    @Test fun manual_completion_discards_pending_automatic_progress_only_after_success() = runTest {
+        val outbox = MemoryOutbox()
+        val session = MutableStateFlow(account())
+        val owner = checkNotNull(markOwner(session.value.user))
+        var fail = true
+        val writer = AccountMarkWriter(backgroundScope, session, outbox, { _, _ -> throw IOException() },
+            complete = { _, _, _ -> if (fail) throw IOException() })
+        runCurrent()
+        writer.enqueue(mark, 1); runCurrent()
+        assertEquals(mark, outbox.all().single().mark)
+        val desired = mark.copy(episode = "6", positionSeconds = 0)
+        assertTrue(runCatching { writer.completeEpisode(desired, 1, null) }.exceptionOrNull() is IOException)
+        assertEquals(mark, outbox.all().single().mark)
+        fail = false
+        outbox.put(PendingMark(owner, mark.copy(seasonId = "124", pageUrl = "https://seasonvar.ru/serial-124-Test.html"), 2))
+        writer.completeEpisode(desired, 1, null)
+        assertEquals("124", outbox.all().single().mark.seasonId)
+    }
+
 }

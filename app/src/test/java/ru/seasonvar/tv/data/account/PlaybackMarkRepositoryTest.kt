@@ -79,6 +79,42 @@ class PlaybackMarkRepositoryTest {
         assertEquals(listOf(point), transport.writes)
     }
 
+    @Test fun manual_completion_saves_zero_time_for_the_exact_episode_and_voice() = runBlocking {
+        val transport = Transport().apply { saved = point }
+        val repository = loggedIn(transport)
+        val desired = point.copy(episode = "8", translationId = "0", positionSeconds = 0)
+        repository.completeEpisode(desired, repository.session.value.version, confirmed = null)
+        assertEquals(listOf("GET $page", "POST mark"), transport.calls)
+        assertEquals(desired, transport.writes.single())
+        assertEquals(1L, repository.marksRevision.value)
+    }
+
+    @Test fun rollback_requires_confirmation_of_the_current_server_mark() = runBlocking {
+        val transport = Transport().apply { saved = point }
+        val repository = loggedIn(transport)
+        val version = repository.session.value.version
+        val desired = point.copy(episode = "5", positionSeconds = 0)
+        val first = runCatching { repository.completeEpisode(desired, version, confirmed = null) }
+        assertEquals(PlaybackMarkSnapshot(mark = point), (first.exceptionOrNull() as EpisodeMarkConflict).current)
+        assertTrue(transport.writes.isEmpty())
+        val latest = point.copy(episode = "9")
+        transport.saved = latest
+        val changed = runCatching { repository.completeEpisode(desired, version, PlaybackMarkSnapshot(mark = point)) }
+        assertEquals(PlaybackMarkSnapshot(mark = latest), (changed.exceptionOrNull() as EpisodeMarkConflict).current)
+        assertTrue(transport.writes.isEmpty())
+        repository.completeEpisode(desired, version, PlaybackMarkSnapshot(mark = latest))
+        assertEquals(listOf(desired), transport.writes)
+    }
+
+    @Test fun manual_completion_requires_consent_to_replace_a_watched_season_status() = runBlocking {
+        val transport = Transport().apply { status = -2 }
+        val repository = loggedIn(transport)
+        val desired = point.copy(positionSeconds = 0)
+        val response = runCatching { repository.completeEpisode(desired, repository.session.value.version, confirmed = null) }
+        assertEquals(PlaybackMarkSnapshot(status = -2), (response.exceptionOrNull() as EpisodeMarkConflict).current)
+        assertTrue(transport.writes.isEmpty())
+    }
+
     @Test fun success_response_is_authoritative_without_readback() = runBlocking {
         val transport = Transport().apply { persist = false }
         val repository = loggedIn(transport)

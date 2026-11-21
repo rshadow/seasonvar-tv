@@ -205,7 +205,7 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
             val metrics = rememberCatalogCardMetrics(maxWidth)
             val detailEntry = entry
             if (detailEntry != null) SeriesDetailsPane(detailEntry, details, FocusRequester.Cancel, {}, onPlay,
-                onActions = if (session.user == null) null else ({ actions.show(it) }), removalDialogOpen = removal.visible,
+                onActions = if (session.user == null) null else ({ actions.show(it, fromDetails = true) }), removalDialogOpen = removal.visible,
                 showActors = showActors, showComments = showComments, onBackdropSource = onBackdropSource)
             else CatalogPane(state, selected, list, cards, null, FocusRequester.Cancel, refresh, retry,
                 onBackdropSource = onBackdropSource,
@@ -219,5 +219,6 @@ private fun ActorSeriesScreen(name: String, url: String, container: SeasonvarApp
         }
     }
     MarkRemovalDialog(removal, onDismiss = actions::dismiss, onAsk = actions::ask, onConfirm = actions::confirm,
-        onInteraction = {}, onRefresh = actions::refreshStatus, onSelectStatus = actions::selectStatus)
+        onInteraction = {}, onRefresh = actions::refreshStatus, onSelectStatus = actions::selectStatus,
+        onMarkEpisode = actions::markEpisode)
 }

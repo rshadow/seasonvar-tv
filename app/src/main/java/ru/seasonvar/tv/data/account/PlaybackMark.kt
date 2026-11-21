@@ -36,6 +36,8 @@ class MarkSaveRejectedException : Exception("Seasonvar rejected the mark")
 
 data class PlaybackMarkSnapshot(val mark: PlaybackMark? = null, val status: Int? = null)
 
+class EpisodeMarkConflict(val current: PlaybackMarkSnapshot) : Exception("Seasonvar progress would be replaced")
+
 object PlaybackMarkParser {
     private val assignment = Regex("""\bvar\s+mark\s*=""")
     private val fragment = Regex("""rewind=(.+)_seriya(?:_na_([0-9]+)_minute_([0-9]+)_sekunde)?""")
