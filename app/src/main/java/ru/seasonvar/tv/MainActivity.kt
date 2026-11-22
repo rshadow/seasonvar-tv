@@ -244,6 +244,7 @@ class MainActivity : ComponentActivity() {
                 smartState = smartState,
                 onSmartVisible = smartModel::setVisible, onSmartRefresh = smartModel::refresh,
                 onLogin = { login, password -> previewEnabled = false; accountModel.login(login, password) },
+                onSessionStorageChoice = accountModel::chooseSessionStorage,
                 onLogout = { previewEnabled = false; accountModel.logout() }, onCheckAccount = accountModel::restore,
                 onPersonalVisible = { feed ->
                     visiblePersonalFeed = feed

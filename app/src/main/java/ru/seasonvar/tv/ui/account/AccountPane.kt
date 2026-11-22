@@ -52,8 +52,11 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
         onLogin(login, submitted)
     }
     LaunchedEffect(session.version) { login = ""; password = "" }
-    LaunchedEffect(session.user?.id, state.busy) {
-        if (!state.busy) { repeat(2) { withFrameNanos { } }; if (session.user == null) loginFocus.requestFocus() else submitFocus.requestFocus() }
+    LaunchedEffect(session.user?.id, state.busy, state.awaitingSessionStorageChoice) {
+        if (!state.busy && !state.awaitingSessionStorageChoice) {
+            repeat(2) { withFrameNanos { } }
+            if (session.user == null) loginFocus.requestFocus() else submitFocus.requestFocus()
+        }
     }
     DisposableEffect(Unit) { onDispose { password = ""; login = "" } }
     LaunchedEffect(Unit) { if (session.user != null && !state.busy) onCheck() }

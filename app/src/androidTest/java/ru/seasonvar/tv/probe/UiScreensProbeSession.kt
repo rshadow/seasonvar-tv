@@ -125,7 +125,7 @@ internal class UiScreensProbeSession(private val probe: Instrumentation, private
     }
 
     fun centered(vararg labels: String) { labels.forEach { label ->
-        waitFor { control(label) != null }
+        waitFor { find(uiAutomation.rootInActiveWindow, label, exact = true) != null }
         ButtonAlignmentChecks.centered(probe, label)
     } }
 

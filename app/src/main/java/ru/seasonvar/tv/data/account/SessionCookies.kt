@@ -8,7 +8,9 @@ import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 
-class StoredSession(val cookies: List<Cookie>, val owner: String? = null)
+class StoredSession(val cookies: List<Cookie>, val owner: String? = null, val unencrypted: Boolean = false)
+
+internal enum class SessionPersistence { ENCRYPTED, UNENCRYPTED, MEMORY }
 
 internal fun siteOrigin(url: HttpUrl) = url.scheme == "https" && url.host in setOf("seasonvar.ru", "www.seasonvar.ru") && url.port == 443
 
@@ -46,6 +48,7 @@ class SessionManager(private val store: SessionStore, private val onChanged: () 
     private val resume = PersonalFeed.RESUME.url.toHttpUrl()
     private var current: SessionCookies? = null
     private var privateSession = false
+    private var persistence = SessionPersistence.ENCRYPTED
     private val savedOwner = MutableStateFlow<String?>(null)
     internal val personalCacheOwner = savedOwner.asStateFlow()
     private var ownerCookies = emptySet<Triple<String, String, String>>()
@@ -57,7 +60,11 @@ class SessionManager(private val store: SessionStore, private val onChanged: () 
             if (current === jar && privateSession) {
                 val cookies = jar.snapshot()
                 if (authCookies(cookies) != ownerCookies) bindOwner(cookies, null)
-                runCatching { store.saveSession(StoredSession(cookies, savedOwner.value)) }
+                if (persistence != SessionPersistence.MEMORY) {
+                    runCatching {
+                        store.saveSession(StoredSession(cookies, savedOwner.value, persistence == SessionPersistence.UNENCRYPTED))
+                    }
+                }
             }
         } }
         return jar
@@ -74,6 +81,7 @@ class SessionManager(private val store: SessionStore, private val onChanged: () 
                 throw SessionStorageException(error)
             }
             privateSession = saved.cookies.isNotEmpty()
+            persistence = if (saved.unencrypted) SessionPersistence.UNENCRYPTED else SessionPersistence.ENCRYPTED
             current = create(saved.cookies).also { bindOwner(it.snapshot(), saved.owner) }
             cacheScope = ru.seasonvar.tv.data.cache.CacheScope(privateSession, generation)
             if (!privateSession) onChanged()
@@ -108,7 +116,12 @@ class SessionManager(private val store: SessionStore, private val onChanged: () 
             val cookies = current!!.snapshot()
             val previous = savedOwner.value
             bindOwner(cookies, identity)
-            if (previous != savedOwner.value) runCatching { store.saveRestoredOwner(StoredSession(cookies, savedOwner.value)) }
+            if (persistence == SessionPersistence.UNENCRYPTED) {
+                val migrated = runCatching { store.saveSession(StoredSession(cookies, savedOwner.value)) }.isSuccess
+                if (migrated) persistence = SessionPersistence.ENCRYPTED
+            } else if (persistence == SessionPersistence.ENCRYPTED && previous != savedOwner.value) {
+                runCatching { store.saveRestoredOwner(StoredSession(cookies, savedOwner.value)) }
+            }
         }
         if (privateSession && cacheScope?.owner != identity) {
             generation++
@@ -116,13 +129,15 @@ class SessionManager(private val store: SessionStore, private val onChanged: () 
             onChanged()
         }
     }
-    @Synchronized fun commit(jar: SessionCookies, owner: String? = null) {
+    @Synchronized internal fun commit(jar: SessionCookies, owner: String? = null, mode: SessionPersistence = SessionPersistence.ENCRYPTED) {
         val cookies = jar.snapshot()
         val verifiedOwner = owner?.takeIf { authCookies(cookies).isNotEmpty() && it.matches(Regex("[1-9][0-9]*")) }
-        store.saveSession(StoredSession(cookies, verifiedOwner))
+        if (mode == SessionPersistence.MEMORY) store.clear()
+        else store.saveSession(StoredSession(cookies, verifiedOwner, mode == SessionPersistence.UNENCRYPTED))
         bindOwner(cookies, verifiedOwner)
         current = jar
         privateSession = true
+        persistence = mode
         generation++
         cacheScope = ru.seasonvar.tv.data.cache.CacheScope(true, generation, owner?.takeUnless { it == "session" })
         onChanged()
@@ -133,6 +148,7 @@ class SessionManager(private val store: SessionStore, private val onChanged: () 
         savedOwner.value = null
         ownerCookies = emptySet()
         privateSession = false
+        persistence = SessionPersistence.ENCRYPTED
         generation++
         cacheScope = ru.seasonvar.tv.data.cache.CacheScope(false, generation)
         onChanged()

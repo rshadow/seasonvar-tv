@@ -16,29 +16,39 @@ import ru.seasonvar.tv.data.account.*
 import java.io.IOException
 
 enum class AccountFailure { CREDENTIALS, EXPIRED, NETWORK, HTTP, MARKUP, STORAGE }
-data class AccountUiState(val busy: Boolean = true, val failure: AccountFailure? = null, val storageFailureCode: String? = null)
+data class AccountUiState(val busy: Boolean = true, val failure: AccountFailure? = null, val storageFailureCode: String? = null,
+    val awaitingSessionStorageChoice: Boolean = false)
 
 class AccountViewModel(private val repository: AccountRepository, private val context: Context? = null) : ViewModel() {
     private val mutableState = MutableStateFlow(AccountUiState())
     val state = mutableState.asStateFlow()
     private var job: Job? = null
+    private var pendingLogin: AccountRepository.PendingLogin? = null
     init { restore() }
-    fun restore() = work(SessionOperation.RESTORE) { repository.restore() }
+    fun restore() = work(SessionOperation.RESTORE) { repository.restore(); null }
     fun login(login: String, password: String) = work(SessionOperation.SAVE) { repository.login(login, password) }
-    fun logout() = work { repository.logout() }
-    private fun work(sessionOperation: SessionOperation? = null, action: suspend () -> Unit) {
+    fun logout() = work { repository.logout(); null }
+
+    fun chooseSessionStorage(remember: Boolean) {
+        val login = pendingLogin ?: return
+        work(SessionOperation.SAVE) { repository.finishLogin(login, remember); null }
+    }
+
+    private fun work(sessionOperation: SessionOperation? = null, action: suspend () -> AccountRepository.PendingLogin?) {
         job?.cancel()
+        pendingLogin = null
         mutableState.value = AccountUiState()
         job = viewModelScope.launch {
-            try { action(); mutableState.value = AccountUiState(busy = false) }
+            try {
+                val pending = action()
+                recordFailure(sessionOperation, pending?.failure)
+                pendingLogin = pending
+                mutableState.value = AccountUiState(busy = false, awaitingSessionStorageChoice = pending != null)
+            }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                val storageFailure = (e as? SessionStorageException)?.diagnostic
-                if (context != null && sessionOperation != null && storageFailure != null) {
-                    withContext(Dispatchers.IO) {
-                        SessionDiagnosticHistory.record(context, SessionDiagnosticRecord(sessionOperation, storageFailure))
-                    }
-                }
+                val storageError = e as? SessionStorageException
+                recordFailure(sessionOperation, storageError)
                 mutableState.value = AccountUiState(false, when (e) {
                     is LoginRejectedException -> AccountFailure.CREDENTIALS
                     is SessionExpiredException -> AccountFailure.EXPIRED
@@ -46,8 +56,15 @@ class AccountViewModel(private val repository: AccountRepository, private val co
                     is IOException -> AccountFailure.NETWORK
                     is SessionStorageException -> AccountFailure.STORAGE
                     else -> AccountFailure.MARKUP
-                }, storageFailure?.code)
+                }, storageError?.diagnostic?.code)
             }
+        }
+    }
+
+    private suspend fun recordFailure(operation: SessionOperation?, error: SessionStorageException?) {
+        val failure = error?.diagnostic ?: return
+        if (context != null && operation != null) withContext(Dispatchers.IO) {
+            SessionDiagnosticHistory.record(context, SessionDiagnosticRecord(operation, failure))
         }
     }
     class Factory(private val repository: AccountRepository, private val context: Context) : ViewModelProvider.Factory {
