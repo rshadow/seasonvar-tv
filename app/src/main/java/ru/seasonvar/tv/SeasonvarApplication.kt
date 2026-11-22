@@ -18,7 +18,7 @@ class SeasonvarApplication : Application(), ImageLoaderFactory {
     internal val interfaceSettings by lazy { ru.seasonvar.tv.ui.settings.InterfaceSettings(this) }
     val networkSettings by lazy { NetworkSettings(this) }
     val sessions: ru.seasonvar.tv.data.account.SessionManager by lazy {
-        ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.EncryptedSessionStore(this)) {
+        ru.seasonvar.tv.data.account.SessionManager(ru.seasonvar.tv.data.account.DeviceSessionStore(this)) {
             val current = sessions.currentCacheScope()
             if (current?.private == true && current.owner != null) htmlCache.selectPrivateOwner(current.owner)
             else if (current?.private == false) htmlCache.clearPrivate()

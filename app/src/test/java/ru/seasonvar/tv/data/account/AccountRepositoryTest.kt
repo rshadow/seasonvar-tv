@@ -5,12 +5,28 @@ import okhttp3.Cookie
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.*
 import org.junit.Test
+import ru.seasonvar.tv.diagnostics.DiagnosticStep
+import ru.seasonvar.tv.diagnostics.LocalDiagnosticFailure
 import java.io.IOException
 
 class AccountRepositoryTest {
     private val authenticated get() = javaClass.getResource("/account-resume.html")!!.readText()
     private val guest = """<div class="headblock-menu"><a href="/?mod=login">Вход</a></div><div class="pgs-marks"></div>"""
     private val site = "https://seasonvar.ru/".toHttpUrl()
+    private class SwitchableSessionStore : SessionStore {
+        var encryptedWritesAvailable = false
+        private var saved = StoredSession(emptyList())
+        override fun read() = saved.cookies
+        override fun readSession() = saved
+        override fun save(cookies: List<Cookie>) = saveSession(StoredSession(cookies))
+        override fun saveSession(session: StoredSession) {
+            if (!session.unencrypted && !encryptedWritesAvailable) {
+                throw SessionStorageException(LocalDiagnosticFailure(DiagnosticStep.KEY_CREATE, "UNKNOWN"))
+            }
+            saved = if (session.unencrypted) StoredSession(session.cookies, unencrypted = true) else session
+        }
+        override fun clear() { saved = StoredSession(emptyList()) }
+    }
     private inner class Transport : AccountTransport {
         val calls = mutableListOf<String>()
         var page = authenticated
@@ -93,6 +109,72 @@ class AccountRepositoryTest {
         try { repository.login("example", "dummy-password"); fail() } catch (_: LoginRejectedException) { }
         assertNull(repository.session.value.user)
         assertTrue(store.cookies.isEmpty())
+    }
+
+    @Test fun approved_fallback_restores_and_rotates_cookies_then_migrates_to_keystore() = runBlocking {
+        val store = SwitchableSessionStore()
+        val transport = Transport()
+        val repository = AccountRepository(SessionManager(store), transport)
+        val pending = checkNotNull(repository.login("example", "dummy-password"))
+        assertEquals("K03-UNKNOWN", pending.failure.diagnostic?.code)
+        assertNull(repository.session.value.user)
+        assertTrue(store.read().isEmpty())
+        repository.finishLogin(pending, remember = true)
+        assertEquals("12", repository.session.value.user?.id)
+        assertTrue(store.readSession().unencrypted)
+        assertNull(store.readSession().owner)
+        assertEquals(1, transport.calls.count { it == "POST login" })
+
+        val restartedManager = SessionManager(store)
+        val restarted = AccountRepository(restartedManager, transport)
+        restarted.restore()
+        assertEquals("12", restarted.session.value.user?.id)
+        assertTrue(store.readSession().unencrypted)
+        val rotated = Cookie.Builder().name("svid1").value("rotated-fixture").hostOnlyDomain("seasonvar.ru").secure().build()
+        restartedManager.current().saveFromResponse(site, listOf(rotated))
+        assertEquals(listOf(rotated), store.read())
+
+        store.encryptedWritesAvailable = true
+        restarted.restore()
+        assertFalse(store.readSession().unencrypted)
+        assertEquals(listOf(rotated), store.read())
+        assertEquals("12", store.readSession().owner)
+        restarted.logout()
+        assertTrue(store.read().isEmpty())
+        assertNull(restarted.session.value.user)
+    }
+
+    @Test fun declining_fallback_keeps_the_verified_login_only_in_memory() = runBlocking {
+        val store = SwitchableSessionStore()
+        val transport = Transport()
+        val manager = SessionManager(store)
+        val repository = AccountRepository(manager, transport)
+        val pending = checkNotNull(repository.login("example", "dummy-password"))
+        repository.finishLogin(pending, remember = false)
+        assertEquals("12", repository.session.value.user?.id)
+
+        store.encryptedWritesAvailable = true
+        manager.current().saveFromResponse(site, listOf(Cookie.Builder().name("svid1").value("rotated-fixture")
+            .hostOnlyDomain("seasonvar.ru").secure().build()))
+        repository.restore()
+        assertTrue(store.read().isEmpty())
+        val restarted = AccountRepository(SessionManager(store), transport)
+        restarted.restore()
+        assertNull(restarted.session.value.user)
+    }
+
+    @Test fun signing_out_clears_an_unencrypted_session_while_keystore_is_still_unavailable() = runBlocking {
+        val store = SwitchableSessionStore()
+        val transport = Transport()
+        val repository = AccountRepository(SessionManager(store), transport)
+        val pending = checkNotNull(repository.login("example", "dummy-password"))
+        repository.finishLogin(pending, remember = true)
+        repository.logout()
+
+        val restarted = AccountRepository(SessionManager(store), transport)
+        restarted.restore()
+        assertNull(restarted.session.value.user)
+        assertTrue(store.read().isEmpty())
     }
     @Test fun expired_session_clears_identity_and_private_list_instead_of_reporting_empty() = runBlocking {
         val store = MemorySessionStore(); val manager = SessionManager(store); val transport = Transport()

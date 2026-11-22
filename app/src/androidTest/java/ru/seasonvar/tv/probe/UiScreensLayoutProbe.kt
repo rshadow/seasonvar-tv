@@ -8,6 +8,7 @@ object UiScreensLayoutProbe {
         val ui = UiScreensProbeSession(probe, theme)
         ui.execute { fixtures ->
             val screens = UiScreenChecks(ui, fixtures)
+            screens.sessionStorageChoice()
             screens.seasonComments()
             screens.detailsNavigation()
             if (!dialogsOnly) {

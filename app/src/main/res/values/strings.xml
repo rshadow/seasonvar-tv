@@ -253,6 +253,10 @@
     <string name="account_network_error">Не удалось связаться с Seasonvar. Проверьте подключение и настройки сети.</string>
     <string name="account_http_error">Seasonvar временно не принимает запрос. Попробуйте позже.</string>
     <string name="account_storage_error">Не удалось восстановить или сохранить вход на устройстве. Повторите проверку аккаунта.</string>
+    <string name="account_storage_choice_title">Запомнить вход на этой приставке?</string>
+    <string name="account_storage_choice_description">Вход на Seasonvar выполнен. Приставка не смогла зашифровать сессию. Её можно сохранить в закрытой папке приложения без дополнительного шифрования.</string>
+    <string name="account_storage_do_not_remember">Войти без сохранения</string>
+    <string name="account_storage_remember">Запомнить вход</string>
     <string name="account_storage_failure_code">Код ошибки сессии: %1$s</string>
     <string name="account_markup_error">Не удалось проверить аккаунт: ответ сайта изменился.</string>
     <string name="account_check">Проверить сессию</string>
@@ -400,6 +404,7 @@
     <string name="device_diagnostics_session">Сохранённый вход</string>
     <string name="device_diagnostics_install">Установка обновлений</string>
     <string name="device_diagnostics_no_session">Сессии нет</string>
+    <string name="device_diagnostics_session_unencrypted">Сохранена без шифрования приложения</string>
     <string name="device_diagnostics_last_session_failure">Последний сбой сессии</string>
     <string name="device_diagnostics_last_restore_failure">Последний сбой восстановления</string>
     <string name="device_diagnostics_last_save_failure">Последний сбой сохранения</string>

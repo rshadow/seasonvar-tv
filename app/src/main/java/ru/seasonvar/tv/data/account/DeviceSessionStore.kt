@@ -41,6 +41,10 @@ class SessionStorageException private constructor(cause: Throwable?, private val
     internal constructor(failure: LocalDiagnosticFailure) : this(null, failure)
 
     internal val diagnostic: LocalDiagnosticFailure? get() = failure ?: (cause as? SessionStorageException)?.diagnostic
+    internal val encryptionUnavailable get() = when (diagnostic?.step) {
+        DiagnosticStep.KEYSTORE_OPEN, DiagnosticStep.KEY_LOOKUP, DiagnosticStep.KEY_CREATE, DiagnosticStep.CRYPTO_ENCRYPT -> true
+        else -> false
+    }
 }
 
 internal object StoredSessionOwnerCodec {
@@ -58,33 +62,46 @@ internal object StoredSessionOwnerCodec {
     }
 }
 
-class EncryptedSessionStore(context: Context) : SessionStore {
+internal class DeviceSessionStore(context: Context, alias: String = "seasonvar-session-v1") : SessionStore {
     private val preferences by lazy { context.getSharedPreferences("account-session", Context.MODE_PRIVATE) }
-    private val cipher = KeystoreCipher("seasonvar-session-v1")
+    private val cipher = KeystoreCipher(alias)
     override fun read(): List<Cookie> = readSession().cookies
     override fun readSession(): StoredSession = sessionOperation {
         val sealed = diagnosticStep(DiagnosticStep.SESSION_READ) { preferences.getString("sealed", null) }
-            ?: return@sessionOperation StoredSession(emptyList())
+            ?: return@sessionOperation readUnencryptedSession()
         val cookies = CookieCodec.decode(cipher.open(sealed))
         val owner = runCatching {
             preferences.getString("sealed-owner", null)?.let { StoredSessionOwnerCodec.decode(cipher.open(it), sealed) }
         }.getOrNull()
         StoredSession(cookies, owner)
     }
+
+    private fun readUnencryptedSession(): StoredSession {
+        val value = diagnosticStep(DiagnosticStep.SESSION_READ) { preferences.getString("unencrypted", null) }
+            ?: return StoredSession(emptyList())
+        return StoredSession(CookieCodec.decode(value), unencrypted = true)
+    }
+
     override fun save(cookies: List<Cookie>) = saveSession(StoredSession(cookies))
     override fun saveRestoredOwner(session: StoredSession) = saveSession(session)
     override fun saveSession(session: StoredSession) = sessionOperation {
+        if (session.unencrypted) {
+            val value = diagnosticStep(DiagnosticStep.SESSION_ENCODE) { CookieCodec.encode(session.cookies) }
+            write { remove("sealed").remove("sealed-owner").putString("unencrypted", value) }
+            return@sessionOperation
+        }
         val sealed = cipher.seal(diagnosticStep(DiagnosticStep.SESSION_ENCODE) { CookieCodec.encode(session.cookies) })
         val owner = session.owner?.let {
             cipher.seal(diagnosticStep(DiagnosticStep.SESSION_ENCODE) { StoredSessionOwnerCodec.encode(it, sealed) })
         }
-        diagnosticStep(DiagnosticStep.SESSION_WRITE) {
-            if (!preferences.edit().putString("sealed", sealed).putString("sealed-owner", owner).commit()) {
-                failDiagnostic(DiagnosticStep.SESSION_WRITE, "COMMIT")
-            }
-        }
+        write { putString("sealed", sealed).putString("sealed-owner", owner).remove("unencrypted") }
     }
-    override fun clear() { preferences.edit().clear().commit() }
+
+    override fun clear() = sessionOperation { write { clear() } }
+
+    private fun write(change: android.content.SharedPreferences.Editor.() -> Unit) = diagnosticStep(DiagnosticStep.SESSION_WRITE) {
+        if (!preferences.edit().apply(change).commit()) failDiagnostic(DiagnosticStep.SESSION_WRITE, "COMMIT")
+    }
 
     private inline fun <T> sessionOperation(operation: () -> T): T = try {
         operation()

@@ -15,7 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
-import ru.seasonvar.tv.data.account.EncryptedSessionStore
+import ru.seasonvar.tv.data.account.DeviceSessionStore
 import ru.seasonvar.tv.data.network.ProxyConfiguration
 import ru.seasonvar.tv.ui.SeasonvarApp
 import ru.seasonvar.tv.ui.navigation.Section
@@ -37,7 +37,7 @@ internal class ProxySettingsProbeSession(private val probe: Instrumentation) {
         var fixture: ProxySettingsFixtures? = null
         try {
             check(android.os.Build.MODEL.contains("sdk", true) || android.os.Build.FINGERPRINT.contains("generic"))
-            EncryptedSessionStore(targetContext).read()
+            DeviceSessionStore(targetContext).read()
             result.putBoolean("session_readable", true)
             kotlinx.coroutines.runBlocking { app.applicationScope.coroutineContext[kotlinx.coroutines.Job]?.cancelAndJoin() }
             fixture = ProxySettingsFixtures(targetContext)

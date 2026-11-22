@@ -1,16 +1,20 @@
 package ru.seasonvar.tv.probe
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Rect
 import android.view.KeyEvent
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.focus.FocusRequester
+import okhttp3.Cookie
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
 import ru.seasonvar.tv.data.account.*
 import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.SeasonvarApp
+import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.account.*
 import ru.seasonvar.tv.ui.catalog.*
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
@@ -19,6 +23,8 @@ import ru.seasonvar.tv.ui.navigation.MenuGroup
 import ru.seasonvar.tv.ui.navigation.MenuOrder
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.search.SearchUiState
+import java.security.KeyStore
+import java.util.concurrent.atomic.AtomicReference
 
 /** Каждая группа экранов имеет собственные проверки; общая fixture сохраняется между диалогами. */
 internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val fixture: UiScreensFixtures) {
@@ -144,6 +150,71 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             }
         }
     } }
+
+    fun sessionStorageChoice() = with(ui) {
+        stage("session_storage")
+        val alias = "seasonvar-session-storage-probe"
+        val context = object : ContextWrapper(targetContext) {
+            override fun getSharedPreferences(name: String, mode: Int) = super.getSharedPreferences("$alias-$name", mode)
+        }
+        val prefs = context.getSharedPreferences("account-session", Context.MODE_PRIVATE)
+        val store = DeviceSessionStore(context, alias)
+        val cookie = Cookie.Builder().name("svid1").value("fixture").hostOnlyDomain("seasonvar.ru")
+            .path("/resume").expiresAt(4_102_444_800_000L).secure().httpOnly().build()
+        try {
+            store.clear()
+            store.saveSession(StoredSession(listOf(cookie), unencrypted = true))
+            val restored = DeviceSessionStore(context, alias).readSession()
+            check(restored.unencrypted && restored.cookies == listOf(cookie) && restored.owner == null)
+            check(prefs.contains("unencrypted") && !prefs.contains("sealed"))
+
+            store.saveSession(StoredSession(restored.cookies, "12"))
+            val encrypted = DeviceSessionStore(context, alias).readSession()
+            check(!encrypted.unencrypted && encrypted.cookies == listOf(cookie) && encrypted.owner == "12")
+            check(!prefs.contains("unencrypted") && prefs.contains("sealed"))
+            store.clear()
+            check(prefs.all.isEmpty() && DeviceSessionStore(context, alias).read().isEmpty())
+            store.saveSession(StoredSession(listOf(cookie), unencrypted = true))
+            store.clear()
+            check(prefs.all.isEmpty() && DeviceSessionStore(context, alias).read().isEmpty())
+        } finally {
+            store.clear()
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(alias) }
+        }
+
+        val withoutSaving = text(R.string.account_storage_do_not_remember)
+        val remember = text(R.string.account_storage_remember)
+        val choice = AtomicReference<Boolean?>()
+        val visible = mutableStateOf(false)
+        render {
+            ThemeButton(text(R.string.account_sign_in), { visible.value = true })
+            if (visible.value) SessionStorageDialog { choice.set(it); visible.value = false }
+        }
+        fun open() {
+            choice.set(null)
+            click(text(R.string.account_sign_in))
+            waitFor { optionFocused(withoutSaving) }
+        }
+        stage("session_storage_open")
+        open()
+        stage("session_storage_alignment")
+        centered(withoutSaving)
+        centered(remember)
+        capture("session-storage-dialog")
+        stage("session_storage_remember")
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+        waitFor { optionFocused(remember) }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_ENTER)
+        waitFor { choice.get() == true }
+        stage("session_storage_decline")
+        open()
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFor { choice.get() == false }
+        stage("session_storage_back")
+        open()
+        sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        waitFor { choice.get() == false }
+    }
 
     private fun optionFocused(label: String): Boolean {
         var node = ui.find(ui.uiAutomation.rootInActiveWindow, label, exact = true)

@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.StatFs
 import java.io.File
 import java.security.KeyStore
-import ru.seasonvar.tv.data.account.EncryptedSessionStore
+import ru.seasonvar.tv.data.account.DeviceSessionStore
 import ru.seasonvar.tv.data.account.SessionDiagnosticHistory
 import ru.seasonvar.tv.data.account.SessionDiagnosticRecord
 import ru.seasonvar.tv.data.account.SessionStorageException
@@ -19,6 +19,7 @@ import ru.seasonvar.tv.diagnostics.failDiagnostic
 internal sealed interface DiagnosticResult {
     data object OK : DiagnosticResult
     data object NO_SESSION : DiagnosticResult
+    data object UNENCRYPTED_SESSION : DiagnosticResult
     data object PERMISSION_REQUIRED : DiagnosticResult
     data class Failed(val failure: LocalDiagnosticFailure) : DiagnosticResult
 }
@@ -49,8 +50,12 @@ internal object DeviceDiagnostics {
             cache = checkOperation(DiagnosticStep.CACHE_CREATE) { checkCache(context.cacheDir) },
             encryption = checkOperation(DiagnosticStep.KEYSTORE_OPEN) { checkEncryption() },
             savedSession = capture(DiagnosticStep.SESSION_READ) {
-                if (EncryptedSessionStore(context).readSession().cookies.isEmpty()) DiagnosticResult.NO_SESSION
-                else DiagnosticResult.OK
+                val session = DeviceSessionStore(context).readSession()
+                when {
+                    session.cookies.isEmpty() -> DiagnosticResult.NO_SESSION
+                    session.unencrypted -> DiagnosticResult.UNENCRYPTED_SESSION
+                    else -> DiagnosticResult.OK
+                }
             },
             installPermission = capture(DiagnosticStep.INSTALL_PERMISSION) {
                 if (UpdateInstaller(context).permissionGranted()) DiagnosticResult.OK

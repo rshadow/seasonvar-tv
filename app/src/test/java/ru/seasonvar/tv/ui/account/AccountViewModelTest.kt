@@ -15,6 +15,48 @@ import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountViewModelTest {
+    @Test fun keystore_failure_waits_for_consent_before_saving_verified_cookies() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val failure = LocalDiagnosticFailure(DiagnosticStep.KEY_CREATE, "UNKNOWN")
+            var stored: StoredSession? = null
+            val store = object : SessionStore {
+                override fun read() = stored?.cookies.orEmpty()
+                override fun save(cookies: List<Cookie>) = error("Unexpected write without storage mode")
+                override fun saveSession(session: StoredSession) {
+                    if (!session.unencrypted) throw SessionStorageException(failure)
+                    stored = session
+                }
+                override fun clear() = error("No session needs clearing")
+            }
+            val authenticated = javaClass.getResource("/account-resume.html")!!.readText()
+            val site = "https://seasonvar.ru/".toHttpUrl()
+            val cookie = Cookie.Builder().name("svid1").value("dummy-session").hostOnlyDomain("seasonvar.ru").secure().build()
+            val transport = object : AccountTransport {
+                override suspend fun get(url: String, jar: SessionCookies) = authenticated
+                override suspend fun login(login: String, password: String, jar: SessionCookies): String {
+                    jar.saveFromResponse(site, listOf(cookie))
+                    return authenticated
+                }
+                override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = error("No viewing mark needed")
+            }
+            val repository = AccountRepository(SessionManager(store), transport)
+            val model = AccountViewModel(repository)
+            model.state.first { !it.busy }
+            model.login("fixture", "fixture")
+
+            model.state.first { it.awaitingSessionStorageChoice }
+            assertNull(stored)
+            assertNull(repository.session.value.user)
+            model.chooseSessionStorage(remember = true)
+            val state = model.state.first { !it.busy }
+            assertNull(state.failure)
+            assertFalse(state.awaitingSessionStorageChoice)
+            assertEquals(listOf(cookie), stored?.cookies)
+            assertEquals("12", repository.session.value.user?.id)
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun confirmed_login_exposes_the_storage_failure_code() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

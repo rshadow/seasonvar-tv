@@ -143,7 +143,7 @@ private fun DiagnosticLine(label: Int, result: DiagnosticResult?, details: Strin
     val d = SeasonvarTheme.dimensions
     val icon = when (result) {
         null -> R.drawable.ic_reload
-        DiagnosticResult.OK, DiagnosticResult.NO_SESSION -> R.drawable.ic_check
+        DiagnosticResult.OK, DiagnosticResult.NO_SESSION, DiagnosticResult.UNENCRYPTED_SESSION -> R.drawable.ic_check
         is DiagnosticResult.Failed, DiagnosticResult.PERMISSION_REQUIRED -> R.drawable.ic_connection_failed
     }
     val status = details ?: when (result) {
@@ -151,10 +151,11 @@ private fun DiagnosticLine(label: Int, result: DiagnosticResult?, details: Strin
         DiagnosticResult.OK -> stringResource(R.string.connection_available)
         is DiagnosticResult.Failed -> diagnosticFailureLabel(result.failure)
         DiagnosticResult.NO_SESSION -> stringResource(R.string.device_diagnostics_no_session)
+        DiagnosticResult.UNENCRYPTED_SESSION -> stringResource(R.string.device_diagnostics_session_unencrypted)
         DiagnosticResult.PERMISSION_REQUIRED -> stringResource(R.string.device_diagnostics_permission_required)
     }
     val tint = when (result) {
-        DiagnosticResult.OK -> SeasonvarTheme.statusSuccess
+        DiagnosticResult.OK, DiagnosticResult.UNENCRYPTED_SESSION -> SeasonvarTheme.statusSuccess
         is DiagnosticResult.Failed -> SeasonvarTheme.statusFailure
         else -> SeasonvarTheme.statusPending
     }

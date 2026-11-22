@@ -177,7 +177,10 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         mutableSession.value = AccountSession(user, version)
     } }
 
-    suspend fun login(login: String, password: String): Unit = withContext(dispatcher) { mutex.withLock {
+    internal class PendingLogin(val jar: SessionCookies, val user: AccountUser, val html: String,
+        val version: Long, val failure: SessionStorageException)
+
+    internal suspend fun login(login: String, password: String): PendingLogin? = withContext(dispatcher) { mutex.withLock {
         if (login.isBlank() || password.isEmpty()) throw LoginRejectedException()
         val candidate = sessions.candidate()
         transport.get("https://seasonvar.ru/?mod=login", candidate)
@@ -185,11 +188,28 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         val html = transport.get("https://seasonvar.ru/resume", candidate)
         val user = withContext(cpuDispatcher) { AccountParser.user(html) } ?: throw LoginRejectedException()
         currentCoroutineContext().ensureActive()
-        sessions.commit(candidate, user.id)
+        try {
+            sessions.commit(candidate, user.id)
+        } catch (error: SessionStorageException) {
+            if (!error.encryptionUnavailable) throw error
+            return@withLock PendingLogin(candidate, user, html, session.value.version, error)
+        }
+        publishLogin(user, html)
+        null
+    } }
+
+    internal suspend fun finishLogin(login: PendingLogin, remember: Boolean): Unit = withContext(dispatcher) { mutex.withLock {
+        if (session.value.version != login.version) return@withLock
+        val mode = if (remember) SessionPersistence.UNENCRYPTED else SessionPersistence.MEMORY
+        sessions.commit(login.jar, login.user.id, mode)
+        publishLogin(login.user, login.html)
+    } }
+
+    private fun publishLogin(user: AccountUser, html: String) {
         htmlCache?.let { it.save(personalKey(PersonalFeed.RESUME), html, it.capture()) }
         invalidateSharedReads()
         mutableSession.value = AccountSession(user, session.value.version + 1)
-    } }
+    }
 
     suspend fun resume(): AccountPage = personalList(PersonalFeed.RESUME)
 
@@ -500,8 +520,9 @@ class AccountRepository(private val sessions: SessionManager, private val transp
     }
 
     suspend fun logout(): Unit = withContext(dispatcher) { mutex.withLock {
-        val previous = sessions.current()
+        val previous = try { sessions.current() } catch (_: SessionStorageException) { null }
         clear()
+        if (previous == null) return@withLock
         try { transport.get("https://seasonvar.ru/?mod=logout", previous) }
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (_: Exception) { }

@@ -227,6 +227,7 @@ internal fun SeasonvarApp(
     onSmartVisible: (Boolean) -> Unit = {},
     onSmartRefresh: () -> Unit = {},
     onLogin: (String, String) -> Unit = { _, _ -> },
+    onSessionStorageChoice: (Boolean) -> Unit = {},
     onLogout: () -> Unit = {},
     onCheckAccount: () -> Unit = {},
     personalFilters: Map<PersonalFeed, ru.seasonvar.tv.ui.filters.ListFiltersController> = emptyMap(),
@@ -294,6 +295,9 @@ internal fun SeasonvarApp(
             personalFilters = personalFilters, publicFilters = publicFilters, historyClear = historyClear,
             onPersonalVisible = onPersonalVisible, onPersonalRefresh = onPersonalRefresh, onPersonalMore = onPersonalMore,
         )
+        if (accountState.awaitingSessionStorageChoice) {
+            ru.seasonvar.tv.ui.account.SessionStorageDialog(onSessionStorageChoice)
+        }
     }
 }
 
