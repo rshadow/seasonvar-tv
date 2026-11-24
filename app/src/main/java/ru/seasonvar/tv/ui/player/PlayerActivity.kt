@@ -241,7 +241,8 @@ class PlayerActivity : ComponentActivity() {
                             }.focusProperties {
                                 left = FocusRequester.Cancel; right = FocusRequester.Cancel
                                 down = FocusRequester.Cancel
-                            }, enabled = !request?.serialId.isNullOrBlank() && playback != null)
+                            }, enabled = !request?.serialId.isNullOrBlank() && playback != null,
+                            showOutline = false)
                     }
                     if (completionVisible) {
                         Column(Modifier.align(Alignment.BottomEnd).padding(d.spacingLarge).width(d.playerAutoNextWidth)

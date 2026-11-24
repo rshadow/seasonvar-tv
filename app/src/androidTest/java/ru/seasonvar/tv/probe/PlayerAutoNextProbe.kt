@@ -24,6 +24,7 @@ import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.ui.player.PlayerActivity
 import ru.seasonvar.tv.ui.player.PlayerClockPosition
 import ru.seasonvar.tv.ui.player.formatPlayerClock
+import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 import java.time.ZoneId
 
@@ -52,6 +53,8 @@ object PlayerAutoNextProbe {
         val originalClockPosition = app.interfaceSettings.playerClockPosition.value
         val settings = targetContext.getSharedPreferences("interface", Context.MODE_PRIVATE)
         val originalClockValue = settings.getString("player_clock_position", null)
+        val originalTheme = app.interfaceSettings.interfaceTheme.value
+        val originalThemeValue = settings.getString("details_appearance", null)
         val originalControls = app.interfaceSettings.showPlayerControls.value
         val hadControlsSetting = settings.contains("show_player_controls")
         var expectedClock: PlayerClockPosition? = null
@@ -186,6 +189,7 @@ object PlayerAutoNextProbe {
             val timelineId = androidx.media3.ui.R.id.exo_progress
             fun control(id: Int) = checkNotNull(activity).findViewById<View>(id)
             main {
+                app.interfaceSettings.setInterfaceTheme(InterfaceTheme.GLASS)
                 app.interfaceSettings.setShowPlayerControls(true)
                 playerView(checkNotNull(activity).window.decorView)?.showController()
             }
@@ -208,13 +212,18 @@ object PlayerAutoNextProbe {
             key(KeyEvent.KEYCODE_DPAD_UP); waitFor(5000) { main { control(timelineId).hasFocus() } }
             key(KeyEvent.KEYCODE_DPAD_CENTER); waitFor(5000) { main { !player().isPlaying } }
             key(KeyEvent.KEYCODE_ENTER); playing(episodes[0].id)
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER)
+            key(KeyEvent.KEYCODE_DPAD_DOWN)
+            capture("speed-focused")
+            key(KeyEvent.KEYCODE_DPAD_CENTER)
             waitFor(5000) { visibleText(targetContext.getString(R.string.playback_speed_title)) }
             key(KeyEvent.KEYCODE_BACK)
             waitFor(5000) { !visibleText(targetContext.getString(R.string.playback_speed_title)) }
             key(KeyEvent.KEYCODE_DPAD_UP); waitFor(5000) { main { control(timelineId).hasFocus() } }
             key(KeyEvent.KEYCODE_DPAD_UP); waitFor(5000) { main { !control(timelineId).hasFocus() } }
-            main { app.interfaceSettings.setShowPlayerControls(true) }
+            main {
+                app.interfaceSettings.setInterfaceTheme(originalTheme)
+                app.interfaceSettings.setShowPlayerControls(true)
+            }
             result.putBoolean("hidden_controls_verified", true)
             stage("clock_positions")
             PlayerClockPosition.entries.forEach { position ->
@@ -397,10 +406,12 @@ object PlayerAutoNextProbe {
                 app.interfaceSettings.setAutoNextEnabled(originalEnabled)
                 app.interfaceSettings.setAutoNextSeasonEnabled(originalSeasonEnabled)
                 app.interfaceSettings.setPlayerClockPosition(originalClockPosition)
+                app.interfaceSettings.setInterfaceTheme(originalTheme)
                 app.interfaceSettings.setShowPlayerControls(originalControls)
             }
             val saved = settings.edit().putBoolean("auto_next_episode", originalEnabled)
                 .putBoolean("auto_next_season", originalSeasonEnabled).apply {
+                    putString("details_appearance", originalThemeValue)
                     if (originalClockValue == null) remove("player_clock_position")
                     else putString("player_clock_position", originalClockValue)
                     if (!hadControlsSetting) remove("show_player_controls")
