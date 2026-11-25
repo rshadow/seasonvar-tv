@@ -388,6 +388,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
                 override fun <I, O> onLaunch(requestCode: Int, contract: androidx.activity.result.contract.ActivityResultContract<I, O>,
                     input: I, options: androidx.core.app.ActivityOptionsCompat?) {
                     check(input is android.content.Intent && input.action == android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    check(input.component == null && input.`package` == null)
                     dispatchResult(requestCode, android.app.Activity.RESULT_OK, android.content.Intent()
                         .putStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS, arrayListOf(" ", spoken.removeFirst())))
                 }

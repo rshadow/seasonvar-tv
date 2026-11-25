@@ -131,19 +131,12 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
                     keyboard?.hide()
                     voiceBlock = draft.active
                     try {
-                        val request = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
                             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                             putExtra(RecognizerIntent.EXTRA_PROMPT, voiceTitle)
-                        }
-                        val manager = context.packageManager
-                        val default = request.resolveActivity(manager)
-                        if (default?.packageName == "com.uapplication.search") {
-                            val googleTv = Intent(request).setPackage("com.google.android.katniss")
-                            if (googleTv.resolveActivity(manager) != null) request.setPackage(googleTv.`package`)
-                        }
-                        voice.launch(request)
+                        })
                     } catch (_: ActivityNotFoundException) {
                         showShortMessage(context, R.string.comment_voice_unavailable)
                     } catch (_: SecurityException) {

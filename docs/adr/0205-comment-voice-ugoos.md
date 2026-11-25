@@ -1,6 +1,6 @@
 # ADR-0205. Распознавание речи в комментариях на Ugoos
 
-Дата 2026-11-25. Статус принят. Уточняет [ADR-0204](0204-write-season-comments.md).
+Дата 2026-11-25. Заменён [ADR-0206](0206-system-comment-voice-input.md). Уточнял [ADR-0204](0204-write-season-comments.md).
 
 ## Контекст
 
