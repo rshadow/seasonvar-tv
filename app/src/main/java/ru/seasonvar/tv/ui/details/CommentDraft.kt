@@ -6,7 +6,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 
-internal data class CommentDraftBlock(val value: TextFieldValue = TextFieldValue(), val spoiler: Boolean = false)
+internal data class CommentDraftBlock(
+    val value: TextFieldValue = TextFieldValue(),
+    val spoiler: Boolean = false,
+    val id: Any = Any(),
+)
 
 internal class CommentDraft {
     var blocks by mutableStateOf(listOf(CommentDraftBlock()))
@@ -35,13 +39,13 @@ internal class CommentDraft {
         return index
     }
 
-    fun removeSpoiler(): Int {
-        val current = blocks[active]
+    fun removeSpoiler(index: Int): Int {
+        val current = blocks[index]
         require(current.spoiler)
-        val first = (active - 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: active
-        val last = (active + 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: active
+        val first = (index - 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: index
+        val last = (index + 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: index
         val text = blocks.subList(first, last + 1).joinToString("") { it.value.text }
-        val offset = if (first < active) blocks[first].value.text.length else 0
+        val offset = if (first < index) blocks[first].value.text.length else 0
         val selection = TextRange(offset + current.value.selection.start, offset + current.value.selection.end)
         blocks = blocks.take(first) + CommentDraftBlock(TextFieldValue(text, selection)) + blocks.drop(last + 1)
         active = first

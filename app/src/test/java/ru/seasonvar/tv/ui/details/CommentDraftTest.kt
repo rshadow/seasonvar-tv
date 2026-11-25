@@ -24,12 +24,25 @@ class CommentDraftTest {
 
     @Test fun removing_a_spoiler_preserves_text_and_cursor() {
         val draft = CommentDraft()
-        draft.edit(0, TextFieldValue("До секрет после", TextRange(3, 9)))
+        draft.edit(0, TextFieldValue("  До секрет\nпосле  ", TextRange(5, 11)))
         val spoiler = draft.insertSpoiler()
         draft.edit(spoiler, TextFieldValue("секрет", TextRange(2)))
-        assertEquals(0, draft.removeSpoiler())
+        draft.active = spoiler + 1
+        assertEquals(0, draft.removeSpoiler(spoiler))
         assertEquals(0, draft.active)
-        assertEquals(TextFieldValue("До секрет после", TextRange(5)), draft.blocks.single().value)
-        assertEquals("До секрет после", draft.text())
+        assertEquals(TextFieldValue("  До секрет\nпосле  ", TextRange(7)), draft.blocks.single().value)
+    }
+
+    @Test fun removing_one_spoiler_preserves_other_spoilers() {
+        val draft = CommentDraft()
+        draft.edit(0, TextFieldValue("начало  конец", TextRange(7)))
+        val first = draft.insertSpoiler()
+        draft.edit(first, TextFieldValue("первый "))
+        val second = draft.insertSpoiler()
+        draft.edit(second, TextFieldValue("второй"))
+        draft.removeSpoiler(first)
+        assertEquals("начало первый [spoiler]второй[/spoiler] конец", draft.text())
+        draft.removeSpoiler(1)
+        assertEquals("начало первый второй конец", draft.text())
     }
 }

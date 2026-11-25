@@ -439,7 +439,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
                 waitFor { !keyboardVisible() }
             }
         }
-        fun enter(value: String) {
+        fun enter(value: String, cursor: Int? = null) {
             waitFor { focusedEditor() != null }
             val field = checkNotNull(focusedEditor())
             check(field.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT,
@@ -447,7 +447,17 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
                     putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
                 }))
             settle()
+            if (cursor != null) {
+                val selection = android.os.Bundle().apply {
+                    putInt(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, cursor)
+                    putInt(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, cursor)
+                }
+                check(checkNotNull(focusedEditor()).performAction(
+                    android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_SELECTION, selection))
+                settle()
+            }
         }
+        val removeSpoiler = text(R.string.comment_remove_spoiler)
         enter("Первая строка\nВторая строка")
         hideKeyboard()
         check(find(uiAutomation.rootInActiveWindow, title, exact = true) != null)
@@ -457,6 +467,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         enter("Скрытая развязка")
         hideKeyboard()
         check(find(uiAutomation.rootInActiveWindow, title, exact = true) != null)
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(removeSpoiler))
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
         stage("comment_voice_segments")
         repeat(2) { dpad(KeyEvent.KEYCODE_DPAD_CENTER) }
@@ -475,8 +486,9 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         waitFor { focusedEditor()?.text?.toString() == dictated }
         stage("comment_reply_submit")
         hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(removeSpoiler))
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
-        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_remove_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_send)))
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
         waitFor { sentComments.size == 1 }
@@ -489,18 +501,25 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         dpad(KeyEvent.KEYCODE_DPAD_UP); check(optionFocused(write))
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
         waitFor { find(uiAutomation.rootInActiveWindow, text(R.string.comment_new_title), exact = true) != null }
-        enter("Новый комментарий сезона\n")
+        enter("До \nпосле", cursor = 3)
         hideKeyboard()
         stage("comment_remove_spoiler")
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
-        enter("Обычный текст")
+        enter("Фрагмент")
         hideKeyboard()
-        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
-        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_remove_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN)
+        waitFor { focusedEditor()?.text?.toString() == "\nпосле" }
+        check(find(uiAutomation.rootInActiveWindow, removeSpoiler, exact = true) != null)
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_UP)
+        waitFor { focusedEditor()?.text?.toString() == "Фрагмент" }
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(removeSpoiler))
+        capture("comments-spoiler-trash")
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
-        val plainComment = "Новый комментарий сезона\nОбычный текст"
+        val plainComment = "До Фрагмент\nпосле"
         waitFor { focusedEditor()?.text?.toString() == plainComment }
         hideKeyboard()
         click(text(R.string.comment_send))

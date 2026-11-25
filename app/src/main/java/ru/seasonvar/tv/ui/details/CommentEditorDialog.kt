@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -85,30 +86,47 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
             }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
-                draft.blocks.forEachIndexed { index, block ->
+                draft.blocks.forEachIndexed { index, block -> key(block.id) {
                     val label = stringResource(if (block.spoiler) R.string.comment_spoiler_text else R.string.comment_text)
+                    val fieldFocus = fields[index]
+                    val previousField = fields.getOrNull(index - 1)
+                    val nextField = fields.getOrNull(index + 1)
+                    val removeFocus = remember { FocusRequester() }
+                    val rightAction = if (block.spoiler) removeFocus else micFocus
                     var focused by remember(index) { mutableStateOf(false) }
                     Column(Modifier.fillMaxWidth()
                         .background(if (block.spoiler) c.surfaceVariant else c.surface, shape)
                         .border(d.focusBorderWidth, if (focused) c.primary else c.onSurfaceVariant, shape)
                         .padding(d.spacingSmall)) {
-                        if (block.spoiler) Text(stringResource(R.string.comment_spoiler),
-                            color = c.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+                        if (block.spoiler) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.comment_spoiler), Modifier.weight(1f),
+                                color = c.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+                            ThemeButton(stringResource(R.string.comment_remove_spoiler), {
+                                focusBlock = draft.removeSpoiler(index)
+                                focusRevision++
+                            }, Modifier.focusRequester(removeFocus).focusProperties {
+                                left = fieldFocus
+                                right = micFocus
+                                up = previousField ?: fieldFocus
+                                down = nextField ?: micFocus
+                            }.onFocusChanged { if (it.isFocused) draft.active = index },
+                                icon = R.drawable.ic_delete, showOutline = false, actionEnabled = !busy)
+                        }
                         BasicTextField(block.value, { draft.edit(index, it) },
                             modifier = Modifier.fillMaxWidth().heightIn(min = d.headerButtonSize)
-                                .focusRequester(fields[index]).onFocusChanged {
+                                .focusRequester(fieldFocus).onFocusChanged {
                                     focused = it.isFocused
                                     if (focused) draft.active = index
                                 }.focusProperties {
-                                    up = fields.getOrNull(index - 1) ?: FocusRequester.Cancel
-                                    down = fields.getOrNull(index + 1) ?: micFocus
-                                    right = micFocus
+                                    up = previousField ?: FocusRequester.Cancel
+                                    down = nextField ?: micFocus
+                                    right = rightAction
                                 }.onPreviewKeyEvent {
                                     if (it.type != KeyEventType.KeyDown || busy) false else when (it.key) {
                                         Key.DirectionCenter -> { keyboard?.show(); true }
-                                        Key.DirectionRight -> !ime && micFocus.requestFocus()
-                                        Key.DirectionUp -> !ime && (fields.getOrNull(index - 1)?.requestFocus() ?: true)
-                                        Key.DirectionDown -> !ime && (fields.getOrNull(index + 1) ?: micFocus).requestFocus()
+                                        Key.DirectionRight -> !ime && rightAction.requestFocus()
+                                        Key.DirectionUp -> !ime && (previousField?.requestFocus() ?: true)
+                                        Key.DirectionDown -> !ime && (nextField ?: micFocus).requestFocus()
                                         else -> false
                                     }
                                 }.semantics { contentDescription = label },
@@ -123,7 +141,7 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
                                 }
                             })
                     }
-                }
+                } }
             }
             failure?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = c.error) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
@@ -144,9 +162,8 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
                     }
                 }, Modifier.weight(1f).focusRequester(micFocus).focusProperties { right = addFocus; up = activeField },
                     showOutline = false, actionEnabled = !busy)
-                val spoilerActive = draft.blocks.getOrNull(draft.active)?.spoiler == true
-                ThemeButton(stringResource(if (spoilerActive) R.string.comment_remove_spoiler else R.string.comment_add_spoiler), {
-                    focusBlock = if (spoilerActive) draft.removeSpoiler() else draft.insertSpoiler()
+                ThemeButton(stringResource(R.string.comment_add_spoiler), {
+                    focusBlock = draft.insertSpoiler()
                     focusRevision++
                 }, Modifier.weight(1f).focusRequester(addFocus).focusProperties {
                     left = micFocus; right = sendFocus; up = activeField
