@@ -47,6 +47,10 @@ class SeriesDetailsViewModel(
     private val currentEntry: (SeriesEntry) -> SeriesEntry = { it },
     private val hasConfirmedMark: (String) -> Boolean = { false },
     internal val loadComments: (suspend (SeriesEntry, Int) -> ru.seasonvar.tv.data.comments.CommentsPage)? = null,
+    internal val refreshComments: (suspend (SeriesEntry, Int) -> ru.seasonvar.tv.data.comments.CommentsPage)? = null,
+    internal val commentAccount: kotlinx.coroutines.flow.StateFlow<ru.seasonvar.tv.data.account.AccountSession> =
+        MutableStateFlow(ru.seasonvar.tv.data.account.AccountSession()),
+    internal val publishComment: (suspend (SeriesEntry, Long, String?, String) -> Unit)? = null,
     private val load: suspend (SeriesEntry) -> SeriesDetails,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DetailsUiState())
@@ -284,7 +288,9 @@ class SeriesDetailsViewModel(
                             " markMatchesSource=" + (direct != null && sourceEpisode != null && direct.marked == sourceEpisode))
                     }
                     parsed
-                } }, loadComments = comments?.let { it::load }, load = { loadDetails(it, false) }) as T
+                } }, loadComments = comments?.let { it::load }, refreshComments = comments?.let { it::refresh },
+                commentAccount = account?.session ?: MutableStateFlow(ru.seasonvar.tv.data.account.AccountSession()),
+                publishComment = account?.let { it::publishComment }, load = { loadDetails(it, false) }) as T
         }
     }
 }

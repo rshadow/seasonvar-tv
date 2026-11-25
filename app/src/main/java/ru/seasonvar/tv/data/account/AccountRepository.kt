@@ -9,7 +9,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import ru.seasonvar.tv.data.SiteClient
+import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.data.cache.*
+import ru.seasonvar.tv.data.comments.CommentsRepository
 
 interface AccountTransport {
     suspend fun clearHistory(jar: SessionCookies): Unit = throw UnsupportedOperationException()
@@ -20,6 +22,8 @@ interface AccountTransport {
     suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies): String = throw UnsupportedOperationException()
     suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies): String
     suspend fun saveHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, jar: SessionCookies): Unit = throw UnsupportedOperationException()
+    suspend fun publishComment(entry: SeriesEntry, parentId: String?, text: String, jar: SessionCookies): String =
+        throw UnsupportedOperationException()
 }
 
 data class AccountSession(val user: AccountUser? = null, val version: Long = 0, val expired: Boolean = false)
@@ -49,6 +53,8 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         override suspend fun saveStatus(change: AccountStatusChange, jar: SessionCookies) = client.accountStatus(change, jar)
         override suspend fun saveMark(mark: PlaybackMark, jar: SessionCookies) = client.accountMark(mark, jar)
         override suspend fun saveHistory(event: ru.seasonvar.tv.data.playback.PlaybackHistoryEvent, jar: SessionCookies) = client.accountHistory(event, jar)
+        override suspend fun publishComment(entry: SeriesEntry, parentId: String?, text: String, jar: SessionCookies) =
+            client.publishComment(entry, parentId, text, jar)
     }, htmlCache, cardData)
     private val mutableSession = MutableStateFlow(AccountSession())
     val session = mutableSession.asStateFlow()
@@ -119,6 +125,15 @@ class AccountRepository(private val sessions: SessionManager, private val transp
         }.getOrNull()
         return parsed?.takeIf { resumeKey(cached = true) == key && cache.isCurrent(lease) }
     }
+
+    internal suspend fun publishComment(entry: SeriesEntry, ownerVersion: Long, parentId: String?, text: String): Unit =
+        withContext(dispatcher) { mutex.withLock {
+            val expected = session.value
+            if (expected.user == null || expected.version != ownerVersion) throw SessionExpiredException()
+            val lease = htmlCache?.capture()
+            CommentsRepository.requirePublished(transport.publishComment(entry, parentId, text, sessions.current()))
+            if (lease != null) htmlCache.invalidate("series-${entry.id}.html", lease)
+        } }
 
     suspend fun clearHistory(ownerVersion: Long): Unit = withContext(dispatcher) { mutex.withLock {
         val expected = session.value

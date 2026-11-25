@@ -57,6 +57,10 @@ class SiteClient(private val settings: NetworkSettings, private val sessions: ru
     override suspend fun moreComments(entry: SeriesEntry, page: Int): String =
         execute(ru.seasonvar.tv.data.comments.CommentsRepository.moreRequest(entry, page))
 
+    internal suspend fun publishComment(entry: SeriesEntry, parentId: String?, text: String,
+        jar: ru.seasonvar.tv.data.account.SessionCookies): String =
+        execute(ru.seasonvar.tv.data.comments.CommentsRepository.publishRequest(entry, parentId, text), jar)
+
     override suspend fun sidebar(feed: PublicFeed): String = execute(sidebarRequest(feed))
 
     suspend fun accountGet(url: String, jar: ru.seasonvar.tv.data.account.SessionCookies): String =

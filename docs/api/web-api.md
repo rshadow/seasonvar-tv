@@ -694,3 +694,9 @@ review_id_serial=<ID_СТРАНИЦЫ_СЕЗОНА>&last_review=<LAST_ИЗ_HTML>
 Обработчик `cmtPage` из [pg.player.min.js](https://cdn.svstat.net/asset/js/pg.player.min.js?25.4.1) отправляет `POST /ajax.php` с `pageComm=<номер>` и `seasId=<ID сезона>`. Подтверждён ответ JSON со `status="ok"` и HTML в `comm`. Номер текущей страницы отмечен `class="act"` на кнопке `[data-click=cmtPage][data-page]`. Для следующего запроса используется соседний номер из ответа.
 
 В проверенных страницах сезонов 2219 и 2779 встречаются два вида спойлеров. Фрагмент внутри текста обёрнут в `details` с `summary`, а целый комментарий скрывает класс `.svc_msg.compress.spoiler` с соседней кнопкой `data-click="cmtShowBigText"`. Приложение разбирает эти элементы в закрытые блоки обычного текста. [ADR-0202](../adr/0202-season-comments.md)
+
+### Публикация комментариев сезона
+
+Формат проверен 2026-11-25 по обработчикам `cmtAddNew`, `cmtReply`, `cmtAddTag` и `cmtPage` в [скрипте Seasonvar](https://cdn.svstat.net/asset/js/pg.player.min.js?25.4.1). Форма отправляет авторизованный `POST /ajax.php` с полями `seasId`, `txtComm` и `parentId`. Для нового комментария `parentId` пуст, для ответа содержит `data-cmtid` выбранной записи. Скрытый фрагмент передаётся между `[spoiler]` и `[/spoiler]`.
+
+`status="ok"` подтверждает запись. При `status="error"` сайт возвращает пояснение в `msg`. Сайт обновляет обсуждение запросом `pageComm`, в том числе для первой страницы. Отправка и повторное чтение проверяются на синтетических ответах. Публикация на живом сайте в проверку не входит. [ADR-0204](../adr/0204-write-season-comments.md)

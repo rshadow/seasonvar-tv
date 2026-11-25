@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -40,6 +42,12 @@ import ru.seasonvar.tv.data.playback.PlaybackRequest
 import ru.seasonvar.tv.data.SeriesEntry
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.ShortMessageEffect
+import ru.seasonvar.tv.ui.showShortMessage
+import ru.seasonvar.tv.data.comments.CommentRejectedException
+import ru.seasonvar.tv.data.comments.SeasonComment
+import ru.seasonvar.tv.data.account.SessionExpiredException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import ru.seasonvar.tv.ui.account.AccountEntryDetails
 import ru.seasonvar.tv.ui.account.accountProgressValue
 import ru.seasonvar.tv.ui.catalog.LoadFailure
@@ -50,6 +58,7 @@ private object VisibleControlsScrollSpec : BringIntoViewSpec
 
 private val headlineFacts = setOf("Вышел", "Страна", "Жанр", "Ограничение")
 private fun isRating(label: String) = label.equals("IMDB", ignoreCase = true) || label.equals("КиноПоиск", ignoreCase = true)
+private data class CommentEditorTarget(val parent: SeasonComment?, val returnFocus: FocusRequester)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -73,8 +82,38 @@ internal fun SeriesDetailsPane(
     val loadComments = model.loadComments.takeIf { showComments }
     val commentFeed = remember(entry.id, loadComments) { SeasonCommentFeed() }
     val commentsFocus = remember { FocusRequester() }
-    val commentsReady = commentFeed.entries.isNotEmpty() || commentFeed.failed
-    val afterDescription = if (commentsReady) commentsFocus else FocusRequester.Cancel
+    val writeFocus = remember { FocusRequester() }
+    val publishComment = model.publishComment.takeIf { loadComments != null && !preparing }
+    val account by model.commentAccount.collectAsStateWithLifecycle()
+    val drafts = remember(entry.id, account.version) { mutableMapOf<String?, CommentDraft>() }
+    var editor by remember(entry.id, account.version) { mutableStateOf<CommentEditorTarget?>(null) }
+    var sending by remember(entry.id, account.version) { mutableStateOf(false) }
+    var sendFailure by remember(entry.id, account.version) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val rejectedMessage = stringResource(R.string.comment_rejected)
+    val loginMessage = stringResource(R.string.comment_login_required)
+    val failedMessage = stringResource(R.string.comment_send_failed)
+    val commentsReady = commentFeed.entries.isNotEmpty() || commentFeed.failed || publishComment != null
+    val afterDescription = when {
+        commentFeed.entries.isNotEmpty() || commentFeed.failed -> commentsFocus
+        publishComment != null -> writeFocus
+        else -> FocusRequester.Cancel
+    }
+    fun writeComment(parent: SeasonComment?, returnFocus: FocusRequester) {
+        onInteraction()
+        if (account.user == null) { showShortMessage(context, R.string.comment_login_required); return }
+        drafts.getOrPut(parent?.id) { CommentDraft() }
+        sendFailure = null
+        editor = CommentEditorTarget(parent, returnFocus)
+    }
+    fun closeEditor(target: CommentEditorTarget) {
+        editor = null
+        scope.launch {
+            repeat(2) { withFrameNanos { } }
+            runCatching { target.returnFocus.requestFocus() }
+        }
+    }
     val episodes = state.episodes.orEmpty()
     val beforeDescription = when {
         episodes.size > SeasonvarTheme.allEpisodesThreshold -> navigation.allEpisodes
@@ -139,26 +178,29 @@ internal fun SeriesDetailsPane(
                         SeriesSynopsis(state)
                     }
                 }
-                itemsIndexed(commentFeed.entries, key = { _, comment -> "${entry.id}:${comment.id}" }) { index, comment ->
-                    val first = index == 0
-                    if (first) {
-                        Text(
-                            stringResource(R.string.comments_heading),
-                            Modifier.fillMaxWidth().padding(start = d.spacingSmall * 2, top = d.spacingLarge)
-                                .semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
+                val firstComment = commentFeed.entries.firstOrNull()
+                if (publishComment != null || firstComment != null) item(key = "comments-start") {
+                    SeasonCommentsHeading(writeFocus, commentsFocus.takeIf { firstComment != null || commentFeed.failed },
+                        { navigation.returnFromComments(beforeDescription) },
+                        if (publishComment != null) ({ writeComment(null, writeFocus) }) else null)
+                    if (firstComment != null) key(firstComment.id) {
+                        SeasonCommentRow(firstComment, commentsFocus, {
+                            if (publishComment != null) writeFocus.requestFocus()
+                            else navigation.returnFromComments(beforeDescription)
+                        }, if (publishComment != null) ({ focus -> writeComment(firstComment, focus) }) else null)
                     }
-                    SeasonCommentRow(comment, commentsFocus.takeIf { first },
-                        if (first) ({ navigation.returnFromComments(beforeDescription) }) else null)
+                }
+                items(commentFeed.entries.drop(1), key = { comment -> "${entry.id}:${comment.id}" }) { comment ->
+                    SeasonCommentRow(comment, null, null,
+                        if (publishComment != null) ({ focus -> writeComment(comment, focus) }) else null)
                 }
                 if (commentFeed.loading || commentFeed.failed) item(key = "comments-status") {
                     if (commentFeed.failed) {
                         val first = commentFeed.entries.isEmpty()
                         ThemeButton(stringResource(R.string.comments_retry), commentFeed::retry,
                             if (first) Modifier.focusRequester(commentsFocus).returnFromFirstComment {
-                                navigation.returnFromComments(beforeDescription)
+                                if (publishComment != null) writeFocus.requestFocus()
+                                else navigation.returnFromComments(beforeDescription)
                             } else Modifier)
                     } else Text(stringResource(R.string.comments_loading), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -166,6 +208,60 @@ internal fun SeriesDetailsPane(
         }
     }
     SeriesDetailsDialogs(state, entry, model, navigation, onInteraction, onPlay)
+    val target = editor
+    if (target != null && publishComment != null) {
+        val parentId = target.parent?.id
+        val draft = checkNotNull(drafts[parentId])
+        CommentEditorDialog(target.parent, draft, sending, sendFailure, { closeEditor(target) }, onSend = {
+            val text = draft.text()
+            if (!sending && text.isNotBlank()) {
+                sending = true
+                sendFailure = null
+                val ownerVersion = account.version
+                scope.launch {
+                    try {
+                        publishComment(entry, ownerVersion, parentId, text)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        sendFailure = when (error) {
+                            is CommentRejectedException -> error.reason ?: rejectedMessage
+                            is SessionExpiredException -> loginMessage
+                            else -> failedMessage
+                        }
+                        return@launch
+                    } finally {
+                        sending = false
+                    }
+                    drafts.remove(parentId)
+                    closeEditor(target)
+                    showShortMessage(context, R.string.comment_sent)
+                    model.refreshComments?.let { refresh ->
+                        try { commentFeed.refresh(parentId, entry, refresh) }
+                        catch (error: CancellationException) { throw error }
+                        catch (_: Exception) { showShortMessage(context, R.string.comment_refresh_failed) }
+                    }
+                }
+            }
+        })
+    }
+}
+
+@Composable
+private fun SeasonCommentsHeading(writeFocus: FocusRequester, first: FocusRequester?, returnToSeason: () -> Unit,
+    onWrite: (() -> Unit)?) {
+    val d = SeasonvarTheme.dimensions
+    Row(Modifier.fillMaxWidth().padding(start = d.spacingSmall * 2, top = d.spacingLarge, end = d.spacingSmall),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.comments_heading), Modifier.weight(1f).semantics { heading() },
+            style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+        if (onWrite != null) {
+            ThemeButton(stringResource(R.string.comment_write), onWrite,
+                Modifier.height(d.headerButtonSize).focusRequester(writeFocus)
+                    .focusProperties { down = first ?: FocusRequester.Cancel }.returnFromFirstComment(returnToSeason),
+                showOutline = false)
+        }
+    }
 }
 
 @Composable

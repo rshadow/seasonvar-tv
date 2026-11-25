@@ -1,11 +1,13 @@
 package ru.seasonvar.tv.data.comments
 
 import okhttp3.FormBody
+import okio.Buffer
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import ru.seasonvar.tv.data.MarkupChangedException
 import ru.seasonvar.tv.data.SeriesEntry
+import java.net.URLDecoder
 
 class CommentsParserTest {
     private val entry = SeriesEntry("123", "https://seasonvar.ru/serial-123-example.html", "Пример", 1, "", "")
@@ -53,5 +55,32 @@ class CommentsParserTest {
         assertEquals(entry.url, request.header("Referer"))
         assertEquals(mapOf("pageComm" to "2", "seasId" to "123"),
             (0 until form.size).associate { form.name(it) to form.value(it) })
+    }
+
+    @Test fun publishing_a_comment_uses_the_website_form_and_keeps_paragraphs_and_spoilers() {
+        val text = "Начало\n[spoiler]Скрытый текст[/spoiler]\nКонец"
+        for (parent in listOf(null, "42")) {
+            val request = CommentsRepository.publishRequest(entry, parent, text)
+            val body = checkNotNull(request.body)
+            val buffer = Buffer().also(body::writeTo)
+            val fields = buffer.readUtf8().split("&").associate { pair ->
+                pair.substringBefore("=") to URLDecoder.decode(pair.substringAfter("="), "UTF-8")
+            }
+            assertEquals("https://seasonvar.ru/ajax.php", request.url.toString())
+            assertEquals(entry.url, request.header("Referer"))
+            assertTrue(body.isOneShot())
+            assertEquals(mapOf("seasId" to "123", "txtComm" to text, "parentId" to parent.orEmpty()), fields)
+        }
+        assertThrows(IllegalArgumentException::class.java) { CommentsRepository.publishRequest(entry, "wrong", text) }
+        assertThrows(IllegalArgumentException::class.java) { CommentsRepository.publishRequest(entry, null, " ") }
+    }
+
+    @Test fun only_explicit_server_success_confirms_publication() {
+        CommentsRepository.requirePublished("""{"status":"ok"}""")
+        val rejection = assertThrows(CommentRejectedException::class.java) {
+            CommentsRepository.requirePublished("""{"status":"error","msg":"<b>Повторите позже</b>"}""")
+        }
+        assertEquals("Повторите позже", rejection.reason)
+        assertThrows(MarkupChangedException::class.java) { CommentsRepository.requirePublished("""{"status":"unknown"}""") }
     }
 }
