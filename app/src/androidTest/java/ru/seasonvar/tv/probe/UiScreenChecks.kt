@@ -428,9 +428,14 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         }
         fun focusedEditor() = focusedEditor(uiAutomation.rootInActiveWindow)
             ?: uiAutomation.windows.firstNotNullOfOrNull { focusedEditor(it.root) }
+        fun keyboardVisible() = uiAutomation.windows.any {
+            it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+        }
         fun hideKeyboard() {
-            if (uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
+            settle()
+            if (keyboardVisible()) {
                 dpad(KeyEvent.KEYCODE_BACK)
+                waitFor { !keyboardVisible() }
             }
         }
         fun enter(value: String) {

@@ -20,7 +20,8 @@ args.output.mkdir(parents=True, exist_ok=True)
 adb = ["adb", "-s", args.device]
 process = subprocess.Popen(adb + ["shell", "am", "instrument", "-w", "-r", "-e", "mode", args.mode, "-e", "theme", args.theme, args.runner],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-watchdog = threading.Timer(300 if args.mode in ("shared-card-cache", "cache-memory") else 180, process.kill)
+long_probes = ("shared-card-cache", "cache-memory", "ui-screens-layout", "ui-dialogs-layout")
+watchdog = threading.Timer(300 if args.mode in long_probes else 180, process.kill)
 watchdog.daemon = True
 watchdog.start()
 fields = {}
