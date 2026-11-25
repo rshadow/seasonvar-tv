@@ -21,4 +21,15 @@ class CommentDraftTest {
         draft.insertSpoiler()
         assertEquals("", draft.text())
     }
+
+    @Test fun removing_a_spoiler_preserves_text_and_cursor() {
+        val draft = CommentDraft()
+        draft.edit(0, TextFieldValue("До секрет после", TextRange(3, 9)))
+        val spoiler = draft.insertSpoiler()
+        draft.edit(spoiler, TextFieldValue("секрет", TextRange(2)))
+        assertEquals(0, draft.removeSpoiler())
+        assertEquals(0, draft.active)
+        assertEquals(TextFieldValue("До секрет после", TextRange(5)), draft.blocks.single().value)
+        assertEquals("До секрет после", draft.text())
+    }
 }

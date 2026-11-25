@@ -490,7 +490,10 @@
     <string name="comment_spoiler">Спойлер</string>
     <string name="comment_spoiler_text">Текст спойлера</string>
     <string name="comment_add_spoiler">+ Спойлер</string>
+    <string name="comment_remove_spoiler">Убрать спойлер</string>
     <string name="comment_voice">Голосом</string>
+    <string name="comment_voice_failed">Не удалось распознать речь. Проверьте микрофон и попробуйте ещё раз.</string>
+    <string name="comment_voice_unavailable">Голосовой ввод недоступен. Введите комментарий с клавиатуры.</string>
     <string name="comment_send">Отправить</string>
     <string name="comment_sending">Отправляем…</string>
     <string name="comment_sent">Комментарий опубликован</string>

@@ -35,6 +35,19 @@ internal class CommentDraft {
         return index
     }
 
+    fun removeSpoiler(): Int {
+        val current = blocks[active]
+        require(current.spoiler)
+        val first = (active - 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: active
+        val last = (active + 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: active
+        val text = blocks.subList(first, last + 1).joinToString("") { it.value.text }
+        val offset = if (first < active) blocks[first].value.text.length else 0
+        val selection = TextRange(offset + current.value.selection.start, offset + current.value.selection.end)
+        blocks = blocks.take(first) + CommentDraftBlock(TextFieldValue(text, selection)) + blocks.drop(last + 1)
+        active = first
+        return first
+    }
+
     fun insertVoice(index: Int, spoken: String) {
         val value = blocks[index].value
         val from = value.selection.min

@@ -55,13 +55,17 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
     val fields = remember(draft.blocks.size) { List(draft.blocks.size) { FocusRequester() } }
     val activeField = fields.getOrElse(draft.active) { fields.first() }
     var focusBlock by remember { mutableIntStateOf(draft.active) }
+    var focusRevision by remember { mutableIntStateOf(0) }
     var voiceBlock by remember { mutableIntStateOf(0) }
     val voiceTitle = stringResource(R.string.comment_voice)
     val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
-            if (spoken.isNullOrEmpty()) showShortMessage(context, R.string.search_voice_failed)
+            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotEmpty) }
+            if (spoken == null) showShortMessage(context, R.string.comment_voice_failed)
             else draft.insertVoice(voiceBlock, spoken)
+        } else if (result.resultCode != Activity.RESULT_CANCELED) {
+            showShortMessage(context, R.string.comment_voice_failed)
         }
         scope.launch { withFrameNanos { }; micFocus.requestFocus() }
     }
@@ -127,21 +131,30 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
                     keyboard?.hide()
                     voiceBlock = draft.active
                     try {
-                        voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        val request = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
                             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                             putExtra(RecognizerIntent.EXTRA_PROMPT, voiceTitle)
-                        })
+                        }
+                        val manager = context.packageManager
+                        val default = request.resolveActivity(manager)
+                        if (default?.packageName == "com.uapplication.search") {
+                            val googleTv = Intent(request).setPackage("com.google.android.katniss")
+                            if (googleTv.resolveActivity(manager) != null) request.setPackage(googleTv.`package`)
+                        }
+                        voice.launch(request)
                     } catch (_: ActivityNotFoundException) {
-                        showShortMessage(context, R.string.search_voice_unavailable)
+                        showShortMessage(context, R.string.comment_voice_unavailable)
                     } catch (_: SecurityException) {
-                        showShortMessage(context, R.string.search_voice_unavailable)
+                        showShortMessage(context, R.string.comment_voice_unavailable)
                     }
                 }, Modifier.weight(1f).focusRequester(micFocus).focusProperties { right = addFocus; up = activeField },
                     showOutline = false, actionEnabled = !busy)
-                ThemeButton(stringResource(R.string.comment_add_spoiler), {
-                    focusBlock = draft.insertSpoiler()
+                val spoilerActive = draft.blocks.getOrNull(draft.active)?.spoiler == true
+                ThemeButton(stringResource(if (spoilerActive) R.string.comment_remove_spoiler else R.string.comment_add_spoiler), {
+                    focusBlock = if (spoilerActive) draft.removeSpoiler() else draft.insertSpoiler()
+                    focusRevision++
                 }, Modifier.weight(1f).focusRequester(addFocus).focusProperties {
                     left = micFocus; right = sendFocus; up = activeField
                 }, showOutline = false, actionEnabled = !busy)
@@ -152,7 +165,7 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
             }
         }
         val requestedFocus = fields.getOrNull(focusBlock)
-        LaunchedEffect(requestedFocus) {
+        LaunchedEffect(requestedFocus, focusRevision) {
             withFrameNanos { }
             requestedFocus?.requestFocus()
         }

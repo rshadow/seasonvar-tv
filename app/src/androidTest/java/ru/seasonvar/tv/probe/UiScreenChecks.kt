@@ -389,7 +389,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
                     input: I, options: androidx.core.app.ActivityOptionsCompat?) {
                     check(input is android.content.Intent && input.action == android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                     dispatchResult(requestCode, android.app.Activity.RESULT_OK, android.content.Intent()
-                        .putStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS, arrayListOf(spoken.removeFirst())))
+                        .putStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS, arrayListOf(" ", spoken.removeFirst())))
                 }
             }
         }
@@ -470,7 +470,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         stage("comment_reply_submit")
         hideKeyboard()
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
-        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_remove_spoiler)))
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_send)))
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
         waitFor { sentComments.size == 1 }
@@ -483,11 +483,23 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         dpad(KeyEvent.KEYCODE_DPAD_UP); check(optionFocused(write))
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
         waitFor { find(uiAutomation.rootInActiveWindow, text(R.string.comment_new_title), exact = true) != null }
-        enter("Новый комментарий сезона")
+        enter("Новый комментарий сезона\n")
+        hideKeyboard()
+        stage("comment_remove_spoiler")
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        enter("Обычный текст")
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_remove_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        val plainComment = "Новый комментарий сезона\nОбычный текст"
+        waitFor { focusedEditor()?.text?.toString() == plainComment }
         hideKeyboard()
         click(text(R.string.comment_send))
         waitFor { sentComments.size == 2 }
-        check(sentComments.last() == (null to "Новый комментарий сезона"))
+        check(sentComments.last() == (null to plainComment))
         waitFor { optionFocused(write) }
     } }
 
