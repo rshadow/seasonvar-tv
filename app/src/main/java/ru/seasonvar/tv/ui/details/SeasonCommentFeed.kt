@@ -6,12 +6,9 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -200,14 +197,13 @@ internal fun SeasonCommentRow(comment: SeasonComment, first: FocusRequester?, re
         }
         if (onReply != null) {
             ThemeButton(stringResource(R.string.comment_reply), { onReply(lastReadingFocus) },
-                Modifier.width(d.headerButtonSize * 2.5f).height(d.headerButtonSize)
-                    .alpha(if (focused) 1f else 0f).focusRequester(replyFocus)
+                Modifier.alpha(if (focused) 1f else 0f).focusRequester(replyFocus)
                     .focusProperties { canFocus = allowReplyFocus }
                     .onFocusChanged {
                         if (replyFocused && !it.isFocused) allowReplyFocus = false
                         replyFocused = it.isFocused
                     }.then(if (focused) Modifier else Modifier.clearAndSetSemantics {}),
-                actionEnabled = focused, contentPadding = PaddingValues(horizontal = d.spacingSmall), showOutline = false)
+                icon = R.drawable.ic_comment_reply, actionEnabled = focused, showOutline = false)
         }
     }
 }
