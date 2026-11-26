@@ -501,7 +501,7 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         dpad(KeyEvent.KEYCODE_DPAD_UP); check(optionFocused(write))
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
         waitFor { find(uiAutomation.rootInActiveWindow, text(R.string.comment_new_title), exact = true) != null }
-        enter("До \nпосле", cursor = 3)
+        enter("До\nпосле", cursor = 2)
         hideKeyboard()
         stage("comment_remove_spoiler")
         dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))

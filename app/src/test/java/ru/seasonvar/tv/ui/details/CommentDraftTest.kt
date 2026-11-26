@@ -33,6 +33,17 @@ class CommentDraftTest {
         assertEquals(TextFieldValue("  До секрет\nпосле  ", TextRange(7)), draft.blocks.single().value)
     }
 
+    @Test fun removing_a_spoiler_inserts_missing_spaces_and_preserves_selection() {
+        val draft = CommentDraft()
+        draft.edit(0, TextFieldValue("Досекретпосле", TextRange(2, 8)))
+        val spoiler = draft.insertSpoiler()
+        draft.edit(spoiler, TextFieldValue("секрет", TextRange(2, 4)))
+
+        draft.removeSpoiler(spoiler)
+
+        assertEquals(TextFieldValue("До секрет после", TextRange(5, 7)), draft.blocks.single().value)
+    }
+
     @Test fun removing_one_spoiler_preserves_other_spoilers() {
         val draft = CommentDraft()
         draft.edit(0, TextFieldValue("начало  конец", TextRange(7)))

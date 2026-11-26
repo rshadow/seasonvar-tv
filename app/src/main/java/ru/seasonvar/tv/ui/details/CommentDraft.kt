@@ -44,8 +44,17 @@ internal class CommentDraft {
         require(current.spoiler)
         val first = (index - 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: index
         val last = (index + 1).takeIf { blocks.getOrNull(it)?.spoiler == false } ?: index
-        val text = blocks.subList(first, last + 1).joinToString("") { it.value.text }
-        val offset = if (first < index) blocks[first].value.text.length else 0
+        var offset = 0
+        val text = buildString {
+            for (blockIndex in first..last) {
+                val part = blocks[blockIndex].value.text
+                if (lastOrNull()?.isWhitespace() == false && part.firstOrNull()?.isWhitespace() == false) {
+                    append(' ')
+                }
+                if (blockIndex == index) offset = length
+                append(part)
+            }
+        }
         val selection = TextRange(offset + current.value.selection.start, offset + current.value.selection.end)
         blocks = blocks.take(first) + CommentDraftBlock(TextFieldValue(text, selection)) + blocks.drop(last + 1)
         active = first
