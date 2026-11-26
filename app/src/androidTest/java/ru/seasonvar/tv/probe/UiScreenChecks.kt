@@ -377,6 +377,157 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         capture("details-description-returned")
     } }
 
+    fun writeSeasonComments() = with(ui) { with(fixture) {
+        stage("comment_reply_navigation")
+        val windowFlag = android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        uiAutomation.serviceInfo = uiAutomation.serviceInfo.apply { flags = flags or windowFlag }
+        commentPages.clear()
+        val spoken = ArrayDeque(listOf("голосом", "ещё фрагмент"))
+        val voiceOwner = object : androidx.activity.result.ActivityResultRegistryOwner {
+            override val activityResultRegistry = object : androidx.activity.result.ActivityResultRegistry() {
+                override fun <I, O> onLaunch(requestCode: Int, contract: androidx.activity.result.contract.ActivityResultContract<I, O>,
+                    input: I, options: androidx.core.app.ActivityOptionsCompat?) {
+                    check(input is android.content.Intent && input.action == android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    check(input.component == null && input.`package` == null)
+                    dispatchResult(requestCode, android.app.Activity.RESULT_OK, android.content.Intent()
+                        .putStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS, arrayListOf(" ", spoken.removeFirst())))
+                }
+            }
+        }
+        render {
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.activity.compose.LocalActivityResultRegistryOwner provides voiceOwner) {
+                SeriesDetailsPane(entry, commentsWriterModel, remember { FocusRequester() }, {}, {})
+            }
+        }
+        waitFor { optionFocused(text(R.string.details_watch)) && commentPages.isNotEmpty() }
+        fun dpad(code: Int) { sendKeyDownUpSync(code); settle() }
+        val first = "Первый зритель"
+        val spoiler = text(R.string.comment_show_spoiler)
+        val reply = text(R.string.comment_reply)
+        val write = text(R.string.comment_write)
+        repeat(6) { if (!optionFocused(first)) dpad(KeyEvent.KEYCODE_DPAD_DOWN) }
+        check(optionFocused(first))
+        dpad(KeyEvent.KEYCODE_DPAD_UP); check(optionFocused(write))
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN); check(optionFocused(first))
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN); check(optionFocused(spoiler))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(reply))
+        dpad(KeyEvent.KEYCODE_DPAD_LEFT); check(optionFocused(spoiler))
+        dpad(KeyEvent.KEYCODE_DPAD_UP); check(optionFocused(first))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(reply))
+        capture("comments-reply-focused")
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        val title = targetContext.getString(R.string.comment_reply_title, first)
+        waitFor { find(uiAutomation.rootInActiveWindow, title, exact = true) != null }
+
+        stage("comment_reply_editor")
+        fun focusedEditor(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+            node ?: return null
+            if (node.isFocused && node.actionList.contains(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_TEXT)) return node
+            for (index in 0 until node.childCount) focusedEditor(node.getChild(index))?.let { return it }
+            return null
+        }
+        fun focusedEditor() = focusedEditor(uiAutomation.rootInActiveWindow)
+            ?: uiAutomation.windows.firstNotNullOfOrNull { focusedEditor(it.root) }
+        fun keyboardVisible() = uiAutomation.windows.any {
+            it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+        }
+        fun hideKeyboard() {
+            settle()
+            if (keyboardVisible()) {
+                dpad(KeyEvent.KEYCODE_BACK)
+                waitFor { !keyboardVisible() }
+            }
+        }
+        fun enter(value: String, cursor: Int? = null) {
+            waitFor { focusedEditor() != null }
+            val field = checkNotNull(focusedEditor())
+            check(field.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT,
+                android.os.Bundle().apply {
+                    putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
+                }))
+            settle()
+            if (cursor != null) {
+                val selection = android.os.Bundle().apply {
+                    putInt(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, cursor)
+                    putInt(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, cursor)
+                }
+                check(checkNotNull(focusedEditor()).performAction(
+                    android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_SELECTION, selection))
+                settle()
+            }
+        }
+        val removeSpoiler = text(R.string.comment_remove_spoiler)
+        enter("Первая строка\nВторая строка")
+        hideKeyboard()
+        check(find(uiAutomation.rootInActiveWindow, title, exact = true) != null)
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN); check(optionFocused(text(R.string.comment_voice)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        enter("Скрытая развязка")
+        hideKeyboard()
+        check(find(uiAutomation.rootInActiveWindow, title, exact = true) != null)
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(removeSpoiler))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
+        stage("comment_voice_segments")
+        repeat(2) { dpad(KeyEvent.KEYCODE_DPAD_CENTER) }
+        check(spoken.isEmpty())
+        dpad(KeyEvent.KEYCODE_DPAD_UP)
+        val dictated = "Скрытая развязка голосом ещё фрагмент"
+        waitFor { focusedEditor()?.text?.toString() == dictated }
+        hideKeyboard()
+        capture("comments-reply-editor")
+        stage("comment_draft_reopen")
+        dpad(KeyEvent.KEYCODE_BACK)
+        waitFor { optionFocused(first) }
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT)
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFor { find(uiAutomation.rootInActiveWindow, title, exact = true) != null }
+        waitFor { focusedEditor()?.text?.toString() == dictated }
+        stage("comment_reply_submit")
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(removeSpoiler))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_send)))
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFor { sentComments.size == 1 }
+        val sent = sentComments.single()
+        check(sent.first == "1" && sent.second.contains("Первая строка\nВторая строка")
+            && sent.second.contains("[spoiler]Скрытая развязка голосом ещё фрагмент[/spoiler]"))
+        waitFor { optionFocused(first) }
+
+        stage("comment_new_editor")
+        dpad(KeyEvent.KEYCODE_DPAD_UP); check(optionFocused(write))
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFor { find(uiAutomation.rootInActiveWindow, text(R.string.comment_new_title), exact = true) != null }
+        enter("До\nпосле", cursor = 2)
+        hideKeyboard()
+        stage("comment_remove_spoiler")
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_voice)))
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(text(R.string.comment_add_spoiler)))
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        enter("Фрагмент")
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_DOWN)
+        waitFor { focusedEditor()?.text?.toString() == "\nпосле" }
+        check(find(uiAutomation.rootInActiveWindow, removeSpoiler, exact = true) != null)
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_UP)
+        waitFor { focusedEditor()?.text?.toString() == "Фрагмент" }
+        hideKeyboard()
+        dpad(KeyEvent.KEYCODE_DPAD_RIGHT); check(optionFocused(removeSpoiler))
+        capture("comments-spoiler-trash")
+        dpad(KeyEvent.KEYCODE_DPAD_CENTER)
+        val plainComment = "До Фрагмент\nпосле"
+        waitFor { focusedEditor()?.text?.toString() == plainComment }
+        hideKeyboard()
+        click(text(R.string.comment_send))
+        waitFor { sentComments.size == 2 }
+        check(sentComments.last() == (null to plainComment))
+        waitFor { optionFocused(write) }
+    } }
+
     fun seasonComments() = with(ui) { with(fixture) {
         stage("season_comments_setting")
         val enabled = mutableStateOf(false)

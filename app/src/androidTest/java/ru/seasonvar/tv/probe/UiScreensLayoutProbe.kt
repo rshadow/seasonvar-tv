@@ -10,6 +10,7 @@ object UiScreensLayoutProbe {
             val screens = UiScreenChecks(ui, fixtures)
             screens.sessionStorageChoice()
             screens.seasonComments()
+            screens.writeSeasonComments()
             screens.detailsNavigation()
             if (!dialogsOnly) {
                 screens.catalogsAndSearch()

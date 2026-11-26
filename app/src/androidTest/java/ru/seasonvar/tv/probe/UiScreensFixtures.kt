@@ -44,7 +44,8 @@ internal class UiScreensFixtures : AutoCloseable {
             Translation("1", "Другая озвучка", listOf(Episode("1", "1")))), "0")
     val detailsModel = SeriesDetailsViewModel { details }
     val commentPages = java.util.concurrent.CopyOnWriteArrayList<Int>()
-    val commentsModel = SeriesDetailsViewModel(loadComments = { _, page ->
+    val sentComments = java.util.concurrent.CopyOnWriteArrayList<Pair<String?, String>>()
+    private val commentsPage: suspend (SeriesEntry, Int) -> CommentsPage = { _, page ->
         commentPages += page
         if (page == 1) CommentsPage(
             listOf(
@@ -60,7 +61,19 @@ internal class UiScreensFixtures : AutoCloseable {
             check(page == 2)
             CommentsPage(listOf(SeasonComment("13", false, "Последний зритель", null, listOf(CommentPart.Text("Вторая страница.")))))
         }
-    }) { details.copy(seasons = details.seasons.take(1), translations = details.translations.takeLast(1), defaultTranslationId = "1") }
+    }
+    private val commentDetails = details.copy(seasons = details.seasons.take(1), translations = details.translations.takeLast(1),
+        defaultTranslationId = "1")
+    val commentsModel = SeriesDetailsViewModel(loadComments = commentsPage) { commentDetails }
+    val commentsWriterModel = SeriesDetailsViewModel(loadComments = commentsPage, commentAccount = MutableStateFlow(account),
+        publishComment = { target, version, parent, body ->
+            check(target.id == entry.id && version == account.version)
+            sentComments += parent to body
+        }, refreshComments = { target, page ->
+            val existing = commentsPage(target, page)
+            existing.copy(entries = existing.entries + SeasonComment("101", true, user.name, null,
+                listOf(CommentPart.Text("Новый ответ в обсуждении."))))
+        }) { commentDetails }
     val actorModel = SeriesDetailsViewModel { details.copy(
         actors = listOf(SeriesActor("Первый актёр", "android.resource://ru.seasonvar.tv/drawable/actor_placeholder"),
             SeriesActor("Второй актёр", "android.resource://ru.seasonvar.tv/drawable/actor_placeholder")),
@@ -69,6 +82,7 @@ internal class UiScreensFixtures : AutoCloseable {
 
     fun attach() {
         store.put("details", detailsModel); store.put("actors", actorModel); store.put("comments", commentsModel)
+        store.put("commentsWriter", commentsWriterModel)
         store.put("translations", translations); store.put("update", update)
     }
     override fun close() { store.clear() }
