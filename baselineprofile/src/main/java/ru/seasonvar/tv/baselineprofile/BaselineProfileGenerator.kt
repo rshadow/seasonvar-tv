@@ -45,6 +45,25 @@ class BaselineProfileGenerator {
         }
     }
 
+    @Test fun returnFromLauncher() {
+        check(Build.MODEL.contains("sdk", true))
+        profile.collect(packageName, maxIterations = 5, stableIterations = 2, includeInStartupProfile = false) {
+            val mainActivity = "ru.seasonvar.tv.MainActivity"
+            pressHome()
+            startActivityAndWait(Intent().setClassName(packageName, mainActivity))
+            check(device.wait(Until.hasObject(By.focused(true).hasDescendant(By.text("Сегодня"))), 10_000))
+            device.pressDPadDown()
+            val selected = By.focused(true).hasDescendant(By.text("Обновления"))
+            check(device.wait(Until.hasObject(selected), 10_000))
+
+            pressHome()
+            val launcherFlags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+            device.executeShellCommand("am start -W -a ${Intent.ACTION_MAIN} " +
+                "-c ${Intent.CATEGORY_LEANBACK_LAUNCHER} -f $launcherFlags -n $packageName/$mainActivity")
+            check(device.wait(Until.hasObject(selected), 10_000)) { "Launcher return changed the selected section" }
+        }
+    }
+
     @Test fun navigation() {
         check(Build.MODEL.contains("sdk", true))
         profile.collect(packageName, maxIterations = 5, stableIterations = 2, includeInStartupProfile = false) {
