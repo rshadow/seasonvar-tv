@@ -14,7 +14,7 @@ import ru.seasonvar.tv.ui.settings.InterfaceTheme
 
 internal data class PosterBackgroundStyle(val enabled: Boolean, val blurRadius: Int, val dimPercent: Int,
     val edgePercent: Int, val fadeEdgePercent: Int, val fadeMillis: Int, val fallbackImage: Int,
-    val fallbackScalePercent: Int) {
+    val fallbackScalePercent: Int, val staticImage: Int) {
     init {
         require(blurRadius in 0..PosterBackdropCache.MAX_EDGE && dimPercent in 0..100)
         require(edgePercent in 0..100 && fadeEdgePercent in 0..50 && fadeMillis >= 0)
@@ -55,6 +55,7 @@ internal data class PlayerAppearance(
 }
 
 internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: PosterBackgroundStyle,
+    val animatedSideGarland: Boolean,
     val surface: Color, val inactiveSurface: Color, val outline: Color,
     val primary: Color,
     val onPrimary: Color,
@@ -115,7 +116,9 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeEdgePercent, R.integer.seasonvar_poster_backdrop_fade_edge_percent),
                 integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFadeMillis, R.integer.seasonvar_poster_backdrop_fade_ms),
                 values.getResourceId(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackImage, 0),
-                integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackScalePercent, R.integer.seasonvar_poster_fallback_scale_percent)),
+                integer(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterFallbackScalePercent, R.integer.seasonvar_poster_fallback_scale_percent),
+                values.getResourceId(R.styleable.SeasonvarInterfaceTheme_seasonvarPosterStaticImage, 0)),
+            animatedSideGarland = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarAnimatedSideGarland, false),
             surface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceColor, R.color.seasonvar_surface),
             inactiveSurface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarInactiveSurfaceColor, R.color.seasonvar_background),
             outline = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceOutlineColor, android.graphics.Color.TRANSPARENT)),

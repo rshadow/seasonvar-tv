@@ -21,8 +21,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DisposableHandle
+import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.WinterTreeLights
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
 import ru.seasonvar.tv.data.images.PosterBackdropCache
 import kotlin.math.roundToInt
@@ -59,7 +61,7 @@ internal fun PosterBackdropPage(content: @Composable BoxScope.() -> Unit) {
 internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f,
     useFallbackImage: Boolean = false) {
     if (!SeasonvarTheme.posterBackdropEnabled) return
-    val poster = source.value
+    val poster = if (SeasonvarTheme.appearance.poster.staticImage == 0) source.value else null
     val empty = remember { mutableStateOf<Bitmap?>(null) }
     PosterBackdrop(poster?.url, poster?.bitmap ?: empty, bounds, menuEnd, useFallbackImage)
 }
@@ -70,17 +72,22 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
     if (!SeasonvarTheme.posterBackdropEnabled) return
     val context = LocalContext.current.applicationContext
     val cache = (context as SeasonvarApplication).posterBackdrops
-    val input = source.value
-    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { useFallbackImage && input == null && it != 0 }
+    val staticImage = SeasonvarTheme.appearance.poster.staticImage.takeIf { it != 0 }
+    val input = if (staticImage == null) source.value else null
+    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { useFallbackImage && input == null && it != 0 && staticImage == null }
+    val resource = staticImage ?: fallback
     val imageScale = if (fallback != null) SeasonvarTheme.posterBackdropFallbackScale else 1f
-    val imageKey = fallback?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
+    val imageKey = resource?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
     val background = SeasonvarTheme.pageBackground
     val radius = SeasonvarTheme.posterBackdropBlurRadius
     val dim = SeasonvarTheme.posterBackdropDimFraction
     val edge = SeasonvarTheme.posterBackdropEdgeFraction
     val fadeEdge = SeasonvarTheme.posterBackdropFadeEdgeFraction
-    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius, imageScale) {
-        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius, imageScale) }
+    val maxEdge = if (staticImage == null) PosterBackdropCache.MAX_EDGE else PosterBackdropCache.STATIC_MAX_EDGE
+    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius, imageScale, maxEdge) {
+        bounds.takeIf { it.width > 0 && it.height > 0 }?.let {
+            PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius, imageScale, maxEdge)
+        }
     }
     val bitmapState = remember(imageKey, spec) {
         mutableStateOf(if (imageKey != null && spec != null) cache.get(imageKey, spec) else null)
@@ -89,7 +96,7 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
         bitmapState.value = if (imageKey != null && spec != null) cache.get(imageKey, spec) else null
         if (imageKey != null && spec != null && bitmapState.value == null) {
             try { bitmapState.value = when {
-                fallback != null -> cache.prepareResource(context, fallback, spec)
+                resource != null -> cache.prepareResource(context, resource, spec)
                 input != null -> cache.prepare(imageKey, input, spec)
                 else -> null
             } }
@@ -111,5 +118,9 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
                     dstSize = target, alpha = opacity.value, filterQuality = FilterQuality.Low)
             }
         }
-    })
+    }) {
+        if (staticImage == R.drawable.theme_winter_tree && image != null) {
+            WinterTreeLights(Modifier.matchParentSize(), opacity)
+        }
+    }
 }

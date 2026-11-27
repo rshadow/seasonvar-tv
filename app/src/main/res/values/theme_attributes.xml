@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="SeasonvarInterfaceTheme">
+        <attr name="seasonvarAnimatedSideGarland" format="boolean" />
         <attr name="seasonvarPosterBackgroundEnabled" format="boolean" />
+        <attr name="seasonvarPosterStaticImage" format="reference" />
         <attr name="seasonvarPosterFallbackImage" format="reference" />
         <attr name="seasonvarPosterFallbackScalePercent" format="integer" />
         <attr name="seasonvarPosterBlurRadius" format="integer" />

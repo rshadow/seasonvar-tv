@@ -107,6 +107,7 @@ import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.WinterGarland
 import ru.seasonvar.tv.ui.theme.focusGlow
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.navigation.MainFocus
@@ -655,6 +656,14 @@ private fun SeasonvarContent(
                 with(density) { IntSize(maxWidth.roundToPx(), maxHeight.roundToPx()) },
                 ((d.screenPaddingHorizontal + d.menuWidth + d.contentGap) / maxWidth).coerceIn(0f, 0.6f),
                 useFallbackImage = section == Section.ACCOUNT || section == Section.SETTINGS || section == Section.ABOUT)
+        }
+        if (SeasonvarTheme.appearance.animatedSideGarland) {
+            WinterGarland(
+                Modifier.align(Alignment.CenterStart)
+                    .width(d.screenPaddingHorizontal + d.menuWidth).fillMaxHeight(),
+                sideMargin = d.screenPaddingHorizontal,
+                bottomMargin = d.screenPaddingVertical,
+            )
         }
         Row(Modifier.fillMaxSize().padding(d.screenPaddingHorizontal, d.screenPaddingVertical),
             horizontalArrangement = Arrangement.spacedBy(d.contentGap)) {

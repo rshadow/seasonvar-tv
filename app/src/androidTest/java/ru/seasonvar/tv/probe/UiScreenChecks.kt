@@ -311,14 +311,14 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
                 check(fontSize.value == ru.seasonvar.tv.ui.settings.InterfaceFontSize.LARGE)
-                check(control(text(R.string.font_size_title))?.isFocused == true)
+                waitFor { control(text(R.string.font_size_title))?.isFocused == true }
                 capture("settings-font-large")
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
                 check(optionFocused(text(R.string.font_size_large)))
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_UP)
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
                 check(fontSize.value == ru.seasonvar.tv.ui.settings.InterfaceFontSize.NORMAL)
-                check(control(text(R.string.font_size_title))?.isFocused == true)
+                waitFor { control(text(R.string.font_size_title))?.isFocused == true }
                 sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER); settle()
             }
             if (name == "speed") {
