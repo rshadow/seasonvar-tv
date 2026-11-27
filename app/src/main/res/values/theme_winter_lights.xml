@@ -16,13 +16,57 @@
     <color name="seasonvar_winter_garland_amber">#FFBA66</color>
     <color name="seasonvar_winter_garland_warm_white">#FFE3BA</color>
     <integer name="seasonvar_winter_garland_cycle_ms">4800</integer>
+    <integer name="seasonvar_winter_tree_lights_cycle_ms">6300</integer>
+
+    <!-- Pairs of x and y coordinates in thousandths of theme_winter_tree.webp. -->
+    <integer-array name="seasonvar_winter_tree_lights">
+        <item>745</item><item>92</item>
+        <item>745</item><item>126</item>
+        <item>755</item><item>146</item>
+        <item>734</item><item>165</item>
+        <item>771</item><item>182</item>
+        <item>718</item><item>228</item>
+        <item>800</item><item>232</item>
+        <item>680</item><item>271</item>
+        <item>801</item><item>292</item>
+        <item>775</item><item>319</item>
+        <item>754</item><item>338</item>
+        <item>736</item><item>361</item>
+        <item>797</item><item>365</item>
+        <item>828</item><item>386</item>
+        <item>666</item><item>396</item>
+        <item>642</item><item>411</item>
+        <item>794</item><item>429</item>
+        <item>734</item><item>446</item>
+        <item>843</item><item>461</item>
+        <item>790</item><item>475</item>
+        <item>767</item><item>488</item>
+        <item>745</item><item>524</item>
+        <item>650</item><item>529</item>
+        <item>810</item><item>542</item>
+        <item>864</item><item>542</item>
+        <item>608</item><item>597</item>
+        <item>718</item><item>614</item>
+        <item>763</item><item>635</item>
+        <item>845</item><item>673</item>
+        <item>627</item><item>702</item>
+        <item>780</item><item>706</item>
+        <item>824</item><item>727</item>
+        <item>753</item><item>733</item>
+        <item>731</item><item>778</item>
+        <item>785</item><item>810</item>
+        <item>673</item><item>832</item>
+        <item>704</item><item>844</item>
+        <item>883</item><item>820</item>
+    </integer-array>
 
     <style name="SeasonvarInterfaceTheme.WinterLights" parent="SeasonvarInterfaceTheme.Classic">
         <item name="seasonvarAnimatedSideGarland">true</item>
         <item name="seasonvarPosterBackgroundEnabled">true</item>
         <item name="seasonvarPosterStaticImage">@drawable/theme_winter_tree</item>
         <item name="seasonvarPosterBlurRadius">1</item>
-        <item name="seasonvarPosterDimPercent">24</item>
+        <item name="seasonvarPosterDimPercent">20</item>
+        <item name="seasonvarPosterEdgePercent">28</item>
         <item name="seasonvarPageBackgroundColor">#0B1C2B</item>
         <item name="seasonvarSurfaceColor">#163330</item>
         <item name="seasonvarInactiveSurfaceColor">#112831</item>

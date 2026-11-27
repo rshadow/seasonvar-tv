@@ -21,8 +21,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.DisposableHandle
+import ru.seasonvar.tv.R
 import ru.seasonvar.tv.SeasonvarApplication
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.WinterTreeLights
 import ru.seasonvar.tv.data.images.PosterBackdropSpec
 import ru.seasonvar.tv.data.images.PosterBackdropCache
 import kotlin.math.roundToInt
@@ -81,8 +83,11 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
     val dim = SeasonvarTheme.posterBackdropDimFraction
     val edge = SeasonvarTheme.posterBackdropEdgeFraction
     val fadeEdge = SeasonvarTheme.posterBackdropFadeEdgeFraction
-    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius, imageScale) {
-        bounds.takeIf { it.width > 0 && it.height > 0 }?.let { PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius, imageScale) }
+    val maxEdge = if (staticImage == null) PosterBackdropCache.MAX_EDGE else PosterBackdropCache.STATIC_MAX_EDGE
+    val spec = remember(bounds, background, dim, edge, fadeEdge, menuEnd, radius, imageScale, maxEdge) {
+        bounds.takeIf { it.width > 0 && it.height > 0 }?.let {
+            PosterBackdropSpec(it.width, it.height, background.toArgb(), dim, edge, fadeEdge, menuEnd, radius, imageScale, maxEdge)
+        }
     }
     val bitmapState = remember(imageKey, spec) {
         mutableStateOf(if (imageKey != null && spec != null) cache.get(imageKey, spec) else null)
@@ -113,5 +118,9 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
                     dstSize = target, alpha = opacity.value, filterQuality = FilterQuality.Low)
             }
         }
-    })
+    }) {
+        if (staticImage == R.drawable.theme_winter_tree && image != null) {
+            WinterTreeLights(Modifier.matchParentSize(), opacity)
+        }
+    }
 }
