@@ -225,3 +225,4 @@
 | [0210 — Регистрация на сайте Seasonvar](0210-registration-on-seasonvar-site.md) | 2026-11-27 | Принято |
 | [0211 — Тема «Видеотека»](0211-videoteka-interface-theme.md) | 2026-11-27 | Принято |
 | [0212 — Тема «Неон»](0212-neon-interface-theme.md) | 2026-11-27 | Принято |
+| [0213 — Тема «Зимние огни»](0213-winter-lights-interface-theme.md) | 2026-11-27 | Принято |

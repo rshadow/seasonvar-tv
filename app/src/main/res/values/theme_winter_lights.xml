@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="seasonvar_winter_gold">#FFD48A</color>
+    <color name="seasonvar_winter_snow">#EFF5F7</color>
+    <color name="seasonvar_winter_cranberry">#D85C76</color>
+
+    <color name="seasonvar_winter_ice">#98DFFB</color>
+    <color name="seasonvar_winter_mint">#8DDAA8</color>
+    <color name="seasonvar_winter_garland_cord">#528988</color>
+    <integer name="seasonvar_winter_garland_cycle_ms">4800</integer>
+
+    <style name="SeasonvarInterfaceTheme.WinterLights" parent="SeasonvarInterfaceTheme.Classic">
+        <item name="seasonvarAnimatedSideGarland">true</item>
+        <item name="seasonvarPosterBackgroundEnabled">true</item>
+        <item name="seasonvarPosterStaticImage">@drawable/theme_winter_tree</item>
+        <item name="seasonvarPosterBlurRadius">1</item>
+        <item name="seasonvarPosterDimPercent">24</item>
+        <item name="seasonvarPageBackgroundColor">#0B1C2B</item>
+        <item name="seasonvarSurfaceColor">#163330</item>
+        <item name="seasonvarInactiveSurfaceColor">#112831</item>
+        <item name="seasonvarDialogBackgroundColor">#132B2E</item>
+        <item name="seasonvarTextColor">@color/seasonvar_winter_snow</item>
+        <item name="seasonvarSecondaryTextColor">#B6CDCF</item>
+        <item name="seasonvarSurfaceOutlineColor">#8B9B6C4C</item>
+        <item name="seasonvarAccentColor">@color/seasonvar_winter_gold</item>
+        <item name="seasonvarOnAccentColor">#182720</item>
+        <item name="seasonvarFocusedOutlineTextColor">@color/seasonvar_winter_gold</item>
+        <item name="seasonvarFocusGlowRadius">8dp</item>
+        <item name="seasonvarFocusGlowColor">#95FFD48A</item>
+        <item name="seasonvarStatusSuccessColor">@color/seasonvar_winter_mint</item>
+        <item name="seasonvarStatusFailureColor">#F48FA4</item>
+        <item name="seasonvarStatusPendingColor">#D4B681</item>
+        <item name="seasonvarTextButtonOutline">true</item>
+        <item name="seasonvarMenuButtonOutline">false</item>
+        <item name="seasonvarIconButtonOutline">true</item>
+        <item name="seasonvarCardOutline">true</item>
+        <item name="seasonvarButtonCornerRadius">8dp</item>
+        <item name="seasonvarCardCornerRadius">10dp</item>
+        <item name="seasonvarPlayerStyle">@style/SeasonvarInterfaceTheme.WinterLights.Player</item>
+    </style>
+
+    <style name="SeasonvarInterfaceTheme.WinterLights.Player" parent="SeasonvarInterfaceTheme.WinterLights">
+        <item name="seasonvarPageBackgroundColor">#101918</item>
+        <item name="seasonvarSurfaceColor">#182522</item>
+        <item name="seasonvarInactiveSurfaceColor">#111B19</item>
+        <item name="seasonvarDialogBackgroundColor">#111B19</item>
+        <item name="seasonvarPlayerClockBackgroundColor">#D9111B19</item>
+        <item name="seasonvarPlayerControlsColor">@color/seasonvar_winter_snow</item>
+        <item name="seasonvarPlayerPlayedColor">@color/seasonvar_winter_gold</item>
+        <item name="seasonvarPlayerBufferedColor">#B8BFAC97</item>
+        <item name="seasonvarPlayerUnplayedColor">#55AEC0B6</item>
+    </style>
+</resources>

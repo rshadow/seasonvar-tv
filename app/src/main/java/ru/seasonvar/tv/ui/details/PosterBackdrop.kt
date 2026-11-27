@@ -59,7 +59,7 @@ internal fun PosterBackdropPage(content: @Composable BoxScope.() -> Unit) {
 internal fun PosterBackdropLayer(source: State<PosterBackdropSource?>, bounds: IntSize, menuEnd: Float = 0f,
     useFallbackImage: Boolean = false) {
     if (!SeasonvarTheme.posterBackdropEnabled) return
-    val poster = source.value
+    val poster = if (SeasonvarTheme.appearance.poster.staticImage == 0) source.value else null
     val empty = remember { mutableStateOf<Bitmap?>(null) }
     PosterBackdrop(poster?.url, poster?.bitmap ?: empty, bounds, menuEnd, useFallbackImage)
 }
@@ -70,10 +70,12 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
     if (!SeasonvarTheme.posterBackdropEnabled) return
     val context = LocalContext.current.applicationContext
     val cache = (context as SeasonvarApplication).posterBackdrops
-    val input = source.value
-    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { useFallbackImage && input == null && it != 0 }
+    val staticImage = SeasonvarTheme.appearance.poster.staticImage.takeIf { it != 0 }
+    val input = if (staticImage == null) source.value else null
+    val fallback = SeasonvarTheme.posterBackdropFallbackImage.takeIf { useFallbackImage && input == null && it != 0 && staticImage == null }
+    val resource = staticImage ?: fallback
     val imageScale = if (fallback != null) SeasonvarTheme.posterBackdropFallbackScale else 1f
-    val imageKey = fallback?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
+    val imageKey = resource?.let { PosterBackdropCache.resourceKey(context, it) } ?: posterUrl
     val background = SeasonvarTheme.pageBackground
     val radius = SeasonvarTheme.posterBackdropBlurRadius
     val dim = SeasonvarTheme.posterBackdropDimFraction
@@ -89,7 +91,7 @@ internal fun PosterBackdrop(posterUrl: String?, source: State<Bitmap?>, bounds: 
         bitmapState.value = if (imageKey != null && spec != null) cache.get(imageKey, spec) else null
         if (imageKey != null && spec != null && bitmapState.value == null) {
             try { bitmapState.value = when {
-                fallback != null -> cache.prepareResource(context, fallback, spec)
+                resource != null -> cache.prepareResource(context, resource, spec)
                 input != null -> cache.prepare(imageKey, input, spec)
                 else -> null
             } }

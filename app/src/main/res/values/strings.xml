@@ -519,6 +519,7 @@
     <string name="interface_theme_glass">Стекло</string>
     <string name="interface_theme_videoteka">Видеотека</string>
     <string name="interface_theme_neon">Неон</string>
+    <string name="interface_theme_winter_lights">Зимние огни</string>
     <string name="show_player_controls_title">Все элементы управления</string>
     <string name="show_player_controls_description">Управление с пульта доступно всегда. Если снять галочку, в панели останутся только шкала перемотки и кнопка скорости.</string>
     <string name="playback_speed_title">Скорость воспроизведения</string>

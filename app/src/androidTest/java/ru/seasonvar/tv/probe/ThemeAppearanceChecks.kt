@@ -50,6 +50,17 @@ internal class ThemeAppearanceChecks(private val ui: BackdropProbeSession) {
         check(neon.player.played == neon.primary && neon.player.buffered != neon.player.played)
         check(ColorUtils.calculateContrast(neon.text.toArgb(), neon.pageBackground.toArgb()) >= 4.5)
         check(ColorUtils.calculateContrast(neon.onPrimary.toArgb(), neon.primary.toArgb()) >= 4.5)
+        val winterTheme = catalog.restore("winter_lights")
+        val winter = resolveInterfaceTheme(targetContext, winterTheme)
+        val winterPlayer = resolveInterfaceTheme(targetContext, playerInterfaceTheme(targetContext, winterTheme))
+        check(winterTheme.label == R.string.interface_theme_winter_lights && winter.focusGlow != null)
+        check(winter.animatedSideGarland && winter.primary.toArgb() == targetContext.getColor(R.color.seasonvar_winter_gold))
+        check(winter.poster.enabled && winter.poster.staticImage == R.drawable.theme_winter_tree)
+        check(glass.poster.staticImage == 0)
+        check(!classic.animatedSideGarland && !neon.animatedSideGarland)
+        check(winterPlayer.surface != winter.surface && winterPlayer.player.played == winter.primary)
+        check(ColorUtils.calculateContrast(winter.text.toArgb(), winter.pageBackground.toArgb()) >= 4.5)
+        check(ColorUtils.calculateContrast(winter.onPrimary.toArgb(), winter.primary.toArgb()) >= 4.5)
         result.putBoolean("theme_contract", true)
     }
 
@@ -182,5 +193,13 @@ internal class ThemeAppearanceChecks(private val ui: BackdropProbeSession) {
         await { appearance.value.storageId == "neon" }
         check(InterfaceSettings(targetContext).interfaceTheme.value.storageId == "neon")
         capture("12-neon-setting")
+        phase = "winter-lights-setting"
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        await { node(targetContext.getString(R.string.interface_theme_winter_lights)) != null }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        await { appearance.value.storageId == "winter_lights" }
+        check(InterfaceSettings(targetContext).interfaceTheme.value.storageId == "winter_lights")
+        capture("13-winter-lights-setting")
     }
 }

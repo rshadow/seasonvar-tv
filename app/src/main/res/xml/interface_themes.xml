@@ -4,4 +4,5 @@
     <theme id="glass" label="@string/interface_theme_glass" style="@style/SeasonvarInterfaceTheme.Glass" />
     <theme id="videoteka" label="@string/interface_theme_videoteka" style="@style/SeasonvarInterfaceTheme.Videoteka" />
     <theme id="neon" label="@string/interface_theme_neon" style="@style/SeasonvarInterfaceTheme.Neon" />
+    <theme id="winter_lights" label="@string/interface_theme_winter_lights" style="@style/SeasonvarInterfaceTheme.WinterLights" />
 </themes>
