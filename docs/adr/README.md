@@ -224,3 +224,4 @@
 | [0208 — Сохранение раздела при возврате через ярлык](0208-launcher-return-keeps-section.md) | 2026-11-26 | Принято |
 | [0210 — Регистрация на сайте Seasonvar](0210-registration-on-seasonvar-site.md) | 2026-11-27 | Принято |
 | [0211 — Тема «Видеотека»](0211-videoteka-interface-theme.md) | 2026-11-27 | Принято |
+| [0212 — Тема «Неон»](0212-neon-interface-theme.md) | 2026-11-27 | Принято |

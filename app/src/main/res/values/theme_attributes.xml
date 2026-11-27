@@ -41,6 +41,8 @@
         <attr name="seasonvarButtonCornerRadius" format="dimension" />
         <attr name="seasonvarCardCornerRadius" format="dimension" />
         <attr name="seasonvarFocusBorderWidth" format="dimension" />
+        <attr name="seasonvarFocusGlowRadius" format="dimension" />
+        <attr name="seasonvarFocusGlowColor" format="color" />
         <attr name="seasonvarSurfaceOutlineWidth" format="dimension" />
         <attr name="seasonvarTextButtonOutline" format="boolean" />
         <attr name="seasonvarMenuButtonOutline" format="boolean" />

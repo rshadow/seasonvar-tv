@@ -44,6 +44,12 @@ internal class ThemeAppearanceChecks(private val ui: BackdropProbeSession) {
         check(ColorUtils.calculateContrast(library.onPrimary.toArgb(), library.primary.toArgb()) >= 4.5)
         check(ColorUtils.calculateContrast(player.text.toArgb(), player.player.background.toArgb()) >= 4.5)
         check(ColorUtils.calculateContrast(player.player.foreground.toArgb(), player.player.background.toArgb()) >= 4.5)
+        val neon = resolveInterfaceTheme(targetContext, catalog.restore("neon"))
+        check(neon.theme.label == R.string.interface_theme_neon && neon.focusGlow != null)
+        check(classic.focusGlow == null && glass.focusGlow == null && library.focusGlow == null)
+        check(neon.player.played == neon.primary && neon.player.buffered != neon.player.played)
+        check(ColorUtils.calculateContrast(neon.text.toArgb(), neon.pageBackground.toArgb()) >= 4.5)
+        check(ColorUtils.calculateContrast(neon.onPrimary.toArgb(), neon.primary.toArgb()) >= 4.5)
         result.putBoolean("theme_contract", true)
     }
 
@@ -168,5 +174,13 @@ internal class ThemeAppearanceChecks(private val ui: BackdropProbeSession) {
         await { appearance.value.storageId == "videoteka" }
         check(InterfaceSettings(targetContext).interfaceTheme.value.storageId == "videoteka")
         capture("11-videoteka-setting")
+        phase = "neon-setting"
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        await { node(targetContext.getString(R.string.interface_theme_neon)) != null }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        await { appearance.value.storageId == "neon" }
+        check(InterfaceSettings(targetContext).interfaceTheme.value.storageId == "neon")
+        capture("12-neon-setting")
     }
 }

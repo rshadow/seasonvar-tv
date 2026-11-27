@@ -107,6 +107,7 @@ import ru.seasonvar.tv.data.network.DnsProvider
 import ru.seasonvar.tv.ui.details.SeriesDetailsPane
 import ru.seasonvar.tv.ui.details.SeriesDetailsViewModel
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.focusGlow
 import ru.seasonvar.tv.ui.navigation.Section
 import ru.seasonvar.tv.ui.navigation.MainFocus
 import ru.seasonvar.tv.ui.navigation.MainStartupNavigation
@@ -783,9 +784,11 @@ internal fun ThemeButton(
     val hasOutline = showOutline ?: if (icon == null) SeasonvarTheme.textButtonOutline else SeasonvarTheme.iconButtonOutline
     val action = { if (enabled && actionEnabled && !loading) onClick() }
     val loadingDescription = if (loading) loadingLabel ?: stringResource(R.string.today_updating) else null
+    val buttonShape = RoundedCornerShape(d.buttonCornerRadius)
     val buttonModifier = modifier
+        .focusGlow(buttonShape, focused)
         .then(if (hasOutline && !focused && outline != Color.Transparent) Modifier.border(SeasonvarTheme.surfaceOutlineWidth,
-            if (actionEnabled) outline else outline.copy(alpha = outline.alpha / 2), RoundedCornerShape(d.buttonCornerRadius)) else Modifier)
+            if (actionEnabled) outline else outline.copy(alpha = outline.alpha / 2), buttonShape) else Modifier)
         .focusRequester(focus).focusProperties { canFocus = enabled }
         .onFocusChanged { focused = it.isFocused; if (!it.isFocused) blockedPress = false }
         .then(if (!actionEnabled || blockedPress) Modifier.onPreviewKeyEvent { event ->
@@ -805,7 +808,7 @@ internal fun ThemeButton(
             stateDescription = loadingDescription
             progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
         } else Modifier)
-    val shape = ButtonDefaults.shape(shape = RoundedCornerShape(d.buttonCornerRadius))
+    val shape = ButtonDefaults.shape(shape = buttonShape)
     val scale = ButtonDefaults.scale(focusedScale = 1f)
     val colors = ButtonDefaults.colors(
         containerColor = when {
@@ -1227,6 +1230,7 @@ internal fun SeriesThumbnail(
                     true
                 }
             }
+            .focusGlow(shape, focused)
             .border(borderWidth, if (focused) c.primary else outline, shape)
             .background(c.surface, shape)
             .combinedClickable(role = Role.Button, onClick = onClick, onLongClick = onLongClick,
