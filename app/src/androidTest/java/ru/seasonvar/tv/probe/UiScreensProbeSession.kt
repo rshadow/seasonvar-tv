@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -13,8 +14,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.tv.material3.MaterialTheme
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.resolveInterfaceTheme
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
 import java.io.File
 
@@ -115,6 +119,19 @@ internal class UiScreensProbeSession(private val probe: Instrumentation, private
         File(artifacts, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
+    fun checkSpoilerFieldContrast(field: AccessibilityNodeInfo) {
+        val bounds = Rect().also(field::getBoundsInScreen)
+        val screenshot = checkNotNull(uiAutomation.takeScreenshot())
+        val background = try {
+            screenshot.getPixel(bounds.left + bounds.width() * 3 / 4, bounds.centerY())
+        } finally {
+            screenshot.recycle()
+        }
+        val palette = resolveInterfaceTheme(targetContext, theme)
+        check(ColorUtils.calculateContrast(palette.text.toArgb(), background) >= 4.5) { "Spoiler text contrast" }
+        check(ColorUtils.calculateContrast(palette.secondaryText.toArgb(), background) >= 4.5) { "Spoiler hint contrast" }
+    }
+
     /** Пересоздаёт состояние композиции для нового экрана; открытия диалогов не вызывают render. */
     fun render(content: @Composable () -> Unit) {
         val current = ++revision

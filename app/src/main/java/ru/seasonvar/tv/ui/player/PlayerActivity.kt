@@ -23,6 +23,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
@@ -71,6 +72,7 @@ import ru.seasonvar.tv.data.playback.PlaybackSpeed
 import ru.seasonvar.tv.ui.SettingsChoiceDialog
 import ru.seasonvar.tv.ui.ThemeButton
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.playerInterfaceTheme
 import java.io.IOException
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -138,7 +140,10 @@ class PlayerActivity : ComponentActivity() {
         setContent {
             val interfaceTheme by container.interfaceSettings.interfaceTheme.collectAsStateWithLifecycle()
             val fontSize by container.interfaceSettings.fontSize.collectAsStateWithLifecycle()
-            SeasonvarTheme(interfaceTheme, fontSize) {
+            val playerTheme = remember(interfaceTheme, LocalConfiguration.current) {
+                playerInterfaceTheme(this@PlayerActivity, interfaceTheme)
+            }
+            SeasonvarTheme(playerTheme, fontSize) {
                 val appearance = SeasonvarTheme.playerAppearance
                 val d = SeasonvarTheme.dimensions
                 val markSync by container.accountMarks.state.collectAsStateWithLifecycle()

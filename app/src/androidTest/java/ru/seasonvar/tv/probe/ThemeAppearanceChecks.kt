@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
+import ru.seasonvar.tv.R
 import ru.seasonvar.tv.ui.settings.*
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
+import ru.seasonvar.tv.ui.theme.playerInterfaceTheme
 import ru.seasonvar.tv.ui.theme.resolveInterfaceTheme
 import java.util.concurrent.atomic.AtomicReference
 
@@ -26,6 +30,20 @@ internal class ThemeAppearanceChecks(private val ui: BackdropProbeSession) {
         check(classic.outline.alpha == 0f)
         check(glass.poster.enabled && glass.poster.blurRadius > 0)
         check(glass.surface.alpha < 1f && glass.inactiveSurface.alpha < 1f && glass.outline.alpha > 0f)
+        val catalog = loadInterfaceThemes(targetContext)
+        val videoteka = catalog.restore("videoteka")
+        check(videoteka.label == R.string.interface_theme_videoteka && catalog.default == InterfaceTheme.CLASSIC)
+        val library = resolveInterfaceTheme(targetContext, videoteka)
+        val player = resolveInterfaceTheme(targetContext, playerInterfaceTheme(targetContext, videoteka))
+        check(!library.poster.enabled && library.cardOutline && library.textButtonOutline)
+        check(playerInterfaceTheme(targetContext, InterfaceTheme.CLASSIC) == InterfaceTheme.CLASSIC)
+        check(playerInterfaceTheme(targetContext, InterfaceTheme.GLASS) == InterfaceTheme.GLASS)
+        check(player.spacing == library.spacing && player.buttonCornerRadius == library.buttonCornerRadius)
+        check(player.player.background == player.pageBackground && player.player.played == player.player.foreground)
+        check(ColorUtils.calculateContrast(library.text.toArgb(), library.pageBackground.toArgb()) >= 4.5)
+        check(ColorUtils.calculateContrast(library.onPrimary.toArgb(), library.primary.toArgb()) >= 4.5)
+        check(ColorUtils.calculateContrast(player.text.toArgb(), player.player.background.toArgb()) >= 4.5)
+        check(ColorUtils.calculateContrast(player.player.foreground.toArgb(), player.player.background.toArgb()) >= 4.5)
         result.putBoolean("theme_contract", true)
     }
 
@@ -144,7 +162,11 @@ internal class ThemeAppearanceChecks(private val ui: BackdropProbeSession) {
         sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
         await { node(targetContext.getString(ru.seasonvar.tv.R.string.interface_theme_glass)) != null }
         capture("10-theme-choices")
-        sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-        check(InterfaceSettings(targetContext).interfaceTheme.value == InterfaceTheme.GLASS)
+        await { node(targetContext.getString(R.string.interface_theme_videoteka)) != null }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN)
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        await { appearance.value.storageId == "videoteka" }
+        check(InterfaceSettings(targetContext).interfaceTheme.value.storageId == "videoteka")
+        capture("11-videoteka-setting")
     }
 }

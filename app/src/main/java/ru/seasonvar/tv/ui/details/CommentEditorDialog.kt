@@ -94,8 +94,10 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
                     val removeFocus = remember { FocusRequester() }
                     val rightAction = if (block.spoiler) removeFocus else micFocus
                     var focused by remember(index) { mutableStateOf(false) }
+                    val fieldBackground = if (block.spoiler) SeasonvarTheme.pageBackground else c.surface
+                    val fieldText = if (block.spoiler) c.onBackground else c.onSurface
                     Column(Modifier.fillMaxWidth()
-                        .background(if (block.spoiler) c.surfaceVariant else c.surface, shape)
+                        .background(fieldBackground, shape)
                         .border(d.focusBorderWidth, if (focused) c.primary else c.onSurfaceVariant, shape)
                         .padding(d.spacingSmall)) {
                         if (block.spoiler) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -131,7 +133,7 @@ internal fun CommentEditorDialog(parent: SeasonComment?, draft: CommentDraft, bu
                                     }
                                 }.semantics { contentDescription = label },
                             readOnly = busy, minLines = if (draft.blocks.size == 1) 4 else 1,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = c.onBackground),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = fieldText),
                             cursorBrush = SolidColor(c.primary),
                             decorationBox = { inner ->
                                 Box {

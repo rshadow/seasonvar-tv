@@ -556,6 +556,8 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         dpad(KeyEvent.KEYCODE_DPAD_CENTER)
         enter("Фрагмент")
         hideKeyboard()
+        checkSpoilerFieldContrast(checkNotNull(focusedEditor()))
+        capture("comments-spoiler-editing")
         dpad(KeyEvent.KEYCODE_DPAD_DOWN)
         waitFor { focusedEditor()?.text?.toString() == "\nпосле" }
         check(find(uiAutomation.rootInActiveWindow, removeSpoiler, exact = true) != null)

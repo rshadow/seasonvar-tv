@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.res.use
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.images.PosterBackdropCache
 import ru.seasonvar.tv.ui.settings.InterfaceTheme
@@ -83,6 +84,13 @@ internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: Po
         require(previewPosterAspectPercent > 0 && previewPosterMaxWidthPercent in 1..100)
         require(listOf(buttonCornerRadius, cardCornerRadius, focusBorderWidth, outlineWidth).all { it.value >= 0f })
     }
+}
+
+internal fun playerInterfaceTheme(context: Context, theme: InterfaceTheme): InterfaceTheme {
+    val style = context.obtainStyledAttributes(theme.styleRes, intArrayOf(R.attr.seasonvarPlayerStyle)).use {
+        it.getResourceId(0, theme.styleRes)
+    }
+    return if (style == theme.styleRes) theme else theme.copy(styleRes = style)
 }
 
 internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): InterfaceThemeSpec {
