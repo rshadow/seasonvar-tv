@@ -6,7 +6,15 @@
 
     <color name="seasonvar_winter_ice">#98DFFB</color>
     <color name="seasonvar_winter_mint">#8DDAA8</color>
-    <color name="seasonvar_winter_garland_cord">#528988</color>
+    <color name="seasonvar_winter_garland_cord">#46665B</color>
+    <color name="seasonvar_winter_garland_cord_front">#667C61</color>
+    <color name="seasonvar_winter_garland_cord_highlight">#ABB78E</color>
+    <dimen name="seasonvar_winter_garland_strand_width">1.2dp</dimen>
+    <dimen name="seasonvar_winter_garland_twist_radius">0.85dp</dimen>
+    <dimen name="seasonvar_winter_garland_twist_pitch">13dp</dimen>
+    <color name="seasonvar_winter_garland_socket">#263B31</color>
+    <color name="seasonvar_winter_garland_amber">#FFBA66</color>
+    <color name="seasonvar_winter_garland_warm_white">#FFE3BA</color>
     <integer name="seasonvar_winter_garland_cycle_ms">4800</integer>
 
     <style name="SeasonvarInterfaceTheme.WinterLights" parent="SeasonvarInterfaceTheme.Classic">
