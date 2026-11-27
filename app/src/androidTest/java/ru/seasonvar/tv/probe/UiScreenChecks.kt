@@ -104,6 +104,38 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
         capture("settings-navigation")
     } }
 
+    fun accountMenuFocus() = with(ui) { with(fixture) {
+        stage("account_menu_focus")
+        val accountState = mutableStateOf(AccountUiState(busy = false))
+        val accountButton = text(R.string.account_title)
+        val signOutButton = text(R.string.account_sign_out)
+        render {
+            SeasonvarApp(
+                PublicFeed.entries.associateWith { catalog }, {},
+                startPage = Section.TODAY,
+                accountSession = account,
+                accountState = accountState.value,
+                onCheckAccount = { accountState.value = AccountUiState(busy = true) },
+            )
+        }
+        waitFor { control(accountButton) != null }
+        check(checkNotNull(control(accountButton)).performAction(AccessibilityNodeInfo.ACTION_FOCUS))
+        waitFor { control(accountButton)?.isFocused == true }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+        waitFor { accountState.value.busy }
+        settle()
+        check(control(accountButton)?.isFocused == true) { "Account lost focus during session check" }
+        main { accountState.value = AccountUiState(busy = false) }
+        waitFor { control(signOutButton) != null }
+        settle()
+        check(control(accountButton)?.isFocused == true) { "Session check moved focus to sign out" }
+
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+        waitFor { control(signOutButton)?.isFocused == true }
+        sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_LEFT)
+        waitFor { control(accountButton)?.isFocused == true }
+    } }
+
     fun accountStates() = with(ui) { with(fixture) {
         stage("account_screens")
         var accountActionTop: Int? = null
@@ -126,7 +158,10 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
                     }
                 }
                 CompositionLocalProvider(LocalContext provides browserContext) {
-                    AccountPane(session, state, remember { FocusRequester() }, { _, _ -> }, {}, {})
+                    AccountPane(
+                        session, state, remember { FocusRequester() }, remember { FocusRequester() },
+                        { _, _ -> }, {}, {},
+                    )
                 }
             }
             val actionLabel = text(if (session.user != null) R.string.account_sign_out else if (state.busy) R.string.account_wait else R.string.account_sign_in)
