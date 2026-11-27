@@ -1,8 +1,13 @@
 package ru.seasonvar.tv.ui.account
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +34,8 @@ import ru.seasonvar.tv.ui.ShortMessageEffect
 import ru.seasonvar.tv.ui.showShortMessage
 import ru.seasonvar.tv.ui.theme.SeasonvarTheme
 
+private const val RegistrationUrl = "https://seasonvar.ru/?mod=reg"
+
 @Composable
 internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFocus: FocusRequester,
     onLogin: (String, String) -> Unit, onLogout: () -> Unit, onCheck: () -> Unit) {
@@ -39,6 +46,7 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
     val loginFocus = remember { FocusRequester() }
     val passwordFocus = remember { FocusRequester() }
     val submitFocus = remember { FocusRequester() }
+    val registrationFocus = remember { FocusRequester() }
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -60,21 +68,39 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
     }
     DisposableEffect(Unit) { onDispose { password = ""; login = "" } }
     LaunchedEffect(Unit) { if (session.user != null && !state.busy) onCheck() }
-    Column(Modifier.fillMaxWidth().widthIn(max = d.dialogWidth), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
-        Text(stringResource(R.string.account_title), style = MaterialTheme.typography.headlineSmall, color = c.onBackground)
+    Column(
+        Modifier.fillMaxWidth().widthIn(max = d.dialogWidth).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(d.spacingMedium),
+    ) {
         val user = session.user
         if (user == null) {
-            Text(stringResource(R.string.account_login_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
-            RemoteTextField(login, { login = it }, R.string.account_login, false,
-                loginFocus, passwordFocus, menuFocus, state.busy, onNext = {
-                    passwordFocus.requestFocus(); scope.launch { withFrameNanos { }; keyboard?.show() }
-                })
-            RemoteTextField(password, { password = it }, R.string.account_password, true,
-                passwordFocus, submitFocus, menuFocus, state.busy, previous = loginFocus, onNext = ::submit)
-            ThemeButton(stringResource(if (state.busy) R.string.account_wait else R.string.account_sign_in), ::submit,
-                Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus; up = passwordFocus },
-                loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(d.spacingExtraLarge),
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+                    Text(stringResource(R.string.account_title),
+                        style = MaterialTheme.typography.headlineSmall, color = c.onBackground)
+                    Text(stringResource(R.string.account_login_hint),
+                        style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                    RemoteTextField(login, { login = it }, R.string.account_login, false,
+                        loginFocus, passwordFocus, menuFocus, state.busy, onNext = {
+                            passwordFocus.requestFocus(); scope.launch { withFrameNanos { }; keyboard?.show() }
+                        })
+                    RemoteTextField(password, { password = it }, R.string.account_password, true,
+                        passwordFocus, submitFocus, menuFocus, state.busy, previous = loginFocus, onNext = ::submit)
+                    ThemeButton(stringResource(if (state.busy) R.string.account_wait else R.string.account_sign_in), ::submit,
+                        Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties {
+                            left = menuFocus
+                            up = passwordFocus
+                            right = registrationFocus
+                        },
+                        loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
+                }
+                RegistrationGuide(registrationFocus, submitFocus, Modifier.weight(1f))
+            }
         } else {
+            Text(stringResource(R.string.account_title), style = MaterialTheme.typography.headlineSmall, color = c.onBackground)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(d.spacingLarge)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
                     Text(user.name, style = MaterialTheme.typography.titleLarge, color = c.onBackground)
@@ -124,5 +150,45 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
             Text(stringResource(R.string.account_storage_failure_code, it),
                 style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
         }
+    }
+}
+
+@Composable
+private fun RegistrationGuide(focus: FocusRequester, signInFocus: FocusRequester, modifier: Modifier) {
+    val d = SeasonvarTheme.dimensions
+    val c = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val steps = listOf(
+        R.string.account_registration_step_form,
+        R.string.account_registration_step_email,
+        R.string.account_registration_step_sign_in,
+    )
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(d.spacingMedium)) {
+        Text(stringResource(R.string.account_registration_title),
+            style = MaterialTheme.typography.headlineSmall, color = c.onBackground)
+        Column(verticalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+            steps.forEachIndexed { index, step ->
+                Row(horizontalArrangement = Arrangement.spacedBy(d.spacingSmall)) {
+                    Text("${index + 1}.", style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                    Text(stringResource(step), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
+                }
+            }
+        }
+        ThemeButton(
+            stringResource(R.string.account_registration_open),
+            onClick = {
+                try {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(RegistrationUrl))
+                        .addCategory(Intent.CATEGORY_BROWSABLE))
+                } catch (_: ActivityNotFoundException) {
+                    showShortMessage(context, R.string.account_registration_no_browser)
+                } catch (_: SecurityException) {
+                    showShortMessage(context, R.string.account_registration_no_browser)
+                }
+            },
+            modifier = Modifier.height(d.headerButtonSize).focusRequester(focus)
+                .focusProperties { left = signInFocus },
+        )
     }
 }

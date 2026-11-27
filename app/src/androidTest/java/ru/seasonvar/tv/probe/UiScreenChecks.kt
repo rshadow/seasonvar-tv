@@ -2,11 +2,15 @@ package ru.seasonvar.tv.probe
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.graphics.Rect
 import android.view.KeyEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
 import okhttp3.Cookie
 import ru.seasonvar.tv.R
 import ru.seasonvar.tv.data.*
@@ -113,10 +117,53 @@ internal class UiScreenChecks(private val ui: UiScreensProbeSession, private val
             Triple("avatar-error", account.copy(user = user.copy(avatarUrl = "android.resource://ru.seasonvar.tv/drawable/missing_account_avatar")), AccountUiState(busy = false)),
             Triple("premium-inactive", account.copy(user = user.copy(premium = AccountPremium.Inactive)), AccountUiState(busy = false)),
             Triple("premium-loading", account, AccountUiState(busy = true)))) {
-            render { AccountPane(session, state, remember { FocusRequester() }, { _, _ -> }, {}, {}) }
+            val browserIntent = AtomicReference<Intent>()
+            render {
+                val context = LocalContext.current
+                val browserContext = remember(context) {
+                    object : ContextWrapper(context) {
+                        override fun startActivity(intent: Intent) { browserIntent.set(intent) }
+                    }
+                }
+                CompositionLocalProvider(LocalContext provides browserContext) {
+                    AccountPane(session, state, remember { FocusRequester() }, { _, _ -> }, {}, {})
+                }
+            }
             val actionLabel = text(if (session.user != null) R.string.account_sign_out else if (state.busy) R.string.account_wait else R.string.account_sign_in)
             centered(actionLabel)
             capture("account-$name")
+            if (name == "guest") {
+                val url = "https://seasonvar.ru/?mod=reg"
+                val button = text(R.string.account_registration_open)
+                val root = uiAutomation.rootInActiveWindow
+                val loginBounds = Rect().also(checkNotNull(find(root, text(R.string.account_login)))::getBoundsInScreen)
+                val registrationTitle = checkNotNull(find(root, text(R.string.account_registration_title)))
+                val registrationBounds = Rect().also(registrationTitle::getBoundsInScreen)
+                check(loginBounds.right < registrationBounds.left)
+                val steps = listOf(R.string.account_registration_step_form, R.string.account_registration_step_email,
+                    R.string.account_registration_step_sign_in)
+                var previousBottom = registrationBounds.bottom
+                for (step in steps) {
+                    val bounds = Rect().also(checkNotNull(find(root, text(step)))::getBoundsInScreen)
+                    check(bounds.left >= registrationBounds.left && bounds.top >= previousBottom)
+                    previousBottom = bounds.bottom
+                }
+                check(find(root, url, exact = true) == null)
+                check(checkNotNull(control(actionLabel)).performAction(AccessibilityNodeInfo.ACTION_FOCUS))
+                waitFor { control(actionLabel)?.isFocused == true }
+                settle()
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_RIGHT)
+                waitFor { control(button)?.isFocused == true }
+                centered(button)
+                capture("account-registration-focus")
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER)
+                waitFor { browserIntent.get() != null }
+                val intent = browserIntent.get()
+                check(intent.action == Intent.ACTION_VIEW && intent.dataString == url)
+                check(intent.hasCategory(Intent.CATEGORY_BROWSABLE))
+                sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_LEFT)
+                waitFor { control(actionLabel)?.isFocused == true }
+            }
             val expected = when (name) {
                 "signed-in", "premium-loading" -> text(R.string.account_premium_unknown)
                 "premium" -> targetContext.getString(R.string.account_premium_until, "31.12.2030")
