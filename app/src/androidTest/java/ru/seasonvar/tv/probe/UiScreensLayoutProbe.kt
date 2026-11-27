@@ -15,6 +15,7 @@ object UiScreensLayoutProbe {
             if (!dialogsOnly) {
                 screens.catalogsAndSearch()
                 screens.accountStates()
+                screens.accountMenuFocus()
             }
             screens.settingsDialogs()
             screens.settingsNavigation()

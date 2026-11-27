@@ -38,7 +38,7 @@ private const val RegistrationUrl = "https://seasonvar.ru/?mod=reg"
 
 @Composable
 internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFocus: FocusRequester,
-    onLogin: (String, String) -> Unit, onLogout: () -> Unit, onCheck: () -> Unit) {
+    signOutFocus: FocusRequester, onLogin: (String, String) -> Unit, onLogout: () -> Unit, onCheck: () -> Unit) {
     val d = SeasonvarTheme.dimensions
     val c = MaterialTheme.colorScheme
     val keyboard = LocalSoftwareKeyboardController.current
@@ -61,9 +61,9 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
     }
     LaunchedEffect(session.version) { login = ""; password = "" }
     LaunchedEffect(session.user?.id, state.busy, state.awaitingSessionStorageChoice) {
-        if (!state.busy && !state.awaitingSessionStorageChoice) {
+        if (session.user == null && !state.busy && !state.awaitingSessionStorageChoice) {
             repeat(2) { withFrameNanos { } }
-            if (session.user == null) loginFocus.requestFocus() else submitFocus.requestFocus()
+            loginFocus.requestFocus()
         }
     }
     DisposableEffect(Unit) { onDispose { password = ""; login = "" } }
@@ -106,7 +106,7 @@ internal fun AccountPane(session: AccountSession, state: AccountUiState, menuFoc
                     Text(user.name, style = MaterialTheme.typography.titleLarge, color = c.onBackground)
                     Text(stringResource(R.string.account_signed_in_hint), style = MaterialTheme.typography.bodyLarge, color = c.onSurfaceVariant)
                     ThemeButton(stringResource(R.string.account_sign_out), onLogout,
-                        Modifier.height(d.headerButtonSize).focusRequester(submitFocus).focusProperties { left = menuFocus },
+                        Modifier.height(d.headerButtonSize).focusRequester(signOutFocus).focusProperties { left = menuFocus },
                         loading = state.busy, loadingLabel = stringResource(R.string.account_wait))
                 }
                 val fallback = painterResource(R.drawable.ic_person)

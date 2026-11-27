@@ -13,6 +13,7 @@ internal class MainFocus {
     val searchFocus = FocusRequester()
     val smartFocus = FocusRequester()
     val accountFocus = FocusRequester()
+    val accountSignOutFocus = FocusRequester()
     val personalFocus = PersonalFeed.entries.associateWith { FocusRequester() }
     val menuBringIntoView = Section.entries.associateWith { BringIntoViewRequester() }
     val searchInputFocus = FocusRequester()

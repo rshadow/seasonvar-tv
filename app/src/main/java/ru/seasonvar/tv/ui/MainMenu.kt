@@ -42,7 +42,15 @@ internal fun MainMenu(groups: List<Pair<MenuGroup, List<Section>>>, pages: List<
                 icon = R.drawable.ic_catalog, actionEnabled = browseEnabled)
             ThemeButton(stringResource(if (accountSession.user == null) R.string.account_sign_in else R.string.account_title),
                 onClick = onAccount,
-                modifier = Modifier.focusRequester(focus.accountFocus).focusProperties { left = focus.browseFocus; right = FocusRequester.Cancel; down = focus.sectionFocus(pages.first()) },
+                modifier = Modifier.focusRequester(focus.accountFocus).focusProperties {
+                    left = focus.browseFocus
+                    right = if (selected == Section.ACCOUNT && accountSession.user != null) {
+                        focus.accountSignOutFocus
+                    } else {
+                        FocusRequester.Cancel
+                    }
+                    down = focus.sectionFocus(pages.first())
+                },
                 icon = R.drawable.ic_person, avatarUrl = accountSession.user?.avatarUrl, avatarKey = accountSession.version)
         }
         Spacer(Modifier.height(d.menuHeaderSpacing))

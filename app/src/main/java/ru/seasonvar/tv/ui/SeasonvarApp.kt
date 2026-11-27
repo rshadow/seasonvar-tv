@@ -683,7 +683,10 @@ private fun SeasonvarContent(
             ) {
                 val cardMetrics = rememberCatalogCardMetrics(maxWidth, if (browsing) d.browseCatalogMinCardWidth else d.catalogMinCardWidth)
                 if (section == Section.ACCOUNT) {
-                    AccountPane(accountSession, accountState, focus.accountFocus, onLogin, onLogout, onCheckAccount)
+                    AccountPane(
+                        accountSession, accountState, focus.accountFocus, focus.accountSignOutFocus,
+                        onLogin, onLogout, onCheckAccount,
+                    )
                 } else if (section == Section.SETTINGS) {
                     SettingsPane(
                         connectionCheck = connectionCheck, onConnectionRefresh = onConnectionRefresh,
