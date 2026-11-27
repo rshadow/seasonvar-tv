@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="SeasonvarInterfaceTheme.Videoteka" parent="SeasonvarInterfaceTheme.Classic">
+        <item name="seasonvarPageBackgroundColor">#E7DECA</item>
+        <item name="seasonvarSurfaceColor">#F2EBDD</item>
+        <item name="seasonvarInactiveSurfaceColor">#E7DECA</item>
+        <item name="seasonvarDialogBackgroundColor">#F2EBDD</item>
+        <item name="seasonvarSurfaceOutlineColor">#A49987</item>
+        <item name="seasonvarTextColor">#25222A</item>
+        <item name="seasonvarSecondaryTextColor">#514951</item>
+        <item name="seasonvarAccentColor">#593D64</item>
+        <item name="seasonvarOnAccentColor">#FFF8ED</item>
+        <item name="seasonvarFocusedOutlineTextColor">#593D64</item>
+        <item name="seasonvarStatusSuccessColor">#2E633C</item>
+        <item name="seasonvarStatusFailureColor">#9C333F</item>
+        <item name="seasonvarStatusPendingColor">#6E5D45</item>
+        <item name="seasonvarTextButtonOutline">true</item>
+        <item name="seasonvarMenuButtonOutline">false</item>
+        <item name="seasonvarIconButtonOutline">true</item>
+        <item name="seasonvarCardOutline">true</item>
+        <item name="seasonvarButtonCornerRadius">3dp</item>
+        <item name="seasonvarCardCornerRadius">4dp</item>
+        <item name="seasonvarPlayerStyle">@style/SeasonvarInterfaceTheme.Videoteka.Player</item>
+    </style>
+
+    <style name="SeasonvarInterfaceTheme.Videoteka.Player" parent="SeasonvarInterfaceTheme.Videoteka">
+        <item name="seasonvarPageBackgroundColor">#171219</item>
+        <item name="seasonvarSurfaceColor">#2F2533</item>
+        <item name="seasonvarInactiveSurfaceColor">#211925</item>
+        <item name="seasonvarDialogBackgroundColor">#211925</item>
+        <item name="seasonvarSurfaceOutlineColor">#796681</item>
+        <item name="seasonvarTextColor">#F2EBDD</item>
+        <item name="seasonvarSecondaryTextColor">#D2C4D5</item>
+        <item name="seasonvarAccentColor">#D5BBDD</item>
+        <item name="seasonvarOnAccentColor">#241B29</item>
+        <item name="seasonvarFocusedOutlineTextColor">#D5BBDD</item>
+        <item name="seasonvarPlayerBackgroundColor">#171219</item>
+        <item name="seasonvarPlayerClockBackgroundColor">#DC211921</item>
+        <item name="seasonvarPlayerControlsColor">#F2EBDD</item>
+        <item name="seasonvarPlayerPlayedColor">#F2EBDD</item>
+        <item name="seasonvarPlayerBufferedColor">#B3D5BBDD</item>
+        <item name="seasonvarPlayerUnplayedColor">#66F2EBDD</item>
+    </style>
+</resources>

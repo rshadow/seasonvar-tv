@@ -50,6 +50,7 @@
         <attr name="seasonvarPosterEdgePercent" format="integer" />
         <attr name="seasonvarPosterFadeEdgePercent" format="integer" />
         <attr name="seasonvarPosterFadeMillis" format="integer" />
+        <attr name="seasonvarPlayerStyle" format="reference" />
         <attr name="seasonvarPlayerBackgroundColor" format="color" />
         <attr name="seasonvarPlayerClockBackgroundColor" format="color" />
         <attr name="seasonvarPlayerControlsColor" format="color" />
