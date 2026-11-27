@@ -242,7 +242,7 @@
     <string name="account_password">Пароль</string>
     <string name="account_login_hint">Войдите в свою учётную запись Seasonvar. Пароль не сохраняется.</string>
     <string name="account_registration_title">Нет аккаунта?</string>
-    <string name="account_registration_step_form">Укажите почту и пароль в форме регистрации.</string>
+    <string name="account_registration_step_form">Укажите почту и пароль в форме регистрации на сайте.</string>
     <string name="account_registration_step_email">Откройте ссылку из письма Seasonvar.</string>
     <string name="account_registration_step_sign_in">Вернитесь в приложение и войдите.</string>
     <string name="account_registration_open">Открыть seasonvar.ru</string>
