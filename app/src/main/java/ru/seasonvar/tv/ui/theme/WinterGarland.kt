@@ -1,5 +1,12 @@
 package ru.seasonvar.tv.ui.theme
 
+import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path as AndroidPath
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -10,24 +17,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import ru.seasonvar.tv.R
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.roundToInt
 
 @Composable
 internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp) {
@@ -37,7 +49,7 @@ internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp)
     val ice = colorResource(R.color.seasonvar_winter_ice)
     val cordColor = colorResource(R.color.seasonvar_winter_garland_cord)
     val frontColor = colorResource(R.color.seasonvar_winter_garland_cord_front)
-    val highlightColor = colorResource(R.color.seasonvar_winter_garland_cord_highlight)
+    val backgroundBlur = dimensionResource(R.dimen.seasonvar_winter_garland_background_blur)
     val strandWidth = dimensionResource(R.dimen.seasonvar_winter_garland_strand_width)
     val twistRadius = dimensionResource(R.dimen.seasonvar_winter_garland_twist_radius)
     val twistPitch = dimensionResource(R.dimen.seasonvar_winter_garland_twist_pitch)
@@ -51,6 +63,7 @@ internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp)
     )
 
     Spacer(modifier.drawWithCache {
+        if (size.width == 0f || size.height == 0f) return@drawWithCache onDrawBehind {}
         val side = sideMargin.toPx()
         val bottom = bottomMargin.toPx()
         val cord = garlandCord(size.width, size.height, side, bottom)
@@ -58,14 +71,13 @@ internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp)
         val pathLength = measure.length
         val turn = (2 * PI).toFloat()
         val sockets = listOf(
-            0.052f to warmWhite, 0.133f to cranberry, 0.210f to amber, 0.296f to warmWhite,
-            0.367f to ice, 0.438f to amber, 0.523f to cranberry, 0.607f to warmWhite,
-            0.682f to amber, 0.756f to warmWhite, 0.830f to amber, 0.884f to ice, 0.945f to warmWhite,
+            0.052f to warmWhite, 0.100f to amber, 0.145f to warmWhite, 0.199f to cranberry,
+            0.263f to amber, 0.322f to warmWhite, 0.388f to amber, 0.452f to cranberry,
+            0.520f to ice, 0.578f to warmWhite, 0.637f to amber, 0.697f to warmWhite,
+            0.780f to amber, 0.860f to warmWhite, 0.947f to amber,
         )
-        val glowRadius = 20.dp.toPx()
-        val socketWidth = 3.2.dp.toPx()
+        val glowRadius = 22.dp.toPx()
         val socketLength = 3.dp.toPx()
-        val glintRadius = 0.70.dp.toPx()
         val bulbLeans = listOf(0.44f, 0.78f, 0.18f, 0.57f, 0.32f)
         val lamps = sockets.mapIndexed { index, (progress, color) ->
             val distance = pathLength * progress
@@ -83,15 +95,15 @@ internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp)
             val tip = neck + axis * length
             val glass = dropShape(neck, axis, length, (2.7f + 0.15f * (index % 3)).dp.toPx())
             val glow = Brush.radialGradient(
-                0f to color,
-                0.23f to color.copy(alpha = 0.34f),
+                0f to warmWhite.copy(alpha = 0.88f),
+                0.23f to color.copy(alpha = 0.43f),
+                0.58f to color.copy(alpha = 0.11f),
                 1f to color.copy(alpha = 0f),
                 center = tip,
                 radius = glowRadius,
             )
-            val glassColor = Brush.linearGradient(listOf(color.copy(alpha = 0.60f), color, warmWhite, color), neck, tip)
-            val phaseOffset = ((index * 5) % sockets.size) * turn / sockets.size
-            GarlandLamp(base, neck, tip, phaseOffset, glass, glassColor, glow)
+            val phaseOffset = ((index * 7) % sockets.size) * turn / sockets.size
+            GarlandLamp(base, neck, tip, phaseOffset, glass, color, glow)
         }
 
         val pitch = twistPitch.toPx()
@@ -101,22 +113,11 @@ internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp)
         val loopCenter = Path().apply {
             measure.getSegment(cord.crossingStart, cord.crossingEnd, this, startWithMoveTo = true)
         }
-        val width = strandWidth.toPx()
-        val outline = Stroke(width + 0.65.dp.toPx(), cap = StrokeCap.Round)
-        val strand = Stroke(width, cap = StrokeCap.Round)
-        val specular = Stroke(width * 0.27f, cap = StrokeCap.Round)
-        val highlightOffset = width * 0.18f
-        val loopShadow = Stroke(width + 2 * radius + 0.7.dp.toPx(), cap = StrokeCap.Round)
-
-        fun DrawScope.drawWire(wire: TwistedWire) {
-            drawPath(wire.strands, Color.Black, alpha = 0.59f, style = outline)
-            drawPath(wire.strands, cordColor, style = strand)
-            drawPath(wire.front, Color.Black, alpha = 0.55f, style = outline)
-            drawPath(wire.front, frontColor, style = strand)
-            translate(-highlightOffset, -highlightOffset) {
-                drawPath(wire.front, highlightColor, alpha = 0.58f, style = specular)
-            }
-        }
+        val backdrop = renderGarlandBackdrop(
+            size, wire, loopWire, loopCenter, lamps, cordColor, frontColor, socketColor,
+            strandWidth.toPx(), radius, backgroundBlur.toPx(),
+        )
+        val destination = IntSize(size.width.roundToInt(), size.height.roundToInt())
         val reflectedLightCenter = Offset(size.width * 0.54f, size.height + bottom * 0.16f)
         val reflectedLightRadius = bottom * 2f
         val reflectedLight = Brush.radialGradient(listOf(amber, amber.copy(alpha = 0f)),
@@ -124,18 +125,13 @@ internal fun WinterGarland(modifier: Modifier, sideMargin: Dp, bottomMargin: Dp)
 
         onDrawBehind {
             drawCircle(reflectedLight, reflectedLightRadius, reflectedLightCenter, alpha = 0.085f)
-            drawWire(wire)
-            drawPath(loopCenter, Color.Black, alpha = 0.72f, style = loopShadow)
-            drawWire(loopWire)
+            drawImage(backdrop, dstSize = destination, filterQuality = FilterQuality.Low)
 
             val time = phase.value * turn
             for (lamp in lamps) {
                 val brightness = 0.5f + 0.5f * cos(time + lamp.phaseOffset)
-                drawCircle(lamp.glow, glowRadius, lamp.tip, alpha = 0.20f + 0.49f * brightness)
-                drawLine(socketColor, lamp.base, lamp.neck, socketWidth, StrokeCap.Round)
-                drawPath(lamp.glass, lamp.glassColor, alpha = 0.63f + 0.37f * brightness)
-                drawCircle(Color.White, glintRadius, lamp.neck + (lamp.tip - lamp.neck) * 0.59f,
-                    alpha = 0.23f + 0.40f * brightness)
+                drawCircle(lamp.glow, glowRadius, lamp.tip, alpha = 0.07f + 0.48f * brightness,
+                    blendMode = BlendMode.Plus)
             }
         }
     })
@@ -147,9 +143,67 @@ private data class GarlandLamp(
     val tip: Offset,
     val phaseOffset: Float,
     val glass: Path,
-    val glassColor: Brush,
+    val color: Color,
     val glow: Brush,
 )
+
+/** Rasterize the soft, mostly static shapes once. Only the light halos are animated. */
+private fun renderGarlandBackdrop(
+    size: Size,
+    wire: TwistedWire,
+    loopWire: TwistedWire,
+    loopCenter: Path,
+    lamps: List<GarlandLamp>,
+    cordColor: Color,
+    frontColor: Color,
+    socketColor: Color,
+    strandWidth: Float,
+    twistRadius: Float,
+    blur: Float,
+): ImageBitmap {
+    val scale = 0.5f
+    val bitmap = Bitmap.createBitmap((size.width * scale).roundToInt().coerceAtLeast(1),
+        (size.height * scale).roundToInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val matrix = Matrix().apply { setScale(scale, scale) }
+    val scaledPath = AndroidPath()
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND }
+    val cordBlur = BlurMaskFilter(blur * scale, BlurMaskFilter.Blur.NORMAL)
+    val bulbBlur = BlurMaskFilter(blur * scale * 0.72f, BlurMaskFilter.Blur.NORMAL)
+
+    fun draw(path: Path, color: Color, width: Float = 0f) {
+        scaledPath.rewind()
+        path.asAndroidPath().transform(matrix, scaledPath)
+        paint.color = color.toArgb()
+        paint.style = if (width == 0f) Paint.Style.FILL else Paint.Style.STROKE
+        paint.strokeWidth = width * scale
+        canvas.drawPath(scaledPath, paint)
+    }
+
+    fun drawCable(cable: TwistedWire) {
+        draw(cable.strands, Color.Black.copy(alpha = 0.64f), strandWidth * 2.6f)
+        draw(cable.strands, cordColor, strandWidth * 1.6f)
+        draw(cable.front, frontColor.copy(alpha = 0.48f), strandWidth)
+    }
+
+    paint.maskFilter = cordBlur
+    drawCable(wire)
+    draw(loopCenter, Color.Black.copy(alpha = 0.78f), strandWidth * 2f + 2 * twistRadius)
+    drawCable(loopWire)
+
+    paint.maskFilter = bulbBlur
+    val sockets = Path().apply {
+        for (lamp in lamps) {
+            moveTo(lamp.base.x, lamp.base.y)
+            lineTo(lamp.neck.x, lamp.neck.y)
+        }
+    }
+    draw(sockets, socketColor, strandWidth * 2.6f)
+    for (lamp in lamps) {
+        draw(lamp.glass, lamp.color.copy(alpha = 0.61f))
+    }
+    return bitmap.asImageBitmap()
+}
 
 private fun dropShape(neck: Offset, axis: Offset, length: Float, radius: Float): Path {
     val lateral = Offset(-axis.y, axis.x)
@@ -222,12 +276,12 @@ private fun garlandCord(width: Float, height: Float, side: Float, bottom: Float)
     fun belowMenu(fraction: Float) = menuBottom + bottom * fraction
     val cord = Path().apply {
         moveTo(-side * 0.49f, -side * 0.19f)
-        cubicTo(side * 0.14f, -side * 0.04f, side * 0.83f, menuBottom * 0.048f, side * 0.57f, menuBottom * 0.126f)
-        cubicTo(side * 0.24f, menuBottom * 0.22f, side * 0.66f, menuBottom * 0.245f, side * 0.69f, menuBottom * 0.31f)
-        cubicTo(side * 0.74f, menuBottom * 0.40f, side * 0.19f, menuBottom * 0.47f, side * 0.28f, menuBottom * 0.56f)
-        cubicTo(side * 0.34f, menuBottom * 0.625f, side * 0.64f, menuBottom * 0.67f, side * 0.62f, menuBottom * 0.72f)
-        cubicTo(side * 0.60f, menuBottom * 0.78f, side * 0.34f, menuBottom * 0.82f, side * 0.40f, menuBottom * 0.88f)
-        cubicTo(side * 0.46f, menuBottom * 0.96f, side * 0.63f, belowMenu(0.43f), width * 0.26f, belowMenu(0.67f))
+        cubicTo(side * 0.68f, -side * 0.03f, side * 0.31f, menuBottom * 0.113f, width * 0.23f, menuBottom * 0.15f)
+        cubicTo(width * 0.48f, menuBottom * 0.175f, width * 0.41f, menuBottom * 0.239f, width * 0.32f, menuBottom * 0.27f)
+        cubicTo(width * 0.214f, menuBottom * 0.307f, side * 0.32f, menuBottom * 0.36f, side * 0.49f, menuBottom * 0.448f)
+        cubicTo(side * 0.66f, menuBottom * 0.542f, width * 0.30f, menuBottom * 0.569f, width * 0.253f, menuBottom * 0.653f)
+        cubicTo(width * 0.21f, menuBottom * 0.726f, side * 0.26f, menuBottom * 0.75f, side * 0.43f, menuBottom * 0.847f)
+        cubicTo(side * 0.58f, menuBottom * 0.914f, side * 0.42f, belowMenu(0.43f), width * 0.26f, belowMenu(0.67f))
     }
     cord.cubicTo(width * 0.38f, belowMenu(0.87f), width * 0.59f, belowMenu(0.53f), width * 0.68f, belowMenu(0.29f))
     cord.cubicTo(width * 0.72f, belowMenu(0.16f), width * 0.65f, belowMenu(0.10f), width * 0.57f, belowMenu(0.19f))
