@@ -6,13 +6,16 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -268,4 +271,10 @@ internal fun SeasonvarTheme(interfaceTheme: InterfaceTheme = InterfaceTheme.CLAS
             content = content,
         )
     }
+}
+
+@Composable
+internal fun Modifier.focusGlow(shape: Shape, focused: Boolean): Modifier {
+    val glow = SeasonvarTheme.appearance.focusGlow
+    return if (focused && glow != null) dropShadow(shape, glow) else this
 }

@@ -2,6 +2,8 @@ package ru.seasonvar.tv.ui.theme
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -69,6 +71,7 @@ internal data class InterfaceThemeSpec(val theme: InterfaceTheme, val poster: Po
     val buttonCornerRadius: Dp,
     val cardCornerRadius: Dp,
     val focusBorderWidth: Dp,
+    val focusGlow: Shadow?,
     val outlineWidth: Dp,
     val textButtonOutline: Boolean,
     val menuButtonOutline: Boolean,
@@ -100,6 +103,8 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
         (values.getDimension(attribute, context.resources.getDimension(fallback)) / context.resources.displayMetrics.density).dp
     fun integer(attribute: Int, fallback: Int) = values.getInt(attribute, context.resources.getInteger(fallback))
     try {
+        val primary = color(R.styleable.SeasonvarInterfaceTheme_seasonvarAccentColor, R.color.seasonvar_accent)
+        val glowRadius = values.getDimension(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusGlowRadius, 0f)
         return InterfaceThemeSpec(
             theme = theme,
             poster = PosterBackgroundStyle(
@@ -114,7 +119,7 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
             surface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceColor, R.color.seasonvar_surface),
             inactiveSurface = color(R.styleable.SeasonvarInterfaceTheme_seasonvarInactiveSurfaceColor, R.color.seasonvar_background),
             outline = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceOutlineColor, android.graphics.Color.TRANSPARENT)),
-            primary = color(R.styleable.SeasonvarInterfaceTheme_seasonvarAccentColor, R.color.seasonvar_accent),
+            primary = primary,
             onPrimary = color(R.styleable.SeasonvarInterfaceTheme_seasonvarOnAccentColor, R.color.seasonvar_on_accent),
             text = color(R.styleable.SeasonvarInterfaceTheme_seasonvarTextColor, R.color.seasonvar_text),
             focusedText = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusedTextColor,
@@ -132,6 +137,11 @@ internal fun resolveInterfaceTheme(context: Context, theme: InterfaceTheme): Int
             buttonCornerRadius = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarButtonCornerRadius, R.dimen.seasonvar_button_corner_radius),
             cardCornerRadius = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarCardCornerRadius, R.dimen.seasonvar_card_corner_radius),
             focusBorderWidth = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusBorderWidth, R.dimen.seasonvar_focus_border_width),
+            focusGlow = glowRadius.takeIf { it > 0f }?.let { radius ->
+                Shadow(radius = (radius / context.resources.displayMetrics.density).dp,
+                    color = Color(values.getColor(R.styleable.SeasonvarInterfaceTheme_seasonvarFocusGlowColor,
+                        primary.copy(alpha = 0.5f).toArgb())))
+            },
             outlineWidth = dimension(R.styleable.SeasonvarInterfaceTheme_seasonvarSurfaceOutlineWidth, R.dimen.seasonvar_surface_outline_width),
             textButtonOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarTextButtonOutline, false),
             menuButtonOutline = values.getBoolean(R.styleable.SeasonvarInterfaceTheme_seasonvarMenuButtonOutline,

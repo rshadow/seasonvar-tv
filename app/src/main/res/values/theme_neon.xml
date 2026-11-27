@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="seasonvar_neon_cyan">#57E8FF</color>
+
+    <style name="SeasonvarInterfaceTheme.Neon" parent="SeasonvarInterfaceTheme.Classic">
+        <item name="seasonvarPageBackgroundColor">#0A0B19</item>
+        <item name="seasonvarSurfaceColor">#151327</item>
+        <item name="seasonvarInactiveSurfaceColor">#0E0F1E</item>
+        <item name="seasonvarDialogBackgroundColor">#141225</item>
+        <item name="seasonvarTextColor">#F1F5FF</item>
+        <item name="seasonvarSecondaryTextColor">#BCC9E0</item>
+        <item name="seasonvarSurfaceOutlineColor">#A8FF459C</item>
+        <item name="seasonvarAccentColor">@color/seasonvar_neon_cyan</item>
+        <item name="seasonvarOnAccentColor">#071421</item>
+        <item name="seasonvarFocusedOutlineTextColor">@color/seasonvar_neon_cyan</item>
+        <item name="seasonvarFocusGlowRadius">9dp</item>
+        <item name="seasonvarFocusGlowColor">#B057E8FF</item>
+        <item name="seasonvarStatusSuccessColor">#67EDB3</item>
+        <item name="seasonvarStatusFailureColor">#FF759F</item>
+        <item name="seasonvarStatusPendingColor">#B6ADC9</item>
+        <item name="seasonvarTextButtonOutline">true</item>
+        <item name="seasonvarMenuButtonOutline">false</item>
+        <item name="seasonvarIconButtonOutline">true</item>
+        <item name="seasonvarCardOutline">true</item>
+        <item name="seasonvarButtonCornerRadius">6dp</item>
+        <item name="seasonvarCardCornerRadius">7dp</item>
+        <item name="seasonvarPlayerPlayedColor">@color/seasonvar_neon_cyan</item>
+        <item name="seasonvarPlayerBufferedColor">#CCFF459C</item>
+        <item name="seasonvarPlayerUnplayedColor">#556A7398</item>
+    </style>
+</resources>
