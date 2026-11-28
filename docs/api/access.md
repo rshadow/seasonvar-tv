@@ -2,7 +2,7 @@
 
 ## Закрепление ключей TLS в приложении
 
-Android-клиенты используют общую конфигурацию [TlsPinSettings.kt](../../app/src/main/java/ru/seasonvar/tv/data/settings/TlsPinSettings.kt) по [ADR-0133](../adr/0133-centralized-tls-pinning.md). Pins — SHA-256 публичных ключей SPKI удостоверяющих центров. Совпадение одного из разрешённых ключей проверяется дополнительно к системному доверию и имени сервера. Ошибка не разрешает повторить запрос без pinning.
+Android-клиенты используют общую конфигурацию [TlsPinSettings.kt](../../core/src/main/java/ru/seasonvar/tv/data/settings/TlsPinSettings.kt) по [ADR-0133](../adr/0133-centralized-tls-pinning.md). Pins — SHA-256 публичных ключей SPKI удостоверяющих центров. Совпадение одного из разрешённых ключей проверяется дополнительно к системному доверию и имени сервера. Ошибка не разрешает повторить запрос без pinning.
 
 Проверено агентом 2026-11-10 через HTTPS с действующей проверкой цепочки и имени, включая транспорт обхода для Seasonvar:
 
@@ -105,7 +105,7 @@ make site-test
 
 ## Сжатие в приложении и исследовательском загрузчике
 
-Проверено агентом 2026-11-09: приложение уже использует прозрачное gzip-сжатие OkHttp 5.5.1. [SiteClient](../../app/src/main/java/ru/seasonvar/tv/data/SiteClient.kt) не устанавливает `Accept-Encoding`; OkHttp добавляет `Accept-Encoding: gzip` и распаковывает ответ до чтения HTML/JSON. [NetworkClients](../../app/src/main/java/ru/seasonvar/tv/data/network/NetworkClients.kt) сохраняет этот механизм и при обходе блокировок: меняются TLS-сокет и версия HTTP, а не обработка сжатия. Отсутствие `Content-Encoding` на уровне кода, читающего готовый ответ, не доказывает отсутствие gzip: после прозрачной распаковки OkHttp удаляет этот заголовок.
+Проверено агентом 2026-11-09: приложение уже использует прозрачное gzip-сжатие OkHttp 5.5.1. [SiteClient](../../core/src/main/java/ru/seasonvar/tv/data/SiteClient.kt) не устанавливает `Accept-Encoding`; OkHttp добавляет `Accept-Encoding: gzip` и распаковывает ответ до чтения HTML/JSON. [NetworkClients](../../core/src/main/java/ru/seasonvar/tv/data/network/NetworkClients.kt) сохраняет этот механизм и при обходе блокировок: меняются TLS-сокет и версия HTTP, а не обработка сжатия. Отсутствие `Content-Encoding` на уровне кода, читающего готовый ответ, не доказывает отсутствие gzip: после прозрачной распаковки OkHttp удаляет этот заголовок.
 
 Живая анонимная проверка выполнена в отдельном JVM-процессе со скомпилированными `NetworkClients` и `DpiSocketFactory` проекта и его версиями зависимостей. Временно добавленный сетевой наблюдатель измерял тело до распаковки, а обычное чтение — после неё; исходники приложения и устройства не менялись. Во всех семи запросах с обходом получены HTTP 200, `Accept-Encoding: gzip` в запросе и `Content-Encoding: gzip` в сетевом ответе:
 

@@ -1,5 +1,6 @@
 package ru.seasonvar.tv.data.home
 
+import ru.seasonvar.tv.data.playback.LocalPlayback
 import org.junit.Assert.*
 import org.junit.Test
 import ru.seasonvar.tv.data.ResumePoint

@@ -18,9 +18,9 @@
 
 | Файл | Что в нём настраивается |
 | --- | --- |
-| [app/src/main/res/values/themes.xml](../../app/src/main/res/values/themes.xml) | Палитра `seasonvar_*`, отступы, интервалы и размеры кнопок, тема Android для окна запуска |
-| [SeasonvarTheme.kt](../../app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt) | Соответствие ресурсов ролям Compose MaterialTheme, набор стилей текста `SeasonvarTypography` и доступ к размерам через `SeasonvarTheme.dimensions` |
-| [app/src/main/res/drawable](../../app/src/main/res/drawable) | Геометрия значка и ТВ-баннера; их цвета берутся из общей палитры |
+| [ui-tv/src/main/res/values/themes.xml](../../ui-tv/src/main/res/values/themes.xml) | Палитра `seasonvar_*`, отступы, интервалы и размеры кнопок, тема Android для окна запуска |
+| [SeasonvarTheme.kt](../../ui-tv/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt) | Соответствие ресурсов ролям Compose MaterialTheme, набор стилей текста `SeasonvarTypography` и доступ к размерам через `SeasonvarTheme.dimensions` |
+| [ui-tv/src/main/res/drawable](../../ui-tv/src/main/res/drawable) | Геометрия значка и ТВ-баннера; их цвета берутся из общей палитры |
 
 Основное место изменения цветов и размеров — `themes.xml`. Экранные компоненты используют `MaterialTheme.colorScheme`, `MaterialTheme.typography` и `SeasonvarTheme.dimensions`. Общие числовые значения оформления в экранах не дублируются. Производные размеры карточек каталога вычисляются централизованно по теме и ширине окна согласно [ADR-0084](0084-shared-catalog-card-metrics.md).
 

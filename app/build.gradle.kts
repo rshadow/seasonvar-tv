@@ -1,13 +1,13 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("androidx.baselineprofile")
 }
 
-val guavaVersion = providers.gradleProperty("guavaVersion").get()
-
 android {
-    namespace = "ru.seasonvar.tv"
+    namespace = "ru.seasonvar.app"
     compileSdk {
         version = release(37) {
             minorApiLevel = 0
@@ -20,7 +20,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 19
-        versionName = "1.4.0"
+        versionName = providers.gradleProperty("seasonvarVersionName").get()
         testInstrumentationRunner = "ru.seasonvar.tv.probe.AccountMarkProbe"
     }
 
@@ -55,6 +55,8 @@ android {
         buildConfig = true
     }
 
+    lint { checkDependencies = true }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
@@ -68,30 +70,8 @@ kotlin {
 
 dependencies {
     baselineProfile(project(":baselineprofile"))
+    implementation(project(":ui-tv"))
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
-    constraints {
-        implementation("com.google.guava:guava:$guavaVersion-android") {
-            because("Fix CVE-2026-102554 in Media3 transitive dependencies")
-        }
-    }
-    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.tv:tv-material:1.1.0")
-
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    implementation("com.squareup.okhttp3:okhttp:5.5.1")
-    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:5.5.1")
-    implementation("org.jsoup:jsoup:1.23.2")
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("androidx.media3:media3-exoplayer:1.11.1")
-    implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
-    implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
-    implementation("androidx.media3:media3-ui:1.11.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.5.1")
@@ -99,7 +79,23 @@ dependencies {
     testImplementation("org.json:json:20260814")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation(project(":core"))
+    testImplementation("org.jsoup:jsoup:1.23.2")
+    testImplementation("com.squareup.okhttp3:okhttp-dnsoverhttps:5.5.1")
+    testImplementation(platform("androidx.compose:compose-bom:2026.06.01"))
+    testImplementation("androidx.compose.foundation:foundation")
+    testImplementation("androidx.media3:media3-datasource:1.11.1")
+    testImplementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
+
+    androidTestImplementation(project(":core"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.06.01"))
+    androidTestImplementation("androidx.activity:activity-compose:1.13.0")
+    androidTestImplementation("androidx.compose.foundation:foundation")
+    androidTestImplementation("androidx.tv:tv-material:1.1.0")
+    androidTestImplementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
+    androidTestImplementation("io.coil-kt:coil-compose:2.7.0")
+    androidTestImplementation("androidx.media3:media3-ui:1.11.1")
+    androidTestImplementation("org.jsoup:jsoup:1.23.2")
 }
 
 baselineProfile {
@@ -118,12 +114,16 @@ androidComponents {
             }
         }
     }
-    onVariants(selector().all()) { variant ->
-        if (variant.buildType in setOf("nonMinifiedRelease", "benchmarkRelease")) {
-            variant.sources.kotlin?.addStaticSourceDirectory("src/nonMinifiedRelease/java")
-        }
-    }
     beforeVariants(selector().all()) { variant ->
         if (variant.buildType in setOf("nonMinifiedProfile", "benchmarkProfile")) variant.enable = false
+    }
+}
+
+// Keep the existing cross-module probes on the assembled app without
+// exposing implementation details through the production module APIs.
+val testLibraryRoots = listOf(":core", ":ui-tv").map { project(it).projectDir.toPath() }
+tasks.withType<KotlinCompile>().configureEach {
+    if (name.endsWith("UnitTestKotlin") || name.endsWith("AndroidTestKotlin")) {
+        friendPaths.from(libraries.filter { jar -> testLibraryRoots.any(jar.toPath()::startsWith) })
     }
 }

@@ -8,7 +8,7 @@
 
 ## Решение
 
-Единое определение карточки — `SeriesEntry` в [CatalogModels.kt](../../app/src/main/java/ru/seasonvar/tv/data/CatalogModels.kt). Здесь же определены вложенные типы данных записи, включая `EntrySelection`, `AccountMark`, `AccountProgress`, `ProgressCounter` и `SeasonEpisodeProgress`.
+Единое определение карточки — `SeriesEntry` в [CatalogModels.kt](../../core/src/main/java/ru/seasonvar/tv/data/CatalogModels.kt). Здесь же определены вложенные типы данных записи, включая `EntrySelection`, `AccountMark`, `AccountProgress`, `ProgressCounter` и `SeasonEpisodeProgress`.
 
 | Данные | Поля |
 | --- | --- |
