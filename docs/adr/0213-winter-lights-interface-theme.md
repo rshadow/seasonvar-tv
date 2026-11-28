@@ -25,7 +25,7 @@
 | Инструмент | Встроенный ImageGen, генерация по тексту |
 | Параметр вызова | `transparent_background=false` |
 | Исходное изображение | PNG, 1672 × 941 |
-| Ресурс в приложении | [theme_winter_tree.webp](../../app/src/main/res/drawable-nodpi/theme_winter_tree.webp) |
+| Ресурс в приложении | [theme_winter_tree.webp](../../ui-tv/src/main/res/drawable-nodpi/theme_winter_tree.webp) |
 | Упаковка ресурса | `cwebp -q 87 -resize 1280 720` |
 
 Финальный промпт

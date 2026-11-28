@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
+    <queries>
+        <provider android:authorities="android.media.tv" />
+        <intent>
+            <action android:name="android.media.tv.action.REQUEST_CHANNEL_BROWSABLE" />
+        </intent>
+    </queries>
+
+    <application>
+        <service android:name="ru.seasonvar.tv.data.home.HomeRefreshJob" android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE" />
+        <provider android:name="ru.seasonvar.tv.data.home.HomePosterProvider" android:authorities="${applicationId}.home-posters"
+            android:exported="true" />
+        <activity android:name="ru.seasonvar.tv.ui.home.HomePlaybackActivity" android:exported="true" android:screenOrientation="landscape">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="seasonvar" android:host="home" android:pathPrefix="/play/" />
+            </intent-filter>
+        </activity>
+        <activity android:name="ru.seasonvar.tv.ui.actor.ActorSeriesActivity" android:exported="false" android:screenOrientation="landscape" />
+        <activity android:name="ru.seasonvar.tv.ui.reviews.ReviewsActivity" android:exported="false" android:screenOrientation="landscape" />
+        <activity
+            android:name="ru.seasonvar.tv.ui.player.PlayerActivity"
+            android:theme="@style/Theme.SeasonvarTV.Player"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+    </application>
+</manifest>

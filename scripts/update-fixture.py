@@ -7,7 +7,8 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 configuration = (ROOT / "app/build.gradle.kts").read_text()
-version_match = re.search(r'versionName = "(\d+)\.(\d+)\.(\d+)"', configuration)
+properties = (ROOT / "gradle.properties").read_text()
+version_match = re.search(r'^seasonvarVersionName=(\d+)\.(\d+)\.(\d+)$', properties, re.MULTILINE)
 code_match = re.search(r'versionCode = (\d+)', configuration)
 if not version_match or not code_match:
     raise SystemExit("Cannot determine the project's version")
@@ -21,12 +22,11 @@ init.write_text("""gradle.beforeProject { project ->
     project.plugins.withId('com.android.application') {
         project.androidComponents.finalizeDsl { android ->
             android.defaultConfig.versionCode = %d
-            android.defaultConfig.versionName = '%s'
         }
     }
 }
-""" % (code, version))
+""" % code)
 subprocess.run([str(ROOT / "scripts/android-env.sh"), "./gradlew", "--console=plain",
-                "--init-script", str(init), ":app:assembleDebug"], cwd=ROOT, check=True)
+                "--init-script", str(init), f"-PseasonvarVersionName={version}", ":app:assembleDebug"], cwd=ROOT, check=True)
 shutil.copyfile(ROOT / "app/build/outputs/apk/debug/app-debug.apk", output / "fixture.apk")
 print(f"Prepared test update {version} ({code}); not a release")

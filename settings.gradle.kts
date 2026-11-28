@@ -15,5 +15,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "SeasonvarTV"
-include(":app")
+include(":app", ":core", ":ui-tv")
 include(":baselineprofile")

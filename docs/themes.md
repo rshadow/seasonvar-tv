@@ -4,7 +4,7 @@
 
 ## Добавить тему
 
-Создать `app/src/main/res/values/theme_night.xml`, например:
+Создать `ui-tv/src/main/res/values/theme_night.xml`, например:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -25,13 +25,13 @@
 </resources>
 ```
 
-Добавить название в `app/src/main/res/values/strings.xml`:
+Добавить название в `ui-tv/src/main/res/values/strings.xml`:
 
 ```xml
 <string name="interface_theme_night">Ночная</string>
 ```
 
-Зарегистрировать стиль в `app/src/main/res/xml/interface_themes.xml`, сохранив существующие записи:
+Зарегистрировать стиль в `ui-tv/src/main/res/xml/interface_themes.xml`, сохранив существующие записи:
 
 ```xml
 <theme id="night" label="@string/interface_theme_night" style="@style/SeasonvarInterfaceTheme.Night" />

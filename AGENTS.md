@@ -58,7 +58,7 @@
 
 - Пункты настроек оформлять по [ADR-0015](docs/adr/0015-settings-item-format.md): название и пояснение слева, галочка или выбранное значение справа, одна точка фокуса на строку. Опции выбирать в диалоге с радиокнопками.
 
-- Визуальные параметры и интервалы хранить в отдельных [XML-файлах тем](docs/themes.md), реестр — в `res/xml/interface_themes.xml` по [ADR-0161](docs/adr/0161-resource-defined-interface-themes.md). Общие размеры компонентов и параметры поведения хранить в [themes.xml](app/src/main/res/values/themes.xml); в Compose использовать MaterialTheme и [SeasonvarTheme](app/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt) согласно [ADR-0008](docs/adr/0008-centralized-ui-theme.md). Новые экраны не должны дублировать эти значения.
+- Визуальные параметры и интервалы хранить в отдельных [XML-файлах тем](docs/themes.md), реестр — в `res/xml/interface_themes.xml` по [ADR-0161](docs/adr/0161-resource-defined-interface-themes.md). Общие размеры компонентов и параметры поведения хранить в [themes.xml](ui-tv/src/main/res/values/themes.xml); в Compose использовать MaterialTheme и [SeasonvarTheme](ui-tv/src/main/java/ru/seasonvar/tv/ui/theme/SeasonvarTheme.kt) согласно [ADR-0008](docs/adr/0008-centralized-ui-theme.md). Новые экраны не должны дублировать эти значения.
 
 - Все основные действия доступны с D-pad, OK и «Назад». Сенсорный экран и мышь не должны быть обязательными.
 - У каждого интерактивного элемента есть заметный фокус и предсказуемый переход к соседним элементам.
@@ -74,7 +74,7 @@
 - При изменении инструментария обновлять toolchain.lock.json и [docs/development.md](docs/development.md).
 - Перед каждым релизом и при изменении исполняемых путей запуска, навигации, общих компонентов списков/карточки, их зависимостей или компилятора повторно генерировать и проверять Baseline/Startup Profiles по [ADR-0174](docs/adr/0174-isolated-baseline-profiles.md); обновлённые правила проводить через PR до релизного тега. Адаптация R8 при сборке не заменяет генерацию.
 
-- Модель карточки любого списка — `SeriesEntry` и вложенный `EntrySelection` в [CatalogModels.kt](app/src/main/java/ru/seasonvar/tv/data/CatalogModels.kt), согласно [ADR-0041](docs/adr/0041-shared-catalog-entry.md). Парсеры заранее заполняют известные поля; интерфейс не извлекает параметры из подписей. Общий выбор при открытии следует [ADR-0040](docs/adr/0040-details-entry-context.md).
+- Модель карточки любого списка — `SeriesEntry` и вложенный `EntrySelection` в [CatalogModels.kt](core/src/main/java/ru/seasonvar/tv/data/CatalogModels.kt), согласно [ADR-0041](docs/adr/0041-shared-catalog-entry.md). Парсеры заранее заполняют известные поля; интерфейс не извлекает параметры из подписей. Общий выбор при открытии следует [ADR-0040](docs/adr/0040-details-entry-context.md).
 - Использовать принятый стек Kotlin + Compose for TV + Media3 ExoPlayer согласно [ADR-0002](docs/adr/0002-native-kotlin-compose-media3.md). Протокол сайта и парсеры отделять от интерфейса и плеера.
 - Соблюдать [ADR-0003](docs/adr/0003-performance-principles.md): каталог из кэша с фоновым обновлением, кеширование постеров под размер карточек, фоновая обработка данных, ленивые списки, восстановление позиции и фокуса, управление ресурсами плеера и проверка release-сборки на Ugoos.
 - Совместимые версии зависимостей и SDK выбирать при реализации по официальным требованиям; выбор стека уже зафиксирован в ADR.
